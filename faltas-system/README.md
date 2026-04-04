@@ -9,3 +9,5 @@
 | `05-reglas-negocio`         | lógica transversal         |
 | `06-integraciones`          | mundo externo              |
 | `07-decisions`              | decisiones de arquitectura |
+
+
