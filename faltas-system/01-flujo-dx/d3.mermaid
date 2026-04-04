@@ -1,0 +1,54 @@
+flowchart TD
+
+classDef inicio fill:#1f4b99,color:#ffffff
+classDef proceso fill:#e8f0fe,color:#111111
+classDef decision fill:#fff4cc,color:#111111
+classDef evento fill:#e7f7e7,color:#111111
+classDef documento fill:#f3e8ff,color:#111111
+classDef error fill:#fde7e9,color:#111111
+classDef destino fill:#0f9d58,color:#ffffff
+
+A["D3<br/>NOTIFICACIÓN<br/>ACTA"]:::inicio
+
+A --> B{"¿Corresponde<br/>notificar?"}:::decision
+
+B -- NO --> R0["Continuar<br/>sin notificar"]:::proceso
+
+B -- SI --> C["Evento<br/>NOTIFICACION_INICIADA"]:::evento
+
+C --> D{"¿Medio<br/>disponible?"}:::decision
+
+D -- NO --> E1["Evento<br/>MEDIO_NO_DISPONIBLE"]:::error
+E1 --> F1["Decidir"]:::proceso
+F1 --> D8["→ D8B"]:::destino
+F1 --> A
+
+D -- SI --> E2["Evento<br/>MEDIO_DETERMINADO"]:::evento
+
+E2 --> G{"¿Documento<br/>necesario?"}:::decision
+
+G -- SI --> H["Invocar<br/>P1"]:::documento
+H --> I{"Resultado"}:::decision
+
+I -- OK --> J["Documento<br/>listo"]:::documento
+I -- PENDIENTE --> K["Evento<br/>DOC_PENDIENTE"]:::evento
+K --> A
+I -- ERROR --> A
+
+J --> L["Invocar<br/>P3"]:::proceso
+
+G -- NO --> L
+
+L --> M{"Resultado<br/>P3"}:::decision
+
+M -- OK --> N["Evento<br/>ACTA_NOTIFICADA"]:::evento
+N --> D4["→ D4"]:::destino
+
+M -- PENDIENTE --> O["Evento<br/>NOTIFICACION_PENDIENTE"]:::evento
+O --> A
+
+M -- FALLA --> P["Evento<br/>NO_CONFIRMADA"]:::error
+P --> Q["Decidir"]:::proceso
+
+Q --> A
+Q --> D8

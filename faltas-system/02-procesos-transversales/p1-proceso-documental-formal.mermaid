@@ -1,0 +1,59 @@
+flowchart TD
+
+    A[Inicio proceso documental] --> B{Requiere documento?}
+
+    B -->|No| C[Salida: SinDocumento<br/>Volver a Origen]
+
+    B -->|Sí| D[Generar documento borrador]
+
+    D --> E{Requiere numeración?}
+
+    E -->|No| F[Continuar sin numerar]
+
+    E -->|Sí| G{Modalidad}
+
+    G -->|En firma| F
+
+    G -->|Pre-numeración| H{Requiere autorización?}
+
+    H -->|Sí| I[Solicitar autorización]
+    I --> J{Autorizado?}
+
+    J -->|No| K[Salida: ErrorAutorizacion<br/>Volver a Origen]
+    J -->|Sí| L[Asignar número]
+
+    H -->|No| L
+
+    L --> F
+
+    F --> M{Requiere firma?}
+
+    M -->|No| N[Salida: DocumentoFormalListo<br/>Volver a Origen]
+
+    M -->|Sí| O[Enviar a firmador]
+
+    O --> P{Resultado firma}
+
+    P -->|Pendiente| Q[Salida: DocumentoPendienteFirma<br/>Volver a Origen]
+
+    P -->|Error| R[Salida: ErrorFirma<br/>Volver a Origen]
+
+    P -->|Firmado| S[Documento final inmutable]
+
+    S --> T{Numeración en firma?}
+
+    T -->|Sí| U[Asignar número]
+    T -->|No| V[Conservar número]
+
+    U --> W[Salida: DocumentoFormalListo<br/>Volver a Origen]
+    V --> W
+
+    classDef process fill:#dbeafe,stroke:#1d4ed8,color:#0f172a,stroke-width:1.5px;
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#0f172a,stroke-width:1.5px;
+    classDef error fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:1.5px;
+    classDef destination fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:1.5px;
+
+    class A,D,F,I,L,O,S,U process;
+    class B,E,G,H,J,M,P,T decision;
+    class K,R error;
+    class C,N,Q,W destination;

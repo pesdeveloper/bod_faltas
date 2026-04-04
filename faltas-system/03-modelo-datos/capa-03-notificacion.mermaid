@@ -1,0 +1,235 @@
+flowchart TD
+
+%% =========================================================
+%% CAPA 03 - NOTIFICACION
+%% Diagrama estructural
+%% =========================================================
+
+%% =========================================================
+%% NODOS PRINCIPALES
+%% =========================================================
+
+ACTA["Acta
+Id
+IdActaDomicilioPrincipal"]
+
+ACTADOM["ActaDomicilio
+Id
+IdActa
+TipoDomicilio
+EsDomicilioActa
+EsPrincipal
+Activo
+FechaHoraRegistro
+CalleTexto
+NumeroPuerta
+Piso
+Depto
+Torre
+IdProvincia
+IdPartido
+IdLocalidad
+CodigoPostal
+DomicilioTexto
+Email
+Telefono
+Observaciones"]
+
+NOTIF["Notificacion
+Id
+IdActa
+IdActaDomicilio
+IdNotificacionOrigen
+CanalNotificacion
+EstadoNotificacion
+MotivoNotificacion
+FechaHoraGeneracion
+FechaHoraEnvio
+FechaHoraAnulacion
+VinculoReceptor
+NombreReceptor
+TipoDocumentoReceptor
+NumeroDocumentoReceptor
+Observaciones
+Activo"]
+
+NOTIFDOC["NotificacionDocumento
+Id
+IdNotificacion
+IdDocumento
+RolDocumentoNotificacion
+Orden
+Activo"]
+
+NOTIFRES["NotificacionResultado
+Id
+IdNotificacion
+TipoResultadoNotificacion
+FechaHoraResultado
+FechaHoraRegistro
+DescripcionResultado
+NombreReceptorInformado
+TipoDocumentoReceptor
+NumeroDocumentoReceptor
+FechaHoraRecepcionInformada
+Anulado
+FechaHoraAnulacion
+MotivoAnulacion
+UsuarioRegistro"]
+
+NOTIFOBS["NotificacionObservacion
+Id
+IdNotificacion
+TipoObservacionNotificacion
+Observacion
+FechaHoraRegistro
+Activo"]
+
+LOTE["LoteNotificacion
+Id
+TipoLoteNotificacion
+EstadoLoteNotificacion
+FechaHoraGeneracion
+FechaHoraCierre
+FechaHoraEnvio
+FechaHoraInformado
+FechaHoraAnulacion
+Descripcion
+Observaciones
+Activo"]
+
+LOTEDET["LoteNotificacionDetalle
+Id
+IdLoteNotificacion
+IdNotificacion
+Orden
+Activo
+Observaciones"]
+
+DOC["Documento
+Id"]
+
+%% =========================================================
+%% RELACIONES ESTRUCTURALES
+%% =========================================================
+
+ACTA -->|1:N| ACTADOM
+ACTADOM -->|N:1 principal proyectado| ACTA
+
+ACTA -->|1:N| NOTIF
+ACTADOM -->|1:N| NOTIF
+
+NOTIF -->|1:N reintentos| NOTIF
+
+NOTIF -->|1:N| NOTIFDOC
+DOC -->|1:N| NOTIFDOC
+
+NOTIF -->|1:N| NOTIFRES
+NOTIF -->|1:N| NOTIFOBS
+
+LOTE -->|1:N| LOTEDET
+NOTIF -->|1:N| LOTEDET
+
+%% =========================================================
+%% NOTAS DE DISEÑO
+%% =========================================================
+
+N1["Regla
+ActaDomicilio nace desde
+el inicio junto con Acta"]
+
+N2["Regla
+Acta guarda
+IdActaDomicilioPrincipal
+como snapshot operativo"]
+
+N3["Regla
+Una notificacion usa
+un solo ActaDomicilio"]
+
+N4["Regla
+Una notificacion puede incluir
+multiples documentos"]
+
+N5["Regla
+El resultado / acuse
+vive en tabla aparte"]
+
+N6["Regla
+Los reintentos generan
+nueva Notificacion"]
+
+N7["Regla
+Notificacion NO tiene
+IdLoteNotificacion"]
+
+N8["Regla
+La relacion con lote vive
+solo en LoteNotificacionDetalle"]
+
+N9["Regla
+Si un resultado fue cargado mal
+no se borra: se anula"]
+
+N10["Regla
+NumeroDocumentoReceptor
+es numerico"]
+
+ACTA -.-> N1
+ACTA -.-> N2
+NOTIF -.-> N3
+NOTIFDOC -.-> N4
+NOTIFRES -.-> N5
+NOTIF -.-> N6
+NOTIF -.-> N7
+LOTEDET -.-> N8
+NOTIFRES -.-> N9
+NOTIF -.-> N10
+NOTIFRES -.-> N10
+
+%% =========================================================
+%% AGRUPACION VISUAL
+%% =========================================================
+
+subgraph S1["Base reutilizable"]
+    ACTA
+    ACTADOM
+    DOC
+end
+
+subgraph S2["Notificacion"]
+    NOTIF
+    NOTIFDOC
+    NOTIFRES
+    NOTIFOBS
+end
+
+subgraph S3["Lotes"]
+    LOTE
+    LOTEDET
+end
+
+subgraph S4["Reglas"]
+    N1
+    N2
+    N3
+    N4
+    N5
+    N6
+    N7
+    N8
+    N9
+    N10
+end
+
+%% =========================================================
+%% ESTILOS
+%% =========================================================
+
+classDef entidad fill:#1f3b5c,color:#ffffff,stroke:#0f2236,stroke-width:1px;
+classDef nota fill:#5b4b00,color:#ffffff,stroke:#3d3200,stroke-width:1px;
+classDef agrupacion fill:#0f1720,color:#ffffff,stroke:#5b6b7a,stroke-width:1px;
+
+class ACTA,ACTADOM,NOTIF,NOTIFDOC,NOTIFRES,NOTIFOBS,LOTE,LOTEDET,DOC entidad;
+class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 nota;
+class S1,S2,S3,S4 agrupacion;

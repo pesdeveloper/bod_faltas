@@ -1,0 +1,36 @@
+flowchart TD
+
+    A[CAPA 02<br/>DOCUMENTAL]
+
+    A --> B[Documento]
+    A --> C[ActaDocumento]
+    A --> D[DocumentoFirma]
+    A --> E[DocumentoObservacion]
+
+    B --> B1[Entidad documental formal<br/>tipo estado numeracion<br/>storage hash firma]
+    C --> C1[Relacion Acta - Documento<br/>rol documental<br/>orden logico]
+    D --> D1[Firma del documento<br/>estado firmante version<br/>proveedor operacion tecnica]
+    E --> E1[Log interno de observaciones<br/>fecha usuario tipo texto]
+
+    C -->|asocia| B
+    D -->|1 a 1 por documento| B
+    E -->|1 a N| B
+
+    F[Proyecta sobre Acta<br/>EstadoDocumentalActual<br/>CantidadDocsPendFirma<br/>CantidadDocsFirmados<br/>IdDocumentoUltimo]
+
+    B --> F
+    C --> F
+    D --> F
+
+    G[Principios<br/>documento entidad propia<br/>sin firma parcial como estado final<br/>anulado si es estado valido<br/>observaciones en tabla aparte]
+
+    G --> A
+
+    classDef core fill:#1f4e79,color:#fff,stroke:#163955,stroke-width:1px;
+    classDef rel fill:#2e7d32,color:#fff,stroke:#1b5e20,stroke-width:1px;
+    classDef aux fill:#6a1b9a,color:#fff,stroke:#4a148c,stroke-width:1px;
+    classDef note fill:#f9a825,color:#000,stroke:#f57f17,stroke-width:1px;
+
+    class A,B core;
+    class C,D,E rel;
+    class F,G note;

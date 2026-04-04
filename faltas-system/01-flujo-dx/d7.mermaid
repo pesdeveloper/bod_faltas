@@ -1,0 +1,39 @@
+flowchart TD
+
+classDef inicio fill:#1f4b99,color:#ffffff
+classDef proceso fill:#e8f0fe,color:#111111
+classDef decision fill:#fff4cc,color:#111111
+classDef evento fill:#e7f7e7,color:#111111
+classDef destino fill:#0f9d58,color:#ffffff
+classDef error fill:#fde7e9,color:#111111
+
+A["D7<br/>APELACIÓN<br/>REVISIÓN"]:::inicio
+
+A --> B["Evento<br/>RECURSO_PRESENTADO"]:::evento
+
+B --> C{"¿Admisible?"}:::decision
+
+C -- NO --> D["Evento<br/>RECHAZADO"]:::error
+D --> D8["→ D8B"]:::destino
+
+C -- SI --> E["Evento<br/>ADMITIDO"]:::evento
+
+E --> F{"¿Interno<br/>o externo?"}:::decision
+
+F -- INTERNO --> G["Revisión<br/>interna"]:::proceso
+
+F -- EXTERNO --> H["Evento<br/>ELEVADO"]:::evento
+H --> I["Esperar<br/>resultado"]:::proceso
+
+G --> I
+
+I --> J{"Resultado"}:::decision
+
+J -- CONFIRMA --> K["Evento<br/>CONFIRMADO"]:::evento
+K --> D8
+
+J -- MODIFICA --> L["Evento<br/>MODIFICADO"]:::evento
+L --> D5["→ D5"]:::destino
+
+J -- ANULA --> M["Evento<br/>ANULADO"]:::evento
+M --> D8

@@ -1,0 +1,39 @@
+flowchart TD
+
+classDef inicio fill:#1f4b99,color:#ffffff
+classDef proceso fill:#e8f0fe,color:#111111
+classDef decision fill:#fff4cc,color:#111111
+classDef evento fill:#e7f7e7,color:#111111
+classDef destino fill:#0f9d58,color:#ffffff
+
+A["D2<br/>ENRIQUECIMIENTO<br/>ACTA"]:::inicio
+
+A --> B["Iniciar<br/>edición"]:::proceso
+B --> E1["Evento<br/>ACTA_ENRIQUECIMIENTO_INICIADO"]:::evento
+
+E1 --> C["Modificar<br/>datos"]:::proceso
+C --> E2["Evento<br/>DATOS_ACTA_ACTUALIZADOS"]:::evento
+
+E2 --> D["Agregar<br/>evidencia"]:::proceso
+D --> E3["Evento<br/>EVIDENCIA_INCORPORADA"]:::evento
+
+E3 --> F{"¿Nivel de<br/>completitud?"}:::decision
+
+F -- NO --> G["Continuar<br/>enriqueciendo"]:::proceso
+G --> E4["Evento<br/>ACTA_ENRIQUECIMIENTO_CONTINUADO"]:::evento
+E4 --> C
+
+F -- SI --> H["Estado<br/>ENRIQUECIDA"]:::proceso
+H --> E5["Evento<br/>ACTA_ENRIQUECIDA"]:::evento
+
+E5 --> I["Puede seguir<br/>editándose"]:::proceso
+I --> C
+
+%% salidas no lineales
+H --> D3["→ D3"]:::destino
+H --> D4["→ D4"]:::destino
+H --> P2["→ P2"]:::destino
+
+G --> D3
+G --> D4
+G --> P2
