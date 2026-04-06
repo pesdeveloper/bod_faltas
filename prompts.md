@@ -7,210 +7,187 @@
 >> Tabla de provincias , localidades, departamentos, etc ! o servicio web que lo devuelva !
 
 ---
+ 🔜 Después de eso
 
-Estamos retomando el diseño del sistema de faltas municipal event-driven de Malvinas Argentinas.
+Cuando volvamos con ese prompt, el siguiente paso natural va a ser:
 
-Quiero que uses TODO el contexto previo ya acordado, sin redefinir nada desde cero ni volver a discutir decisiones ya cerradas, salvo que yo lo pida explícitamente.
+👉 limpieza final
+👉 estructura de carpetas .md
+👉 contratos de servicios
+👉 queries base
+👉 y recién ahí: código
+
+---
+Estamos retomando el diseño completo del sistema de faltas municipal event-driven (Malvinas Argentinas).
 
 ⚠️ IMPORTANTE
-- Documentos largos → SIEMPRE entregarlos en múltiples partes
+- NO redefinir nada desde cero
+- NO volver a discutir decisiones ya cerradas
+- SI detectar inconsistencias antes de avanzar
+- Documentos largos → dividir solo si es necesario
 - Formato siempre copy/paste limpio
 - No usar canvas
-- Mantener lenguaje técnico claro
-- No resumir en exceso
-- Si detectás inconsistencias, marcarlas antes de avanzar
+- Lenguaje técnico claro
+- Orientado a spec-as-source (uso con ChatGPT / Cursor)
 
 ---
 
-# ESTADO ACTUAL DEL PROYECTO
+# ESTADO ACTUAL DEL MODELO
+
+El sistema está completamente modelado hasta CAPA 09.
 
 ## Flujo general
-
-Ya están completamente definidos y cerrados:
-
-- flujo D1–D8
-- procesos transversales:
-  - P1 = documental
-  - P2 = económico
-  - P3 = notificación
+- D1–D8 definidos y cerrados
+- D2 = ENRIQUECIMIENTO (no validación)
+- Modelo event-driven
+- Append-only
+- Reingreso por eventos
+- Snapshots operativos controlados
 
 ---
 
-## Reglas estructurales del sistema
+# CAPAS DEFINIDAS
 
-- modelo event-driven
-- append-only (histórico)
-- no se reabre: se reingresa por evento
-- separación clara entre:
-  - flujo
-  - acto
-  - documento
-- snapshots controlados para operación
-- catálogos cerrados (enum / constantes)
-- tipos compatibles con Informix
-- no usar texto libre para estados importantes
-
----
-
-# CAPAS YA IMPLEMENTADAS
-
-## CAPA 01 — NÚCLEO OPERATIVO
-
-Entidades:
-
+## CAPA 01 — Núcleo operativo
 - Acta
 - ActaEvento (append-only)
-- ActaEvidencia
-- ActaObservacion
-- ActaTransito
-- ActaContravencion
-- ActaContravencionMedida
-- Inspectores
-- InspectoresSnapshot
-- ActaDomicilio (refactor ya integrado)
+- Evidencias
+- Observaciones
+- Subtipos (transito / contravención)
+- Inspectores + snapshot
+- ActaDomicilio
 
-Decisiones clave:
-
-- Acta es entidad central
-- snapshot operativo vive en Acta
-- reingreso por eventos
-- evidencias pertenecen al acta
-- domicilio se sacó de Acta → ahora es ActaDomicilio
-- Acta tiene:
-  - IdActaDomicilioPrincipal
-
----
-
-## CAPA 02 — DOCUMENTAL
-
-Entidades:
-
+## CAPA 02 — Documental
 - Documento
-- ActaDocumento
 - DocumentoFirma
 - DocumentoObservacion
+- ActaDocumento
 
-Decisiones:
-
-- Documento es entidad propia
-- 1 documento → 1 firma
-- observaciones separadas
-- anulado es estado válido
-- evidencias NO pertenecen a esta capa
-- hash SHA-256
-- relación con notificación se resuelve en Capa 03
-
----
-
-## CAPA 03 — NOTIFICACIÓN
-
-Entidades:
-
-- ActaDomicilio (reutilizada)
+## CAPA 03 — Notificación
 - Notificacion
 - NotificacionDocumento
 - NotificacionResultado
-- NotificacionObservacion
-- LoteNotificacion
-- LoteNotificacionDetalle
+- Lotes desacoplados
 
-Decisiones clave:
+## CAPA 04 — Presentaciones
+- ActaPresentacion (genérica)
+- Comparecencia, descargo, solicitudes, etc.
 
-- notificación = intento
-- reintentos = nueva fila
-- resultado separado
-- múltiples documentos por notificación
-- lote desacoplado
-- Notificacion NO tiene IdLote
-- NumeroDocumentoReceptor es numérico
-- historial completo (no delete)
+## CAPA 05 — Actos
+- ActaActo
+- Tipos: FALLO, RESOLUCION, DISPOSICION
+- Estado mínimo: EMITIDO / ANULADO
 
----
+## CAPA 06 — Económico (integración)
+- SujBieFaltas (IdSuj + IdBie)
+- NO se modela deuda
+- Integración con cccmte / ccmov existente
+- Procesos externos (GenerarDeuda, PlanPagos, etc.)
 
-# ESTADO ACTUAL
+## CAPA 07 — Recursivo
+- ActaRecurso
+- Tipo: APELACION
+- Estados: INTERPUESTO → CONCEDIDO → ELEVADO → RESULTADO → CERRADO
 
-Capas 01, 02 y 03 están:
+## CAPA 08 — Derivación externa
+- ActaDerivacionExterna
+- Tipos: APREMIO / JUZGADO_PAZ
+- ResultadoDerivacionExterna:
+  - PAGO_EN_APREMIO
+  - CONFIRMA_FALLO
+  - MODIFICA_FALLO
+  - ANULA_FALLO
+- Estado simple + resultado tipificado
 
-✔ diseñadas  
-✔ documentadas  
-✔ consistentes  
-
----
-
-# PRÓXIMO PASO (MUY IMPORTANTE)
-
-Vamos a construir:
-
-## 👉 CAPA 04 — PRESENTACIONES E INTERACCIÓN ADMINISTRATIVA
-
-YA está definida la decisión clave:
-
-✔ usar **OPCIÓN A → entidad genérica**
-
----
-
-# DEFINICIÓN BASE DE CAPA 04
-
-La capa debe modelar:
-
-- comparecencia espontánea
-- descargo
-- constitución de domicilio
-- presentación de documentación
-- solicitudes (pago voluntario, prórroga, etc.)
-- notas administrativas
-- interacción del infractor o terceros con la causa
+## CAPA 09 — Snapshot operativo
+- ActaSnapshotOperativo
+- EtapaOperativaActual
+- Banderas:
+  - TieneRecursoAbierto
+  - TieneDerivacionExternaAbierta
+  - TieneDeuda
+  - etc.
+- Base para bandejas
+- NO reemplaza el dominio
 
 ---
 
-# REGLA CENTRAL
+# OBJETIVO ACTUAL
 
-Debe existir una entidad base tipo:
+NO agregar más capas.
 
-👉 ActaPresentacion
-
-NO queremos múltiples tablas separadas para cada tipo.
+👉 Estamos en fase de **cierre y consolidación del modelo completo**
 
 ---
 
-# OBJETIVO DE LA SESIÓN
+# PRÓXIMO PASO
 
-Quiero que trabajemos en este orden:
+Quiero que hagamos:
 
-## 1. Documento conceptual
-capa-04-presentaciones.md
+## 👉 PASADA GENERAL DE CONSOLIDACIÓN
 
-## 2. Diagrama estructural
-capa-04-presentaciones.mermaid
+Objetivo:
 
-## 3. DDL lógico
-capa-04-ddl-logico.md
-
----
-
-# ESTILO DE TRABAJO
-
-- técnico, directo, sin vueltas
-- sin sobre-diseño
-- consistente con capas anteriores
-- reutilizar lo ya existente (Documento, ActaDomicilio, etc.)
-- separar bien responsabilidades
-- no mezclar con económico ni resolución todavía
+- detectar redundancias entre capas
+- simplificar nombres
+- unificar criterios
+- validar consistencia global
+- reducir complejidad innecesaria
+- asegurar que el modelo sea óptimo para:
+  - generación de código con IA
+  - uso como spec-as-source
+  - implementación directa
 
 ---
 
-# MUY IMPORTANTE
+# ENFOQUE DE TRABAJO
 
-Antes de empezar:
+Quiero que lo hagamos en este orden:
 
-👉 Si detectás inconsistencias con Capa 01–03, marcarlas primero
+## 1. Revisión global de consistencia
+- relaciones entre capas
+- posibles duplicaciones
+- posibles simplificaciones
+
+## 2. Normalización de criterios
+- enums
+- nombres de campos
+- patrones repetidos (UsuarioRegistro, OrigenRegistro, etc.)
+
+## 3. Simplificación del modelo
+- eliminar lo que no aporta
+- evitar sobre-modelado
+- mantener lo mínimo necesario
+
+## 4. Preparación para implementación
+- qué ya está listo para código
+- qué falta definir como contratos
+- qué partes necesitan queries o servicios
 
 ---
 
-# INSTRUCCIÓN FINAL
+# IMPORTANTE
 
-Arrancar directamente por:
+- No reescribir todo
+- No generar documentos gigantes
+- Trabajar en bloques claros y concretos
+- Señalar mejoras antes de aplicarlas
 
-👉 capa-04-presentaciones.md
+---
 
-(si es largo, dividir en partes)
+# INSTRUCCIÓN
+
+Arrancar por:
+
+👉 Revisión global de consistencia del modelo (capas 01–09)
+
+Listando:
+
+- cosas que están perfectas
+- cosas que se pueden simplificar
+- posibles inconsistencias
+- oportunidades de mejora reales (no teóricas)
+
+Sin modificar todavía nada, solo análisis.
+
+

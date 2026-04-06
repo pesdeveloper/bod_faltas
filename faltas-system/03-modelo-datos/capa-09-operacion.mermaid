@@ -1,0 +1,114 @@
+flowchart TD
+
+    A1[Acta<br>Id]
+    A2[ActaSnapshotOperativo<br>IdActa<br>EtapaOperativaActual<br>FechaUltimoMovimiento]
+    A3[ActaEvento<br>Id]
+    A4[Documento<br>Id]
+    A5[Notificacion<br>Id]
+    A6[ActaPresentacion<br>Id]
+    A7[ActaActo<br>Id]
+    A8[SujBieFaltas<br>Id]
+    A9[ActaRecurso<br>Id]
+    A10[ActaDerivacionExterna<br>Id]
+
+    A1 -->|1 a 1| A2
+    A3 -.->|alimenta| A2
+    A4 -.->|alimenta| A2
+    A5 -.->|alimenta| A2
+    A6 -.->|alimenta| A2
+    A7 -.->|alimenta| A2
+    A8 -.->|alimenta| A2
+    A9 -.->|alimenta| A2
+    A10 -.->|alimenta| A2
+
+    B1[EtapaOperativaActual<br>catalogado]
+    B2[OrigenRegistro<br>catalogado]
+
+    B1 --> A2
+    B2 --> A2
+
+    C1[LABRADA]
+    C2[EN_ENRIQUECIMIENTO]
+    C3[EN_NOTIFICACION_ACTA]
+    C4[EN_ANALISIS]
+    C5[CON_ACTO]
+    C6[EN_NOTIFICACION_ACTO]
+    C7[EN_RECURSO]
+    C8[EN_GESTION_EXTERNA]
+    C9[EN_APREMIO]
+    C10[CERRADA]
+    C11[ARCHIVADA]
+
+    C1 --> A2
+    C2 --> A2
+    C3 --> A2
+    C4 --> A2
+    C5 --> A2
+    C6 --> A2
+    C7 --> A2
+    C8 --> A2
+    C9 --> A2
+    C10 --> A2
+    C11 --> A2
+
+    D1[Bandeja<br>En enriquecimiento]
+    D2[Bandeja<br>Para notificar acta]
+    D3[Bandeja<br>Con presentaciones pendientes]
+    D4[Bandeja<br>Con acto pendiente]
+    D5[Bandeja<br>Con recurso abierto]
+    D6[Bandeja<br>En gestión externa]
+    D7[Bandeja<br>Con resultado externo pendiente]
+    D8[Bandeja<br>Con deuda]
+    D9[Bandeja<br>Cerradas / archivadas]
+
+    A2 --> D1
+    A2 --> D2
+    A2 --> D3
+    A2 --> D4
+    A2 --> D5
+    A2 --> D6
+    A2 --> D7
+    A2 --> D8
+    A2 --> D9
+
+    subgraph S1[Entidad central]
+        A2
+    end
+
+    subgraph S2[Fuentes del snapshot]
+        A1
+        A3
+        A4
+        A5
+        A6
+        A7
+        A8
+        A9
+        A10
+    end
+
+    subgraph S3[Etapas operativas]
+        C1
+        C2
+        C3
+        C4
+        C5
+        C6
+        C7
+        C8
+        C9
+        C10
+        C11
+    end
+
+    subgraph S4[Vistas / bandejas]
+        D1
+        D2
+        D3
+        D4
+        D5
+        D6
+        D7
+        D8
+        D9
+    end

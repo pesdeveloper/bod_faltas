@@ -1,0 +1,76 @@
+flowchart TD
+
+    A1[Acta<br>Id]
+    A2[ActaActo<br>Id<br>IdActa<br>TipoActo<br>EstadoActo<br>IdDocumentoPrincipal<br>FechaRegistro]
+    A3[Documento<br>Id]
+    A4[DocumentoFirma<br>Id]
+    A5[ActaEvento<br>Id]
+
+    A1 -->|1 a N| A2
+    A2 -->|N a 1| A3
+    A3 -->|1 a 0..1/N| A4
+    A2 -.->|refleja hechos relevantes en| A5
+
+    B1[TipoActo<br>catalogado]
+    B2[EstadoActo<br>catalogado]
+    B3[OrigenRegistro<br>catalogado]
+
+    B1 --> A2
+    B2 --> A2
+    B3 --> A2
+
+    C1[FALLO]
+    C2[RESOLUCION]
+    C3[DISPOSICION]
+
+    C1 --> A2
+    C2 --> A2
+    C3 --> A2
+
+    D1[EMITIDO]
+    D2[ANULADO]
+
+    D1 --> A2
+    D2 --> A2
+
+    E1[D4<br>Análisis]
+    E2[D5<br>Decisión / formalización]
+    E3[Capa 03<br>Notificación]
+
+    E1 --> E2
+    E2 --> A2
+    A2 -->|puede dar lugar a| E3
+
+    subgraph S1[Entidad central]
+        A2
+    end
+
+    subgraph S2[Relaciones]
+        A1
+        A3
+        A4
+        A5
+    end
+
+    subgraph S3[Catálogos]
+        B1
+        B2
+        B3
+    end
+
+    subgraph S4[Tipos de acto]
+        C1
+        C2
+        C3
+    end
+
+    subgraph S5[Estado mínimo]
+        D1
+        D2
+    end
+
+    subgraph S6[Ubicación funcional]
+        E1
+        E2
+        E3
+    end

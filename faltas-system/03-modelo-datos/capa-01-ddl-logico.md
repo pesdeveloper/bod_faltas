@@ -46,7 +46,7 @@
 - `FechaHoraSync` → `DATETIME YEAR TO SECOND` NULL
 - `Activa` → `SMALLINT`
 - `FechaHoraRegistro` → `DATETIME YEAR TO SECOND`
-- `UsuarioRegistro` → `VARCHAR(64)` NULL
+- `UsuarioRegistro` → `VARCHAR(36)` NULL
 - `ObservacionesInternas` → `VARCHAR(255)` NULL
 
 ## Observaciones de diseño
@@ -84,7 +84,7 @@
 - `TipoEvento` → `SMALLINT`
 - `OrigenEvento` → `SMALLINT`
 - `FechaHoraEvento` → `DATETIME YEAR TO SECOND`
-- `IdUsuario` → `VARCHAR(64)` NULL
+- `IdUsuario` → `VARCHAR(36)` NULL
 - `Detalle` → `VARCHAR(255)` NULL
 - `IdDocumento` → `INT8` NULL
 - `IdDetalleActa` → `INT8` NULL
@@ -136,7 +136,7 @@
 - `IdLocalidad` → `INT` NULL
 - `CodigoPostal` → `CHAR(7)` NULL
 - `DomicilioTexto` → `VARCHAR(255)` NULL
-- `Email` → `VARCHAR(150)` NULL
+- `Email` → `VARCHAR(64)` NULL
 - `Telefono` → `VARCHAR(14)` NULL
 - `Observaciones` → `VARCHAR(255)` NULL
 
@@ -205,7 +205,7 @@
 - `TipoObservacion` → `SMALLINT`
 - `Observacion` → `VARCHAR(255)`
 - `FechaHoraRegistro` → `DATETIME YEAR TO SECOND`
-- `IdUsuario` → `VARCHAR(64)` NULL
+- `IdUsuario` → `VARCHAR(36)` NULL
 - `Activa` → `SMALLINT`
 
 ## Observaciones de diseño
