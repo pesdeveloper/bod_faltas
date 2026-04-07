@@ -1,0 +1,44 @@
+flowchart TD
+
+    B01["Labradas / Enriquecimiento / Preparación acta"]
+    B02["Notificación del acta"]
+    B03["Acta notificada / espera"]
+    B04["Pendiente de fallo"]
+    B05["Preparación y notificación del fallo"]
+    B06["Fallo notificado / espera"]
+    B07["Gestión externa"]
+
+    X06["Análisis / presentaciones / pagos"]
+    X17["Con apelación"]
+    X19["Paralizadas"]
+    X20["Cerradas"]
+    X21["Archivo"]
+
+    B01 --> B02
+    B02 --> B03
+    B03 --> B04
+    B04 --> B05
+    B05 --> B06
+    B06 --> B07
+
+    B03 -->|presentaciones / pagos| X06
+    B04 -->|presentaciones / pagos| X06
+    B06 -->|apelación| X17
+    B06 -->|otras novedades| X06
+
+    B07 -->|reingreso con nuevo fallo| B04
+    B07 -->|resultado conclusivo| X20
+
+    B01 -.-> X19
+    B02 -.-> X19
+    B03 -.-> X19
+    B04 -.-> X19
+    B05 -.-> X19
+    B06 -.-> X19
+    B07 -.-> X19
+
+    X19 -->|reactivar| X06
+    X19 -->|cerrar| X20
+
+    X20 --> X21
+    X21 -->|desarchivar| X06
