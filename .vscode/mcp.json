@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "informix-local": {
+      "type": "stdio",
+      "command": "java",
+      "args": [
+        "-jar",
+        "C:\\tools\\informix-db-mcp\\target\\informix-mcp-server-1.0.0.jar"
+      ]
+    }
+  }
+}

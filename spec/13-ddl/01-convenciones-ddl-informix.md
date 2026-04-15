@@ -4,6 +4,12 @@
 
 Este archivo fija las convenciones físicas base para bajar el modelo a Informix 12.10.
 
+La política general de nomenclatura del proyecto se define en:
+
+- [spec/00-transversal/03-convenciones-de-nomenclatura.md](../00-overview/03-convenciones-de-nomenclatura.md)
+
+Este bloque DDL la adopta íntegramente.
+
 ---
 
 ## Motor
@@ -41,8 +47,8 @@ El tipo debe ser compatible con la PK referenciada.
 Ejemplos:
 
 - `IdActa INT8`
-- `IdDependencia INT`
-- `IdTipoEvento SMALLINT`
+- `IdDep INT`
+- `IdTipoEvt SMALLINT`
 
 ---
 
@@ -123,7 +129,7 @@ La convención base del modelo físico es:
 
 Cuando un contenido pueda exceder el rango razonable de `LVARCHAR`, deberá persistirse en más de un campo físico.
 
-La reconstrucción del valor completo quedará a cargo de la capa de acceso a datos.
+La reconstrucción del valor completo quedará a cargo de la capa de acceso de datos.
 
 ---
 
@@ -154,6 +160,8 @@ Ejemplos:
 - `IdUserAlta`
 - `IdUserUltMod`
 
+Cuando el identificador del dominio sea entero interno, deberá respetarse ese tipo.
+
 ---
 
 ## Nullability
@@ -178,10 +186,12 @@ Casos típicos:
 
 Convenciones base:
 
+- aplicar la política definida en [spec/00-transversal/03-convenciones-de-nomenclatura.md](../00-overview/03-convenciones-de-nomenclatura.md)
 - PK: `Id`
 - FK: `Id[Entidad]`
-- nombres cortos y explícitos
-- sin prefijos innecesarios
+- nombres compactos, consistentes y explícitos
+- evitar nombres excesivamente largos
+- cuando el nombre corto no sea evidente, documentarlo con observación breve en el spec
 
 ---
 

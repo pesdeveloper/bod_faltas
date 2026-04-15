@@ -1,222 +1,373 @@
-# Estado actual y próximo paso
+# 99 - Estado actual y próximo paso
 
-## Estado actual consolidado
+## Estado actual
 
-El repo ya tiene consolidado el bloque base de especificación y puede tomarse `spec/` como fuente principal de verdad.
+El trabajo está concentrado en la consolidación del bloque `spec/13-ddl/` del repo multiproyecto del sistema de faltas municipal.
 
-A la fecha, quedaron cerrados y alineados los siguientes bloques:
+Ya no estamos discutiendo fundamentos del dominio ni del backend.  
+El foco actual es bajar correctamente el modelo a DDL físico, manteniendo consistencia con lo ya cerrado en:
 
-- overview base
+- overview
 - reglas transversales principales
 - bandejas canónicas
-- bloque `01-dominio`
-- bloque `12-datos`
-- bloque `04-backend`
-- bloque `09-integraciones`
-
-También quedó abierto el bloque físico:
-
-- `spec/13-ddl/`
+- `spec/01-dominio/`
+- `spec/12-datos/`
+- `spec/04-backend/`
+- `spec/09-integraciones/`
 
 ---
 
-## Dominio consolidado
+## Bloques DDL ya trabajados
 
-El bloque `spec/01-dominio/` quedó consolidado como definición conceptual del negocio.
+Ya quedaron trabajados y bastante alineados:
 
-Puntos cerrados importantes:
+- `spec/13-ddl/01-convenciones-ddl-informix.md`
+- `spec/13-ddl/02-tablas-nucleo-expediente.md`
+- `spec/13-ddl/03-tablas-referenciales-y-versionado.md`
+- `spec/13-ddl/04-tablas-acta-y-satelites.md`
+- `spec/13-ddl/05-tablas-talonarios-y-numeracion.md`
+- `spec/13-ddl/06-tablas-equipos-y-catalogos-operativos.md`
 
-- la unidad principal de gestión es Acta / Expediente
-- la notificación es un proceso transversal único
-- el snapshot es derivado y regenerable
-- archivo y cerrada no son equivalentes
-- el motor de firma es externo al sistema de faltas y en este repo solo existe integración
-- `Dependencia` e `Inspector` forman parte del dominio
-- `Dependencia` e `Inspector` requieren versionado referencial para congelar contexto histórico sin snapshot textual embebido
-- `Talonario y numeración` quedó definido como mecanismo administrativo transversal del dominio
+Además, se definió una convención transversal de nomenclatura que debe vivir en:
 
-También quedó firme que:
-
-- el `Acta` pertenece a una `Dependencia`
-- el `Inspector` está asignado a una `Dependencia`
-- el `Acta` queda asociado al `Inspector` que la captó/labró
-- la `Dependencia` aporta contexto operativo inicial, incluyendo si el circuito es de tránsito o no
+- `spec/00-overview/03-convenciones-de-nomenclatura.md`
 
 ---
 
-## Datos consolidados
+## Decisiones fuertes ya cerradas
 
-El bloque `spec/12-datos/` quedó consolidado como modelo lógico de datos previo a persistencia/SQL.
+### Convención de nomenclatura
 
-Puntos cerrados importantes:
+Se acordó una regla general para todo el proyecto:
 
-- la identidad del `Acta` no se agota en una sola referencia
-- en `Acta` conviven:
-  - clave interna
-  - identidad técnica distribuida de origen
-  - numeración administrativa visible
-- la numeración administrativa puede depender de talonarios
-- en actas, los talonarios se asocian a dependencias y no a inspectores
-- el documento separa identidad lógica, numeración visible y soporte material
-- el documento puede pre-numerarse o numerarse al firmar
-- el documento puede firmarse digitalmente por integración externa o por circuito material/ológrafo con posterior incorporación o reemplazo de la versión firmada
-- el snapshot quedó definido como derivado, regenerable y útil para operación, pero no como fuente primaria de verdad
+- nombres compactos
+- consistentes
+- legibles
+- cómodos para SQL
+- con composición:
+  - **prefijo + concepto + contexto**
 
----
+#### Prefijos estándar
+- `Id` = identificador
+- `Ver` = versión
+- `Fh` = fecha/hora
+- `Si` = flag booleano lógico
+- `Nro` = número visible o administrativo
+- `Obs` = observación
+- `Cant` = cantidad
+- `Cod` = código
+- `Nom` = nombre
+- `Desc` = descripción
 
-## Backend consolidado
+#### Contextos aceptados
+- `Infr` = infracción
+- `Infct` = infractor
+- `Info` = información
 
-El bloque `spec/04-backend/` quedó consolidado a nivel de responsabilidades, persistencia y procesos.
-
-Puntos cerrados importantes:
-
-- el backend se concibe como núcleo compartido del ecosistema y no como backends separados por app
-- el backend se organiza por servicios de expediente, documentos, firma, notificación, snapshot, bandejas y gestión externa
-- medidas y liberaciones quedaron tratadas como responsabilidad coordinada principalmente por el servicio de expediente
-- la persistencia backend se implementará con SQL explícito
-- no se utilizará ORM como mecanismo principal de persistencia del núcleo transaccional
-- `08-persistencia-y-sql.md` quedó como archivo índice
-- se abrió el subbloque `spec/04-backend/08-persistencia-y-sql/` con:
-  - esquema relacional base
-  - versionado referencial
-  - persistencia documental
-  - numeración y talonarios
-  - snapshot y reproyección
-  - storage documental
-  - consultas operativas y bandejas
-- `09-jobs-workers-y-procesos.md` quedó definido como bloque de procesos diferidos, reproyección, integración y consistencia
-
-También quedó firme que:
-
-- el storage documental debe resolverse desacoplado del documento lógico mediante `StorageKey`
-- las bandejas deben apoyarse preferentemente en snapshot o proyecciones equivalentes
-- la reconstrucción histórica debe seguir apoyándose en el núcleo transaccional, especialmente en `ActaEvento`
+#### Regla adicional
+Si un campo no encaja exactamente en la convención:
+- nombrarlo corto
+- con criterio
+- sin perder significado
 
 ---
 
-## Integraciones consolidadas
+## Regla de redacción de spec ya acordada
 
-El bloque `spec/09-integraciones/` quedó consolidado.
+Los spec DDL deben redactarse así:
 
-Puntos cerrados importantes:
-
-- gestión externa desacoplada y correlacionada con efecto material sobre el expediente
-- storage documental desacoplado del documento lógico mediante `StorageKey`
-- autenticación y roles integrados con un IdP propio del ecosistema implementado con OpenIddict
-- la identidad autenticada no debe confundirse con `Inspector`, `Dependencia` ni otras entidades del dominio
-- la autorización del backend debe mantenerse explícita
+- tabla en formato tabular
+- notas debajo de cada tabla
+- enumeraciones explícitas en el mismo archivo donde se usan
+- estilo compacto, claro y navegable
+- útil para implementación asistida y para lectura humana
 
 ---
 
-## DDL físico abierto
+## Estado del núcleo del acta
 
-Se abrió el bloque físico:
+### Acta
+Quedó firme que:
 
-- `spec/13-ddl/`
+- `NroActa` en la base central no puede ser null
+- sync local/mobile no contamina el núcleo central
+- el domicilio de la infracción debe tender a ser normalizado
+- el partido no se persiste en el domicilio de la infracción
+- se habilita domicilio textual solo como excepción controlada
+- `SiEjeUrb` puede persistirse como dato derivado
+- `ObsActa` es texto propio del acta, no auditoría interna
 
-Ya quedaron creados y avanzados:
+### ActaSnapshot
+Quedó firme que:
 
-- `00-mapa-ddl-fisico.md`
-- `01-convenciones-ddl-informix.md`
-- `02-tablas-nucleo-expediente.md`
+- es 1:1 con `Acta`
+- es derivado y regenerable
+- no es fuente primaria de verdad
+- `FhUltMod` e `IdUserUltMod` se guardan acá, no en `Acta`
 
----
+### ActaEvento
+Quedó firme que:
 
-## Reglas físicas ya cerradas para Informix
+- es append-only
+- no lleva texto libre embebido
+- las observaciones operativas van a tabla transversal `Observacion`
 
-Quedaron definidas estas reglas base para el DDL físico:
+### Observacion
+Quedó firme que:
 
-- motor objetivo: **Informix 12.10**
-- no usar `SERIAL`
-- usar **secuencias**
-- no todos los IDs deben ser `INT8`
-- criterio base:
-  - `INT8` para tablas de alto crecimiento
-  - `INT` para tablas medianas o referenciales
-  - `SMALLINT` para catálogos y referencias pequeñas
-- GUID/UUID técnicos:
-  - `CHAR(36)`
-- fechas:
-  - fecha sin hora → `DATETIME YEAR TO DAY`
-  - fecha con hora → `DATETIME YEAR TO SECOND`
-  - hora sola → `DATETIME HOUR TO SECOND`
-- flags:
-  - `SMALLINT`
-- `VARCHAR` ajustado y no sobredimensionado
-- no usar `TEXT`
-- usar `LVARCHAR` solo cuando haga falta texto largo
-- si un contenido excede el rango razonable de `LVARCHAR`, debe fragmentarse en más de un campo físico y recomponerse desde la capa de acceso a datos
-- campos de auditoría de usuario:
-  - `IdUserAlta`
-  - `IdUserUltMod`
-  - como `CHAR(36)` apuntando al `SubjectId` externo
+- es tabla transversal
+- texto corto `VARCHAR(255)`
+- el campo de usuario queda como `IdUser`
+- si se edita, la edición debe generar auditoría/evento
 
 ---
 
-## Estado real del trabajo DDL
+## Estado de referenciales/versionado
 
-El bloque DDL ya comenzó, pero todavía no puede considerarse cerrado.
+### Dependencia
+Quedó firme:
 
-Punto importante actual:
+- existe tabla base `Dependencia`
+- existe tabla histórica `DependenciaVersion`
+- debe poder reconstruirse organigrama histórico
+- la relación padre/hija forma parte del modelo
+- las referencias del acta deben guardar `IdDep + VerDep`
 
-- `02-tablas-nucleo-expediente.md` quedó como primer borrador útil, pero requiere corrección antes de seguir bajando el resto de las tablas
+### Inspector
+Quedó firme:
 
-Temas ya detectados para corregir en la próxima sesión:
+- `IdInsp` pasa a `INT`
+- `VerInsp` se mantiene
+- el IdP no se modifica estructuralmente
+- el IdP emite claims construidos:
+  - `InspectorId`
+  - `InspectorVersion`
+- el versionado del inspector queda desacoplado del maestro de usuarios
+- el acta persiste `IdInsp + VerInsp`
+- existe:
+  - `Inspector`
+  - `InspectorVersion`
 
-- revisar tipos físicos de varias columnas
-- evitar usar `INT8` donde no corresponde
-- revisar longitudes de `VARCHAR`
-- ajustar campos de auditoría para usar `IdUser...` en lugar de `Usr...`
-- revisar campos de `Acta` y `ActaEvento`
-- no perder de vista que todavía faltan las tablas satélite del acta real:
-  - tránsito
-  - contravención
-  - mercadería
-  - decomiso
-  - medidas preventivas
-- no meter esos datos dentro de `Acta` si deben resolverse como satélites
+### Medida preventiva
+Quedó firme:
+
+- el catálogo se organiza por dependencia
+- existe:
+  - `MedidaPreventiva`
+- la aplicación concreta al acta se resuelve en:
+  - `ActaMedidaPreventiva`
 
 ---
 
-## Próximo paso correcto
+## Estado de satélites del acta
 
-El próximo paso natural al retomar es:
+### ActaVehiculo
+Quedó firme:
 
-1. corregir `spec/13-ddl/02-tablas-nucleo-expediente.md`
-2. continuar con:
-   - `03-tablas-referenciales-y-versionado.md`
-   - `04-tablas-acta-y-satelites.md`
-3. después seguir con:
-   - tablas documentales
-   - tablas de notificación
-   - tablas de numeración y talonarios
-   - snapshot y auxiliares
-4. luego pasar a:
+- tabla separada reutilizable
+- sirve para tránsito y sustancias alimenticias
+- `TipoVehTxt` solo aplica si `TipoVeh = OTRO`
+
+### ActaTransito
+Quedó firme:
+
+- guarda resumen rápido de tránsito
+- alcoholemia detallada va en tabla aparte
+- el equipo usado se referencia por:
+  - `IdAlcoholimetro`
+  - `VerAlcoholimetro`
+
+### ActaTransitoAlcoholemia
+Quedó firme:
+
+- guarda mediciones
+- una debe poder marcarse como resultado final
+- la tabla no necesita duplicar datos completos del equipo
+
+### ActaContravencion
+Corrección reciente ya aceptada:
+
+- agregar:
+  - `IdSuj SMALLINT`
+  - `IdBie INT`
+- estos identifican el origen de la cuenta municipal consultada
+- la nomenclatura puede precargarse desde lookup maestro
+- el inspector puede corregir datos precargados si detecta inconsistencias
+
+#### OrigenNomencl
+Queda así:
+- `1 = OBTENIDA_COMERCIO`
+- `2 = OBTENIDA_INMUEBLE`
+- `3 = INGRESADA_MANUAL_VALIDADA`
+
+### ActaSustanciasAlimenticias
+Quedó firme:
+
+- usa rubro y ámbito
+- no duplica estructura vehicular
+- vehículo se resuelve con `ActaVehiculo`
+
+---
+
+## Normativa / artículos / valores
+
+Quedó firme la separación entre:
+
+- `NormativaFaltas`
+- `ArticuloNormativaFaltas`
+- `TarifarioUnidadFaltas`
+- `ActaArticuloInfringido`
+- `ActaArticuloAuditoria`
+
+Y también que:
+
+- los artículos no deben quedar como texto plano en el satélite
+- el acta debe congelar la instancia aplicada
+- la auditoría de ajustes manuales no se mezcla con `Observacion`
+
+---
+
+## Talonarios y numeración
+
+Hoy quedó bastante avanzado el bloque de talonarios.
+
+### Tablas ya definidas
+- `PoliticaNumeracion`
+- `Talonario`
+- `TalonarioDependencia`
+- `TalonarioInsp`
+- `TalonarioMovimiento`
+
+### Decisiones importantes
+- no usar máscara libre
+- la política se compone por partes:
+  - prefijo
+  - año
+  - serie
+  - número
+- cada unión entre componentes puede tener separador distinto
+- talonarios pueden ser:
+  - globales
+  - de dependencia
+- asignación a inspector solo para manual físico
+- `TalonarioMovimiento` registra el estado de cada número manual
+- no hace falta:
+  - `ActaManualAnulada`
+  - `ActaOrigenNumeracion`
+
+### TipoTalonario
+- `1 = ELECTRONICO`
+- `2 = MANUAL_FISICO`
+
+### EstadoNro
+- `1 = USADO`
+- `2 = ANULADO`
+
+### Ajuste importante de `PoliticaNumeracion`
+No usar `SepNum` único.
+
+Deben existir:
+- `SepPrefAnio`
+- `SepAnioSerie`
+- `SepSerieNro`
+
+---
+
+## Equipos y catálogos operativos
+
+Hoy también quedó abierto y bastante bien orientado el bloque:
+
+- `Alcoholimetro`
+- `AlcoholimetroVersion`
+- `RubroCom`
+- `RubroComVersion`
+
+### Alcoholímetro
+Quedó firme:
+
+- existe tabla de equipos
+- debe ser versionada
+- el equipo puede deshabilitarse
+- la deshabilitación debe documentarse
+- la UX mobile puede seleccionar el equipo en memoria temporal local o por QR
+- eso no se persiste como “estado operativo previo” en central
+- el acta referencia el equipo por:
+  - `IdAlcoholimetro`
+  - `VerAlcoholimetro`
+
+### Rubros
+Quedó firme:
+
+- usar:
+  - `RubroCom`
+  - `RubroComVersion`
+- no usar nombre tipo snapshot para rubros
+- la versión existe para sostener `IdRub + VerRub` en el acta
+
+---
+
+## Borrador / proceso / eventos
+
+### EstadoProcesoActual
+Se aceptó incluir:
+- `0 = BORRADOR`
+
+### TipoEvt
+Se aceptó incluir:
+- `0 = ACTA_CREADA_EN_BORRADOR`
+- `1 = ACTA_LABRADA`
+- `2 = BORRADOR_DESCARTADO`
+
+### Regla conceptual
+- el flujo administrativo real empieza cuando el acta queda labrada
+- `BORRADOR` es un estado técnico previo y no contradice D1–D8
+
+---
+
+## Tema territorial / georreferenciación
+
+Sigue siendo un tema activo y conectado al modelo.
+
+### Domicilio de infracción
+Se apoya en datos locales de Malvinas:
+- `IdTca`
+- `id_loc`
+- `id_bar`
+- `SiEjidoUrbano`
+- lookup por calle + altura
+
+### Domicilio del infractor
+Se apoya en catálogos IGN/INDEC:
+- provincia `SMALLINT`
+- municipio `INT`
+- departamento `INT`
+- localidad `INT8`
+- localidad censal `INT8`
+- calle `INT8`
+
+---
+
+## Próximo paso
+
+El siguiente paso lógico es **revisión de consistencia final** de los bloques ya armados y luego continuar con los bloques que faltan, probablemente en este orden:
+
+1. revisar consistencia entre `04`, `05` y `06`
+2. seguir con:
+   - documentales
+   - notificación
+   - snapshot auxiliares / apoyo si hiciera falta
+3. después:
    - diagrama relacional
    - SQL de creación
 
 ---
 
-## Criterio para continuar
+## Criterio de continuación
 
-Al retomar el bloque físico:
-
-- no rehacer dominio, datos, backend ni integraciones
-- usar esa base como cerrada
-- mantener archivos compactos y orientados a `spec-as-source`
-- bajar a físico solo lo ya consolidado
-- corregir primero el núcleo antes de seguir con el resto del esquema
-
----
-
-## Estado de continuidad
-
-Si se retoma en otro chat, debe asumirse como punto de partida que:
-
-- `01-dominio` está cerrado
-- `12-datos` está cerrado
-- `04-backend` está cerrado
-- `09-integraciones` está cerrado
-- `13-ddl` está abierto
-- el próximo punto exacto es corregir `02-tablas-nucleo-expediente.md`
-- no corresponde volver a discutir fundamentos ya cerrados salvo contradicción real
+- seguir en español
+- no rediseñar desde cero
+- usar `spec/` como fuente de verdad
+- mantener documentos compactos
+- no inflar definiciones
+- no reabrir fundamentos ya cerrados salvo contradicción real
+- seguir con el mismo estilo tabular + notas + enumeraciones
