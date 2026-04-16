@@ -1,4 +1,9 @@
-Estamos retomando el repo multiproyecto del sistema de faltas municipal.
+# Prompt de reanudación del chat
+
+Retomamos el repo multiproyecto del sistema de faltas municipal.
+
+Antes de seguir, abrir también:
+- [`estado-actual-y-proximo-paso.md`](./estado-actual-y-proximo-paso.md)
 
 ## Regla general de trabajo
 
@@ -7,209 +12,289 @@ Estamos retomando el repo multiproyecto del sistema de faltas municipal.
 - Usar `spec/` como fuente principal de verdad.
 - Mantener estilo compacto, claro, navegable y orientado a `spec-as-source`.
 - No volver a discutir fundamentos ya cerrados salvo contradicción real.
-- Priorizar correcciones quirúrgicas y archivos completos copy-paste cuando haga falta.
+- Priorizar correcciones quirúrgicas y archivos completos copy-paste o paquetes descargables cuando haga falta.
+- Priorizar navegación entre archivos por links relativos cuando sea útil.
+- Evitar documentos innecesariamente largos; partir por responsabilidad cuando convenga.
+- Cuando un archivo deba funcionar como “hub”, debe ser corto, navegable y con links a archivos satélite.
 
 ---
 
 ## Estado general al retomar
 
-Se consolidó una pasada muy amplia de alineación entre el bloque `spec/13-ddl/` y el resto de la spec.
+Se consolidó una pasada fuerte de alineación entre:
 
-Ya se revisaron y alinearon, con distinta profundidad:
+- `spec/`
+- `spec/13-ddl/`
+- `sql/informix/base/`
+- `spec/14-sql-operativo/`
 
-- `01-dominio`
-- `02-reglas-transversales`
-- `03-bandejas`
-- `04-backend`
-- `09-integraciones`
-- `12-datos`
+Ya se revisaron, corrigieron o regeneraron bloques importantes del repositorio.
 
-También se revisó el `spec` completo en zip para detectar contradicciones globales.
+El trabajo reciente se concentró en:
 
-El resultado general fue bueno:
-- no se detectaron contradicciones estructurales graves nuevas
-- sí se hicieron varias alineaciones importantes con el DDL final
+1. convención física de nombres
+2. renombre y regeneración de `13-ddl`
+3. regeneración de `sql/informix/base`
+4. compactación y reestructuración de `14-sql-operativo`
+5. modelado/documentación de tablas territoriales y lookups de domicilios
+6. ajuste de persistencia del domicilio del infractor y jurisdicción emisora de licencia
 
 ---
 
-## Decisiones muy importantes ya firmes
+## Decisiones firmes vigentes
 
-### Núcleo
-- `Acta` es la unidad principal de gestión.
-- `ActaEvento` es append-only.
-- `Observacion` es tabla transversal.
-- `ActaSnapshot` quedó como **una única proyección operativa principal**, simple, directa y regenerable.
-- `ActaSnapshot` debe vivir solo en `09-tablas-snapshot-auxiliares-y-proyecciones.md`, no duplicada en `02`.
+### Convención física
 
-### Acta
-- `NroActa` no puede ser nulo en base central.
-- hay que contemplar GPS en `Acta`:
-  - `LatInfr`
-  - `LonInfr`
-- hay que contemplar evidencias:
-  - `ActaEvidencia`
+Prefijos oficiales:
 
-### Documental
-- `Documento` es entidad lógica desacoplada del archivo físico.
-- storage se resuelve por `StorageKey`.
-- el archivo firmado reemplaza al borrador; no se conservan ambas versiones en el circuito documental principal.
-- `IdPolNum` sobra en `Documento`.
-- `TipoFirmaReq` reemplaza flags tipo `SiFirmaDigital` / `SiFirmaOlografa`.
-- `DocumentoFirma` quedó minimalista y usa `IdUserFirma`.
+- `Fal` = dominio propio de faltas
+- `Num` = numeración / talonarios transversal
+- `Stor` = storage documental transversal
 
-### Notificación
-- toda notificación recae sobre un documento del expediente
-- toda notificación pertenece a una acta
-- `NotificacionDestino` fue eliminado
-- cada `NotificacionIntento` tiene un único destino efectivo
-- `Notificacion` conserva estado resumido de acuse
+Además:
 
-### Numeración
-- no usar máscara libre
-- política por componentes:
-  - prefijo
-  - año
-  - serie
-  - número
-- separadores por componente:
-  - `SepPrefAnio`
-  - `SepAnioSerie`
-  - `SepSerieNro`
-- talonarios:
-  - `ELECTRONICO`
-  - `MANUAL_FISICO`
-- `TalonarioMovimiento` resuelve el estado del número manual
+- entidades compartidas existentes conservan su nombre real
+- ejemplo:
+  - `RubroCom`
+  - `RubroComVersion`
 
-### Referenciales/versionado
-- `Dependencia` / `DependenciaVersion`
-- `Inspector` / `InspectorVersion`
-- `Alcoholimetro` / `AlcoholimetroVersion`
+Archivo canónico:
+- `spec/12-datos/00-convencion-nombres-fisicos.md`
+
+### Restricción interna de nombres auxiliares
+
+Aunque Informix soporte identificadores más largos, el proyecto fija como regla interna:
+
+- nombres de índices, constraints y secuencias: **máximo 30 caracteres**
+
+Esto ya obligó a regenerar naming físico en `13-ddl` y `sql/informix/base`.
+
+### Storage y numeración son transversales
+
+No pertenecen solo a faltas.
+
+Por eso:
+
+- tablas de numeración/talonarios → `Num*`
+- tablas de storage → `Stor*`
+
+### RubroCom es compartido
+
+- `RubroCom` pertenece al sistema actual de ingresos
+- no debe renombrarse a `FalRubroCom`
+- `RubroComVersion` debe existir para compatibilidad/versionado, pero conservando familia nominal compartida
+
+---
+
+## Estado actual de `spec/13-ddl`
+
+`spec/13-ddl/` fue reorganizado y ajustado.
+
+Además del trabajo general previo, se partió el bloque territorial para hacerlo más navegable:
+
+- `11-tablas-territoriales-externas-introduccion.md`
+- `12-tablas-territoriales-ign-indec.md`
+- `13-tablas-territoriales-malvinas-locales.md`
+- `14-tablas-georreferenciacion-territorial.md`
+
+### Estado de esos archivos
+
+#### 11
+Quedó como introducción / marco general de tablas territoriales externas y compartidas.
+
+#### 12
+Documenta tablas IGN / INDEC consumidas por faltas.
+
+#### 13
+Documenta tablas locales de Malvinas para resolución fina de domicilios.
+
+#### 14
+Quedó creado como archivo base de georreferenciación territorial, pero **pendiente de completarse** cuando estén cargadas las capas reales en PostGIS.
+
+---
+
+## Estado actual de `spec/14-sql-operativo`
+
+Se hizo una compactación fuerte para alinearlo con `spec-as-source`.
+
+El bloque actual quedó así:
+
+- `00-metodologia-sql-operativo.md`
+- `01-patrones-transaccionales.md`
+- `02-sql-bandejas.md`
+- `03-sql-formularios-y-lookups.md`
+- `03a-sql-lookups-domicilio-infractor.md`
+- `03b-sql-lookups-licencia-y-jurisdiccion.md`
+- `03c-sql-lookups-catalogos-y-validaciones.md`
+- `04-sql-crud-acta.md`
+- `05-sql-crud-documental.md`
+- `06-sql-crud-notificacion.md`
+- `07-sql-crud-referenciales-y-transversales.md`
+- `08-sql-proyecciones-y-reproceso.md`
+
+### Criterios aplicados
+
+- `00` quedó como hub corto y navegable
+- `03` quedó como hub corto
+- el detalle de formularios/lookups se separó en `03a`, `03b`, `03c`
+- se evitó renumerar `04` a `08`
+- se reforzó navegación entre archivos por links relativos
+
+---
+
+## Estado actual del tema domicilios
+
+Este es uno de los puntos más importantes del momento.
+
+### Domicilio del infractor
+
+Se tomó la decisión de ir con **opción B**:
+
+- mantener el shape nacional común
+- y además persistir referencias locales de Malvinas cuando el domicilio del infractor sea de Malvinas Argentinas
+
+### Domicilio del infractor en Malvinas Argentinas
+Se resuelve con tablas locales:
+
+- `localidad`
+- `calle`
+- `geo_calle_alturas_barrio`
+
+apoyadas por:
+
+- `barrio`
+- `manzana`
+- `callexmza`
+
+La resolución fina usa:
+
+- localidad
+- calle
+- altura
+- tramo
+- barrio
+- ejido urbano
+
+### Domicilio del infractor fuera de Malvinas Argentinas
+Se resuelve con stack IGN / INDEC:
+
+- `geo_ign_provincia`
+- `geo_ign_municipio`
+- `geo_ign_departamento`
+- `geo_indec_localidad`
+- `geo_indec_localidad_censal`
+- `geo_indec_calles`
+
+con apoyo opcional de:
+
+- `geo_bahra_asentamiento`
+
+### Regla de municipio lógico
+
+En UX siempre se muestra “Municipio”, pero internamente puede ser:
+
+- municipio real
+- o departamento fallback
+
+### Regla de calle no encontrada en catálogo
+
+Si la calle no existe en catálogo:
+
+- se permite ingreso textual
+- no se agrega al catálogo
+- no se corrige el origen desde el formulario
+- el domicilio queda parcialmente normalizado
+
+### Persistencia acordada para domicilio del infractor
+
+Además del shape nacional, se decidió completar soporte para:
+
+- calle textual libre
+- normalización parcial
+- referencias locales de Malvinas para el infractor
+
+En concreto, quedó acordado agregar o contemplar en `FalActa`:
+
+- soporte local fino Malvinas para el infractor
+- flag de calle textual libre del infractor
+- campo de calle textual del infractor
+- flag de normalización parcial del domicilio del infractor
+
+---
+
+## Municipio emisor de licencia
+
+También quedó mejor definido:
+
+- persistir provincia
+- persistir municipio real si existe
+- persistir departamento fallback si no hay municipio
+- persistir tipo de jurisdicción emisora
+
+Aunque en UX siga viéndose como un único campo con fallback.
+
+---
+
+## Estado de georreferenciación
+
+Se decidió separar georreferenciación/GIS del lookup territorial tabular.
+
+Por eso existe:
+
+- `spec/13-ddl/14-tablas-georreferenciacion-territorial.md`
+
+Estado actual:
+
+- archivo creado
+- orientación funcional ya documentada
+- pendiente de completar cuando estén cargadas las capas reales en el servidor PostGIS
+
+---
+
+## Estado del SQL físico
+
+`sql/informix/base/` fue regenerado y alineado con:
+
+- `Fal`
+- `Num`
+- `Stor`
 - `RubroCom` / `RubroComVersion`
+- regla de máximo 30 caracteres en nombres auxiliares
 
-### Contravención
-- agregar:
-  - `IdSuj`
-  - `IdBie`
-- `OrigenNomencl`:
-  - `OBTENIDA_COMERCIO`
-  - `OBTENIDA_INMUEBLE`
-  - `INGRESADA_MANUAL_VALIDADA`
+Luego se hizo otra pasada para alinearlo con las decisiones nuevas de:
 
-### Storage documental
-Se definió el bloque:
-- `StorageBackend`
-- `StoragePolitica`
-- `StorageObjeto`
-
-Con política de resolución por:
-- sistema
-- familia
-- tipo de objeto
-- fallback a política general
-- fallback a backend default
-
-Ruta relativa recomendada:
-`/{sistema}/{familia}/{tipo}/{anio}/{mes}/{bucket}/{ref_negocio}/{storage_key}.{ext}`
+- domicilio del infractor
+- calle textual libre
+- normalización parcial
+- jurisdicción emisora de licencia
 
 ---
 
-## Bloques ya revisados
+## Punto exacto donde se retoma
 
-### `01-dominio`
-Se alineó con:
-- GPS en acta
-- evidencias
-- documento desacoplado por `StorageKey`
-- notificación siempre sobre documento
-- snapshot operativo simplificado
-- talonarios más realistas
+En este momento:
 
-### `02-reglas-transversales`
-Se completaron los archivos vacíos:
-- `04-reglas-de-reingreso.md`
-- `05-reglas-de-bandejas-y-transiciones.md`
-- `06-reglas-de-medidas-preventivas.md`
-- `07-reglas-de-pendientes-materiales.md`
-
-### `03-bandejas`
-Se hicieron ajustes finos de alineación con:
-- snapshot
-- notificación
-- firma
-- gestión externa
-- pendientes materiales
-
-### `04-backend`
-Se alineó con:
-- snapshot único
-- documental simplificado
-- firma externa mínima
-- notificación simplificada
-- storage explícito
-- numeración real
-- gestión externa proyectable
-
-### `09-integraciones`
-Se alineó con:
-- motor de firma externo
-- notificación por documento
-- storage documental desacoplado
-- autenticación con IdP del ecosistema
-
-### `12-datos`
-Se alineó con:
-- `Acta`
-- `Documento`
-- `Notificacion`
-- `Snapshot`
-- `Catálogos y maestros`
+- el usuario va a revisar `spec/14-sql-operativo`
+- ya se regeneraron archivos de `13-ddl`, `14-sql-operativo` y `sql/informix/base` para reflejar los cambios de domicilios
+- `13-ddl` ya quedó mejor separado en territorial tabular vs GIS
+- georreferenciación quedó diferida para completar cuando existan las capas cargadas en PostGIS
 
 ---
 
-## Revisión global del spec
+## Próximo paso recomendado al retomar
 
-Se hizo una pasada global al `spec` completo.
-
-Conclusión:
-- la consistencia general ya es buena
-- no conviene otra gran ronda transversal completa
-- solo quedan pendientes finos y el siguiente paso fuerte
-
----
-
-## Punto exacto donde se cortó
-
-Se intentó avanzar con el **diagrama relacional**.
-
-Se propusieron diagramas por bloques y un mapa general.
-
-Problema encontrado:
-- los diagramas Mermaid dieron error en preview
-
-Conclusión operativa:
-- dejar el tema de diagramas para mañana
-- revisar formato
-- probablemente simplificar sintaxis / tipos o cambiar estrategia
+1. revisar observaciones del usuario sobre `spec/14-sql-operativo`
+2. ajustar si hace falta los archivos regenerados por el tema domicilios
+3. verificar si la persistencia final acordada de domicilio quedó exactamente como se quiere
+4. completar `spec/13-ddl/14-tablas-georreferenciacion-territorial.md` cuando estén las capas reales PostGIS
+5. luego empezar a bajar de spec a SQL operativo más cercano a implementación real
 
 ---
 
-## Próximo paso exacto al retomar
+## Recordatorio de estilo para seguir
 
-1. revisar cómo conviene resolver los diagramas relacionales:
-   - Mermaid simplificado
-   - otra sintaxis más compatible
-   - o un nivel menor de detalle
-2. generar versión usable/visible del diagrama relacional
-3. después pasar a:
-   - SQL de creación
-   - o ajuste final previo si el diagrama revela algo
-
----
-
-## Criterio al continuar
-
-- No rehacer la spec transversal ya corregida.
-- No abrir otra gran ronda de revisión global salvo que aparezca una contradicción real.
-- Concentrarse ahora en:
-  - diagramas relacionales
-  - y luego SQL de creación.
+- mantener archivos compactos
+- usar hubs cortos y archivos satélite cuando convenga
+- priorizar links relativos navegables entre archivos
+- evitar documentos gigantes con múltiples responsabilidades
+- usar `spec-as-source` de verdad: legible por humanos y navegable/usable por agentes

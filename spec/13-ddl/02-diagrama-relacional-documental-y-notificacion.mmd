@@ -1,0 +1,11 @@
+erDiagram
+    Acta ||--o{ ActaDocumento : vincula
+    Documento ||--o{ ActaDocumento : pertenece
+    Documento ||--o| DocumentoFirma : tiene
+
+    Acta ||--o{ Notificacion : genera
+    Documento ||--o{ Notificacion : recae_sobre
+    Notificacion ||--o{ NotificacionIntento : tiene
+
+    TipoDocumento ||--o{ Documento : clasifica
+    TipoFirmaReq ||--o{ Documento : requiere

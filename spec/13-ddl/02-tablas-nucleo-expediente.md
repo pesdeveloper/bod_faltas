@@ -58,11 +58,26 @@ Aunque el modelo completo del acta incluye más tablas, este bloque concentra la
 | `VerLocCenInfct` | `SMALLINT` | Sí | Versión localidad censal |
 | `IdCalleInfct` | `INT8` | Sí | Calle INDEC del infractor |
 | `VerCalleInfct` | `SMALLINT` | Sí | Versión calle INDEC |
+| `IdLocMalvInfct` | `CHAR(2)` | Sí | Localidad local de Malvinas para domicilio del infractor |
+| `VerLocMalvInfct` | `SMALLINT` | Sí | Versión localidad local del infractor |
+| `IdTcaInfct` | `CHAR(5)` | Sí | Calle local de Malvinas para domicilio del infractor |
+| `VerTcaInfct` | `SMALLINT` | Sí | Versión calle local del infractor |
+| `IdBarInfct` | `SMALLINT` | Sí | Barrio local resuelto del infractor |
+| `SiCalleTxtInfct` | `SMALLINT` | No | 0/1, habilita calle textual libre del infractor |
+| `CalleTxtInfct` | `VARCHAR(120)` | Sí | Calle textual libre si no existe normalización |
+| `SiNormParcialInfct` | `SMALLINT` | No | 0/1, indica normalización parcial del domicilio del infractor |
 | `AltInfct` | `INT` | Sí | Altura domicilio infractor |
 | `PisoInfct` | `VARCHAR(10)` | Sí | Piso |
 | `DeptoInfct` | `VARCHAR(10)` | Sí | Depto |
 | `ObsDomInfct` | `VARCHAR(120)` | Sí | Aclaración breve domicilio infractor |
 | `CodPosInfct` | `VARCHAR(10)` | Sí | Código postal editable |
+| `IdProvLicEmi` | `SMALLINT` | Sí | Provincia emisora de licencia |
+| `VerProvLicEmi` | `SMALLINT` | Sí | Versión provincia emisora |
+| `IdMuniLicEmi` | `INT` | Sí | Municipio emisor real |
+| `VerMuniLicEmi` | `SMALLINT` | Sí | Versión municipio emisor |
+| `IdDptoLicEmi` | `INT` | Sí | Departamento emisor fallback |
+| `VerDptoLicEmi` | `SMALLINT` | Sí | Versión departamento emisor |
+| `TipoJurLicEmi` | `SMALLINT` | Sí | 1 municipio / 2 departamento |
 | `ObsActa` | `LVARCHAR` | Sí | Texto libre propio del acta |
 | `FhAlta` | `DATETIME YEAR TO SECOND` | No | Alta técnica |
 | `IdUserAlta` | `CHAR(36)` | No | Usuario que dio alta |
@@ -71,14 +86,16 @@ Aunque el modelo completo del acta incluye más tablas, este bloque concentra la
 
 ### Notas
 - `NroActa` no puede ser `NULL` en la base central.
-- El estado `BORRADOR` puede existir a nivel de proceso, pero no invalida que el número visible exista al persistir en central si así lo exige el mecanismo de numeración.
 - El domicilio de la infracción debe ser preferentemente normalizado.
 - El partido no se persiste como dato del domicilio de infracción.
 - `SiDomTxtInfr = 1` habilita `DomTxtInfr`.
 - `SiEjeUrb` se obtiene a partir de calle + altura y puede persistirse como dato derivado útil.
+- Para el domicilio del infractor se persiste el shape nacional general y, si el domicilio es de Malvinas Argentinas, también las referencias locales finas.
+- `SiCalleTxtInfct = 1` habilita `CalleTxtInfct` cuando la calle no existe en catálogo.
+- `SiNormParcialInfct = 1` indica que el domicilio del infractor quedó parcialmente normalizado.
+- La jurisdicción emisora de licencia mantiene provincia y distingue internamente municipio real de departamento fallback.
 - `ObsActa` representa contenido propio del acta, no auditoría interna.
 - `LatInfr` y `LonInfr` permiten georreferenciación de la infracción.
-- Las coordenadas pueden provenir de captura mobile.
 - No reemplazan la normalización del domicilio.
 
 ---
@@ -174,6 +191,10 @@ Aunque el modelo completo del acta incluye más tablas, este bloque concentra la
 ### TipoPersInfct
 - `1 = FISICA`
 - `2 = JURIDICA`
+
+### TipoJurLicEmi
+- `1 = MUNICIPIO`
+- `2 = DEPARTAMENTO`
 
 ### BloqueActual
 - `1 = D1_LABRADO`

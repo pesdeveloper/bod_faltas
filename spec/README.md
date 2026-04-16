@@ -106,5 +106,5 @@ La prioridad actual es consolidar:
 
 Para retomar rápidamente el estado actual de la spec:
 
-- [Estado actual y próximo paso](00-overview/99-estado-actual-y-proximo-paso.md)
+- [Estado actual y próximo paso](./99-estado-actual-y-proximo-paso.md)
 - [Contexto mínimo para agentes](11-prompts-y-skills/prompts/00-contexto-minimo-para-agentes.md)

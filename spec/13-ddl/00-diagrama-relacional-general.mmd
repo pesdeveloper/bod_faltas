@@ -1,0 +1,33 @@
+erDiagram
+    Acta ||--o{ ActaEvento : tiene
+    Acta ||--o{ ActaEvidencia : tiene
+    Acta ||--o{ Observacion : recibe
+    Acta ||--|| ActaSnapshot : proyecta
+
+    Acta ||--o{ ActaDocumento : vincula
+    Documento ||--o{ ActaDocumento : pertenece
+    Documento ||--o| DocumentoFirma : tiene
+
+    Acta ||--o{ Notificacion : genera
+    Documento ||--o{ Notificacion : recae_sobre
+    Notificacion ||--o{ NotificacionIntento : tiene
+
+    TipoDocumento ||--o{ Documento : clasifica
+    TipoFirmaReq ||--o{ Documento : requiere
+
+    Talonario ||--o{ TalonarioMovimiento : registra
+    PoliticaNumeracion ||--o{ Talonario : define
+    TipoDocumento ||--o{ Talonario : aplica_a
+
+    StorageBackend ||--o{ StoragePolitica : soporta
+    StoragePolitica ||--o{ StorageObjeto : resuelve
+    Documento ||--o| StorageObjeto : usa
+
+    Dependencia ||--o{ DependenciaVersion : versiona
+    Inspector ||--o{ InspectorVersion : versiona
+    Alcoholimetro ||--o{ AlcoholimetroVersion : versiona
+    RubroCom ||--o{ RubroComVersion : versiona
+
+    Acta }o--|| DependenciaVersion : dependencia_origen
+    Acta }o--|| InspectorVersion : inspector_actuante
+    Acta }o--o| AlcoholimetroVersion : alcoholimetro
