@@ -27,6 +27,7 @@ No deben quedar dispersos como textos libres cuando impactan en comportamiento d
 Describen la situación operativa resumida del expediente.
 
 Ejemplos conceptuales:
+- borrador
 - labrada
 - en revisión
 - en análisis
@@ -48,6 +49,8 @@ Deben alinearse con el modelo vigente de bandejas.
 Clasifican hechos relevantes registrados sobre la Acta.
 
 Ejemplos conceptuales:
+- creación en borrador
+- descarte de borrador
 - generación documental
 - firma
 - notificación
@@ -105,10 +108,12 @@ Ejemplos conceptuales:
 Describen por qué canal se realiza una notificación.
 
 Canales previstos:
-- electrónica
-- correo / carta documento
+- domicilio electrónico
+- email
+- postal
+- bluemail
 - notificador municipal
-- comparecencia / retiro presencial
+- portal ciudadano
 - otro canal formal definido posteriormente
 
 ---

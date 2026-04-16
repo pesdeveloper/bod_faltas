@@ -7,7 +7,6 @@ Este archivo define el núcleo físico mínimo y operativo del expediente.
 Incluye:
 
 - `Acta`
-- `ActaSnapshot`
 - `ActaEvento`
 - `Observacion`
 
@@ -67,6 +66,8 @@ Aunque el modelo completo del acta incluye más tablas, este bloque concentra la
 | `ObsActa` | `LVARCHAR` | Sí | Texto libre propio del acta |
 | `FhAlta` | `DATETIME YEAR TO SECOND` | No | Alta técnica |
 | `IdUserAlta` | `CHAR(36)` | No | Usuario que dio alta |
+| `LatInfr` | `DECIMAL(12,8)` | Sí | Latitud GPS de la infracción |
+| `LonInfr` | `DECIMAL(12,8)` | Sí | Longitud GPS de la infracción |
 
 ### Notas
 - `NroActa` no puede ser `NULL` en la base central.
@@ -76,39 +77,34 @@ Aunque el modelo completo del acta incluye más tablas, este bloque concentra la
 - `SiDomTxtInfr = 1` habilita `DomTxtInfr`.
 - `SiEjeUrb` se obtiene a partir de calle + altura y puede persistirse como dato derivado útil.
 - `ObsActa` representa contenido propio del acta, no auditoría interna.
+- `LatInfr` y `LonInfr` permiten georreferenciación de la infracción.
+- Las coordenadas pueden provenir de captura mobile.
+- No reemplazan la normalización del domicilio.
 
 ---
 
-## Tabla: ActaSnapshot
+## Tabla: ActaEvidencia
 
 | Campo | Tipo físico | Null | Observación |
 |---|---|---:|---|
-| `IdActa` | `INT8` | No | PK/FK 1:1 a acta |
-| `BloqueActual` | `SMALLINT` | No | Bloque operativo actual |
-| `EstProcAct` | `SMALLINT` | No | Estado de proceso actual |
-| `SitAdmAct` | `SMALLINT` | No | Situación administrativa global |
-| `SiCerrada` | `SMALLINT` | No | 0/1 |
-| `SiPermiteReing` | `SMALLINT` | No | 0/1 |
-| `TipoCierreAct` | `SMALLINT` | Sí | Tipo de cierre actual |
-| `EstPagoAct` | `SMALLINT` | No | Estado de pago actual |
-| `SiTieneDesc` | `SMALLINT` | No | 0/1 tiene descargo |
-| `SiTieneMedPrev` | `SMALLINT` | No | 0/1 tiene medida preventiva |
-| `EstDocAct` | `SMALLINT` | No | Estado documental actual |
-| `EstNotifAct` | `SMALLINT` | No | Estado notificación actual |
-| `CantDocsPendFirma` | `SMALLINT` | No | Cantidad de docs pendientes de firma |
-| `CantDocsFirmados` | `SMALLINT` | No | Cantidad de docs firmados |
-| `IdEvtUlt` | `INT8` | Sí | Último evento proyectado |
-| `IdDocuUlt` | `INT8` | Sí | Último documento relacionado |
-| `IdNotifUlt` | `INT8` | Sí | Última notificación relacionada |
-| `FhUltMod` | `DATETIME YEAR TO SECOND` | Sí | Última modificación proyectada |
-| `IdUserUltMod` | `CHAR(36)` | Sí | Usuario última modificación proyectada |
-| `FhSnapshot` | `DATETIME YEAR TO SECOND` | No | Momento de proyección |
+| `Id` | `INT8` | No | PK |
+| `IdActa` | `INT8` | No | FK a acta |
+| `TipoEvid` | `SMALLINT` | No | Tipo de evidencia |
+| `StorageKey` | `VARCHAR(255)` | No | Ubicación del archivo |
+| `NomArchivo` | `VARCHAR(120)` | Sí | Nombre lógico/original |
+| `MimeType` | `VARCHAR(80)` | Sí | Tipo MIME |
+| `HashEvid` | `VARCHAR(128)` | Sí | Hash del archivo |
+| `ObsEvid` | `VARCHAR(255)` | Sí | Observación breve |
+| `OrdenEvid` | `SMALLINT` | Sí | Orden visual |
+| `FhCaptura` | `DATETIME YEAR TO SECOND` | Sí | Momento de captura |
+| `FhAlta` | `DATETIME YEAR TO SECOND` | No | Alta técnica |
+| `IdUserAlta` | `CHAR(36)` | No | Usuario alta |
 
 ### Notas
-- `ActaSnapshot` es derivado y regenerable.
-- No es fuente primaria de verdad.
-- Su función es facilitar consulta operativa, navegación por bandejas y performance.
-- `FhUltMod` e `IdUserUltMod` se persisten acá como dato proyectado, no como dato propio de `Acta`.
+- Esta tabla representa evidencias adjuntas al acta digital.
+- El storage se resuelve por `StorageKey`.
+- No se guarda binario en la base.
+- Puede haber múltiples evidencias por acta.
 
 ---
 
@@ -284,3 +280,10 @@ Aunque el modelo completo del acta incluye más tablas, este bloque concentra la
 - `3 = INTEGRACION_EXTERNA`
 - `4 = PROCESO_BATCH`
 - `5 = PORTAL_CIUDADANO`
+
+### TipoEvid
+- `1 = FOTO`
+- `2 = VIDEO`
+- `3 = AUDIO`
+- `4 = DOCUMENTO_ADJUNTO`
+- `5 = OTRO`

@@ -22,6 +22,8 @@ Puede incluir, entre otros:
 - documentos notificables firmables
 - otras piezas documentales que requieran firma
 
+La pendiente de firma refiere al documento lógico del expediente y no exige conservar simultáneamente archivo borrador y archivo firmado dentro del dominio documental principal.
+
 ---
 
 ## Qué no contiene
@@ -105,6 +107,7 @@ No existe una única salida obligatoria para todos los expedientes.
 Un mismo expediente puede tener varios documentos firmables al mismo tiempo.
 
 Por ejemplo:
+
 - dos medidas preventivas
 - una resolución adicional
 - un documento notificable asociado
@@ -120,7 +123,7 @@ Esta bandeja debe funcionar independientemente de que la firma sea:
 - simulada en sandbox
 - confirmada por integración externa real
 
-El sistema de faltas no firma por sí mismo.  
+El sistema de faltas no firma por sí mismo.
 Refleja que un documento del expediente quedó pendiente de firma y reacciona al resultado informado por el sistema de firma o por el modo sandbox.
 
 ---
@@ -160,6 +163,5 @@ El expediente aparece aquí porque ya tiene documentos generados cuya firma est�
 - [Índice maestro de bandejas](00-indice-maestro-bandejas.md)
 - [Bandeja de pendientes de fallo](05-bandeja-pendientes-fallo.md)
 - [Bandeja de notificaciones](07-bandeja-notificaciones.md)
-- [Snapshot operativo](../01-dominio/05-snapshot-operativo.md)
-- [Reglas de firma](../02-reglas-transversales/01-reglas-de-firma.md)
 - [Integración con motor de firma](../09-integraciones/01-integracion-motor-firma.md)
+- [Snapshot operativo](../01-dominio/05-snapshot-operativo.md)

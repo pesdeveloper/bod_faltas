@@ -16,6 +16,8 @@ El snapshot es:
 
 Su persistencia existe por razones operativas, no como reemplazo del núcleo transaccional.
 
+La estrategia actual privilegia una única proyección operativa del expediente (`ActaSnapshot`), evitando incorporar estructuras auxiliares de control si no aportan valor operativo concreto.
+
 ---
 
 ## Estructura esperada
@@ -24,12 +26,7 @@ Debe existir:
 
 - `ActaSnapshot` o equivalente
 
-Y podrán existir estructuras auxiliares para:
-
-- control de regeneración
-- reprocesos
-- marcas de actualización
-- colas o pendientes de reproyección, si luego se justifican
+No deben incorporarse tablas técnicas adicionales de snapshot si no existe una necesidad práctica real y estable del sistema.
 
 ---
 

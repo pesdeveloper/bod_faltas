@@ -2,7 +2,7 @@
 
 ## Finalidad
 
-Esta bandeja reúne expedientes que requieren producir una pieza no-fallo.
+Actas que requieren producir una pieza administrativa o documental que no constituye fallo.
 
 Su función es concentrar los casos donde el expediente necesita una decisión o documento administrativo distinto del fallo, con efecto operativo sobre su continuidad.
 

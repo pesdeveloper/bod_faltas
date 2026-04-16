@@ -6,6 +6,8 @@ Esta bandeja reúne expedientes en los que efectivamente existe apelación o rec
 
 Su función es dar visibilidad específica a los casos en los que el expediente entra en un tramo recursivo o de revisión posterior.
 
+La visibilidad de esta bandeja puede apoyarse también en plazos proyectados del expediente, especialmente cuando exista apelación presentada o apelación todavía habilitada dentro del plazo aplicable.
+
 ---
 
 ## Qué contiene

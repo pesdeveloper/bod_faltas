@@ -2,26 +2,17 @@
 
 ## Finalidad
 
-Este archivo resume los servicios de backend vinculados a las bandejas operativas del sistema de faltas.
+Este archivo define las responsabilidades del backend respecto de las bandejas operativas del sistema.
 
-Su objetivo es identificar las responsabilidades del backend respecto de la construcción, consulta y filtrado de expedientes visibles en bandejas.
-
-No define todavía endpoints, DTOs ni detalles técnicos de implementación.
+Su objetivo es dejar claro cómo se exponen listados, filtros, badges e indicadores operativos a partir del expediente y su proyección.
 
 ---
 
 ## Regla principal
 
-Las bandejas muestran **expedientes / actas**, no documentos sueltos.
+La implementación de bandejas debe apoyarse prioritariamente en `ActaSnapshot` como proyección operativa única del expediente, evitando reconstrucciones costosas del núcleo para operaciones rutinarias de listado y filtrado.
 
-El backend debe exponer las bandejas como vistas operativas construidas principalmente a partir de:
-
-- snapshot operativo
-- estado resumido del expediente
-- bloqueos
-- pendientes
-- reglas de visibilidad
-- filtros de trabajo
+La lógica de bandejas sigue derivando del expediente y sus hechos, pero su consulta operativa debe resolverse preferentemente desde snapshot.
 
 ---
 
@@ -31,86 +22,9 @@ Este bloque debe permitir, al menos:
 
 - listar expedientes por bandeja
 - aplicar filtros operativos
-- ordenar resultados
-- exponer badges e indicadores resumidos
-- explicar por qué un expediente aparece en una bandeja
-- reflejar acciones habilitadas según la situación operativa
-
----
-
-## Responsabilidades principales
-
-### 1. Consulta por bandeja
-Debe permitir obtener los expedientes visibles en una bandeja determinada, por ejemplo:
-
-- labradas
-- enriquecimiento
-- análisis
-- pendientes de resolución / redacción
-- pendientes de fallo
-- pendientes de firma
-- notificaciones
-- con apelación
-- gestión externa
-- paralizadas
-- archivo
-- cerradas
-
----
-
-### 2. Aplicación de filtros operativos
-Debe permitir aplicar filtros relevantes para el trabajo diario, por ejemplo:
-
-- estado operativo
-- tipo de pieza notificable
-- canal de notificación
-- existencia de acuse
-- plazo o vencimiento
-- existencia de medidas activas
-- existencia de pendientes materiales
-- motivo de archivo
-- destino externo
-- operador o notificador, cuando corresponda
-
----
-
-### 3. Exposición de indicadores resumidos
-Debe permitir exponer, al menos:
-
-- badges o etiquetas operativas
-- bloqueos relevantes
-- motivo resumido de archivo
-- existencia de pendientes de firma
-- existencia de piezas en notificación
-- situación de medidas o pendientes materiales
-
-Estos indicadores deben apoyarse principalmente en snapshot.
-
----
-
-### 4. Habilitación de acciones
-Debe permitir que la UI determine qué acciones están habilitadas para cada expediente según su situación operativa.
-
-Ejemplos:
-
-- pasar a otra bandeja
-- generar una pieza
-- registrar firma
-- iniciar notificación
-- registrar resultado
-- enviar a archivo
-- enviar a cerrada
-- paralizar
-- reingresar al circuito
-
-La validación final de negocio no debe depender solo de la UI.
-
----
-
-### 5. Explicación de visibilidad
-Debe poder exponer, al menos de forma resumida, por qué un expediente aparece en la bandeja actual.
-
-Esto es importante para evitar que la UI deba reconstruir por sí sola toda la lógica de negocio.
+- ordenar por prioridad o referencia temporal
+- exponer indicadores visibles
+- justificar la ubicación de un expediente en una bandeja determinada
 
 ---
 
@@ -118,101 +32,29 @@ Esto es importante para evitar que la UI deba reconstruir por sí sola toda la l
 
 Este bloque no debe:
 
-- recalcular por su cuenta toda la historia del expediente en cada consulta
-- reemplazar la fuente de verdad del dominio
-- tratar las bandejas como workflows rígidos independientes del expediente
-- duplicar en la UI la lógica central de visibilidad y bloqueos
-
-Debe apoyarse principalmente en snapshot y en reglas operativas ya consolidadas.
+- reconstruir historia completa del expediente
+- reemplazar la lógica de expediente
+- duplicar indebidamente lógica documental o notificatoria
+- depender de joins excesivos para operaciones rutinarias
 
 ---
 
 ## Relación con otros servicios
 
-### Con servicios de expediente
-El servicio de expediente coordina la situación general del caso, pero el servicio de bandejas expone la lectura operativa de múltiples expedientes en conjunto.
+### Con expediente
+La bandeja refleja situación operativa derivada del expediente.
 
-### Con servicios de snapshot
-El servicio de bandejas depende principalmente de snapshot para construir listas rápidas, filtros y badges.
+### Con snapshot
+Snapshot es la fuente principal de consulta para bandejas.
 
-### Con servicios documentales
-El estado documental impacta en la visibilidad de bandejas, pero la gestión documental sigue viviendo en su bloque propio.
+### Con notificación
+Estados resumidos de notificación y reintentos deben llegar proyectados o accesibles operativamente.
 
-### Con servicios de firma
-Las firmas pendientes o completadas pueden modificar bandejas, pero la lógica de firma sigue en su bloque específico.
-
-### Con servicios de notificación
-La situación de notificación impacta fuertemente en bandejas, especialmente en notificaciones, fallo, archivo y gestión externa.
-
-### Con servicios de gestión externa
-La derivación y el resultado externo modifican la visibilidad del expediente en bandejas y sus acciones habilitadas.
-
----
-
-## Operaciones conceptuales típicas
-
-Este bloque debería poder sostener operaciones conceptuales como:
-
-- listar expedientes de una bandeja
-- contar expedientes por bandeja
-- aplicar filtros sobre una bandeja
-- obtener badges o indicadores resumidos
-- obtener acciones habilitadas por expediente
-- explicar motivo de visibilidad o bloqueo
-- ordenar expedientes según criterios operativos
-
-No implica que estas operaciones deban exponerse una a una como endpoints directos.
-
----
-
-## Relación con snapshot
-
-Snapshot es la principal base operativa de este bloque.
-
-El servicio de bandejas debe consumir especialmente información resumida como:
-
-- bandeja visible actual
-- estado operativo general
-- pendientes documentales
-- pendientes de firma
-- situación de notificación
-- bloqueos de avance
-- bloqueos de cierre
-- medidas activas
-- pendientes materiales
-- condición de archivo o cerrada
-
----
-
-## Relación con la UI
-
-La UI de bandejas debe poder consumir este bloque para:
-
-- mostrar listados
-- aplicar filtros
-- mostrar badges
-- explicar bloqueos
-- renderizar acciones habilitadas
-- navegar al detalle del expediente
-
-La UI no debería reconstruir reglas operativas centrales que ya existen en backend y snapshot.
+### Con gestión externa
+La condición y resultado resumido de gestión externa debe ser visible si afecta la bandeja.
 
 ---
 
 ## Idea clave
 
-Las bandejas no son solo pantallas.
-
-Son vistas operativas del expediente soportadas por backend, snapshot y reglas de negocio consistentes.
-
----
-
-## Archivos relacionados
-
-- [Mapa backend](00-mapa-backend.md)
-- [Servicios de expediente](01-servicios-de-expediente.md)
-- [Servicios de snapshot](05-servicios-de-snapshot.md)
-- [Índice maestro de bandejas](../03-bandejas/00-indice-maestro-bandejas.md)
-- [Snapshot operativo](../01-dominio/05-snapshot-operativo.md)
-- [Reglas de cierre y archivo](../02-reglas-transversales/03-reglas-de-cierre-y-archivo.md)
-- [Reglas de notificación](../02-reglas-transversales/02-reglas-de-notificacion.md)
+Las bandejas son una vista operativa del expediente, no una fuente autónoma de verdad. Deben resolverse de forma rápida, consistente y apoyada en snapshot.

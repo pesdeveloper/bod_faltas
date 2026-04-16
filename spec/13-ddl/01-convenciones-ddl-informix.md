@@ -6,7 +6,7 @@ Este archivo fija las convenciones físicas base para bajar el modelo a Informix
 
 La política general de nomenclatura del proyecto se define en:
 
-- [spec/00-transversal/03-convenciones-de-nomenclatura.md](../00-overview/03-convenciones-de-nomenclatura.md)
+- [spec/00-overview/03-convenciones-de-nomenclatura.md](../00-overview/03-convenciones-de-nomenclatura.md)
 
 Este bloque DDL la adopta íntegramente.
 
@@ -186,7 +186,7 @@ Casos típicos:
 
 Convenciones base:
 
-- aplicar la política definida en [spec/00-transversal/03-convenciones-de-nomenclatura.md](../00-overview/03-convenciones-de-nomenclatura.md)
+- aplicar la política definida en [spec/00-overview/03-convenciones-de-nomenclatura.md](../00-overview/03-convenciones-de-nomenclatura.md)
 - PK: `Id`
 - FK: `Id[Entidad]`
 - nombres compactos, consistentes y explícitos

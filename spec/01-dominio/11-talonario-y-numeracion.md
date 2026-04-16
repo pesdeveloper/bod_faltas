@@ -74,12 +74,12 @@ El número resultante debe tratarse como valor textual y no como entero puro.
 
 La numeración puede responder a distintas modalidades operativas, por ejemplo:
 
-- automática por sistema
-- manual o preimpresa en papel
+- electrónica
+- manual física / preimpresa
 
-El sistema debe poder convivir con ambas cuando la operatoria lo requiera.
+La política de numeración debe definirse por componentes habilitados, como prefijo, año, serie y número, con separadores controlados entre componentes, evitando máscaras libres difíciles de validar y mantener.
 
-En particular, para actas puede existir talonario manual/preimpreso asociado a dependencia, sin necesidad de materializar previamente todos los números posibles en la base.
+No todos los talonarios requieren asignación a dependencia. Pueden existir talonarios globales para otros objetos numerables del sistema, mientras que en el caso de las actas la asignación a dependencia sigue siendo la regla principal.
 
 ---
 

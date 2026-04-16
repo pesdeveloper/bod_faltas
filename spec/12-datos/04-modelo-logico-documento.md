@@ -2,43 +2,30 @@
 
 ## Finalidad
 
-`Documento` representa una pieza documental formal del expediente.
+`Documento` representa la pieza documental lógica del expediente.
 
-Puede originarse en el sistema, incorporarse desde fuera, requerir numeración, firma, emisión, reemplazo o incorporación posterior de una versión firmada.
+Su función es modelar el documento como entidad del caso, separada de:
 
----
-
-## Tabla principal
-
-### `Documento`
-
-Debe contener, como mínimo a nivel lógico:
-
-- `Id`
-- `IdTecnico`, si se usa identidad técnica estable
-- referencia al expediente
-- tipo de documento
-- estado documental principal
-- número de documento, cuando exista
-- referencia al contexto de numeración, cuando corresponda
-- referencia al archivo o versión material vigente
-- metadatos básicos de creación, emisión, firma o incorporación
+- su soporte físico concreto
+- la firma
+- la notificación
+- el storage real del archivo
 
 ---
 
 ## Qué guarda
 
-`Documento` debe guardar la identidad y metadata principal de la pieza documental, incluyendo cuando corresponda:
+El modelo de `Documento` debe poder guardar, según corresponda:
 
 - tipo documental
+- estado documental
+- número visible, si corresponde
+- talonario, si corresponde
+- tipo de firma requerida
+- referencia técnica al archivo vigente mediante `StorageKey`
+- hash del archivo vigente
+- fecha de generación
 - relación con el expediente
-- estado principal
-- número visible
-- condición de pre-numerado o numerado definitivo
-- si requiere firma o no
-- si fue firmado digitalmente, ológrafamente o no firmado
-- referencia a la versión material vigente del documento
-- contexto básico de emisión, incorporación o reemplazo
 
 ---
 
@@ -46,88 +33,57 @@ Debe contener, como mínimo a nivel lógico:
 
 `Documento` no debe usarse para guardar:
 
-- toda la trazabilidad del expediente
-- todos los eventos documentales como texto libre
-- la lógica completa del motor de firma
-- la lógica completa del motor de numeración
-- el snapshot del expediente
-- detalle operativo completo de notificaciones
-
-Tampoco debe confundirse documento con archivo binario puro.
+- rutas físicas absolutas
+- detalle completo del backend de storage
+- lógica interna del motor de firma
+- múltiples versiones materiales coexistentes como regla operativa normal
+- historia completa del expediente
+- acuses o intentos de notificación
 
 ---
 
 ## Reglas principales
 
-- Todo `Documento` pertenece a un expediente.
-- El `Id` interno no reemplaza al número visible del documento.
-- `NumeroDocumento` puede no existir todavía en etapas tempranas.
-- La numeración puede ocurrir al firmar o previamente como pre-numeración.
-- La numeración visible depende del mecanismo de talonarios y políticas de numeración aplicables.
-- Un documento puede existir sin estar firmado.
-- Un documento puede imprimirse, firmarse físicamente/ológrafamente y luego incorporarse o reemplazarse por su versión firmada.
-- La firma digital o electrónica se resuelve por integración externa; el sistema conserva el resultado documental.
-- El documento puede cambiar de versión material sin perder su identidad lógica principal, según las reglas del caso.
+- El documento es una entidad lógica del expediente.
+- Su soporte físico se resuelve por `StorageKey`.
+- La política de numeración no vive dentro del documento; se resuelve por talonario cuando corresponda.
+- El documento puede existir antes de la firma.
+- Cuando el documento se firma, el archivo firmado reemplaza al archivo previo no firmado dentro del circuito documental estándar.
+- La firma se integra externamente y su trazabilidad mínima vive en entidad separada.
 
 ---
 
-## Numeración documental
+## Relación con firma
 
-`NumeroDocumento` es la identidad administrativa visible del documento.
+`Documento` puede requerir firma digital u ológrafa.
 
-No reemplaza:
-
-- el `Id` interno
-- la identidad técnica del documento, si existe
-
-La numeración puede provenir de talonario y responder a una política de formato.
-
-Debe contemplarse al menos estas situaciones:
-
-- documento aún sin numerar
-- documento pre-numerado
-- documento numerado al firmar
-- documento numerado dentro de un circuito manual/preimpreso, si aplica
-
-La definición exacta del submodelo de numeración se desarrollará en el bloque correspondiente.
+La lógica de firma no vive dentro del documento, pero el estado documental sí debe reflejar el efecto de la firma.
 
 ---
 
-## Firma y soporte material
+## Relación con storage
 
-El documento puede atravesar distintas situaciones de firma y materialización, por ejemplo:
+La ubicación real del archivo no forma parte del dominio principal del documento.
 
-- generado y pendiente de firma
-- pre-numerado y pendiente de firma
-- firmado digitalmente
-- impreso para firma física/ológrafa
-- re-subido o reemplazado por versión firmada
-- incorporado desde fuera ya firmado
-
-Por lo tanto, el modelo debe separar con claridad:
-
-- identidad lógica del documento
-- numeración visible
-- condición de firma
-- versión material o archivo vigente
+Debe resolverse mediante un bloque de storage documental desacoplado, referenciado por `StorageKey`.
 
 ---
 
-## Relaciones clave
+## Relación con el expediente
 
-`Documento` se relaciona con:
+Todo documento pertenece a un expediente / acta y puede cumplir un rol específico dentro de él, por ejemplo:
 
-- `Acta`, como expediente al que pertenece
-- `ActaEvento`, cuando existan hechos documentales relevantes
-- `Notificacion`, cuando el documento sea objeto notificable o pieza vinculada al proceso de notificación
-- talonarios y numeración, cuando el documento requiera número visible
-- integración de firma, cuando exista firma digital o electrónica
-- storage documental, para resolver el soporte material de sus versiones
+- documento principal
+- medida preventiva
+- acto administrativo
+- notificación del acto
+- anexo
+- constancia
 
 ---
 
-## Criterio de compactación
+## Idea clave
 
-`Documento` debe mantenerse como entidad documental principal.
+El sistema no gestiona “archivos sueltos”.
 
-Cuando crezcan demasiado los detalles de archivo, firma, versiones, observaciones o integración, deben separarse en anexos o entidades auxiliares en lugar de sobrecargar la tabla principal.
+Gestiona documentos lógicos del expediente, cuyo soporte material se resuelve por storage desacoplado y cuya firma se integra externamente cuando corresponde.

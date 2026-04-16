@@ -6,6 +6,8 @@ Este archivo resume las bandejas operativas vigentes del sistema de faltas.
 
 Las bandejas deben entenderse como **bandejas de expedientes / actas** según su situación documental y procesal actual.
 
+La ubicación operativa de cada expediente en estas bandejas debe poder proyectarse en `ActaSnapshot` mediante código de bandeja, visibilidad operativa y estado procesal actual.
+
 El expediente permanece en su bandeja actual mientras falten documentos o condiciones necesarias para avanzar.  
 Cuando el conjunto documental o material requerido queda completo, el sistema habilita la acción de pase a la siguiente bandeja operativa que corresponda.
 
@@ -81,14 +83,12 @@ Archivo relacionado:
 
 Concentra todo el proceso transversal de notificación.
 
-Aplica a cualquier pieza notificable:
+Aplica a cualquier pieza notificable del expediente, por ejemplo:
 - acta
 - medida preventiva
-- resolución
+- acto administrativo
 - fallo
-- sentencia
-- liberación
-- otra pieza
+- otra pieza documental formal que requiera notificación
 
 Archivo relacionado:
 - [07-bandeja-notificaciones.md](07-bandeja-notificaciones.md)

@@ -150,6 +150,9 @@ El snapshot operativo debe reflejar, al menos:
 - si existen medidas activas
 - si existen pendientes materiales
 - si ya puede pasar a cerrada
+- bandejas
+- bloqueo de cierre
+- visibilidad rápida
 
 La UI debe poder explicar rápidamente por qué un expediente no puede cerrarse.
 

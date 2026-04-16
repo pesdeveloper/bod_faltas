@@ -1,0 +1,87 @@
+erDiagram
+    Dependencia ||--o{ DependenciaVersion : versiona
+    Inspector ||--o{ InspectorVersion : versiona
+    Dependencia ||--o{ InspectorVersion : contiene
+    Alcoholimetro ||--o{ AlcoholimetroVersion : versiona
+    RubroCom ||--o{ RubroComVersion : versiona
+    MedidaPreventiva ||--o{ ActaMedidaPreventiva : aplicada_en
+
+    Dependencia {
+        INT IdDep PK
+        INT IdDepPadre
+        SMALLINT SiActiva
+    }
+
+    DependenciaVersion {
+        INT IdDep FK
+        SMALLINT VerDep PK
+        VARCHAR120 NomDep
+        SMALLINT SiActiva
+        DATETIME FhVigDesde
+        DATETIME FhVigHasta
+    }
+
+    Inspector {
+        INT IdInsp PK
+        INT IdUsuarioExt
+        SMALLINT SiActivo
+    }
+
+    InspectorVersion {
+        INT IdInsp FK
+        SMALLINT VerInsp PK
+        INT IdDep
+        SMALLINT VerDep
+        VARCHAR120 NomInsp
+        INT Legajo
+        SMALLINT SiActivo
+        DATETIME FhVigDesde
+        DATETIME FhVigHasta
+    }
+
+    Alcoholimetro {
+        INT IdAlcoholimetro PK
+        VARCHAR20 CodAlcoholimetro
+        VARCHAR64 NroSerie
+        SMALLINT SiDeshabilitado
+        SMALLINT SiActivo
+    }
+
+    AlcoholimetroVersion {
+        INT IdAlcoholimetro FK
+        SMALLINT VerAlcoholimetro PK
+        VARCHAR20 CodAlcoholimetro
+        VARCHAR64 NroSerie
+        VARCHAR64 Marca
+        VARCHAR64 Modelo
+        SMALLINT SiDeshabilitado
+        VARCHAR255 ObsDeshabilitado
+        SMALLINT SiActivo
+        DATETIME FhVigDesde
+        DATETIME FhVigHasta
+    }
+
+    RubroCom {
+        SMALLINT IdRub PK
+        CHAR64 NomRub
+        SMALLINT SiDeshabilitado
+    }
+
+    RubroComVersion {
+        SMALLINT IdRub FK
+        SMALLINT VerRub PK
+        CHAR64 NomRub
+        SMALLINT SiDeshabilitado
+        DATETIME FhVigDesde
+        DATETIME FhVigHasta
+    }
+
+    MedidaPreventiva {
+        INT IdMedPrev PK
+        SMALLINT VerMedPrev
+        INT IdDep
+        SMALLINT VerDep
+        VARCHAR120 NomMedPrev
+        VARCHAR255 DescMedPrev
+        SMALLINT SiActiva
+    }

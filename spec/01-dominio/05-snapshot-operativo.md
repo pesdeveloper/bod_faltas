@@ -48,6 +48,17 @@ El snapshot debe resumir, al menos, estas dimensiones del expediente:
 - medidas preventivas
 - pendientes materiales de liberación o restitución
 - condiciones de archivo o cierre
+- si el expediente tiene notificación de acta
+- si tiene notificación de medida preventiva
+- si tiene notificación de fallo o acto administrativo
+- si alguna de esas notificaciones está en proceso o con acuse pendiente
+- cantidad de reintentos de notificación
+- si tiene solicitud de pago voluntario
+- si tiene pago total
+- si tiene plan de pagos, cantidad de cuotas y valor de cuota
+- si está en gestión externa, su tipo y resultado resumido
+- plazos operativos relevantes, como presentación, apelación o derivación
+- fecha del acta, dependencia e inspector para filtros rápidos
 
 ---
 

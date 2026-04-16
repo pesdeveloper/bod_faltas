@@ -21,6 +21,8 @@ El sistema de faltas:
 - reacciona al resultado de firma
 - actualiza estado documental y situación operativa del expediente
 
+La trazabilidad persistida de firma debe ser mínima y suficiente para el dominio, priorizando el registro de que el documento fue firmado, cuándo y por qué usuario se produjo la firma, sin necesidad de modelar detalle innecesario del sistema externo.
+
 ---
 
 ## Alcance dentro del repo de faltas
@@ -88,6 +90,8 @@ Cuando un documento del expediente pasa a firmado, el sistema de faltas debe pod
 - recalcular o actualizar snapshot
 - habilitar el próximo paso operativo, si corresponde
 - mover visibilidad del expediente a la bandeja siguiente cuando aplique
+
+El resultado de la firma debe impactar sobre el documento vigente, reemplazando el archivo previo no firmado cuando corresponda.
 
 ---
 

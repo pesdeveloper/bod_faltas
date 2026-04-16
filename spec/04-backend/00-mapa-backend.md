@@ -30,6 +30,7 @@ Las distintas superficies operativas consumen un backend común, con responsabil
 - **Gestión de snapshot**: construcción y exposición de proyección operativa actual.
 - **Gestión de bandejas**: listados, filtros e indicadores operativos apoyados en snapshot.
 - **Gestión externa**: derivaciones, resultados externos y reingreso con efecto material.
+- **Resolución de storage documental**: determinación de backend, construcción de rutas y acceso desacoplado por `StorageKey`.
 
 ---
 
@@ -53,7 +54,7 @@ El backend actúa como punto de integración con sistemas externos relevantes, p
 - motor de firma
 - mecanismos de notificación
 - gestión externa
-- storage documental
+- backend o infraestructura de storage documental
 - autenticación y roles
 
 Estas integraciones no deben contaminar el núcleo del dominio con detalles técnicos innecesarios.

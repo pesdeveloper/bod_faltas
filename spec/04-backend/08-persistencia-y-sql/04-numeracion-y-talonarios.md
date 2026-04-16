@@ -2,13 +2,13 @@
 
 ## Finalidad
 
-Este archivo define cómo se persisten talonarios, políticas de numeración y control de numeración visible para actas, documentos y demás objetos numerables.
+Este archivo define criterios de persistencia y SQL para la numeración visible y el uso de talonarios en el sistema.
 
 ---
 
 ## Regla base
 
-La numeración visible debe persistirse separada de:
+La numeración visible pertenece al contexto administrativo de numeración y no reemplaza:
 
 - identidad interna
 - identidad técnica, si existe
@@ -25,7 +25,7 @@ Debe existir al menos:
 - `Talonario`
 - una entidad o mecanismo equivalente para política de numeración
 - una entidad o mecanismo equivalente para asignación de talonarios, si corresponde
-- estructuras auxiliares de control, reserva o correlativo, si el diseño final lo requiere
+- una estructura de movimiento o estado del número manual, cuando el proceso lo requiera
 
 ---
 
@@ -37,7 +37,7 @@ Debe existir al menos:
 - Un objeto puede pre-numerarse.
 - Un objeto puede numerarse al firmar.
 - La numeración puede responder a circuito automático o manual/preimpreso.
-- La persistencia debe contemplar numeración por unidad o por rangos, si el proceso lo requiere.
+- La política de numeración debe definirse por componentes habilitados, como prefijo, año, serie y número, con separadores controlados entre componentes, evitando máscaras libres difíciles de validar y mantener.
 
 ---
 
@@ -48,6 +48,20 @@ Para actas:
 - el número visible puede depender de talonarios asociados a dependencias
 - el talonario no debe depender del inspector como titular
 - el inspector participa del expediente, no de la titularidad del talonario
+
+---
+
+## Talonarios globales y por dependencia
+
+Los talonarios no deben asumirse siempre como dependientes de una dependencia.
+
+Pueden existir talonarios globales para otros objetos numerables, mientras que para actas la asignación a dependencia sigue siendo la regla principal.
+
+---
+
+## Numeración manual física
+
+En talonarios manuales físicos, el estado de cada número debe quedar trazado mediante `TalonarioMovimiento`, sin necesidad de una tabla separada de anulados si el estado ya queda resuelto allí.
 
 ---
 

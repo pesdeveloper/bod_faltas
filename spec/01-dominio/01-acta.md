@@ -20,6 +20,8 @@ Es el objeto central alrededor del cual el sistema registra:
 - las notificaciones emitidas y sus resultados
 - las medidas y liberaciones vinculadas
 - las actuaciones y presentaciones que impactan en su evolución
+- la ubicación territorial del hecho, incluyendo coordenadas GPS cuando existan
+- las evidencias digitales asociadas al acta, como fotos, video, audio u otros adjuntos
 
 El sistema no se organiza alrededor de una multa aislada ni de un documento aislado, sino alrededor del expediente cuyo eje es el Acta.
 
@@ -108,3 +110,4 @@ El Acta se relaciona conceptualmente con:
 - Dependencia, como ámbito organizacional competente y como fuente de contexto operativo inicial del expediente
 - Inspector, como actor interviniente en el labrado o actuación sobre el acta, asignado a una dependencia
 - Talonarios de actas, como mecanismo de numeración administrativa visible cuando la operatoria lo requiera
+- Evidencias del acta, como soporte material adicional del expediente

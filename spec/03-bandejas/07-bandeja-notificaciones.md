@@ -8,11 +8,14 @@ No se separa por tipo de documento en múltiples bandejas distintas.
 
 La misma bandeja permite tratar la notificación de cualquier pieza notificable del expediente.
 
+En el modelo actual del sistema, la notificación siempre recae sobre un documento del expediente y cada intento se dirige a un único destino efectivo, cuyo canal y resultado deben quedar trazados.
+
 ---
 
 ## Qué contiene
 
 Contiene expedientes con una o más piezas dentro del proceso de notificación.
+
 
 Puede incluir, entre otras:
 

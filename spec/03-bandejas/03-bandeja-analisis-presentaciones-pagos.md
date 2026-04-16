@@ -19,6 +19,8 @@ Contiene expedientes que presentan una o más situaciones como estas:
 - antecedentes o novedades incorporadas
 - actuación que exige decidir el siguiente paso material del expediente
 
+También puede concentrar situaciones con impacto económico u operativo proyectable en snapshot, como solicitud de pago voluntario, existencia de plan de pagos o reingreso para nuevo análisis.
+
 ---
 
 ## Qué no contiene
@@ -80,8 +82,7 @@ La salida de esta bandeja se habilita cuando el análisis material ya permitió 
 
 La salida no es única. Depende del resultado del análisis.
 
-Destinos típicos:
-
+### Destinos típicos
 - pendientes de resolución / redacción
 - pendientes de fallo
 - pendientes de firma

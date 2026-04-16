@@ -2,25 +2,22 @@
 
 ## Finalidad
 
-Este archivo resume los servicios de backend vinculados a la gestión externa del expediente.
+Este archivo define las responsabilidades del backend respecto de la gestión externa del expediente.
 
-Su objetivo es identificar las responsabilidades del backend respecto de la derivación, seguimiento, resultado y reingreso de expedientes que salen del circuito interno principal hacia una gestión externa formal.
-
-No define todavía endpoints, DTOs ni contratos técnicos detallados.
+Su objetivo es dejar claro cómo se trata la derivación externa, su resultado y el eventual reingreso del expediente al circuito interno.
 
 ---
 
 ## Regla principal
 
-La gestión externa no debe modelarse como una simple salida definitiva del expediente.
+La gestión externa es una salida controlada del expediente hacia un circuito u organismo externo, sin pérdida de identidad ni historia.
 
-El backend debe permitir:
+El backend debe poder:
 
-- registrar la derivación externa
-- mantener trazabilidad de esa derivación
-- registrar resultados o actuaciones externas
-- reingresar el expediente cuando el resultado externo tenga efecto material
-- actualizar la situación operativa del expediente según corresponda
+- registrar la derivación
+- reflejar el estado externo relevante
+- registrar el resultado resumido
+- procesar el eventual reingreso
 
 ---
 
@@ -28,163 +25,59 @@ El backend debe permitir:
 
 Este bloque debe permitir, al menos:
 
-- derivar un expediente a gestión externa
-- registrar destino externo
-- consultar situación externa general
-- registrar actuaciones o resultados externos
-- coordinar reingreso al circuito interno
-- impactar en snapshot, bandejas y situación operativa del expediente
+- registrar envío o derivación externa
+- identificar el tipo de gestión externa
+- registrar resultado resumido
+- registrar reingreso posterior
+- impactar sobre snapshot y bandejas
 
 ---
 
 ## Responsabilidades principales
 
-### 1. Registro de derivación externa
-Debe permitir dejar constancia de que el expediente fue derivado formalmente a una gestión externa.
+### 1. Derivación externa
+Debe permitir dejar trazado:
 
-Esto incluye, según corresponda:
+- que el expediente salió a gestión externa
+- qué tipo de gestión externa corresponde
+- cuándo ocurrió
+- qué efecto tiene en la situación operativa
 
-- destino externo general
-- fecha o momento de derivación
-- contexto mínimo de la salida
-- trazabilidad suficiente
+### 2. Resultado externo
+Debe permitir reflejar:
 
----
+- si la gestión sigue pendiente
+- si está en trámite
+- si finalizó
+- si no produjo resultado
+- si derivó en reingreso
 
-### 2. Consulta de situación externa
-Debe permitir conocer, al menos:
+### 3. Reingreso
+Debe permitir:
 
-- si el expediente está en gestión externa
-- cuál es el destino externo general
-- si existen actuaciones o resultados registrados
-- si el expediente sigue en espera o ya quedó listo para reingreso, archivo o cierre
-
----
-
-### 3. Registro de resultados externos
-Debe permitir registrar hechos relevantes provenientes del circuito externo, por ejemplo:
-
-- resultado sin novedad
-- necesidad de reingreso
-- necesidad de nuevo fallo
-- rectificación o modificación
-- pago externo
-- cierre externo
-- otra actuación externa con efecto material
+- registrar reingreso desde gestión externa
+- mantener la identidad del expediente
+- conservar historia previa
+- recalcular snapshot y bandeja correspondiente
 
 ---
 
-### 4. Reingreso al circuito interno
-Debe permitir reencauzar el expediente cuando el resultado externo produzca efectos que obliguen a volver al circuito interno.
+## Relación con snapshot
 
-Destinos típicos de reingreso:
-
-- análisis / presentaciones / pagos
-- pendientes de fallo
-- archivo
-- cerrada
-- otra bandeja, según la nueva situación real del expediente
-
----
-
-### 5. Impacto sobre expediente y snapshot
-Debe permitir que la gestión externa modifique la situación operativa del expediente cuando corresponda.
-
-Por ejemplo, para:
-
-- dejar visible el expediente en gestión externa
-- habilitar reingreso
-- cambiar bloqueos o condición final
-- actualizar snapshot y bandejas
+Los efectos de la gestión externa deben proyectarse operativamente en snapshot, permitiendo conocer si el expediente está o estuvo en gestión externa, su tipo, su resultado resumido y si existió reingreso posterior.
 
 ---
 
 ## Qué no debe hacer
 
-Este bloque no debe absorber de forma innecesaria:
+Este bloque no debe absorber:
 
-- la lógica completa del organismo externo
-- el proceso interno detallado de apremios
-- el proceso interno detallado del Juzgado de Paz
-- decisiones jurídicas o administrativas ajenas al sistema de faltas
-- integraciones técnicas de bajo nivel que no impacten en el expediente
-
-Debe registrar y administrar el efecto externo sobre el expediente, no reemplazar el sistema externo.
-
----
-
-## Relación con otros servicios
-
-### Con servicios de expediente
-La gestión externa modifica la situación del expediente, pero la coordinación general del caso sigue viviendo en el bloque de expediente.
-
-### Con servicios de snapshot
-La derivación y los resultados externos impactan en snapshot porque cambian bandeja, visibilidad y próximo paso.
-
-### Con servicios documentales
-La gestión externa puede incorporar documentos o constancias externas relevantes, pero el tratamiento documental sigue perteneciendo al bloque documental.
-
-### Con servicios de notificación
-Puede existir una secuencia donde una notificación válida habilite luego una derivación externa o donde un resultado externo genere nuevas necesidades de notificación.
-
----
-
-## Operaciones conceptuales típicas
-
-Este bloque debería poder sostener operaciones conceptuales como:
-
-- derivar expediente a gestión externa
-- registrar destino externo
-- consultar estado externo general
-- registrar resultado externo
-- registrar actuación externa
-- reingresar expediente
-- enviar a archivo
-- enviar a cerrada
-
-No implica que estas operaciones deban exponerse una a una como endpoints directos.
-
----
-
-## Relación con bandejas
-
-Este bloque se relaciona especialmente con:
-
-- bandeja de gestión externa
-- pendientes de fallo, si el resultado exige nueva decisión
-- análisis, si el resultado requiere evaluación material
-- archivo, si el expediente quedó resuelto pero no cerrable
-- cerrada, si ya cumple completamente las reglas de cierre
-
----
-
-## Relación con la UI
-
-La UI debe poder usar este bloque para:
-
-- ver a qué destino externo fue derivado el expediente
-- saber si existe resultado externo
-- entender si el expediente debe reingresar
-- identificar si quedó listo para archivo o cierre
-- registrar o consultar actuaciones externas relevantes
+- la lógica completa del sistema externo
+- modelado detallado del organismo tercero
+- reconstrucción técnica del circuito externo más allá de lo que impacta en el expediente
 
 ---
 
 ## Idea clave
 
-La gestión externa no saca al expediente del sistema.
-
-Lo mantiene trazable y listo para producir efectos materiales sobre su situación operativa, incluyendo reingreso cuando corresponda.
-
----
-
-## Archivos relacionados
-
-- [Mapa backend](00-mapa-backend.md)
-- [Servicios de expediente](01-servicios-de-expediente.md)
-- [Servicios de snapshot](05-servicios-de-snapshot.md)
-- [Bandeja de gestión externa](../03-bandejas/09-bandeja-gestion-externa.md)
-- [Bandeja de pendientes de fallo](../03-bandejas/05-bandeja-pendientes-fallo.md)
-- [Bandeja de archivo](../03-bandejas/11-bandeja-archivo.md)
-- [Bandeja de cerradas](../03-bandejas/12-bandeja-cerradas.md)
-- [Reglas de cierre y archivo](../02-reglas-transversales/03-reglas-de-cierre-y-archivo.md)
+La gestión externa debe tratarse como una dimensión operativa trazable del expediente, con impacto claro en estado, snapshot, bandeja y reingreso.

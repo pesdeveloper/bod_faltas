@@ -50,6 +50,8 @@ Debe permitir:
 - recuperar expediente por identificador
 - exponer datos mínimos de contexto
 - soportar lectura resumida y lectura detallada
+- ubicación GPS
+- evidencias
 
 ---
 
@@ -61,6 +63,10 @@ Debe permitir conocer, al menos:
 - bloqueos relevantes
 - próximos pasos habilitados
 - relaciones con snapshot y documentación del expediente
+- estado resumido de notificaciones relevantes
+- existencia de gestión externa y su resultado resumido
+- situación económica operativa proyectada, como pago total o plan de pagos si aplica
+- plazos operativos relevantes proyectados
 
 ---
 
@@ -204,15 +210,4 @@ Cada superficie consumirá un recorte distinto, pero el centro sigue siendo el e
 
 El backend no se organiza alrededor de documentos aislados ni de tareas sueltas.
 
-Se organiza alrededor del expediente y de los servicios que reflejan o modifican su situación operativa.
-
----
-
-## Archivos relacionados
-
-- [Mapa backend](00-mapa-backend.md)
-- [Mapa de dominio](../01-dominio/00-mapa-dominio.md)
-- [Snapshot operativo](../01-dominio/05-snapshot-operativo.md)
-- [Índice maestro de bandejas](../03-bandejas/00-indice-maestro-bandejas.md)
-- [Servicios documentales](02-servicios-documentales.md)
-- [Servicios de snapshot](05-servicios-de-snapshot.md)
+Se organiza alrededor del expediente como unidad de gestión y trazabilidad, coordinando desde allí el resto de las piezas del sistema.

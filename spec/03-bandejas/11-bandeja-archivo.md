@@ -115,6 +115,8 @@ Archivo se relaciona especialmente con situaciones como:
 
 Mientras esas situaciones subsistan, el expediente no debe pasar a cerrada.
 
+La permanencia en archivo puede depender también de pendientes materiales formalmente identificados, cuyo efecto debe ser visible en snapshot cuando bloqueen el pase a cerrada.
+
 ---
 
 ## Relación con snapshot

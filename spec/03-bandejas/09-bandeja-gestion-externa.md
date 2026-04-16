@@ -105,6 +105,8 @@ El sistema debe contemplar reingreso cuando el resultado externo produzca efecto
 
 ## Relación con snapshot
 
+El snapshot operativo debe permitir identificar si el expediente está en gestión externa, de qué tipo es esa gestión, si existió reingreso desde ella y cuál es su resultado resumido actual.
+
 El snapshot debe permitir identificar, al menos:
 
 - que el expediente está en gestión externa

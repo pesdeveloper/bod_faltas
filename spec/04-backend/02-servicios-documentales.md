@@ -2,21 +2,27 @@
 
 ## Finalidad
 
-Este archivo resume los servicios de backend centrados en la gestión documental del expediente.
+Este archivo define las responsabilidades del backend vinculadas al bloque documental del sistema.
 
-Su objetivo es identificar las responsabilidades principales del bloque documental dentro del backend compartido del sistema de faltas.
-
-No define todavía endpoints, DTOs ni firmas técnicas concretas.
+Su objetivo es dejar claro qué debe resolver el backend respecto de producción, estado y consulta de documentos del expediente, sin confundir documento lógico con almacenamiento físico ni con el motor de firma.
 
 ---
 
 ## Regla principal
 
-El sistema de faltas se comporta como un gestor documental orientado al expediente.
+El backend documental debe tratar al documento como una entidad lógica del expediente.
 
-Por lo tanto, el bloque documental no es accesorio: es una de las piezas centrales del backend.
+Debe poder resolver:
 
-Su responsabilidad es administrar las piezas documentales del expediente y su situación operativa.
+- su generación
+- su numeración cuando corresponda
+- su estado documental
+- su relación con el expediente
+- su referencia técnica de almacenamiento mediante `StorageKey`
+
+El archivo firmado reemplaza al archivo previo no firmado dentro del storage documental principal.
+
+La gestión documental no requiere conservar simultáneamente múltiples versiones materiales del mismo documento dentro del circuito operativo estándar.
 
 ---
 
@@ -25,181 +31,103 @@ Su responsabilidad es administrar las piezas documentales del expediente y su si
 Este bloque debe permitir, al menos:
 
 - generar documentos del expediente
-- recuperar documentos existentes
-- relacionar documentos con el expediente
-- administrar estado documental
-- distinguir documentos que requieren firma o notificación
-- exponer trazabilidad documental suficiente
-- soportar lectura documental para web y apps del ecosistema
+- consultar documentos existentes
+- conocer su estado documental
+- vincular documentos con el expediente
+- resolver si requieren firma
+- persistir su referencia de storage
+- exponer contexto documental para otras capas del backend
 
 ---
 
 ## Responsabilidades principales
 
-### 1. Generación documental
-Debe permitir producir piezas documentales del expediente, por ejemplo:
-
-- acta
-- resolución
-- fallo
-- medida preventiva
-- documento de notificación
-- documento de liberación
-- otras piezas administrativas
-
-La generación documental debe impactar en la situación operativa del expediente.
-
----
-
-### 2. Gestión de estado documental
-Debe permitir conocer y administrar, al menos:
-
-- documento generado
-- pendiente de firma
-- firmado
-- pendiente de notificación
-- en notificación
-- notificado
-- observado
-- anulado
-- reemplazado
-
-El listado definitivo se alinea con el catálogo documental vigente.
-
----
-
-### 3. Asociación entre expediente y documento
-Debe permitir que cada documento quede correctamente vinculado al expediente y a su contexto operativo.
-
-Esto incluye, según corresponda:
-
-- tipo documental
-- estado
-- relación con medidas, fallo o notificación
-- origen o motivo documental
-- trazabilidad suficiente
-
----
-
-### 4. Consulta documental
+### 1. Producción documental
 Debe permitir:
 
-- obtener documentos de un expediente
-- listar documentos por situación
-- identificar piezas pendientes
-- recuperar metadata documental relevante
-- soportar lectura resumida y detallada
+- generar el documento lógico
+- registrar tipo documental
+- registrar estado documental
+- vincularlo al expediente
+- dejar preparado el documento para numeración o firma si corresponde
 
 ---
 
-### 5. Efecto documental sobre el expediente
-Debe exponer o provocar cambios que impacten en el expediente cuando ocurran hechos como:
+### 2. Relación con numeración
+La numeración documental debe resolverse mediante:
 
-- documento generado
-- documento firmado
-- documento observado
-- documento anulado
-- documento listo para notificación
-- documento reemplazado
+- talonario, cuando corresponda
+- política de numeración aplicable al talonario
 
-El documento no debe tratarse como archivo aislado, sino como pieza con efecto operativo.
+La lógica de numeración no debe quedar embebida dentro del documento como política propia.
+
+---
+
+### 3. Relación con storage
+El documento no debe quedar acoplado a una ruta física.
+
+Debe resolverse mediante:
+
+- `StorageKey`
+- backend de storage
+- metadata técnica asociada
+
+El backend documental debe trabajar con referencia desacoplada y no con paths absolutos embebidos en la lógica de dominio.
+
+---
+
+### 4. Estado documental
+Debe permitir conocer, por ejemplo:
+
+- si el documento está en borrador
+- si fue generado
+- si está pendiente de firma
+- si fue firmado
+- si fue incorporado firmado
+- si fue anulado
+
+---
+
+### 5. Consulta documental
+Debe permitir:
+
+- recuperar documentos de un expediente
+- conocer el rol del documento en el expediente
+- identificar documento principal o accesorio
+- consultar metadata documental mínima
 
 ---
 
 ## Qué no debe hacer
 
-Este bloque no debe absorber de forma innecesaria la lógica detallada de:
+Este bloque no debe absorber de forma innecesaria:
 
-- motor de firma externo
-- canales concretos de notificación
-- cálculo completo de snapshot
-- storage físico detallado
-- agenda operativa de notificador
-- gestión externa del expediente
-
-Debe coordinar con esos bloques, no reemplazarlos.
+- la lógica de firma externa
+- la lógica de notificación por canal
+- la lógica de snapshot
+- la lógica de bandejas
+- la resolución física final del archivo más allá de la referencia por `StorageKey`
 
 ---
 
 ## Relación con otros servicios
 
-### Con servicios de expediente
-Los documentos pertenecen al expediente y modifican su situación, pero la coordinación general del caso vive en el bloque de expediente.
+### Con expediente
+El documento siempre forma parte del expediente y debe quedar ligado a su contexto operativo.
 
-### Con servicios de firma
-Un documento puede requerir firma, pero la firma real se resuelve mediante integración externa o sandbox.
+### Con firma
+El backend documental debe exponer qué documento requiere firma y actualizar su estado según el resultado recibido, sin reemplazar el motor de firma.
 
-### Con servicios de notificación
-Un documento puede convertirse en pieza notificable, pero la lógica de notificación vive en su bloque específico.
+### Con notificación
+El backend documental provee el documento notificable, pero la notificación pertenece a su propio bloque transversal.
 
-### Con servicios de snapshot
-El estado documental impacta en snapshot, pero el snapshot sigue siendo derivado.
-
-### Con storage documental
-El bloque documental necesita acceso a metadata y ubicación lógica, pero no debería acoplarse al storage físico.
-
----
-
-## Operaciones conceptuales típicas
-
-Este bloque debería poder sostener operaciones conceptuales como:
-
-- generar documento
-- obtener documento
-- listar documentos por expediente
-- cambiar estado documental
-- marcar documento como pendiente de firma
-- marcar documento como firmado
-- marcar documento como pendiente de notificación
-- marcar documento como notificado
-- anular o reemplazar documento
-- consultar documentos pendientes
-
-No implica que estas operaciones deban exponerse una a una como endpoints directos.
-
----
-
-## Relación con UI
-
-La UI del sistema debe poder usar este bloque para:
-
-- ver documentos de un expediente
-- identificar qué documentos existen
-- saber cuáles están pendientes de firma
-- saber cuáles están pendientes de notificación
-- distinguir documentos activos, observados, anulados o reemplazados
-- navegar el estado documental del expediente
-
----
-
-## Relación con snapshot y bandejas
-
-El bloque documental es uno de los principales proveedores de información para:
-
-- pendientes de firma
-- notificaciones
-- archivo
-- cierre
-- badges e indicadores del expediente
-
-No todas estas reglas viven en el bloque documental, pero su estado es clave para el cálculo operativo.
+### Con storage
+El backend documental debe apoyarse en el bloque de storage para ubicar físicamente el archivo, sin modelar el storage como parte del documento lógico.
 
 ---
 
 ## Idea clave
 
-En este sistema, un documento no es solo un archivo almacenado.
+El sistema no gestiona “archivos sueltos”.
 
-Es una pieza del expediente con efecto real sobre su situación operativa.
-
----
-
-## Archivos relacionados
-
-- [Mapa backend](00-mapa-backend.md)
-- [Servicios de expediente](01-servicios-de-expediente.md)
-- [Servicios de firma](03-servicios-de-firma.md)
-- [Servicios de notificación](04-servicios-de-notificacion.md)
-- [Mapa de dominio](../01-dominio/00-mapa-dominio.md)
-- [Catálogos y estados](../01-dominio/07-catalogos-y-estados.md)
-- [Integración de storage documental](../09-integraciones/04-integracion-storage-documental.md)
+Gestiona documentos lógicos del expediente, cuyo soporte material se resuelve técnicamente por storage desacoplado y cuya firma se integra con un servicio externo cuando corresponde.

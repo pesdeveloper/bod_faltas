@@ -117,6 +117,8 @@ Un expediente no debe entrar a cerrada mientras existan, por ejemplo:
 
 Esto debe estar alineado con snapshot y reglas de cierre.
 
+La inexistencia de pendientes materiales relevantes forma parte de la condición real de cierre, no solo de la situación documental o económica del expediente.
+
 ---
 
 ## Relación con snapshot

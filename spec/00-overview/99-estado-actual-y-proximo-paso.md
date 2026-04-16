@@ -4,7 +4,7 @@
 
 El trabajo está concentrado en la consolidación del bloque `spec/13-ddl/` del repo multiproyecto del sistema de faltas municipal.
 
-Ya no estamos discutiendo fundamentos del dominio ni del backend.  
+Ya no estamos discutiendo fundamentos del dominio ni del backend.
 El foco actual es bajar correctamente el modelo a DDL físico, manteniendo consistencia con lo ya cerrado en:
 
 - overview
@@ -27,6 +27,10 @@ Ya quedaron trabajados y bastante alineados:
 - `spec/13-ddl/04-tablas-acta-y-satelites.md`
 - `spec/13-ddl/05-tablas-talonarios-y-numeracion.md`
 - `spec/13-ddl/06-tablas-equipos-y-catalogos-operativos.md`
+- `spec/13-ddl/07-tablas-documentales.md`
+- `spec/13-ddl/08-tablas-notificacion.md`
+- `spec/13-ddl/09-tablas-snapshot-auxiliares-y-proyecciones.md`
+- `spec/13-ddl/10-tablas-storage-documental.md`
 
 Además, se definió una convención transversal de nomenclatura que debe vivir en:
 
@@ -48,16 +52,16 @@ Se acordó una regla general para todo el proyecto:
   - **prefijo + concepto + contexto**
 
 #### Prefijos estándar
-- `Id` = identificador
-- `Ver` = versión
-- `Fh` = fecha/hora
-- `Si` = flag booleano lógico
-- `Nro` = número visible o administrativo
-- `Obs` = observación
-- `Cant` = cantidad
-- `Cod` = código
-- `Nom` = nombre
-- `Desc` = descripción
+- `Id`
+- `Ver`
+- `Fh`
+- `Si`
+- `Nro`
+- `Obs`
+- `Cant`
+- `Cod`
+- `Nom`
+- `Desc`
 
 #### Contextos aceptados
 - `Infr` = infracción
@@ -65,7 +69,7 @@ Se acordó una regla general para todo el proyecto:
 - `Info` = información
 
 #### Regla adicional
-Si un campo no encaja exactamente en la convención:
+Si un campo no encaja exactamente:
 - nombrarlo corto
 - con criterio
 - sin perder significado
@@ -96,21 +100,26 @@ Quedó firme que:
 - se habilita domicilio textual solo como excepción controlada
 - `SiEjeUrb` puede persistirse como dato derivado
 - `ObsActa` es texto propio del acta, no auditoría interna
+- faltaba incorporar GPS y se acordó agregar:
+  - `LatInfr`
+  - `LonInfr`
 
 ### ActaSnapshot
 Quedó firme que:
 
-- es 1:1 con `Acta`
+- existe **una sola definición canónica** de `ActaSnapshot`
+- esa definición debe vivir en `09-tablas-snapshot-auxiliares-y-proyecciones.md`
+- no debe quedar duplicada en `02`
 - es derivado y regenerable
 - no es fuente primaria de verdad
-- `FhUltMod` e `IdUserUltMod` se guardan acá, no en `Acta`
+- debe ser simple, directo y orientado a operación, bandejas, plazos, pagos y gestión externa
 
 ### ActaEvento
 Quedó firme que:
 
 - es append-only
 - no lleva texto libre embebido
-- las observaciones operativas van a tabla transversal `Observacion`
+- las observaciones operativas van a `Observacion`
 
 ### Observacion
 Quedó firme que:
@@ -122,7 +131,7 @@ Quedó firme que:
 
 ---
 
-## Estado de referenciales/versionado
+## Referenciales/versionado
 
 ### Dependencia
 Quedó firme:
@@ -130,72 +139,62 @@ Quedó firme:
 - existe tabla base `Dependencia`
 - existe tabla histórica `DependenciaVersion`
 - debe poder reconstruirse organigrama histórico
-- la relación padre/hija forma parte del modelo
-- las referencias del acta deben guardar `IdDep + VerDep`
+- el acta guarda `IdDep + VerDep`
 
 ### Inspector
 Quedó firme:
 
-- `IdInsp` pasa a `INT`
+- `IdInsp` es `INT`
 - `VerInsp` se mantiene
-- el IdP no se modifica estructuralmente
 - el IdP emite claims construidos:
   - `InspectorId`
   - `InspectorVersion`
-- el versionado del inspector queda desacoplado del maestro de usuarios
 - el acta persiste `IdInsp + VerInsp`
-- existe:
-  - `Inspector`
-  - `InspectorVersion`
 
 ### Medida preventiva
 Quedó firme:
 
-- el catálogo se organiza por dependencia
-- existe:
-  - `MedidaPreventiva`
-- la aplicación concreta al acta se resuelve en:
-  - `ActaMedidaPreventiva`
+- catálogo por dependencia
+- existe `MedidaPreventiva`
+- la aplicación concreta se resuelve en `ActaMedidaPreventiva`
 
 ---
 
-## Estado de satélites del acta
+## Satélites del acta
 
 ### ActaVehiculo
 Quedó firme:
 
 - tabla separada reutilizable
 - sirve para tránsito y sustancias alimenticias
-- `TipoVehTxt` solo aplica si `TipoVeh = OTRO`
+- `TipoVehTxt` solo si `TipoVeh = OTRO`
 
 ### ActaTransito
 Quedó firme:
 
-- guarda resumen rápido de tránsito
-- alcoholemia detallada va en tabla aparte
+- guarda resumen rápido
+- alcoholemia detallada va aparte
 - el equipo usado se referencia por:
   - `IdAlcoholimetro`
   - `VerAlcoholimetro`
+- no debe duplicar datos del equipo si ya quedan congelados en `AlcoholimetroVersion`
 
 ### ActaTransitoAlcoholemia
 Quedó firme:
 
 - guarda mediciones
 - una debe poder marcarse como resultado final
-- la tabla no necesita duplicar datos completos del equipo
 
 ### ActaContravencion
-Corrección reciente ya aceptada:
+Quedó firme:
 
 - agregar:
   - `IdSuj SMALLINT`
   - `IdBie INT`
-- estos identifican el origen de la cuenta municipal consultada
 - la nomenclatura puede precargarse desde lookup maestro
-- el inspector puede corregir datos precargados si detecta inconsistencias
+- el inspector puede corregir datos precargados
 
 #### OrigenNomencl
-Queda así:
 - `1 = OBTENIDA_COMERCIO`
 - `2 = OBTENIDA_INMUEBLE`
 - `3 = INGRESADA_MANUAL_VALIDADA`
@@ -205,7 +204,15 @@ Quedó firme:
 
 - usa rubro y ámbito
 - no duplica estructura vehicular
-- vehículo se resuelve con `ActaVehiculo`
+
+### Evidencias
+Se detectó un faltante importante del DDL respecto del dominio:
+- faltaban las evidencias del acta digital
+
+Se acordó incorporar tabla satélite:
+- `ActaEvidencia`
+
+con storage por `StorageKey`, tipo de evidencia, hash, nombre lógico, orden y fecha de captura.
 
 ---
 
@@ -221,7 +228,7 @@ Quedó firme la separación entre:
 
 Y también que:
 
-- los artículos no deben quedar como texto plano en el satélite
+- los artículos no deben quedar como texto plano en satélites
 - el acta debe congelar la instancia aplicada
 - la auditoría de ajustes manuales no se mezcla con `Observacion`
 
@@ -229,54 +236,43 @@ Y también que:
 
 ## Talonarios y numeración
 
-Hoy quedó bastante avanzado el bloque de talonarios.
-
-### Tablas ya definidas
+### Tablas
 - `PoliticaNumeracion`
 - `Talonario`
 - `TalonarioDependencia`
 - `TalonarioInsp`
 - `TalonarioMovimiento`
 
-### Decisiones importantes
+### Decisiones clave
 - no usar máscara libre
-- la política se compone por partes:
+- la política se compone por componentes:
   - prefijo
   - año
   - serie
   - número
-- cada unión entre componentes puede tener separador distinto
-- talonarios pueden ser:
-  - globales
-  - de dependencia
-- asignación a inspector solo para manual físico
+- cada unión entre componentes puede tener separador distinto:
+  - `SepPrefAnio`
+  - `SepAnioSerie`
+  - `SepSerieNro`
+- `TipoTalonario`:
+  - `1 = ELECTRONICO`
+  - `2 = MANUAL_FISICO`
 - `TalonarioMovimiento` registra el estado de cada número manual
 - no hace falta:
   - `ActaManualAnulada`
   - `ActaOrigenNumeracion`
-
-### TipoTalonario
-- `1 = ELECTRONICO`
-- `2 = MANUAL_FISICO`
-
-### EstadoNro
-- `1 = USADO`
-- `2 = ANULADO`
-
-### Ajuste importante de `PoliticaNumeracion`
-No usar `SepNum` único.
-
-Deben existir:
-- `SepPrefAnio`
-- `SepAnioSerie`
-- `SepSerieNro`
+- los talonarios pueden ser:
+  - globales
+  - de dependencia
+- la asignación a inspector aplica solo a manual físico
+- un talonario bloqueado no puede usarse
+- `CodDesbloqueo` lo genera el sistema y el desbloqueo es por API específica
 
 ---
 
 ## Equipos y catálogos operativos
 
-Hoy también quedó abierto y bastante bien orientado el bloque:
-
+### Tablas
 - `Alcoholimetro`
 - `AlcoholimetroVersion`
 - `RubroCom`
@@ -285,15 +281,12 @@ Hoy también quedó abierto y bastante bien orientado el bloque:
 ### Alcoholímetro
 Quedó firme:
 
-- existe tabla de equipos
-- debe ser versionada
-- el equipo puede deshabilitarse
-- la deshabilitación debe documentarse
-- la UX mobile puede seleccionar el equipo en memoria temporal local o por QR
-- eso no se persiste como “estado operativo previo” en central
+- el equipo debe ser versionado
 - el acta referencia el equipo por:
   - `IdAlcoholimetro`
   - `VerAlcoholimetro`
+- la UX mobile puede seleccionar equipo localmente o por QR
+- la deshabilitación debe documentarse
 
 ### Rubros
 Quedó firme:
@@ -301,62 +294,180 @@ Quedó firme:
 - usar:
   - `RubroCom`
   - `RubroComVersion`
-- no usar nombre tipo snapshot para rubros
-- la versión existe para sostener `IdRub + VerRub` en el acta
 
 ---
 
-## Borrador / proceso / eventos
+## Documentales
 
-### EstadoProcesoActual
-Se aceptó incluir:
-- `0 = BORRADOR`
+### Tablas
+- `Documento`
+- `ActaDocumento`
+- `DocumentoFirma`
+- `DocumentoObservacion`
 
-### TipoEvt
-Se aceptó incluir:
-- `0 = ACTA_CREADA_EN_BORRADOR`
-- `1 = ACTA_LABRADA`
-- `2 = BORRADOR_DESCARTADO`
-
-### Regla conceptual
-- el flujo administrativo real empieza cuando el acta queda labrada
-- `BORRADOR` es un estado técnico previo y no contradice D1–D8
+### Decisiones clave
+- documento lógico separado del storage
+- storage desacoplado por `StorageKey`
+- numeración documental se resuelve por talonario si aplica
+- `IdPolNum` sobra en `Documento`
+- `SiFirmaDigital` y `SiFirmaOlografa` se reemplazan por:
+  - `TipoFirmaReq`
+- no se guarda archivo previo no firmado luego de firmar
+- el archivo firmado reemplaza al borrador
+- no hacen falta en `DocumentoFirma`:
+  - `FirmanteRef`
+  - `StorageKeyFirmado`
+  - `HashFirmado`
+  - `IdExternoFirma`
+  - `ResultadoFirma`
+- se usa:
+  - `IdUserFirma`
+- `HashDocu VARCHAR(128)` alcanza para hashes textuales habituales
 
 ---
 
-## Tema territorial / georreferenciación
+## Notificación
 
-Sigue siendo un tema activo y conectado al modelo.
+### Tablas
+- `Notificacion`
+- `NotificacionIntento`
+- `NotificacionAcuse`
+- `NotificacionObservacion`
 
-### Domicilio de infracción
-Se apoya en datos locales de Malvinas:
-- `IdTca`
-- `id_loc`
-- `id_bar`
-- `SiEjidoUrbano`
-- lookup por calle + altura
+### Decisiones clave
+- la notificación es transversal
+- siempre se notifica un documento
+- en este modelo toda notificación pertenece a una acta
+- `IdDocu` y `IdActa` deben ser obligatorios
+- `FhVencimiento` en `Notificacion` no tiene sentido y debe eliminarse
+- `NotificacionDestino` sobra y debe eliminarse
+- cada intento se envía a un único destino efectivo
+- `NotificacionIntento` debe guardar:
+  - `TipoDestNotif`
+  - `DestNotif`
+- `NotificacionAcuse` puede simplificarse eliminando:
+  - `CodAcuse`
+  - `RefExterna`
+- `StorageKeyAcuse` queda opcional
+- conviene tener en `Notificacion` un estado resumido de acuse:
+  - `EstadoAcuse`
 
-### Domicilio del infractor
-Se apoya en catálogos IGN/INDEC:
-- provincia `SMALLINT`
-- municipio `INT`
-- departamento `INT`
-- localidad `INT8`
-- localidad censal `INT8`
-- calle `INT8`
+---
+
+## Snapshot principal
+
+### Tabla
+- `ActaSnapshot`
+
+### Decisiones clave
+- reemplaza el enfoque de múltiples snapshots auxiliares
+- debe permitir ver rápidamente:
+  - bandeja
+  - proceso
+  - si tiene notificación de acta
+  - si tiene notificación de medida preventiva
+  - si tiene notificación de fallo/acto
+  - si alguna está en proceso o pendiente de acuse
+  - si hubo reintentos
+  - si tiene solicitud de pago voluntario
+  - monto exigible del acta
+  - si pagó totalmente
+  - si tiene plan de pagos
+  - cantidad de cuotas / valor cuota
+  - cantidad de caídas/refinanciaciones
+  - si está en gestión externa
+  - tipo de gestión externa
+  - si reingresó de gestión externa
+  - resultado de gestión externa
+  - plazos relevantes
+  - fecha del acta
+  - dependencia
+  - inspector
+
+### Decisiones eliminadas
+- `SnapshotJobControl` no aporta valor práctico y debe eliminarse
+- no se justifican snapshots territoriales auxiliares si esos datos ya están en `Acta`
+
+---
+
+## Storage documental
+
+### Tablas
+- `StorageBackend`
+- `StoragePolitica`
+- `StorageObjeto`
+
+### Decisiones clave
+- `StorageKey` debe tener bloque de storage real detrás
+- para esta versión se acepta un storage específico de faltas
+- la política debe soportar:
+  - disco local
+  - red
+  - S3
+  - Azure Blob
+- debe poder resolverse backend por:
+  - sistema
+  - familia
+  - tipo de objeto
+- si no existe política específica:
+  - usar política general del sistema
+  - si no existe, backend default
+
+### Política de distribución
+La ruta relativa recomendada es:
+
+`/{sistema}/{familia}/{tipo}/{anio}/{mes}/{bucket}/{ref_negocio}/{storage_key}.{ext}`
+
+### Criterios de diseño
+- evitar carpetas gigantes
+- distribución técnica por bucket
+- interpretabilidad humana razonable
+- si se tiene el número de acta debe poder inferirse razonablemente dónde buscar
+- no guardar binarios en base
+- el dominio guarda solo `StorageKey`
+- la migración de backend no debe obligar a cambiar el dominio
+
+---
+
+## Correcciones de consistencia detectadas en el zip
+
+Quedaron detectados tres ajustes reales:
+
+### 1) `02-tablas-nucleo-expediente.md`
+- eliminar completamente la definición de `ActaSnapshot`
+
+### 2) `09-tablas-snapshot-auxiliares-y-proyecciones.md`
+- dejar como definición canónica única de `ActaSnapshot`
+- eliminar `SnapshotJobControl` si todavía sigue
+
+### 3) `08-tablas-notificacion.md`
+- eliminar toda referencia residual a `NotificacionDestino`
+- corregir encabezado y criterios generales en consecuencia
+
+### 4) `01-convenciones-ddl-informix.md`
+- alinear la referencia textual y link con:
+  - `spec/00-overview/03-convenciones-de-nomenclatura.md`
 
 ---
 
 ## Próximo paso
 
-El siguiente paso lógico es **revisión de consistencia final** de los bloques ya armados y luego continuar con los bloques que faltan, probablemente en este orden:
+El siguiente paso lógico es:
 
-1. revisar consistencia entre `04`, `05` y `06`
-2. seguir con:
-   - documentales
-   - notificación
-   - snapshot auxiliares / apoyo si hiciera falta
-3. después:
+1. aplicar los parches puntuales ya identificados en:
+   - `01`
+   - `02`
+   - `08`
+   - `09`
+2. revisar consistencia global final entre:
+   - `04`
+   - `05`
+   - `06`
+   - `07`
+   - `08`
+   - `09`
+   - `10`
+3. después avanzar con:
    - diagrama relacional
    - SQL de creación
 

@@ -2,65 +2,45 @@
 
 ## Finalidad
 
-`Snapshot operativo` representa la proyección derivada de la situación actual del expediente para lectura rápida, operación y bandejas.
+`Snapshot operativo` representa la proyección resumida y regenerable del estado operativo actual del expediente.
 
-Su función es facilitar consultas operativas sin reemplazar al núcleo transaccional del sistema.
+Su función es permitir:
 
----
+- bandejas
+- filtros
+- búsqueda rápida
+- lectura resumida
+- decisiones operativas
+- estadísticas
 
-## Naturaleza del snapshot
-
-El snapshot es derivado y regenerable.
-
-No constituye fuente primaria de verdad.
-
-Debe poder explicarse a partir de:
-
-- `Acta`
-- `ActaEvento`
-- `Documento`
-- `Notificacion`
-- medidas, presentaciones y demás piezas relevantes del expediente
-
----
-
-## Tabla o proyección principal
-
-### `ActaSnapshot` o equivalente
-
-El modelo puede materializar un snapshot operativo por expediente cuando resulte útil para operación.
-
-Debe contener, como mínimo a nivel lógico:
-
-- referencia única a `Acta`
-- estado operativo actual proyectado
-- indicadores principales para bandejas y lectura rápida
-- referencias resumidas al contexto vigente del expediente
-- marcas de actualización o regeneración
-
-La forma física final podrá resolverse como tabla, vista materializada u otra estrategia equivalente.
+sin exigir reconstrucción completa del expediente en cada consulta rutinaria.
 
 ---
 
 ## Qué guarda
 
-El snapshot debe guardar solo información derivada útil para:
+El snapshot debe guardar solo información derivada útil para la operación actual, por ejemplo:
 
-- bandejas
-- filtros
-- búsqueda operativa
-- lectura rápida del estado actual
-- indicadores visibles de situación del expediente
-
-Puede incluir, según el caso:
-
-- estado actual proyectado
-- etapa o bandeja actual
-- indicadores de notificación
-- indicadores documentales
-- indicadores de medidas o presentaciones
-- referencias resumidas a dependencia, inspector u otros contextos vigentes
-- fechas operativas relevantes derivadas
+- fecha del acta
+- dependencia e inspector proyectados
+- bloque actual
+- estado procesal actual
+- situación administrativa actual
+- código de bandeja y visibilidad
+- si existe notificación de acta
+- si existe notificación de medida preventiva
+- si existe notificación de fallo o acto
+- si alguna notificación está en proceso o pendiente de acuse
+- cantidad de reintentos relevantes
+- si existe solicitud de pago voluntario
+- monto exigible actual
+- si existe pago total
+- si existe plan de pagos
+- datos resumidos del plan
+- si existe gestión externa
+- tipo y resultado resumido de gestión externa
+- plazos operativos relevantes
+- referencias resumidas a último evento, documento o notificación
 
 ---
 
@@ -83,21 +63,20 @@ Tampoco debe convertirse en una “segunda verdad” del expediente.
 
 - El snapshot es derivado.
 - El snapshot es regenerable.
+- Existe una única proyección operativa principal del expediente.
 - El snapshot no reemplaza a `Acta`.
 - El snapshot no reemplaza a `ActaEvento`.
 - El snapshot no reemplaza a `Documento` ni a `Notificacion`.
 - Puede persistirse por razones operativas.
-- Su contenido debe mantenerse compacto y enfocado en lectura actual del expediente.
+- Su contenido debe mantenerse compacto, directo y enfocado en lectura actual del expediente.
 
 ---
 
 ## Relación con bandejas
 
-El snapshot puede ser la base principal de lectura para bandejas y vistas operativas.
+El snapshot es la base principal de lectura para bandejas y vistas operativas.
 
-Por eso debe poder resumir, de forma confiable, la situación actual del expediente sin exigir reconstrucción completa en cada consulta.
-
-Sin embargo, las bandejas no deben redefinir el dominio: deben apoyarse en el snapshot y en el núcleo del modelo.
+Debe poder resumir, de forma confiable, la situación actual del expediente sin exigir reconstrucción completa en cada consulta.
 
 ---
 
@@ -111,21 +90,10 @@ El modelo debe asumir que:
 - puede requerir reproyección
 - no debe contener información imposible de recomponer desde la fuente primaria
 
----
-
-## Relaciones clave
-
-`Snapshot operativo` se relaciona con:
-
-- `Acta`, como expediente proyectado
-- `ActaEvento`, como fuente principal de trazabilidad
-- `Documento`, `Notificacion` y demás piezas del expediente, como fuentes de estado derivado
-- bandejas y consultas operativas, como principal consumidor funcional de la proyección
+No se justifican estructuras técnicas adicionales si no aportan valor operativo concreto.
 
 ---
 
-## Criterio de compactación
+## Idea clave
 
-El snapshot debe mantenerse como una proyección operativa resumida.
-
-Cuando una necesidad requiera demasiado detalle histórico o semántico, esa necesidad debe resolverse en el núcleo del modelo o en consultas especializadas, no inflando el snapshot.
+El snapshot debe mantenerse como una proyección operativa resumida, simple y útil para decisión, no como un submodelo paralelo del expediente.

@@ -1,4 +1,4 @@
-# Integración con storage documental
+# 04-integracion-storage-documental.md
 
 ## Finalidad
 
@@ -13,8 +13,14 @@ Este bloque cubre:
 - resolución de `StorageKey`
 - almacenamiento y recuperación de archivos
 - desacople entre documento lógico y storage físico
-- intercambio futuro de tecnología de storage
-- soporte para lectura, descarga, reemplazo o incorporación de versiones materiales
+- soporte para backends distintos:
+  - disco local
+  - unidad de red
+  - S3
+  - Azure Blob
+- política de resolución de backend
+- fallback por política
+- soporte para lectura, descarga, reemplazo o incorporación de archivos
 
 No cubre:
 
@@ -30,31 +36,52 @@ El storage documental debe quedar desacoplado de la identidad lógica del docume
 
 La ubicación real del archivo no debe formar parte canónica de `Documento`.
 
-La integración debe resolverse mediante `StorageKey` o mecanismo equivalente.
+La integración debe resolverse mediante `StorageKey` y un bloque explícito de storage capaz de determinar:
+
+- backend
+- política
+- ruta relativa
+- metadata técnica del objeto almacenado
 
 ---
 
 ## Reglas de integración
 
 - El documento lógico no conoce la ubicación física final del archivo.
-- La versión material del documento referencia `StorageKey`.
+- El expediente y sus satélites deben guardar solo `StorageKey`.
 - El storage resuelve la ubicación real o lógica del archivo.
 - El backend debe poder cambiar de storage sin rediseñar el modelo documental.
 - La integración debe permitir almacenamiento, recuperación, verificación y reemplazo de archivos cuando corresponda.
 
 ---
 
-## Capacidades mínimas esperadas
+## Política de resolución
 
-La integración debe contemplar, según el caso:
+La resolución del backend de storage debe permitir, al menos:
 
-- guardar archivo
-- recuperar archivo
-- resolver metadata técnica mínima
-- validar existencia o disponibilidad
-- reemplazar o agregar nueva versión material
-- permitir lectura o descarga controlada
-- soportar migración o cambio de backend de storage, si luego se requiere
+1. buscar política específica por:
+   - sistema
+   - familia
+   - tipo de objeto
+2. si no existe:
+   - usar política general del sistema
+3. si tampoco existe:
+   - usar backend default
+
+---
+
+## Política de distribución física
+
+La ruta relativa recomendada debe seguir una estructura equivalente a:
+
+`/{sistema}/{familia}/{tipo}/{anio}/{mes}/{bucket}/{ref_negocio}/{storage_key}.{ext}`
+
+Esto debe permitir:
+
+- distribución técnica razonable
+- evitar carpetas gigantes
+- mantener interpretabilidad humana razonable
+- desacoplar dominio de ruta física absoluta
 
 ---
 
@@ -62,20 +89,25 @@ La integración debe contemplar, según el caso:
 
 La persistencia debe distinguir entre:
 
-- `Documento`
-- versión material documental
-- resolución de `StorageKey`
+- backend de storage
+- política de storage
+- objeto almacenado
+- `StorageKey`
 
 Debe poder guardar, según corresponda:
 
-- `StorageKey`
-- tipo o proveedor de storage
-- ubicación física o lógica
-- hash
+- backend resuelto
+- sistema, familia y tipo
+- año y mes lógicos
+- bucket
+- referencia de negocio
+- nombre lógico
+- extensión
+- tipo MIME
 - tamaño
-- tipo de contenido
+- hash
+- ruta relativa
 - estado del objeto almacenado
-- metadatos técnicos mínimos
 
 ---
 
@@ -84,25 +116,15 @@ Debe poder guardar, según corresponda:
 La integración con storage debe ser consumida principalmente por:
 
 - servicios documentales
-- servicios de firma, cuando haya reemplazo o incorporación de versión firmada
-- procesos de reproceso o consolidación documental
+- servicios de firma, cuando haya reemplazo del archivo firmado
+- evidencias del acta
+- acuses u otros soportes técnicos asociados
 - backend de lectura o descarga documental
 
 No debe contaminar el dominio con detalles de infraestructura.
 
 ---
 
-## Relaciones clave
-
-Este bloque se relaciona con:
-
-- `Documento`
-- persistencia documental
-- jobs y procesos de consolidación documental
-- integraciones auxiliares, cuando el storage deba interoperar con servicios externos
-
----
-
 ## Resultado esperado
 
-Este bloque debe dejar resuelto que el storage documental es intercambiable y que su resolución queda desacoplada del documento lógico mediante `StorageKey`.
+Este bloque debe dejar resuelto que el storage documental es configurable, intercambiable y desacoplado del dominio mediante `StorageKey`, política de resolución y metadata técnica del objeto almacenado.

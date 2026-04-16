@@ -58,6 +58,7 @@ Cuando una consulta requiera mayor detalle, debe ampliar desde el núcleo sin co
 - Las búsquedas por número visible, identidad técnica o referencias administrativas deben apoyarse en estructuras preparadas para ese fin.
 - Las consultas no deben depender de joins excesivos para resolver operaciones rutinarias.
 - La semántica de bandeja no debe quedar embebida de forma caótica en SQL aislado sin apoyo en snapshot o proyección estable.
+- `ActaSnapshot` debe contener explícitamente la información operativa mínima necesaria para resolver bandejas, notificaciones relevantes, gestión externa, situación económica resumida y plazos sin exigir joins excesivos para consultas rutinarias.
 
 ---
 

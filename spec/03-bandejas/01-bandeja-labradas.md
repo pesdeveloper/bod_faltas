@@ -10,6 +10,10 @@ Representa el punto de entrada operativo del expediente al circuito del sistema.
 
 ## Qué contiene
 
+No incluye borradores técnicos previos al labrado.
+
+El expediente ingresa a esta bandeja cuando el acta ya fue efectivamente labrada y pasó a integrar el circuito administrativo del sistema.
+
 Contiene expedientes / actas recién creados a partir del labrado inicial.
 
 Todavía no se consideran listos para continuar el circuito completo hasta que se realice la revisión o decisión inicial correspondiente.

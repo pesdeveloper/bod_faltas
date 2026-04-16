@@ -12,29 +12,37 @@ La ubicación real del archivo no debe formar parte canónica de `Documento`.
 
 La persistencia debe resolver el storage mediante `StorageKey` o mecanismo equivalente.
 
+Debe existir un bloque explícito de storage documental, capaz de resolver:
+
+- backend físico o lógico
+- política de resolución por sistema/familia/tipo
+- objeto almacenado con `StorageKey`, ruta relativa y metadata técnica
+
 ---
 
 ## Estructura esperada
 
-Debe existir una tabla o mecanismo equivalente para resolver:
+Debe existir una estructura o bloque equivalente para resolver:
 
+- backend de storage
+- política de storage
+- objeto almacenado
 - `StorageKey`
-- tipo o proveedor de storage
 - ubicación física o lógica
 - estado
 - metadatos técnicos mínimos
 
-Las versiones materiales documentales deben referenciar `StorageKey` y no una ruta física embebida.
+Las referencias documentales deben apoyarse en `StorageKey` y no en rutas físicas embebidas.
 
 ---
 
 ## Reglas de persistencia
 
 - `Documento` conserva identidad lógica.
-- La versión material conserva referencia a `StorageKey`.
 - La resolución de storage conserva la ubicación real o intercambiable del archivo.
 - El backend no debe depender de una ruta rígida embebida en la identidad documental.
 - Debe poder migrarse o intercambiarse el storage sin rediseñar el modelo documental.
+- La resolución concreta de storage debe contemplar backends configurables y una política de fallback, sin acoplar el dominio a una unidad, ruta absoluta o proveedor único.
 
 ---
 
@@ -48,7 +56,6 @@ La resolución de storage puede guardar, según corresponda:
 - hash o referencia técnica
 - estado del objeto almacenado
 - metadatos técnicos mínimos
-- marcas de disponibilidad o verificación, si luego se justifican
 
 ---
 
@@ -68,8 +75,9 @@ Este bloque no debe absorber:
 
 Este bloque se relaciona con:
 
-- persistencia documental, como soporte de versiones materiales
-- integraciones auxiliares, cuando el storage deba interoperar con servicios externos
+- persistencia documental, como soporte de archivos
+- evidencias del expediente
+- acuses u otros soportes técnicos asociados
 - backend de lectura o descarga documental, cuando corresponda
 
 ---

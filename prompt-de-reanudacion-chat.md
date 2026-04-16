@@ -1,317 +1,215 @@
-# Prompt de reanudación del chat
-
 Estamos retomando el repo multiproyecto del sistema de faltas municipal.
 
-## Reglas de trabajo
+## Regla general de trabajo
 
 - Continuar en español.
 - No rediseñar desde cero.
 - Usar `spec/` como fuente principal de verdad.
-- Mantener archivos chicos, claros, navegables y orientados a `spec-as-source`.
+- Mantener estilo compacto, claro, navegable y orientado a `spec-as-source`.
 - No volver a discutir fundamentos ya cerrados salvo contradicción real.
-- No inflar los documentos con explicación innecesaria.
-- Priorizar definiciones compactas y útiles para implementación asistida.
+- Priorizar correcciones quirúrgicas y archivos completos copy-paste cuando haga falta.
 
 ---
 
-## Estado consolidado que no se reabre salvo contradicción real
+## Estado general al retomar
 
-Ya quedaron consolidados y alineados:
+Se consolidó una pasada muy amplia de alineación entre el bloque `spec/13-ddl/` y el resto de la spec.
 
-- bloque base de overview
-- reglas transversales principales
-- bandejas canónicas
-- `spec/01-dominio/`
-- `spec/12-datos/`
-- `spec/04-backend/`
-- `spec/09-integraciones/`
+Ya se revisaron y alinearon, con distinta profundidad:
 
-### Decisiones cerradas importantes
+- `01-dominio`
+- `02-reglas-transversales`
+- `03-bandejas`
+- `04-backend`
+- `09-integraciones`
+- `12-datos`
 
-- La unidad principal de gestión es Acta / Expediente.
-- La notificación es un proceso transversal único.
-- El snapshot es derivado y regenerable.
-- Archivo y cerrada no son equivalentes.
-- El motor de firma es externo al sistema de faltas y en este repo solo existe integración.
-- `Dependencia` e `Inspector` forman parte del dominio.
-- `Dependencia` e `Inspector` requieren versionado referencial para congelar contexto histórico sin snapshot textual embebido.
-- `Talonario y numeración` es un mecanismo administrativo transversal del dominio.
-- En backend se trabajará con SQL explícito.
-- No se utilizará ORM como mecanismo principal de persistencia del núcleo transaccional.
-- El storage documental debe resolverse desacoplado del documento lógico mediante `StorageKey`.
-- La autenticación del sistema de faltas se integra con un IdP propio del ecosistema implementado con OpenIddict.
+También se revisó el `spec` completo en zip para detectar contradicciones globales.
+
+El resultado general fue bueno:
+- no se detectaron contradicciones estructurales graves nuevas
+- sí se hicieron varias alineaciones importantes con el DDL final
 
 ---
 
-## Convención ya fijada para los spec DDL
+## Decisiones muy importantes ya firmes
 
-### Estilo de spec
-- tabla en formato tabular
-- notas debajo de cada tabla
-- enumeraciones explícitas en el mismo archivo donde se usan
-- estilo compacto, claro y navegable
+### Núcleo
+- `Acta` es la unidad principal de gestión.
+- `ActaEvento` es append-only.
+- `Observacion` es tabla transversal.
+- `ActaSnapshot` quedó como **una única proyección operativa principal**, simple, directa y regenerable.
+- `ActaSnapshot` debe vivir solo en `09-tablas-snapshot-auxiliares-y-proyecciones.md`, no duplicada en `02`.
 
-### Convención de nombres
-- composición:
-  - **prefijo + concepto + contexto**
+### Acta
+- `NroActa` no puede ser nulo en base central.
+- hay que contemplar GPS en `Acta`:
+  - `LatInfr`
+  - `LonInfr`
+- hay que contemplar evidencias:
+  - `ActaEvidencia`
 
-#### Prefijos estándar
-- `Id`
-- `Ver`
-- `Fh`
-- `Si`
-- `Nro`
-- `Obs`
-- `Cant`
-- `Cod`
-- `Nom`
-- `Desc`
+### Documental
+- `Documento` es entidad lógica desacoplada del archivo físico.
+- storage se resuelve por `StorageKey`.
+- el archivo firmado reemplaza al borrador; no se conservan ambas versiones en el circuito documental principal.
+- `IdPolNum` sobra en `Documento`.
+- `TipoFirmaReq` reemplaza flags tipo `SiFirmaDigital` / `SiFirmaOlografa`.
+- `DocumentoFirma` quedó minimalista y usa `IdUserFirma`.
 
-#### Contextos
-- `Infr` = infracción
-- `Infct` = infractor
-- `Info` = información
+### Notificación
+- toda notificación recae sobre un documento del expediente
+- toda notificación pertenece a una acta
+- `NotificacionDestino` fue eliminado
+- cada `NotificacionIntento` tiene un único destino efectivo
+- `Notificacion` conserva estado resumido de acuse
 
-#### Regla adicional
-Si un campo no encaja exacto:
-- hacerlo corto
-- con criterio
-- sin perder significado
-
-### Archivo transversal acordado
-- `spec/00-overview/03-convenciones-de-nomenclatura.md`
-
----
-
-## Estado actual del DDL
-
-Se trabajó fuerte sobre:
-
-- `spec/13-ddl/01-convenciones-ddl-informix.md`
-- `spec/13-ddl/02-tablas-nucleo-expediente.md`
-- `spec/13-ddl/03-tablas-referenciales-y-versionado.md`
-- `spec/13-ddl/04-tablas-acta-y-satelites.md`
-- `spec/13-ddl/05-tablas-talonarios-y-numeracion.md`
-- `spec/13-ddl/06-tablas-equipos-y-catalogos-operativos.md`
-
-Todavía puede haber ajustes finos de consistencia, pero la base quedó bastante firme.
-
----
-
-## Núcleo del acta ya alineado
-
-### Tablas núcleo
-- `Acta`
-- `ActaSnapshot`
-- `ActaEvento`
-- `Observacion`
-
-### Decisiones clave
-- `NroActa` obligatorio en central
-- `ActaSnapshot` separado 1:1
-- `FhUltMod` e `IdUserUltMod` en snapshot
-- `ActaEvento` append-only
-- `Observacion` transversal con `VARCHAR(255)`
-- `ObsActa` en `Acta` como texto propio largo
-
----
-
-## Referenciales/versionado ya alineados
-
-### Tablas
-- `Dependencia`
-- `DependenciaVersion`
-- `Inspector`
-- `InspectorVersion`
-- `MedidaPreventiva`
-
-### Decisiones clave
-- `IdInsp` es `INT`
-- `VerInsp` se mantiene
-- el IdP emite claims construidos:
-  - `InspectorId`
-  - `InspectorVersion`
-- el versionado del inspector queda desacoplado del maestro de usuarios
-- el acta guarda `IdInsp + VerInsp`
-
----
-
-## Satélites del acta ya alineados
-
-### Tablas
-- `ActaTransito`
-- `ActaTransitoAlcoholemia`
-- `ActaVehiculo`
-- `ActaContravencion`
-- `ActaSustanciasAlimenticias`
-- `ActaMedidaPreventiva`
-
-### Decisiones clave
-- `ActaVehiculo` separada y reutilizable
-- `TipoVehTxt` solo si `TipoVeh = OTRO`
-- `ActaTransito` guarda resumen rápido
-- `ActaTransitoAlcoholemia` guarda mediciones
-- el equipo usado se referencia por:
-  - `IdAlcoholimetro`
-  - `VerAlcoholimetro`
-- en `ActaTransito` deben salir:
-  - `NroSerieAlcoh`
-  - `SiEqCalib`
-  - `SiCalibVig`
-  - `FhUltCalib`
-
-### Ajuste importante en contravención
-En `ActaContravencion` deben existir:
-- `IdSuj SMALLINT`
-- `IdBie INT`
-
-Y `OrigenNomencl` debe quedar:
-- `1 = OBTENIDA_COMERCIO`
-- `2 = OBTENIDA_INMUEBLE`
-- `3 = INGRESADA_MANUAL_VALIDADA`
-
-Además debe quedar una nota explícita:
-- comercio e inmueble pueden consultarse en maestros
-- esa consulta puede precargar domicilio y nomenclatura
-- el inspector puede corregir datos precargados si detecta inconsistencias
-
----
-
-## Normativa / artículos / valores ya alineados
-
-### Tablas
-- `NormativaFaltas`
-- `ArticuloNormativaFaltas`
-- `TarifarioUnidadFaltas`
-- `ActaArticuloInfringido`
-- `ActaArticuloAuditoria`
-
-### Decisiones clave
-- los artículos no se resuelven como texto suelto en satélites
-- el acta congela la instancia aplicada
-- la auditoría de cambios manuales va separada de `Observacion`
-
----
-
-## Talonarios / numeración ya bastante definidos
-
-### Tablas
-- `PoliticaNumeracion`
-- `Talonario`
-- `TalonarioDependencia`
-- `TalonarioInsp`
-- `TalonarioMovimiento`
-
-### Decisiones clave
+### Numeración
 - no usar máscara libre
-- la política se compone por partes:
+- política por componentes:
   - prefijo
   - año
   - serie
   - número
-- cada unión entre componentes puede tener separador distinto:
+- separadores por componente:
   - `SepPrefAnio`
   - `SepAnioSerie`
   - `SepSerieNro`
-- `TipoTalonario`:
-  - `1 = ELECTRONICO`
-  - `2 = MANUAL_FISICO`
-- `TalonarioMovimiento` registra el estado de cada número manual
-- no hace falta:
-  - `ActaManualAnulada`
-  - `ActaOrigenNumeracion`
-- los talonarios pueden ser:
-  - globales
-  - de dependencia
-- la asignación a inspector aplica solo a manual físico
+- talonarios:
+  - `ELECTRONICO`
+  - `MANUAL_FISICO`
+- `TalonarioMovimiento` resuelve el estado del número manual
+
+### Referenciales/versionado
+- `Dependencia` / `DependenciaVersion`
+- `Inspector` / `InspectorVersion`
+- `Alcoholimetro` / `AlcoholimetroVersion`
+- `RubroCom` / `RubroComVersion`
+
+### Contravención
+- agregar:
+  - `IdSuj`
+  - `IdBie`
+- `OrigenNomencl`:
+  - `OBTENIDA_COMERCIO`
+  - `OBTENIDA_INMUEBLE`
+  - `INGRESADA_MANUAL_VALIDADA`
+
+### Storage documental
+Se definió el bloque:
+- `StorageBackend`
+- `StoragePolitica`
+- `StorageObjeto`
+
+Con política de resolución por:
+- sistema
+- familia
+- tipo de objeto
+- fallback a política general
+- fallback a backend default
+
+Ruta relativa recomendada:
+`/{sistema}/{familia}/{tipo}/{anio}/{mes}/{bucket}/{ref_negocio}/{storage_key}.{ext}`
 
 ---
 
-## Equipos y catálogos operativos ya abiertos
+## Bloques ya revisados
 
-### Tablas
-- `Alcoholimetro`
-- `AlcoholimetroVersion`
-- `RubroCom`
-- `RubroComVersion`
+### `01-dominio`
+Se alineó con:
+- GPS en acta
+- evidencias
+- documento desacoplado por `StorageKey`
+- notificación siempre sobre documento
+- snapshot operativo simplificado
+- talonarios más realistas
 
-### Decisiones clave
-- el alcoholímetro debe ser versionado
-- el acta referencia el equipo por:
-  - `IdAlcoholimetro`
-  - `VerAlcoholimetro`
-- la UX mobile puede seleccionar equipo localmente o por QR
-- eso no requiere persistencia previa en central
-- el equipo puede deshabilitarse y debe documentarse
-- para rubros usar:
-  - `RubroCom`
-  - `RubroComVersion`
+### `02-reglas-transversales`
+Se completaron los archivos vacíos:
+- `04-reglas-de-reingreso.md`
+- `05-reglas-de-bandejas-y-transiciones.md`
+- `06-reglas-de-medidas-preventivas.md`
+- `07-reglas-de-pendientes-materiales.md`
 
----
+### `03-bandejas`
+Se hicieron ajustes finos de alineación con:
+- snapshot
+- notificación
+- firma
+- gestión externa
+- pendientes materiales
 
-## Borrador / proceso / eventos
+### `04-backend`
+Se alineó con:
+- snapshot único
+- documental simplificado
+- firma externa mínima
+- notificación simplificada
+- storage explícito
+- numeración real
+- gestión externa proyectable
 
-### EstadoProcesoActual
-Debe incluir:
-- `0 = BORRADOR`
+### `09-integraciones`
+Se alineó con:
+- motor de firma externo
+- notificación por documento
+- storage documental desacoplado
+- autenticación con IdP del ecosistema
 
-### TipoEvt
-Debe incluir al menos:
-- `0 = ACTA_CREADA_EN_BORRADOR`
-- `1 = ACTA_LABRADA`
-- `2 = BORRADOR_DESCARTADO`
-
-Regla:
-- el flujo administrativo real empieza cuando el acta queda labrada
-- `BORRADOR` es un estado técnico previo
-
----
-
-## Tema territorial / georreferenciación
-
-Sigue activo y conectado al modelo.
-
-### Domicilio de infracción
-Usa datos locales de Malvinas:
-- `IdTca`
-- `id_loc`
-- `id_bar`
-- `SiEjidoUrbano`
-- lookup por calle + altura
-
-### Domicilio del infractor
-Usa catálogos IGN/INDEC:
-- provincia `SMALLINT`
-- municipio `INT`
-- departamento `INT`
-- localidad `INT8`
-- localidad censal `INT8`
-- calle `INT8`
+### `12-datos`
+Se alineó con:
+- `Acta`
+- `Documento`
+- `Notificacion`
+- `Snapshot`
+- `Catálogos y maestros`
 
 ---
 
-## Próximo paso exacto
+## Revisión global del spec
 
-Al retomar:
+Se hizo una pasada global al `spec` completo.
 
-1. revisar consistencia final entre `04`, `05` y `06`
-2. verificar que `ActaTransito` haya quedado alineada con `AlcoholimetroVersion`
-3. seguir con los bloques faltantes, probablemente:
-   - documentales
-   - notificación
-   - auxiliares o snapshot de apoyo si hiciera falta
-4. después:
-   - diagrama relacional
+Conclusión:
+- la consistencia general ya es buena
+- no conviene otra gran ronda transversal completa
+- solo quedan pendientes finos y el siguiente paso fuerte
+
+---
+
+## Punto exacto donde se cortó
+
+Se intentó avanzar con el **diagrama relacional**.
+
+Se propusieron diagramas por bloques y un mapa general.
+
+Problema encontrado:
+- los diagramas Mermaid dieron error en preview
+
+Conclusión operativa:
+- dejar el tema de diagramas para mañana
+- revisar formato
+- probablemente simplificar sintaxis / tipos o cambiar estrategia
+
+---
+
+## Próximo paso exacto al retomar
+
+1. revisar cómo conviene resolver los diagramas relacionales:
+   - Mermaid simplificado
+   - otra sintaxis más compatible
+   - o un nivel menor de detalle
+2. generar versión usable/visible del diagrama relacional
+3. después pasar a:
    - SQL de creación
+   - o ajuste final previo si el diagrama revela algo
 
 ---
 
-## Regla de continuación
+## Criterio al continuar
 
-- no rehacer `01-dominio`
-- no rehacer `12-datos`
-- no rehacer `04-backend`
-- no rehacer `09-integraciones`
-- usar esos bloques como base estable
-- mantener el estilo tabular + notas + enumeraciones
-- seguir con documentos compactos y útiles para implementación asistida
+- No rehacer la spec transversal ya corregida.
+- No abrir otra gran ronda de revisión global salvo que aparezca una contradicción real.
+- Concentrarse ahora en:
+  - diagramas relacionales
+  - y luego SQL de creación.

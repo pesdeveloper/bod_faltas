@@ -11,6 +11,7 @@ La notificación se trata como un **proceso transversal único**, aplicable a cu
 ## Regla principal
 
 La notificación no se modela como múltiples bandejas separadas por tipo de documento.
+En el modelo del sistema, toda notificación recae sobre un documento del expediente y queda asociada a la acta correspondiente.
 
 Se concentra en una única lógica operativa, con filtros por:
 
@@ -56,10 +57,12 @@ Su resultado modifica la situación operativa del expediente y puede:
 
 ## Canales previstos
 
-- notificación electrónica
-- correo / carta documento
+- domicilio electrónico
+- email
+- postal
+- bluemail
 - notificador municipal
-- comparecencia o retiro presencial
+- portal ciudadano
 - otro canal formal que luego se defina
 
 ---
@@ -78,6 +81,8 @@ El sistema debe distinguir claramente entre:
 - decisión manual pendiente
 
 El acuse puede provenir por distintas vías según el canal utilizado.
+
+Cada intento de notificación se dirige a un único destino efectivo, cuyo canal, resultado y datos relevantes deben quedar trazados como parte del intento mismo.
 
 ---
 

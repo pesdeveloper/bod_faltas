@@ -73,11 +73,13 @@ La política de numeración no vive dentro del documento.
 El documento puede:
 
 - no requerir firma
-- firmarse digital o electrónicamente por integración externa
+- firmarse digitalmente por integración externa
 - imprimirse para firma física u ológrafa
-- incorporarse o reemplazarse luego por la versión efectivamente firmada
+- reemplazar el archivo borrador por la versión efectivamente firmada
 
 Por eso, la identidad lógica del documento no debe confundirse con una única representación material.
+
+En esta versión del sistema, cuando el documento se firma, el archivo firmado reemplaza al archivo previo no firmado, sin necesidad de conservar ambas versiones dentro del dominio documental principal.
 
 ---
 
@@ -113,4 +115,4 @@ Por eso, la identidad lógica del documento no debe confundirse con una única r
 - `ActaEvento`, cuando su generación, numeración, firma, emisión, recepción o reemplazo produce trazabilidad relevante
 - `Notificacion`, cuando deba comunicarse formalmente
 - `Talonario y numeración`, cuando requiera número visible
-- storage o repositorio documental, como soporte técnico de sus versiones materiales
+- storage documental, como soporte técnico desacoplado mediante `StorageKey`

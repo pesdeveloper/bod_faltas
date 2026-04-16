@@ -44,6 +44,8 @@ Esta bandeja no existe para “mandar el expediente a otro lado a ver qué se ha
 
 Existe para completar su preparación documental y operativa inicial.
 
+La completitud de esta bandeja puede incluir tanto información faltante como generación o preparación documental mínima necesaria para permitir la continuidad del expediente.
+
 ---
 
 ## Regla de entrada

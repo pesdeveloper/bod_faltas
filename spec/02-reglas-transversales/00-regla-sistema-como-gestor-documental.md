@@ -37,6 +37,7 @@ No muestran documentos sueltos como unidad principal de trabajo.
 
 ### 3. Los documentos materializan el avance
 Las decisiones y actuaciones relevantes se expresan mediante documentos y hechos asociados al expediente.
+Los documentos se entienden como entidades lógicas del expediente, desacopladas de su soporte físico concreto, el cual se resuelve mediante almacenamiento externo referenciado por `StorageKey`.
 
 ### 4. La firma modifica la situación del expediente
 Cuando un documento pasa a firmado, cambia la situación operativa del expediente y puede habilitar un nuevo paso.
@@ -120,6 +121,7 @@ La spec debe describir el sistema siguiendo esta misma filosofía:
 - snapshot como resumen
 - bandejas como visibilidad operativa del expediente
 - reglas transversales como determinantes del cambio de situación
+- storage documental como soporte técnico desacoplado del dominio principal
 
 ---
 

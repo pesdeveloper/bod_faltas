@@ -21,6 +21,8 @@ Este bloque debe cubrir, según corresponda:
 - motivos o resultados estables
 - dependencias, inspectores y sus referencias estructurales
 - talonarios y políticas de numeración
+- alcoholímetros y sus versiones
+- rubros y sus versiones
 - otros maestros con valor semántico transversal
 
 No todo valor del sistema merece catálogo propio.
@@ -62,6 +64,7 @@ Tampoco conviene crear catálogos innecesarios para valores hiperlocales o desca
 - Los estados principales del sistema deben apoyarse en catálogos cuando tengan valor transversal.
 - Dependencia e Inspector deben modelarse como maestros o entidades referenciales del dominio, no como simples textos libres.
 - Talonario y política de numeración deben modelarse como referencias estructurales reutilizables.
+- Alcoholímetro y rubro deben poder congelar contexto histórico mediante versionado cuando el expediente los use.
 - Cuando corresponda preservar contexto histórico, los maestros referenciales podrán requerir versionado.
 
 ---
@@ -88,8 +91,23 @@ Dentro de este bloque debe contemplarse el submodelo referencial de:
 - reglas de formato y alcance
 
 En el caso de las actas, los talonarios deben quedar asociados a dependencias.
+Pero no todos los talonarios tienen que depender de una dependencia, ya que pueden existir talonarios globales para otros objetos numerables.
 
 La numeración visible no debe confundirse con la identidad interna ni con la identidad técnica de los objetos numerados.
+
+---
+
+## Equipos y catálogos operativos
+
+Dentro de este bloque deben contemplarse también referencias estructurales para:
+
+- `Alcoholimetro` y `AlcoholimetroVersion`
+- `RubroCom` y `RubroComVersion`
+
+Estas referencias permiten congelar contexto histórico cuando el expediente use:
+
+- un equipo de alcoholemia concreto
+- un rubro operativo aplicable al caso
 
 ---
 
@@ -102,6 +120,7 @@ La numeración visible no debe confundirse con la identidad interna ni con la id
 - `Documento`, para tipo, estado y numeración
 - `Notificacion`, para canales, estados y resultados
 - `Medidas y liberaciones`, para tipos y estados aplicables
+- entidades satélite del expediente, cuando consuman rubros, equipos o referencias estructurales
 - versionado de entidades referenciales, cuando corresponda congelar contexto histórico
 
 ---

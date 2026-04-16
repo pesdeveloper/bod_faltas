@@ -1,4 +1,4 @@
-# Integración con autenticación y roles
+# 05-integracion-autenticacion-y-roles.md
 
 ## Finalidad
 
@@ -66,6 +66,19 @@ Esto implica que:
 
 ---
 
+## Correlación con actores del dominio
+
+Cuando corresponda, la integración debe permitir correlacionar identidad autenticada con:
+
+- usuario interno
+- inspector
+- dependencia
+- perfil funcional
+
+En particular, la condición de inspector y su versión deben poder resolverse de forma explícita dentro del ecosistema, sin convertir al IdP en dueño del modelo completo de inspector del dominio de faltas.
+
+---
+
 ## Autorización y permisos
 
 La integración debe permitir, según corresponda:
@@ -80,20 +93,6 @@ La autorización efectiva del backend debe mantenerse explícita y no quedar imp
 
 ---
 
-## Relación con el dominio
-
-La identidad autenticada puede necesitar correlación con:
-
-- usuario interno
-- inspector
-- dependencia
-- perfil funcional
-- superficie consumidora
-
-Pero esas relaciones deben resolverse de forma controlada y no automática por nombre, rol o claim aislado.
-
----
-
 ## Persistencia esperada
 
 La persistencia local del sistema, si se requiere, debe guardar solo lo necesario para:
@@ -105,18 +104,6 @@ La persistencia local del sistema, si se requiere, debe guardar solo lo necesari
 - control de permisos o superficies habilitadas, si luego se justifica
 
 La fuente principal de autenticación sigue estando en el IdP del ecosistema.
-
----
-
-## Relaciones clave
-
-Este bloque se relaciona con:
-
-- backend común del sistema
-- apps web y móviles consumidoras
-- `Inspector` y `Dependencia`, cuando haya correlación funcional
-- autenticación y roles del ecosistema general
-- servicios de seguridad y autorización del backend
 
 ---
 

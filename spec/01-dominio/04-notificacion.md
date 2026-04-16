@@ -37,7 +37,9 @@ La notificación actúa como proceso transversal sobre el expediente y puede afe
 - la existencia o no de acuse
 - la necesidad de reintento, corrección, nueva preparación o cambio de curso
 
-El expediente puede requerir múltiples notificaciones a lo largo de su vida.
+En este modelo, toda notificación pertenece a un expediente y recae sobre un documento del expediente.
+
+La notificación puede requerir uno o más intentos, pero cada intento se dirige a un único destino efectivo, cuyo canal y resultado deben quedar trazados.
 
 ---
 

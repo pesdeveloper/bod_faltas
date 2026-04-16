@@ -18,6 +18,7 @@ Tiene sentido funcional porque puede:
 - intervenir en actuaciones del expediente
 - quedar asociado al origen material del caso
 - formar parte del contexto administrativo visible o trazable del expediente
+- el inspector es una entidad de dominio versionada propia de faltas aunque su autenticación se resuelva vía usuario externo/IdP
 
 ---
 

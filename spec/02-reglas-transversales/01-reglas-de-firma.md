@@ -130,6 +130,7 @@ El snapshot operativo debe resumir, al menos:
 ## Regla de trazabilidad
 
 Toda firma relevante debe dejar trazabilidad suficiente en el expediente.
+En esta versión del sistema, cuando un documento es firmado, el archivo firmado reemplaza al archivo previo no firmado dentro del storage documental principal, sin necesidad de conservar ambas versiones dentro del dominio documental operativo.
 
 Esto incluye, según corresponda:
 

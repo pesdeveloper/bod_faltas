@@ -1,118 +1,94 @@
-# Modelo lógico — Notificacion
+# Modelo lógico — Notificación
 
 ## Finalidad
 
-`Notificacion` representa el proceso formal de comunicación de un objeto notificable del expediente.
+`Notificación` representa el proceso notificatorio transversal del expediente.
 
-Permite registrar emisión, envío, recepción, acuse, rechazo, incidencia, reintento y resultado, sin confundir la notificación con el documento ni con el expediente.
-
----
-
-## Tabla principal
-
-### `Notificacion`
-
-Debe contener, como mínimo a nivel lógico:
-
-- `Id`
-- referencia obligatoria a `Acta`
-- tipo u objeto notificable
-- estado principal de notificación
-- canal utilizado
-- destino o destinatario
-- fechas relevantes del proceso
-- resultado principal
-- referencias opcionales a documento, evento o integración involucrada
-- metadatos básicos de registración
+Su función es modelar la comunicación formal de documentos del expediente, sus intentos, acuses y efecto operativo posterior.
 
 ---
 
 ## Qué guarda
 
-`Notificacion` debe guardar la identidad y metadata principal del proceso de notificación, incluyendo cuando corresponda:
+El modelo de notificación debe poder guardar, según corresponda:
 
-- qué se notifica
-- a quién se intenta notificar
-- por qué canal
-- en qué estado se encuentra
-- qué resultado produjo
-- si hubo acuse, rechazo, incidencia o reintento
-- qué pieza documental o acto está involucrado
+- documento notificado
+- acta a la que pertenece
+- tipo de notificación
+- estado actual
+- canal principal
+- si requiere acuse
+- si existe acuse
+- estado resumido del acuse
+- fecha del acuse, si aplica
+- intentos de notificación
+- resultado de cada intento
+- constancia de acuse, si corresponde
 
 ---
 
 ## Qué no guarda
 
-`Notificacion` no debe usarse para guardar:
+`Notificación` no debe usarse para guardar:
 
-- el expediente completo
-- el contenido completo del documento notificado
-- toda la trazabilidad del expediente
-- bitácora técnica de mensajería de bajo nivel
-- snapshot operativo completo
-- semántica completa del sistema externo de notificación
-
-Tampoco debe reducirse a una simple marca de “enviado”.
+- contenido completo del documento notificado
+- rutas físicas absolutas
+- duplicación innecesaria del expediente
+- múltiples destinos estructurados separados si cada intento ya refleja su destino efectivo
 
 ---
 
 ## Reglas principales
 
-- Toda `Notificacion` pertenece a un expediente.
-- La notificación es un proceso transversal separado del documento y del expediente.
-- El objeto notificable puede ser un documento, un acto o un resultado formal del expediente.
-- Una notificación puede existir en distintas etapas antes de tener resultado final.
-- El resultado de la notificación puede impactar en la evolución operativa del expediente.
-- Los hitos relevantes de la notificación pueden reflejarse en `ActaEvento`, pero no la reemplazan.
-- La notificación puede requerir reintentos, cambio de canal o tratamiento posterior según las reglas del caso.
+- En este modelo, toda notificación recae sobre un documento del expediente.
+- Toda notificación pertenece a una acta.
+- Una notificación puede tener múltiples intentos.
+- Cada intento se dirige a un único destino efectivo.
+- El acuse, si existe, debe quedar trazado como pieza propia del circuito notificatorio.
+- El resultado notificatorio debe poder proyectarse en snapshot.
 
 ---
 
-## Objeto notificable
+## Relación con intentos
 
-La notificación debe poder identificar con claridad qué objeto del expediente se está comunicando.
+Los intentos deben poder registrar, al menos:
 
-Ese objeto puede ser, según corresponda:
-
-- un documento
-- un acto administrativo
-- una resolución o fallo
-- una constancia
-- otro resultado formal notificable
-
-La definición exacta de objetos notificables pertenece a reglas y catálogos del sistema.
+- canal utilizado
+- destino efectivo
+- resultado del intento
+- fecha/hora del intento
+- fecha/hora del resultado si existe
 
 ---
 
-## Resultado y trazabilidad
+## Relación con acuse
 
-La notificación debe permitir registrar, como mínimo:
+El sistema debe poder distinguir entre:
 
-- emisión o preparación
-- envío o salida efectiva
-- recepción o acuse, si existe
-- rechazo, imposibilidad o incidencia
-- reintento
-- resultado final
+- notificación emitida
+- notificación en proceso
+- notificación con acuse pendiente
+- notificación con acuse recibido
+- notificación fallida o reintentable
 
-Cuando esos hitos tengan relevancia para el expediente, podrán reflejarse también en eventos.
-
----
-
-## Relaciones clave
-
-`Notificacion` se relaciona con:
-
-- `Acta`, como expediente al que pertenece
-- `Documento`, cuando exista pieza documental notificable
-- `ActaEvento`, cuando la notificación produzca hechos relevantes de trazabilidad
-- integraciones externas de mensajería, correo, cédula, publicación u otros canales admitidos
-- snapshot operativo, cuando su estado impacte en la lectura actual del expediente
+El acuse puede tener constancia técnica propia cuando corresponda.
 
 ---
 
-## Criterio de compactación
+## Relación con el expediente
 
-`Notificacion` debe mantenerse como entidad principal del proceso de comunicación formal.
+La notificación puede:
 
-Cuando crezcan demasiado los detalles de destinos, acuses, incidencias o integraciones, deben separarse en anexos o entidades auxiliares en lugar de sobrecargar la tabla principal.
+- habilitar nuevos pasos
+- bloquear avance
+- disparar plazos
+- motivar reencauce
+- alimentar snapshot y bandejas
+
+Pero no reemplaza al expediente ni al documento notificado.
+
+---
+
+## Idea clave
+
+La notificación es un proceso transversal del expediente, siempre apoyado en un documento notificable y trazado mediante intentos y acuses con impacto operativo claro.

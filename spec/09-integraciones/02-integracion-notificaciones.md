@@ -4,235 +4,140 @@
 
 Este archivo describe cómo debe entenderse la integración de notificaciones dentro del ecosistema del sistema de faltas.
 
-No define todavía contratos técnicos detallados ni proveedores concretos.
+No define todavía contratos técnicos detallados ni proveedores finales.
 
-Su objetivo es fijar:
-
-- qué necesita el sistema de faltas del subsistema de notificaciones
-- qué resultados espera recibir
-- cómo impactan esos resultados sobre el expediente
-- qué parte pertenece al dominio de faltas y qué parte a la integración
+Su objetivo es dejar claro qué parte pertenece al sistema de faltas y qué parte pertenece al mecanismo o proveedor externo de notificación.
 
 ---
 
 ## Regla principal
 
-El sistema de faltas no debe confundirse con un simple proveedor técnico de mensajería o envío.
+La notificación es un proceso transversal del expediente.
 
-El sistema de faltas:
+En el modelo actual del sistema:
 
-- decide qué pieza debe notificarse
-- registra el inicio del proceso de notificación
-- refleja canal, estado, acuse y resultado
-- reacciona al efecto operativo de la notificación sobre el expediente
+- toda notificación recae sobre un documento del expediente
+- toda notificación pertenece a una acta
+- cada intento de notificación se dirige a un único destino efectivo
+- el sistema debe registrar canal, resultado y acuse cuando corresponda
 
-Los mecanismos concretos de envío o diligenciamiento pueden apoyarse en integraciones externas o capacidades específicas por canal.
-
----
-
-## Alcance dentro del ecosistema de faltas
-
-Dentro del sistema de faltas debe modelarse, al menos:
-
-- qué pieza se notifica
-- por qué canal
-- en qué estado general está la notificación
-- si existe acuse
-- cuál fue el resultado
-- si requiere reintento
-- si requiere decisión manual
-- qué efecto produce sobre el expediente
+La integración externa no reemplaza a la entidad `Notificacion`, sino que materializa o informa su ejecución.
 
 ---
 
-## Qué queda fuera del núcleo de faltas
+## Alcance dentro del repo de faltas
 
-Quedan fuera del núcleo del dominio, salvo como integración o infraestructura:
+Este repositorio debe modelar:
 
-- proveedores concretos de correo electrónico
-- integraciones postales específicas
-- servicios externos de mensajería
-- detalle técnico de transporte o entrega electrónica
-- lógica completa de agenda o despacho de notificador fuera del dominio propio
-- detalles técnicos de colas, gateways o brokers
+- qué documento se notifica
+- a qué expediente pertenece
+- por qué canal se intenta notificar
+- cuál fue el destino efectivo del intento
+- cuál fue el resultado del intento
+- si existió acuse y cuál fue su estado resumido
+- qué efecto operativo produce la notificación sobre expediente y snapshot
+
+---
+
+## Qué queda fuera de este repo
+
+Queda fuera del repositorio de faltas, según el caso:
+
+- implementación técnica específica del proveedor
+- mensajería concreta del canal
+- infraestructura de correo, postal o tercero especializado
+- UI propia del proveedor externo
+- detalles internos de tracking no relevantes para el dominio
 
 ---
 
 ## Canales previstos
 
-La integración debe contemplar, al menos, estos canales:
+Los canales previstos en el sistema son, al menos:
 
-- notificación electrónica
-- correo / carta documento
+- domicilio electrónico
+- email
+- postal
+- bluemail
 - notificador municipal
-- comparecencia o retiro presencial
+- portal ciudadano
 - otro canal formal que luego se defina
 
-Cada canal puede requerir una forma distinta de evidenciar resultado o acuse.
+---
+
+## Regla de integración
+
+La integración debe pensarse mediante puertos o adaptadores según canal o mecanismo.
+
+El sistema de faltas necesita poder:
+
+- emitir o registrar la notificación
+- registrar intentos
+- registrar destino efectivo
+- registrar resultado del intento
+- registrar acuse si corresponde
+- reflejar el efecto operativo sobre expediente y snapshot
 
 ---
 
-## Regla de inicio de notificación
+## Regla de acuse
 
-Cuando el expediente ya tiene una pieza notificable en condiciones, el sistema de faltas debe poder:
+El sistema debe distinguir entre:
 
-- registrar que la notificación se inicia
-- indicar el canal
-- dejar trazabilidad del intento o diligencia
-- exponer el expediente en la bandeja de notificaciones
+- canales o circuitos que requieren acuse
+- canales o circuitos donde el acuse adicional no es necesario
 
-El inicio de la notificación no implica automáticamente resultado positivo ni cierre del trámite.
+Si existe acuse, debe poder registrarse:
 
----
-
-## Regla de acuse y resultado
-
-La integración debe permitir que el sistema de faltas reciba o registre, según el canal:
-
-- acuse pendiente
-- acuse positivo
-- acuse negativo
-- vencimiento sin acuse suficiente
-- reintento pendiente
-- resultado final relevante
-
-El expediente debe reaccionar a ese resultado sin perder trazabilidad de la notificación.
+- su estado
+- fecha/hora
+- constancia asociada si existe
+- efecto resumido sobre la notificación
 
 ---
 
-## Reglas por canal
+## Relación con el expediente
 
-### 1. Notificación electrónica
-Debe permitir registrar:
+La notificación puede:
 
-- fecha de inicio
-- dirección o medio utilizado, si corresponde
-- estado general
-- plazo de espera aplicable
-- resultado final, cuando exista
-
-El sistema debe contemplar la espera operativa correspondiente antes de determinar el efecto definitivo.
-
----
-
-### 2. Correo / carta documento
-Debe permitir registrar:
-
-- despacho o inicio de envío
-- estado general
-- recepción o acuse externo
-- resultado final cuando esté disponible
-
-Mientras el resultado no sea suficiente, el expediente puede permanecer con acuse pendiente o situación equivalente.
-
----
-
-### 3. Notificador municipal
-Debe permitir registrar, al menos:
-
-- diligencia asignada o iniciada
-- fecha y hora
-- resultado de la diligencia
-- observaciones
-- firma dibujada en dispositivo, si aplica
-- evidencia complementaria
-- acuse en acto, cuando corresponda
-
-Este canal se relaciona directamente con la app móvil del notificador.
-
----
-
-### 4. Comparecencia o retiro presencial
-Debe permitir registrar:
-
-- fecha del acto
-- identidad o constancia del compareciente, si aplica
-- pieza notificada
-- resultado suficiente para el expediente
-
----
-
-## Relación con la bandeja de notificaciones
-
-La integración de notificaciones no reemplaza la bandeja de notificaciones.
-
-La bandeja muestra expedientes en situación de notificación.  
-La integración aporta o registra los resultados que permiten modificar esa situación.
+- habilitar nuevos pasos
+- bloquear avance hasta resultado o acuse
+- provocar reencauce del expediente
+- alimentar snapshot y bandejas
+- generar reintentos o nuevas actuaciones
 
 ---
 
 ## Relación con snapshot
 
-El snapshot debe poder reflejar el efecto operativo resumido de la notificación, por ejemplo:
+El snapshot debe poder reflejar, al menos:
 
-- expediente con piezas en notificación
-- acuse pendiente
-- resultado positivo o negativo relevante
-- espera de plazo post notificación
-- habilitación del siguiente paso
-
-El detalle fino del trámite de notificación no vive solo en snapshot.
+- si existe notificación de acta
+- si existe notificación de medida preventiva
+- si existe notificación de fallo o acto
+- si alguna está en proceso
+- si alguna tiene acuse pendiente
+- cantidad de reintentos relevantes
 
 ---
 
 ## Relación con la UI
 
-La UI debe poder consumir esta integración o sus efectos para mostrar claramente:
+Las superficies del sistema pueden necesitar:
 
-- qué pieza se está notificando
-- por qué canal
-- en qué estado general se encuentra
-- si existe acuse
-- si el resultado fue positivo o negativo
-- si requiere reintento
-- si requiere decisión manual
-
----
-
-## Relación con apps móviles
-
-### App móvil del notificador
-Debe consumir y/o alimentar esta integración para:
-
-- recibir diligencias
-- registrar entrega o intento
-- capturar firma dibujada
-- adjuntar evidencia
-- registrar resultado
-
-### Otras apps
-Las demás apps pueden consumir resultados de notificación, pero no necesariamente gestionan el proceso completo de diligenciamiento.
-
----
-
-## Regla de trazabilidad
-
-Toda integración de notificación debe dejar trazabilidad suficiente sobre:
-
-- pieza afectada
-- canal
-- intento o diligencia
-- acuse
-- resultado
-- fechas relevantes
-- observaciones
-- reintentos
-
----
-
-## Regla de desacople
-
-El dominio del sistema de faltas no debe depender de detalles técnicos innecesarios del proveedor o mecanismo concreto de notificación.
-
-La integración debe abstraer esos detalles y exponer al dominio solo la información necesaria para operar sobre el expediente.
+- iniciar o registrar notificación
+- consultar estado resumido
+- visualizar intentos
+- visualizar acuse
+- decidir próximos pasos según resultado notificatorio
 
 ---
 
 ## Idea clave
 
-El sistema de faltas no “es” el sistema de mensajería.
+La integración de notificaciones no reemplaza la lógica del expediente.
 
-El sistema de faltas decide, registra y utiliza el resultado de la notificación para modificar la situación operativa del expediente.
+Solo materializa por canal un proceso notificatorio ya modelado por el sistema de faltas, con impacto directo en estado operativo, snapshot y bandejas.
 
 ---
 
