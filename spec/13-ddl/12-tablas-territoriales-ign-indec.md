@@ -118,13 +118,16 @@ Fuente de localidades para resolver la localidad visible del domicilio fuera de 
 | `provincia_nombre` | `VARCHAR(64)` | No | Denormalizado |
 
 ### PK
-- `id`
+- `id` (Debe ser `NOT NULL`. La nulabilidad en origen es un error a corregir en la ingesta).
 
 ### Índices relevantes
 - por `provincia_id`
 - por `(provincia_id, municipio_id)`
 - por `(provincia_id, departamento_id)`
 - por `(provincia_id, nombre)`
+
+### Observación sobre índices
+Los nombres de los índices en estas tablas externas pueden no seguir la convención del proyecto (`Ix...`/`Ux...`). Se documentan como existen en origen o se crearán con la convención interna si es necesario.
 
 ### Observación
 Puede haber inconsistencias entre localidad, municipio y departamento.

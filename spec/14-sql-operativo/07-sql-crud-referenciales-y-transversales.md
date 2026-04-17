@@ -2,20 +2,41 @@
 
 ## Finalidad
 
-Este archivo agrupa los patrones SQL principales de:
+Este archivo funciona como puerta de entrada para el bloque SQL de:
 
 - referenciales propios de faltas
 - entidades versionadas
+- rubros compartidos
 - numeración / talonarios transversal
 - storage transversal
-- entidades compartidas relevantes para faltas
+
+No concentra todo el detalle.  
+El detalle se reparte en archivos satélite para mantener el bloque compacto, navegable y usable como `spec-as-source`.
 
 ---
 
-## Grupo A - Referenciales propios de faltas
+## Cómo leer este bloque
 
-Tablas principales:
+- referenciales propios y entidades versionadas → [`07a-sql-referenciales-versionados.md`](./07a-sql-referenciales-versionados.md)
+- rubros compartidos → [`07b-sql-rubros-compartidos.md`](./07b-sql-rubros-compartidos.md)
+- numeración / talonarios transversal → [`07c-sql-numeracion-transversal.md`](./07c-sql-numeracion-transversal.md)
+- storage transversal → [`07d-sql-storage-transversal.md`](./07d-sql-storage-transversal.md)
 
+---
+
+## Reglas generales
+
+- Las entidades versionadas deben respetar el patrón de cierre de vigencia más alta de nueva versión.
+- Las entidades transversales (`Num*`, `Stor*`) no deben contaminarse con lógica específica de faltas.
+- Las entidades compartidas (`RubroCom`, `RubroComVersion`) deben conservar compatibilidad con el sistema actual.
+- Las operaciones de lectura operativa deben privilegiar la versión vigente, salvo que el caso de uso requiera lectura histórica.
+- Cuando una asignación o vinculación tenga efecto operativo inmediato, la persistencia debe dejarlo resuelto en la misma transacción.
+
+---
+
+## Grupos incluidos
+
+### A. Referenciales propios de faltas
 - `FalDependencia`
 - `FalDependenciaVersion`
 - `FalInspector`
@@ -24,59 +45,21 @@ Tablas principales:
 - `FalAlcoholimetroVersion`
 - `FalMedidaPreventiva`
 
-Patrón principal:
-- alta raíz + primera versión
-- cierre de versión vigente + nueva versión
-- lectura de vigente
-- lectura histórica por fecha
-
----
-
-## Grupo B - Rubros comerciales compartidos
-
-Tablas:
+### B. Rubros comerciales compartidos
 - `RubroCom`
 - `RubroComVersion`
 
-Regla:
-- `RubroCom` conserva nombre real compartido
-- `RubroComVersion` permite compatibilidad histórica/versionada para faltas
-
----
-
-## Grupo C - Numeración / talonarios transversal
-
-Tablas:
+### C. Numeración / talonarios transversal
 - `NumPolitica`
 - `NumTalonario`
 - `NumTalonarioDependencia`
 - `NumTalonarioInspector`
 - `NumTalonarioMovimiento`
 
-Operaciones típicas:
-- crear política
-- crear talonario
-- asignar talonario a dependencia
-- asignar talonario a inspector
-- registrar movimiento de número usado o reservado
-- consultar talonarios vigentes
-- consultar disponibilidad y próximo número lógico
-
----
-
-## Grupo D - Storage transversal
-
-Tablas:
+### D. Storage transversal
 - `StorBackend`
 - `StorPolitica`
 - `StorObjeto`
-
-Operaciones típicas:
-- alta de backend
-- alta de política
-- resolver política efectiva por sistema/familia/tipo
-- registrar objeto
-- obtener objeto por storage key
 
 ---
 
@@ -86,5 +69,6 @@ Operaciones típicas:
 - mezclar storage físico con documento lógico
 - romper compatibilidad de `RubroCom` con el sistema actual
 - no dejar claro qué parte del versionado cierra vigencia y cuál crea nueva versión
+- dejar asignaciones de talonario o políticas de storage en estado ambiguo
 
 ---

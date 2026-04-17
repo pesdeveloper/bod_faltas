@@ -73,3 +73,44 @@ y regenere el snapshot derivado.
 - recalcular pendientes materiales
 
 ---
+
+## Criterio operativo de actualización
+
+### Actualización incremental en línea
+
+Debe aplicarse solo cuando el cambio impacta directamente la operación inmediata y puede resolverse sin releer todo el expediente.
+
+Casos típicos:
+
+- alta inicial de acta
+- nuevo evento con impacto en bloque o estado actual
+- alta o cambio documental que afecte flags visibles
+- apertura o cierre de notificación
+- cambios en pendientes materiales o medidas preventivas activas
+
+### Reproceso completo
+
+Debe aplicarse cuando:
+
+- exista riesgo de inconsistencia entre snapshot y fuente de verdad
+- cambie una regla de derivación
+- se deba recalcular una acta puntual o un lote
+- una operación histórica no haya reproyectado correctamente
+
+### Regla de consistencia
+
+En caso de discrepancia, la fuente de verdad debe ser siempre:
+
+- `FalActa`
+- `FalActaEvento`
+- tablas documentales
+- tablas de notificación
+- satélites relevantes
+
+`FalActaSnapshot` debe poder regenerarse completamente a partir de esas fuentes.
+
+### Regla de idempotencia
+
+El reproceso de una misma acta debe poder ejecutarse más de una vez sin producir duplicación ni degradación del estado proyectado.
+
+---

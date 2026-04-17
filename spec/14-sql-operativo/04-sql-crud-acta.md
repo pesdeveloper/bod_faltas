@@ -87,12 +87,91 @@ Se mantiene preferentemente normalizado con referencias locales/municipales y so
 
 ### Municipio emisor de licencia
 
-Debe persistirse como jurisdicción emisora distinguida internamente entre:
+Debe persistirse como jurisdicción emisora distinguiendo internamente entre:
 
 - municipio real
 - departamento fallback
 
 aunque en UX el lookup sea unificado.
+
+---
+
+## Mapeo de persistencia en `FalActa`
+
+Para que la operación de alta sea implementable, la información de domicilios y licencias se persiste en `FalActa` usando las siguientes columnas.
+
+### Domicilio del infractor (contexto `Infct`)
+
+#### Soporte nacional (IGN / INDEC)
+
+- `IdProvInfct`, `VerProvInfct`
+- `IdDptoInfct`, `VerDptoInfct`
+- `IdMuniInfct`, `VerMuniInfct` (`nullable`)
+- `IdLocInfct`, `VerLocInfct`
+- `IdLocCenInfct`, `VerLocCenInfct`
+- `IdCalleInfct`, `VerCalleInfct` (`nullable`, si se normaliza)
+
+#### Soporte local Malvinas
+
+- `IdLocMalvInfct`, `VerLocMalvInfct`
+- `IdTcaInfct`, `VerTcaInfct`
+- `IdBarInfct`
+
+#### Soporte común y texto libre
+
+- `AltInfct`
+- `PisoInfct`
+- `DeptoInfct`
+- `ObsDomInfct`
+- `CodPosInfct`
+- `SiCalleTxtInfct`
+- `CalleTxtInfct`
+- `SiNormParcialInfct`
+
+### Jurisdicción emisora de licencia (contexto `LicEmi`)
+
+- `IdProvLicEmi`, `VerProvLicEmi`
+- `IdDptoLicEmi`, `VerDptoLicEmi`
+- `IdMuniLicEmi`, `VerMuniLicEmi` (`nullable`)
+- `TipoJurLicEmi`
+
+### Regla de uso
+
+#### Domicilio del infractor fuera de Malvinas
+
+Debe persistir principalmente:
+
+- provincia
+- municipio o departamento fallback
+- localidad
+- localidad censal
+- calle externa si existe
+- calle textual libre si no existe normalización
+- altura y complementos
+- código postal si se dispone
+- flag de normalización parcial si corresponde
+
+#### Domicilio del infractor en Malvinas
+
+Debe persistir:
+
+- shape nacional cuando aplique
+- y además soporte local fino:
+  - localidad Malvinas
+  - calle municipal
+  - barrio local si se resolvió
+- calle textual libre si no hubo resolución de catálogo
+- código postal si se dispone
+- flag de normalización parcial si corresponde
+
+#### Municipio emisor de licencia
+
+Debe persistirse siempre:
+
+- provincia
+- municipio real si existe
+- departamento fallback si no existe municipio aplicable
+- tipo de jurisdicción emisora en `TipoJurLicEmi`
 
 ---
 
@@ -116,14 +195,17 @@ La operación de alta debe dejar explícito qué satélites son obligatorios y c
 ## Lecturas principales
 
 ### Listado corto administrativo
+
 Base recomendada:
 - `FalActaSnapshot`
 - join corto a `FalActa`
 
 ### Detalle completo
+
 Se recomienda composición en backend a partir de múltiples queries cortas, no una query monolítica.
 
 ### Historial
+
 Base:
 - `FalActaEvento`
 
@@ -139,5 +221,3 @@ Orden:
 - mezcla de corrección mutable con reescritura de historial
 - recalcular de más el snapshot en cada operación mínima
 - asumir un único modelo de domicilio del infractor cuando el diseño exige soporte nacional + local Malvinas
-
----

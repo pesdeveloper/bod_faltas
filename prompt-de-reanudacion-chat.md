@@ -15,7 +15,7 @@ Antes de seguir, abrir también:
 - Priorizar correcciones quirúrgicas y archivos completos copy-paste o paquetes descargables cuando haga falta.
 - Priorizar navegación entre archivos por links relativos cuando sea útil.
 - Evitar documentos innecesariamente largos; partir por responsabilidad cuando convenga.
-- Cuando un archivo deba funcionar como “hub”, debe ser corto, navegable y con links a archivos satélite.
+- Cuando un archivo deba funcionar como hub, debe ser corto, navegable y con links a archivos satélite.
 
 ---
 
@@ -38,6 +38,7 @@ El trabajo reciente se concentró en:
 4. compactación y reestructuración de `14-sql-operativo`
 5. modelado/documentación de tablas territoriales y lookups de domicilios
 6. ajuste de persistencia del domicilio del infractor y jurisdicción emisora de licencia
+7. revisión completa del bloque `spec/14-sql-operativo`
 
 ---
 
@@ -90,7 +91,7 @@ Por eso:
 
 `spec/13-ddl/` fue reorganizado y ajustado.
 
-Además del trabajo general previo, se partió el bloque territorial para hacerlo más navegable:
+La parte territorial quedó separada así:
 
 - `11-tablas-territoriales-externas-introduccion.md`
 - `12-tablas-territoriales-ign-indec.md`
@@ -100,7 +101,7 @@ Además del trabajo general previo, se partió el bloque territorial para hacerl
 ### Estado de esos archivos
 
 #### 11
-Quedó como introducción / marco general de tablas territoriales externas y compartidas.
+Introducción y marco general de tablas territoriales externas y compartidas.
 
 #### 12
 Documenta tablas IGN / INDEC consumidas por faltas.
@@ -115,9 +116,9 @@ Quedó creado como archivo base de georreferenciación territorial, pero **pendi
 
 ## Estado actual de `spec/14-sql-operativo`
 
-Se hizo una compactación fuerte para alinearlo con `spec-as-source`.
+El bloque fue revisado completo y quedó mucho más alineado con `spec-as-source`.
 
-El bloque actual quedó así:
+### Estructura actual
 
 - `00-metodologia-sql-operativo.md`
 - `01-patrones-transaccionales.md`
@@ -130,6 +131,10 @@ El bloque actual quedó así:
 - `05-sql-crud-documental.md`
 - `06-sql-crud-notificacion.md`
 - `07-sql-crud-referenciales-y-transversales.md`
+- `07a-sql-referenciales-versionados.md`
+- `07b-sql-rubros-compartidos.md`
+- `07c-sql-numeracion-transversal.md`
+- `07d-sql-storage-transversal.md`
 - `08-sql-proyecciones-y-reproceso.md`
 
 ### Criterios aplicados
@@ -137,14 +142,16 @@ El bloque actual quedó así:
 - `00` quedó como hub corto y navegable
 - `03` quedó como hub corto
 - el detalle de formularios/lookups se separó en `03a`, `03b`, `03c`
-- se evitó renumerar `04` a `08`
-- se reforzó navegación entre archivos por links relativos
+- `07` se partió en hub + satélites para hacerlo más compacto y usable
+- `01`, `04`, `05` y `06` quedaron bastante más accionables
+- `02` quedó en nivel operativo correcto, sin congelar todavía `WHERE` literales definitivos
+- `08` quedó reforzado con criterio operativo de actualización y reproceso
 
 ---
 
 ## Estado actual del tema domicilios
 
-Este es uno de los puntos más importantes del momento.
+Este es uno de los puntos más importantes ya cerrados.
 
 ### Domicilio del infractor
 
@@ -166,15 +173,6 @@ apoyadas por:
 - `manzana`
 - `callexmza`
 
-La resolución fina usa:
-
-- localidad
-- calle
-- altura
-- tramo
-- barrio
-- ejido urbano
-
 ### Domicilio del infractor fuera de Malvinas Argentinas
 Se resuelve con stack IGN / INDEC:
 
@@ -189,35 +187,22 @@ con apoyo opcional de:
 
 - `geo_bahra_asentamiento`
 
-### Regla de municipio lógico
+### Reglas cerradas
 
-En UX siempre se muestra “Municipio”, pero internamente puede ser:
-
-- municipio real
-- o departamento fallback
-
-### Regla de calle no encontrada en catálogo
-
-Si la calle no existe en catálogo:
-
-- se permite ingreso textual
-- no se agrega al catálogo
-- no se corrige el origen desde el formulario
-- el domicilio queda parcialmente normalizado
+- en UX siempre existe municipio lógico
+- el fallback puede resolver municipio real o departamento
+- si la calle no existe en catálogo:
+  - se permite texto libre
+  - no se agrega al catálogo
+  - no se corrige el origen
+  - el domicilio queda parcialmente normalizado
 
 ### Persistencia acordada para domicilio del infractor
 
-Además del shape nacional, se decidió completar soporte para:
-
-- calle textual libre
-- normalización parcial
-- referencias locales de Malvinas para el infractor
-
-En concreto, quedó acordado agregar o contemplar en `FalActa`:
+Además del shape nacional, se decidió contemplar:
 
 - soporte local fino Malvinas para el infractor
-- flag de calle textual libre del infractor
-- campo de calle textual del infractor
+- calle textual libre del infractor
 - flag de normalización parcial del domicilio del infractor
 
 ---
@@ -261,7 +246,7 @@ Estado actual:
 - `RubroCom` / `RubroComVersion`
 - regla de máximo 30 caracteres en nombres auxiliares
 
-Luego se hizo otra pasada para alinearlo con las decisiones nuevas de:
+Luego se hicieron pasadas adicionales para alinear el SQL base con decisiones de:
 
 - domicilio del infractor
 - calle textual libre
@@ -274,20 +259,25 @@ Luego se hizo otra pasada para alinearlo con las decisiones nuevas de:
 
 En este momento:
 
-- el usuario va a revisar `spec/14-sql-operativo`
-- ya se regeneraron archivos de `13-ddl`, `14-sql-operativo` y `sql/informix/base` para reflejar los cambios de domicilios
-- `13-ddl` ya quedó mejor separado en territorial tabular vs GIS
-- georreferenciación quedó diferida para completar cuando existan las capas cargadas en PostGIS
+- `spec/14-sql-operativo` ya quedó revisado completo
+- `13-ddl` quedó mejor separado entre territorial tabular y GIS
+- georreferenciación quedó pendiente para completar con capas reales PostGIS
+- el próximo paso ya no está en revisión general de `14`, sino en:
+  - completar GIS
+  - o bajar a SQL más concreto / implementación real
 
 ---
 
 ## Próximo paso recomendado al retomar
 
-1. revisar observaciones del usuario sobre `spec/14-sql-operativo`
-2. ajustar si hace falta los archivos regenerados por el tema domicilios
-3. verificar si la persistencia final acordada de domicilio quedó exactamente como se quiere
-4. completar `spec/13-ddl/14-tablas-georreferenciacion-territorial.md` cuando estén las capas reales PostGIS
-5. luego empezar a bajar de spec a SQL operativo más cercano a implementación real
+1. completar `spec/13-ddl/14-tablas-georreferenciacion-territorial.md` cuando estén cargadas las capas reales en PostGIS
+2. luego bajar de spec a SQL más concreto o cercano a implementación real
+3. priorizar, según convenga:
+   - lookups territoriales
+   - alta de acta
+   - circuito documental
+   - circuito de notificación
+   - repositorios / capa backend
 
 ---
 

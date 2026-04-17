@@ -2,9 +2,9 @@
 
 ## Estado actual
 
-El repo quedó bastante más ordenado y coherente que al inicio de esta pasada.
+El repo quedó bastante más ordenado, consistente y navegable que al inicio de esta pasada.
 
-Se cerraron decisiones importantes de naming, estructura y separación de responsabilidades, y además se reordenaron varios bloques para que sean más compatibles con un enfoque `spec-as-source`.
+Se cerraron decisiones importantes de naming, estructura y separación de responsabilidades, y además se terminó una revisión completa del bloque `spec/14-sql-operativo` para alinearlo con un enfoque `spec-as-source`.
 
 ---
 
@@ -53,7 +53,7 @@ El bloque `13-ddl` fue regenerado/ajustado y además se reorganizó la parte ter
 Archivo introductorio y marco general.
 
 #### `12`
-Documenta tablas IGN / INDEC que faltas consume para resolución territorial.
+Documenta tablas IGN / INDEC consumidas por faltas para resolución territorial.
 
 #### `13`
 Documenta tablas locales de Malvinas para resolución fina del domicilio.
@@ -73,15 +73,15 @@ Archivo de georreferenciación territorial creado, pero pendiente de completarse
 - `RubroCom` / `RubroComVersion`
 - nombres auxiliares cortos
 
-Después se hizo otra pasada para alinear el SQL base con las decisiones nuevas de domicilios y licencia.
+Después se hicieron pasadas adicionales para alinear el SQL base con decisiones nuevas de domicilios y licencia.
 
-Quedó pendiente solo la validación final del usuario y, si hiciera falta, una última corrección quirúrgica.
+Queda pendiente solo la validación final del usuario si, al bajar a implementación real, aparece alguna corrección quirúrgica más.
 
 ---
 
 ## 4. Estado de `spec/14-sql-operativo`
 
-El bloque fue compactado y reorganizado.
+El bloque fue revisado completo y quedó mucho más compacto, navegable y accionable.
 
 ### Estructura actual
 
@@ -96,20 +96,30 @@ El bloque fue compactado y reorganizado.
 - `05-sql-crud-documental.md`
 - `06-sql-crud-notificacion.md`
 - `07-sql-crud-referenciales-y-transversales.md`
+- `07a-sql-referenciales-versionados.md`
+- `07b-sql-rubros-compartidos.md`
+- `07c-sql-numeracion-transversal.md`
+- `07d-sql-storage-transversal.md`
 - `08-sql-proyecciones-y-reproceso.md`
 
-### Estado funcional
+### Resultado funcional
 
 - `00` funciona como hub corto
 - `03` funciona como hub corto
-- `03a/03b/03c` separan detalle de lookups
-- el bloque quedó mucho más navegable y menos pesado
+- `07` fue partido en hub + satélites
+- `01`, `04`, `05` y `06` quedaron mucho más accionables
+- `02` quedó correctamente en nivel operativo, sin congelar aún filtros SQL literales de bandeja
+- `08` quedó reforzado con criterio operativo de actualización y reproceso
+
+### Estado general del bloque
+
+`spec/14-sql-operativo` puede considerarse **revisado por completo** por ahora.
 
 ---
 
 ## 5. Estado del tema domicilios
 
-Este es el punto funcional más importante del momento.
+Este fue uno de los puntos funcionales más importantes de la pasada.
 
 ### Domicilio del infractor
 
@@ -197,30 +207,33 @@ Archivo actual:
 
 En este momento:
 
-- el usuario va a revisar `spec/14-sql-operativo`
-- ya se regeneraron archivos de `13-ddl`, `14-sql-operativo` y `sql/informix/base` para reflejar cambios de domicilios y licencia
-- falta la pasada fina posterior a la revisión del usuario
+- `spec/14-sql-operativo` ya quedó revisado completo
+- `13-ddl` ya quedó mejor separado en territorial tabular vs GIS
+- el siguiente paso ya no está en revisión general del bloque operativo
 - georreferenciación queda para completar con datos reales del servidor GIS
+- luego corresponde bajar a SQL operativo más concreto o implementación real
 
 ---
 
 ## Próximo paso recomendado
 
 ### Paso inmediato
-Esperar / revisar observaciones del usuario sobre `spec/14-sql-operativo`.
-
-### Luego
-Ajustar si hace falta los archivos regenerados por domicilios y licencia.
-
-### Después
 Completar:
 
 - `spec/13-ddl/14-tablas-georreferenciacion-territorial.md`
 
 cuando estén cargadas las capas reales en PostGIS.
 
-### Luego
-Empezar a bajar de spec a SQL operativo más concreto / cercano a implementación real.
+### Después
+Empezar a bajar de spec a SQL más concreto / cercano a implementación real.
+
+Prioridades posibles:
+
+- lookups territoriales
+- alta de acta
+- circuito documental
+- circuito de notificación
+- repositorios o capa backend
 
 ---
 
