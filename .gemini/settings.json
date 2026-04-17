@@ -6,6 +6,14 @@
         "-jar",
         "C:\\tools\\informix-db-mcp\\target\\informix-mcp-server-1.0.0.jar"
       ]
+    },
+    "postgres-malvinas-geo": {
+      "command": "postgres-mcp",
+      "args": [
+        "--access-mode",
+        "restricted",
+        "postgres://malvinas_admin:PasswordFuerte@10.10.3.179:5432/malvinas_geo_db"
+      ]
     }
   }
 }
