@@ -59,11 +59,45 @@ Documenta tablas IGN / INDEC consumidas por faltas para resolución territorial.
 Documenta tablas locales de Malvinas para resolución fina del domicilio.
 
 #### `14`
-Archivo de georreferenciación territorial creado, pero pendiente de completarse con tablas reales PostGIS.
+Archivo de georreferenciación territorial ya completado con las capas reales de Geomática municipal en PostGIS.
 
 ---
 
-## 3. Estado de `sql/informix/base`
+## 3. Estado de GIS / PostGIS
+
+Se adoptó el prefijo:
+
+- `geo_gmat_*`
+
+para capas geoespaciales municipales oficiales.
+
+### Proyección
+
+- `EPSG:22195`
+- Campo Inchauspe / Argentina 5
+
+### Capas GIS documentadas
+
+- `geo_gmat_localidad`
+- `geo_gmat_barrio`
+- `geo_gmat_manzana`
+- `geo_gmat_parcela`
+- `geo_gmat_nomenclatura`
+- `geo_gmat_calle`
+
+### Estado funcional
+
+Quedó documentado:
+
+- el rol de cada capa
+- la jerarquía espacial entre capas
+- reglas de resolución espacial
+- uso de `ST_Transform` cuando el origen GPS venga en WGS84
+- el hecho de que `geo_gmat_nomenclatura` es capa de etiqueta/punto y no reemplaza a la parcela
+
+---
+
+## 4. Estado de `sql/informix/base`
 
 `sql/informix/base/` fue regenerado con la convención nueva:
 
@@ -73,13 +107,18 @@ Archivo de georreferenciación territorial creado, pero pendiente de completarse
 - `RubroCom` / `RubroComVersion`
 - nombres auxiliares cortos
 
-Después se hicieron pasadas adicionales para alinear el SQL base con decisiones nuevas de domicilios y licencia.
+Después se hicieron pasadas adicionales para alinear el SQL base con decisiones nuevas de:
+
+- domicilios
+- licencia
+- documental
+- notificación
 
 Queda pendiente solo la validación final del usuario si, al bajar a implementación real, aparece alguna corrección quirúrgica más.
 
 ---
 
-## 4. Estado de `spec/14-sql-operativo`
+## 5. Estado de `spec/14-sql-operativo`
 
 El bloque fue revisado completo y quedó mucho más compacto, navegable y accionable.
 
@@ -117,7 +156,7 @@ El bloque fue revisado completo y quedó mucho más compacto, navegable y accion
 
 ---
 
-## 5. Estado del tema domicilios
+## 6. Estado del tema domicilios
 
 Este fue uno de los puntos funcionales más importantes de la pasada.
 
@@ -176,7 +215,7 @@ Se decidió contemplar, además del shape nacional:
 
 ---
 
-## 6. Municipio emisor de licencia
+## 7. Municipio emisor de licencia
 
 También quedó definido que debe persistirse:
 
@@ -189,55 +228,41 @@ Aunque en UX siga presentándose como un único campo lógico con fallback.
 
 ---
 
-## 7. Estado de georreferenciación
-
-Se decidió separar lookup territorial tabular de georreferenciación/GIS.
-
-Archivo actual:
-- `spec/13-ddl/14-tablas-georreferenciacion-territorial.md`
-
-### Estado
-- creado
-- orientación funcional ya documentada
-- pendiente de completarse cuando estén cargadas las capas reales en PostGIS
-
----
-
 ## 8. Punto exacto donde quedó el trabajo
 
 En este momento:
 
 - `spec/14-sql-operativo` ya quedó revisado completo
-- `13-ddl` ya quedó mejor separado en territorial tabular vs GIS
-- el siguiente paso ya no está en revisión general del bloque operativo
-- georreferenciación queda para completar con datos reales del servidor GIS
-- luego corresponde bajar a SQL operativo más concreto o implementación real
+- GIS/PostGIS ya quedó documentado a nivel spec
+- el siguiente paso ya no está en revisión general de spec
+- el proyecto está listo para empezar a bajar a implementación real guiada por spec
+- el foco natural pasa a `backend/`
 
 ---
 
-## Próximo paso recomendado
+## 9. Próximo paso recomendado
 
 ### Paso inmediato
-Completar:
+Empezar a trabajar en `backend/` con casos de uso concretos.
 
-- `spec/13-ddl/14-tablas-georreferenciacion-territorial.md`
+### Prioridades sugeridas
 
-cuando estén cargadas las capas reales en PostGIS.
+1. lookups territoriales
+2. alta de acta
+3. circuito documental
+4. circuito de notificación
 
-### Después
-Empezar a bajar de spec a SQL más concreto / cercano a implementación real.
+### Estrategia recomendada
 
-Prioridades posibles:
-
-- lookups territoriales
-- alta de acta
-- circuito documental
-- circuito de notificación
-- repositorios o capa backend
+- `spec/` sigue siendo la fuente de verdad
+- Byte diseña y ordena
+- Cursor implementa
+- Gemini hace revisión crítica
+- las propuestas de Gemini se aceptan solo si mejoran realmente el proyecto
 
 ---
 
-## Criterio de continuidad
+## 10. Criterio de continuidad
 
 Seguir trabajando con estas reglas:
 

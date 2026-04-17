@@ -5,6 +5,10 @@ Retomamos el repo multiproyecto del sistema de faltas municipal.
 Antes de seguir, abrir también:
 - [`estado-actual-y-proximo-paso.md`](./estado-actual-y-proximo-paso.md)
 
+Si la memoria fue borrada o el chat es nuevo, usar además:
+- `prompt-maestro-de-recuperacion.md`
+- `prompt-recuperacion-faltas.md`
+
 ## Regla general de trabajo
 
 - Continuar en español.
@@ -16,6 +20,15 @@ Antes de seguir, abrir también:
 - Priorizar navegación entre archivos por links relativos cuando sea útil.
 - Evitar documentos innecesariamente largos; partir por responsabilidad cuando convenga.
 - Cuando un archivo deba funcionar como hub, debe ser corto, navegable y con links a archivos satélite.
+
+---
+
+## Esquema de trabajo acordado
+
+- **ChatGPT / Byte** = arquitecto, mantiene coherencia global, filtra decisiones y define rumbo.
+- **Cursor** = implementa y genera código.
+- **Gemini** = revisor crítico que busca inconsistencias, ambigüedades o grietas y propone cambios.
+- Las propuestas de Gemini no se aceptan automáticamente: se evalúan y se toman solo si realmente mejoran el proyecto.
 
 ---
 
@@ -39,6 +52,7 @@ El trabajo reciente se concentró en:
 5. modelado/documentación de tablas territoriales y lookups de domicilios
 6. ajuste de persistencia del domicilio del infractor y jurisdicción emisora de licencia
 7. revisión completa del bloque `spec/14-sql-operativo`
+8. documentación de capas GIS/PostGIS reales de Geomática municipal
 
 ---
 
@@ -110,7 +124,38 @@ Documenta tablas IGN / INDEC consumidas por faltas.
 Documenta tablas locales de Malvinas para resolución fina de domicilios.
 
 #### 14
-Quedó creado como archivo base de georreferenciación territorial, pero **pendiente de completarse** cuando estén cargadas las capas reales en PostGIS.
+Ya quedó completado con las capas reales municipales de Geomática en PostGIS.
+
+---
+
+## Estado actual de GIS / PostGIS
+
+Se adoptó el prefijo:
+
+- `geo_gmat_*`
+
+como familia de capas GIS municipales de Geomática.
+
+### Proyección / SRID
+
+- `EPSG:22195`
+- Campo Inchauspe / Argentina 5
+
+### Capas GIS documentadas
+
+- `geo_gmat_localidad`
+- `geo_gmat_barrio`
+- `geo_gmat_manzana`
+- `geo_gmat_parcela`
+- `geo_gmat_nomenclatura`
+- `geo_gmat_calle`
+
+### Reglas importantes ya cerradas
+
+- `geo_gmat_nomenclatura` es capa de punto/etiqueta, no reemplaza a parcela
+- `geo_gmat_parcela` es el objeto poligonal principal para selección parcelaria
+- las capas GIS complementan la resolución territorial tabular
+- las coordenadas GPS de origen móvil probablemente lleguen en `EPSG:4326`, por lo que deben transformarse antes de cruzarse con las capas municipales
 
 ---
 
@@ -146,6 +191,10 @@ El bloque fue revisado completo y quedó mucho más alineado con `spec-as-source
 - `01`, `04`, `05` y `06` quedaron bastante más accionables
 - `02` quedó en nivel operativo correcto, sin congelar todavía `WHERE` literales definitivos
 - `08` quedó reforzado con criterio operativo de actualización y reproceso
+
+### Estado general del bloque
+
+`spec/14-sql-operativo` puede considerarse **revisado completo por ahora**.
 
 ---
 
@@ -220,22 +269,6 @@ Aunque en UX siga viéndose como un único campo con fallback.
 
 ---
 
-## Estado de georreferenciación
-
-Se decidió separar georreferenciación/GIS del lookup territorial tabular.
-
-Por eso existe:
-
-- `spec/13-ddl/14-tablas-georreferenciacion-territorial.md`
-
-Estado actual:
-
-- archivo creado
-- orientación funcional ya documentada
-- pendiente de completar cuando estén cargadas las capas reales en el servidor PostGIS
-
----
-
 ## Estado del SQL físico
 
 `sql/informix/base/` fue regenerado y alineado con:
@@ -252,6 +285,8 @@ Luego se hicieron pasadas adicionales para alinear el SQL base con decisiones de
 - calle textual libre
 - normalización parcial
 - jurisdicción emisora de licencia
+- documental
+- notificación
 
 ---
 
@@ -260,24 +295,22 @@ Luego se hicieron pasadas adicionales para alinear el SQL base con decisiones de
 En este momento:
 
 - `spec/14-sql-operativo` ya quedó revisado completo
-- `13-ddl` quedó mejor separado entre territorial tabular y GIS
-- georreferenciación quedó pendiente para completar con capas reales PostGIS
-- el próximo paso ya no está en revisión general de `14`, sino en:
-  - completar GIS
-  - o bajar a SQL más concreto / implementación real
+- GIS/PostGIS ya quedó documentado a nivel spec
+- el siguiente paso ya no está en revisión general de spec
+- el proyecto está en el umbral de empezar a escribir código guiado por spec
+- el foco natural pasa a `backend/`, usando `spec/` como fuente de verdad
 
 ---
 
 ## Próximo paso recomendado al retomar
 
-1. completar `spec/13-ddl/14-tablas-georreferenciacion-territorial.md` cuando estén cargadas las capas reales en PostGIS
-2. luego bajar de spec a SQL más concreto o cercano a implementación real
-3. priorizar, según convenga:
+1. empezar a bajar de spec a implementación real en `backend/`
+2. priorizar casos de uso cerrados, por ejemplo:
    - lookups territoriales
    - alta de acta
    - circuito documental
    - circuito de notificación
-   - repositorios / capa backend
+3. usar `apps/` solo cuando haga falta validar shape, UX o integración
 
 ---
 
@@ -288,3 +321,4 @@ En este momento:
 - priorizar links relativos navegables entre archivos
 - evitar documentos gigantes con múltiples responsabilidades
 - usar `spec-as-source` de verdad: legible por humanos y navegable/usable por agentes
+- usar el esquema: Byte diseña, Cursor implementa, Gemini audita
