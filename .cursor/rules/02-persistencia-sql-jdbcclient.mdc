@@ -1,0 +1,19 @@
+---
+description: Persistencia con Spring JDBC + JdbcClient + SQL explícito
+globs:
+  - backend/**/*.java
+alwaysApply: true
+---
+
+Reglas obligatorias de persistencia:
+
+- Usar `JdbcClient` como API preferida.
+- Escribir SQL explícito.
+- Usar siempre parámetros nombrados.
+- No usar parámetros posicionales con `?`.
+- Preferir Java Text Blocks para SQL multilínea.
+- Preferir alias SQL explícitos cuando ayuden al mapeo o a la claridad.
+- Para DTOs y proyecciones, preferir Java Records.
+- Para mapeos complejos, usar `RowMapper<T>`.
+- Los repositories deben ser clases concretas.
+- Los repositories no deben contener lógica de negocio.

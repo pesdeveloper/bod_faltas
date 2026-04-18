@@ -1,0 +1,21 @@
+---
+description: Separación de capas y responsabilidades backend
+globs:
+  - backend/**/*.java
+alwaysApply: true
+---
+
+Separación esperada:
+
+- `web` o `infrastructure/web`: endpoints HTTP, request/response, traducción hacia application
+- `application`: casos de uso, orquestación, transacciones
+- `domain`: modelo, contratos, reglas puras de dominio
+- `infrastructure/persistence/jdbc`: repositories concretos y acceso SQL
+- `infrastructure/config`: configuración Spring
+
+Reglas:
+
+- No poner lógica de negocio en controllers.
+- No poner lógica de negocio en repositories.
+- No mezclar contratos de dominio con detalles HTTP.
+- No acoplar casos de uso a detalles de framework si no es necesario.

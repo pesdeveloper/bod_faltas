@@ -1,324 +1,180 @@
-# Prompt de reanudación del chat
+# Prompt de reanudación del chat — Proyecto Faltas
 
-Retomamos el repo multiproyecto del sistema de faltas municipal.
+Retomamos el proyecto del sistema de faltas municipal de Malvinas Argentinas.
 
-Antes de seguir, abrir también:
-- [`estado-actual-y-proximo-paso.md`](./estado-actual-y-proximo-paso.md)
+## Regla de arranque
 
-Si la memoria fue borrada o el chat es nuevo, usar además:
-- `prompt-maestro-de-recuperacion.md`
-- `prompt-recuperacion-faltas.md`
+Antes de continuar:
 
-## Regla general de trabajo
-
-- Continuar en español.
-- No rediseñar desde cero.
-- Usar `spec/` como fuente principal de verdad.
-- Mantener estilo compacto, claro, navegable y orientado a `spec-as-source`.
-- No volver a discutir fundamentos ya cerrados salvo contradicción real.
-- Priorizar correcciones quirúrgicas y archivos completos copy-paste o paquetes descargables cuando haga falta.
-- Priorizar navegación entre archivos por links relativos cuando sea útil.
-- Evitar documentos innecesariamente largos; partir por responsabilidad cuando convenga.
-- Cuando un archivo deba funcionar como hub, debe ser corto, navegable y con links a archivos satélite.
+1. leer `prompt-recuperacion-faltas.md`
+2. leer `estado-actual-y-proximo-paso.md`
+3. tomar el repo y la spec como fuente principal de verdad
+4. no rediseñar desde cero
+5. continuar desde el próximo paso real pendiente
 
 ---
 
-## Esquema de trabajo acordado
+## Estado conceptual a asumir al retomar
 
-- **ChatGPT / Byte** = arquitecto, mantiene coherencia global, filtra decisiones y define rumbo.
-- **Cursor** = implementa y genera código.
-- **Gemini** = revisor crítico que busca inconsistencias, ambigüedades o grietas y propone cambios.
-- Las propuestas de Gemini no se aceptan automáticamente: se evalúan y se toman solo si realmente mejoran el proyecto.
+El proyecto ya tiene una spec bastante madura.
 
----
+No estamos en etapa de rediscutir el dominio general desde cero.
 
-## Estado general al retomar
+Ya quedaron bastante consolidados:
 
-Se consolidó una pasada fuerte de alineación entre:
-
-- `spec/`
-- `spec/13-ddl/`
-- `sql/informix/base/`
-- `spec/14-sql-operativo/`
-
-Ya se revisaron, corrigieron o regeneraron bloques importantes del repositorio.
-
-El trabajo reciente se concentró en:
-
-1. convención física de nombres
-2. renombre y regeneración de `13-ddl`
-3. regeneración de `sql/informix/base`
-4. compactación y reestructuración de `14-sql-operativo`
-5. modelado/documentación de tablas territoriales y lookups de domicilios
-6. ajuste de persistencia del domicilio del infractor y jurisdicción emisora de licencia
-7. revisión completa del bloque `spec/14-sql-operativo`
-8. documentación de capas GIS/PostGIS reales de Geomática municipal
+- enfoque `spec-as-source`
+- núcleo orientado a `Acta`
+- modelo event-driven
+- `ActaEvento` append-only
+- `ActaSnapshot` como proyección operativa
+- flujo D1–D8
+- D2 = Enriquecimiento
+- procesos transversales:
+  - P1 documental
+  - P2 económico
+  - P3 notificación
+- bandejas como vistas operativas
+- convención física `Fal`, `Num`, `Stor`
+- bloque `spec/13-ddl` maduro
+- bloque `spec/14-sql-operativo` maduro
 
 ---
 
-## Decisiones firmes vigentes
+## Decisiones nuevas ya cerradas
 
-### Convención física
+### 1. Implementación backend real
 
-Prefijos oficiales:
+Para backend productivo futuro quedó definida una línea base:
 
-- `Fal` = dominio propio de faltas
-- `Num` = numeración / talonarios transversal
-- `Stor` = storage documental transversal
+- Spring Boot moderno
+- code-first
+- sin XML
+- Java Config + anotaciones
+- `application.yml`
+- Spring JDBC
+- `JdbcClient` como API preferida
+- SQL explícito
+- parámetros nombrados
+- sin JPA/Hibernate
+- sin `JpaRepository` / `CrudRepository`
 
-Además:
+Esto quedó documentado en:
 
-- entidades compartidas existentes conservan su nombre real
-- ejemplo:
-  - `RubroCom`
-  - `RubroComVersion`
+- `spec/04-backend/10-implementacion-base-spring-jdbc.md`
 
-Archivo canónico:
-- `spec/12-datos/00-convencion-nombres-fisicos.md`
+### 2. Prototipo de validación
 
-### Restricción interna de nombres auxiliares
+Antes de bajar a implementación productiva real, se definió construir un prototipo para validar con la Dirección de Faltas.
 
-Aunque Informix soporte identificadores más largos, el proyecto fija como regla interna:
+Ese prototipo quedó definido como:
 
-- nombres de índices, constraints y secuencias: **máximo 30 caracteres**
+- simulador funcional integral del negocio
+- de punta a punta
+- con datos mockeados
+- con estado en memoria
+- sin base real
+- sin Informix
+- sin integraciones reales
+- con toda la lógica operativa visible
+- con bandejas, eventos, documentos, firma simulada, notificaciones, reintentos, archivo, cerrado, etc.
 
-Esto ya obligó a regenerar naming físico en `13-ddl` y `sql/informix/base`.
+Importante:
 
-### Storage y numeración son transversales
+- el prototipo es **descartable**
+- no es base evolutiva del backend real
+- cuando termine su objetivo, debe eliminarse del repo por completo
 
-No pertenecen solo a faltas.
+Esto quedó documentado en:
 
-Por eso:
+- `spec/03-bandejas/99-prototipo-validacion-direccion.md`
 
-- tablas de numeración/talonarios → `Num*`
-- tablas de storage → `Stor*`
+### 3. Orquestación de agentes
 
-### RubroCom es compartido
+También quedó formalizado el esquema de trabajo:
 
-- `RubroCom` pertenece al sistema actual de ingresos
-- no debe renombrarse a `FalRubroCom`
-- `RubroComVersion` debe existir para compatibilidad/versionado, pero conservando familia nominal compartida
+- Byte = arquitecto
+- Cursor = implementa
+- Gemini = auditor crítico
+- la spec manda
+- no se aceptan propuestas automáticamente sin evaluación arquitectónica
 
----
+Esto quedó documentado en:
 
-## Estado actual de `spec/13-ddl`
-
-`spec/13-ddl/` fue reorganizado y ajustado.
-
-La parte territorial quedó separada así:
-
-- `11-tablas-territoriales-externas-introduccion.md`
-- `12-tablas-territoriales-ign-indec.md`
-- `13-tablas-territoriales-malvinas-locales.md`
-- `14-tablas-georreferenciacion-territorial.md`
-
-### Estado de esos archivos
-
-#### 11
-Introducción y marco general de tablas territoriales externas y compartidas.
-
-#### 12
-Documenta tablas IGN / INDEC consumidas por faltas.
-
-#### 13
-Documenta tablas locales de Malvinas para resolución fina de domicilios.
-
-#### 14
-Ya quedó completado con las capas reales municipales de Geomática en PostGIS.
+- `spec/00-overview/06-orquestacion-de-agentes-y-flujo-sdd.md`
 
 ---
 
-## Estado actual de GIS / PostGIS
+## Punto real en el que quedó el trabajo
 
-Se adoptó el prefijo:
+El siguiente paso ya no es seguir ampliando la spec en abstracto.
 
-- `geo_gmat_*`
+El siguiente paso real es bajar a código el **prototipo descartable** para validación con la Dirección.
 
-como familia de capas GIS municipales de Geomática.
+La idea es que mañana se empiece con Cursor sobre:
 
-### Proyección / SRID
+- `backend/api-faltas-prototipo/`
 
-- `EPSG:22195`
-- Campo Inchauspe / Argentina 5
-
-### Capas GIS documentadas
-
-- `geo_gmat_localidad`
-- `geo_gmat_barrio`
-- `geo_gmat_manzana`
-- `geo_gmat_parcela`
-- `geo_gmat_nomenclatura`
-- `geo_gmat_calle`
-
-### Reglas importantes ya cerradas
-
-- `geo_gmat_nomenclatura` es capa de punto/etiqueta, no reemplaza a parcela
-- `geo_gmat_parcela` es el objeto poligonal principal para selección parcelaria
-- las capas GIS complementan la resolución territorial tabular
-- las coordenadas GPS de origen móvil probablemente lleguen en `EPSG:4326`, por lo que deben transformarse antes de cruzarse con las capas municipales
+con implementación simple, sin sobrearquitectura, priorizando velocidad, claridad y capacidad de validación.
 
 ---
 
-## Estado actual de `spec/14-sql-operativo`
+## Criterio de implementación inmediata
 
-El bloque fue revisado completo y quedó mucho más alineado con `spec-as-source`.
+Para el prototipo:
 
-### Estructura actual
-
-- `00-metodologia-sql-operativo.md`
-- `01-patrones-transaccionales.md`
-- `02-sql-bandejas.md`
-- `03-sql-formularios-y-lookups.md`
-- `03a-sql-lookups-domicilio-infractor.md`
-- `03b-sql-lookups-licencia-y-jurisdiccion.md`
-- `03c-sql-lookups-catalogos-y-validaciones.md`
-- `04-sql-crud-acta.md`
-- `05-sql-crud-documental.md`
-- `06-sql-crud-notificacion.md`
-- `07-sql-crud-referenciales-y-transversales.md`
-- `07a-sql-referenciales-versionados.md`
-- `07b-sql-rubros-compartidos.md`
-- `07c-sql-numeracion-transversal.md`
-- `07d-sql-storage-transversal.md`
-- `08-sql-proyecciones-y-reproceso.md`
-
-### Criterios aplicados
-
-- `00` quedó como hub corto y navegable
-- `03` quedó como hub corto
-- el detalle de formularios/lookups se separó en `03a`, `03b`, `03c`
-- `07` se partió en hub + satélites para hacerlo más compacto y usable
-- `01`, `04`, `05` y `06` quedaron bastante más accionables
-- `02` quedó en nivel operativo correcto, sin congelar todavía `WHERE` literales definitivos
-- `08` quedó reforzado con criterio operativo de actualización y reproceso
-
-### Estado general del bloque
-
-`spec/14-sql-operativo` puede considerarse **revisado completo por ahora**.
+- priorizar simplicidad
+- usar estado en memoria
+- usar dataset mock precargado
+- evitar infraestructura real
+- exponer todas las acciones importantes del negocio
+- permitir recorrer el sistema completo
+- no preocuparse por reusabilidad futura
+- no contaminar el backend real con decisiones del prototipo
 
 ---
 
-## Estado actual del tema domicilios
+## Qué debería encararse primero
 
-Este es uno de los puntos más importantes ya cerrados.
+Orden sugerido de arranque para el prototipo:
 
-### Domicilio del infractor
-
-Se tomó la decisión de ir con **opción B**:
-
-- mantener el shape nacional común
-- y además persistir referencias locales de Malvinas cuando el domicilio del infractor sea de Malvinas Argentinas
-
-### Domicilio del infractor en Malvinas Argentinas
-Se resuelve con tablas locales:
-
-- `localidad`
-- `calle`
-- `geo_calle_alturas_barrio`
-
-apoyadas por:
-
-- `barrio`
-- `manzana`
-- `callexmza`
-
-### Domicilio del infractor fuera de Malvinas Argentinas
-Se resuelve con stack IGN / INDEC:
-
-- `geo_ign_provincia`
-- `geo_ign_municipio`
-- `geo_ign_departamento`
-- `geo_indec_localidad`
-- `geo_indec_localidad_censal`
-- `geo_indec_calles`
-
-con apoyo opcional de:
-
-- `geo_bahra_asentamiento`
-
-### Reglas cerradas
-
-- en UX siempre existe municipio lógico
-- el fallback puede resolver municipio real o departamento
-- si la calle no existe en catálogo:
-  - se permite texto libre
-  - no se agrega al catálogo
-  - no se corrige el origen
-  - el domicilio queda parcialmente normalizado
-
-### Persistencia acordada para domicilio del infractor
-
-Además del shape nacional, se decidió contemplar:
-
-- soporte local fino Malvinas para el infractor
-- calle textual libre del infractor
-- flag de normalización parcial del domicilio del infractor
+1. crear `backend/api-faltas-prototipo`
+2. montar estructura mínima Spring Boot
+3. definir store en memoria
+4. cargar escenario mock inicial
+5. exponer primeras bandejas
+6. exponer detalle de acta
+7. exponer historial de eventos
+8. exponer acciones mock
+9. agregar documentos simulados
+10. agregar notificaciones y reintentos simulados
 
 ---
 
-## Municipio emisor de licencia
+## Regla de continuidad
 
-También quedó mejor definido:
+Al retomar:
 
-- persistir provincia
-- persistir municipio real si existe
-- persistir departamento fallback si no hay municipio
-- persistir tipo de jurisdicción emisora
+- no volver a discutir si el prototipo debe existir
+- no volver a discutir si usa base real
+- no volver a discutir si debe evolucionar al backend real
+- esas decisiones ya quedaron cerradas
 
-Aunque en UX siga viéndose como un único campo con fallback.
+Se debe avanzar directamente en:
 
----
-
-## Estado del SQL físico
-
-`sql/informix/base/` fue regenerado y alineado con:
-
-- `Fal`
-- `Num`
-- `Stor`
-- `RubroCom` / `RubroComVersion`
-- regla de máximo 30 caracteres en nombres auxiliares
-
-Luego se hicieron pasadas adicionales para alinear el SQL base con decisiones de:
-
-- domicilio del infractor
-- calle textual libre
-- normalización parcial
-- jurisdicción emisora de licencia
-- documental
-- notificación
+- estructura del prototipo
+- implementación con Cursor
+- validación rápida del recorrido
+- ajuste fino a partir de lo que vaya mostrando la demo
 
 ---
 
-## Punto exacto donde se retoma
+## Regla final
 
-En este momento:
+Si hay contradicción entre recuerdos vagos, chat y repo, priorizar:
 
-- `spec/14-sql-operativo` ya quedó revisado completo
-- GIS/PostGIS ya quedó documentado a nivel spec
-- el siguiente paso ya no está en revisión general de spec
-- el proyecto está en el umbral de empezar a escribir código guiado por spec
-- el foco natural pasa a `backend/`, usando `spec/` como fuente de verdad
+1. `spec/`
+2. `estado-actual-y-proximo-paso.md`
+3. este archivo
+4. el chat actual
 
----
-
-## Próximo paso recomendado al retomar
-
-1. empezar a bajar de spec a implementación real en `backend/`
-2. priorizar casos de uso cerrados, por ejemplo:
-   - lookups territoriales
-   - alta de acta
-   - circuito documental
-   - circuito de notificación
-3. usar `apps/` solo cuando haga falta validar shape, UX o integración
-
----
-
-## Recordatorio de estilo para seguir
-
-- mantener archivos compactos
-- usar hubs cortos y archivos satélite cuando convenga
-- priorizar links relativos navegables entre archivos
-- evitar documentos gigantes con múltiples responsabilidades
-- usar `spec-as-source` de verdad: legible por humanos y navegable/usable por agentes
-- usar el esquema: Byte diseña, Cursor implementa, Gemini audita
+No inventar memoria. Continuar desde el punto real documentado.

@@ -1,0 +1,18 @@
+---
+description: Reglas de dominio relevantes para implementación
+globs:
+  - backend/**/*.java
+alwaysApply: true
+---
+
+Recordatorios de dominio:
+
+- `Acta` es la unidad principal.
+- No existe `IdCausa` como entidad principal.
+- `ActaEvento` es append-only.
+- `ActaSnapshot` es proyección operativa derivada.
+- No se reabre editando estado: se reingresa por evento.
+- Mantener separación entre flujo, acto, documento y notificación.
+- Las bandejas son vistas operativas, no reconstrucción completa del expediente.
+- D2 es Enriquecimiento, no validación rígida.
+- Archivo no equivale automáticamente a Cerrada.
