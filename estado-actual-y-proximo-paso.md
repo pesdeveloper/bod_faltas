@@ -85,6 +85,25 @@ Archivo asociado:
 
 - `spec/03-bandejas/99-prototipo-validacion-direccion.md`
 
+### Módulo del prototipo
+
+Se decidió que el prototipo debe vivir separado del backend real.
+
+Ubicación prevista:
+
+- `backend/api-faltas-prototipo/`
+
+No corresponde usar `api-faltas-core` para este objetivo.
+
+### Cursor Rules
+
+Se definieron rules para el backend real y, adicionalmente, rules específicas para el prototipo:
+
+- prototipo descartable en memoria
+- construcción incremental por slices mínimos
+
+Esto deja preparado el contexto para empezar a generar código con Cursor sin mezclar reglas de producción con reglas del simulador.
+
 ---
 
 ## Lectura correcta del momento actual
@@ -136,16 +155,19 @@ Permitir:
 ## Orden sugerido de implementación
 
 1. crear estructura mínima de `backend/api-faltas-prototipo`
-2. definir modelos mock básicos
-3. definir store en memoria
-4. cargar escenario inicial con 8 a 12 actas mock
-5. exponer endpoints mínimos de salud y reset
-6. exponer bandejas
-7. exponer detalle de acta
-8. exponer historial de eventos
-9. exponer acciones operativas mock
-10. agregar lógica documental simulada
-11. agregar lógica de notificación y reintentos simulados
+2. levantar proyecto Spring Boot mínimo
+3. definir modelos mock básicos
+4. definir store en memoria
+5. cargar escenario inicial con 8 a 12 actas mock
+6. exponer endpoints mínimos de salud y reset
+7. exponer bandejas
+8. exponer actas por bandeja
+9. exponer detalle de acta
+10. exponer historial de eventos
+11. exponer primera acción operativa mock
+12. agregar lógica documental simulada
+13. agregar lógica de firma simulada
+14. agregar lógica de notificación y reintentos simulados
 
 ---
 

@@ -1,0 +1,41 @@
+---
+description: Prototipo descartable en memoria para validación funcional
+globs:
+  - backend/api-faltas-prototipo/**
+alwaysApply: true
+---
+
+Este módulo es un prototipo descartable para validación funcional con la Dirección de Faltas.
+
+Reglas obligatorias:
+
+- Este módulo NO es base evolutiva del backend productivo.
+- Debe priorizar simplicidad, claridad y rapidez de implementación.
+- Debe usar estado en memoria.
+- Debe usar dataset mock precargado al iniciar.
+- No usar base de datos real.
+- No usar Informix.
+- No usar H2.
+- No usar Flyway ni Liquibase.
+- No usar Spring JDBC ni JdbcClient en este módulo.
+- No usar JPA/Hibernate.
+- No usar seguridad real ni autenticación real.
+- No introducir workers, colas o integraciones reales.
+- No diseñar pensando en reutilización futura obligatoria.
+- No sobrearquitectar.
+
+Objetivo del módulo:
+
+- simular integralmente la lógica operativa del negocio
+- exponer bandejas, actas, eventos, documentos simulados y notificaciones simuladas
+- permitir ejecutar acciones mock y recorrer el circuito completo
+- servir como simulador funcional navegable
+- poder eliminarse completo del repo una vez validado el negocio
+
+Criterio general:
+
+- preferir la implementación más simple posible
+- preferir estructuras claras y directas
+- evitar abstracciones innecesarias
+- evitar capas ceremoniales
+- evitar patrones enterprise para algo descartable

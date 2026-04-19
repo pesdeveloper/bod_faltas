@@ -88,7 +88,17 @@ Esto quedó documentado en:
 
 - `spec/03-bandejas/99-prototipo-validacion-direccion.md`
 
-### 3. Orquestación de agentes
+### 3. Backend del prototipo
+
+Se definió que el prototipo debe implementarse como módulo separado y descartable, no dentro del backend real.
+
+Ubicación prevista:
+
+- `backend/api-faltas-prototipo/`
+
+La idea es construirlo con la mínima complejidad necesaria para validar el negocio con usuarios reales.
+
+### 4. Orquestación de agentes
 
 También quedó formalizado el esquema de trabajo:
 
@@ -102,6 +112,16 @@ Esto quedó documentado en:
 
 - `spec/00-overview/06-orquestacion-de-agentes-y-flujo-sdd.md`
 
+### 5. Cursor Rules
+
+También quedaron definidas reglas para:
+
+- backend real Spring/JdbcClient
+- prototipo descartable en memoria
+- construcción incremental por slices mínimos
+
+El prototipo no debe mezclar reglas del backend real.
+
 ---
 
 ## Punto real en el que quedó el trabajo
@@ -110,7 +130,7 @@ El siguiente paso ya no es seguir ampliando la spec en abstracto.
 
 El siguiente paso real es bajar a código el **prototipo descartable** para validación con la Dirección.
 
-La idea es que mañana se empiece con Cursor sobre:
+La idea es empezar con Cursor sobre:
 
 - `backend/api-faltas-prototipo/`
 
@@ -139,14 +159,18 @@ Orden sugerido de arranque para el prototipo:
 
 1. crear `backend/api-faltas-prototipo`
 2. montar estructura mínima Spring Boot
-3. definir store en memoria
-4. cargar escenario mock inicial
-5. exponer primeras bandejas
-6. exponer detalle de acta
-7. exponer historial de eventos
-8. exponer acciones mock
-9. agregar documentos simulados
-10. agregar notificaciones y reintentos simulados
+3. definir modelos mock básicos
+4. definir store en memoria
+5. cargar escenario mock inicial
+6. exponer health y reset de escenario
+7. exponer bandejas
+8. exponer actas por bandeja
+9. exponer detalle de acta
+10. exponer historial de eventos
+11. exponer primera acción operativa mock
+12. luego agregar documentos simulados
+13. luego agregar firma simulada
+14. luego agregar notificaciones simuladas y reintentos
 
 ---
 

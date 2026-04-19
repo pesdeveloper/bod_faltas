@@ -1,0 +1,55 @@
+---
+description: Construcción incremental del prototipo por slices mínimos funcionales
+globs:
+  - backend/api-faltas-prototipo/**
+alwaysApply: true
+---
+
+Este prototipo debe construirse en slices mínimos funcionales.
+
+Reglas obligatorias:
+
+- No intentar construir todo el sistema de una sola vez.
+- Avanzar en pasos pequeños, visibles y verificables.
+- Cada paso debe dejar algo ejecutable y navegable.
+- Priorizar primero un vertical slice mínimo antes de agregar complejidad.
+
+Orden sugerido de construcción:
+
+1. levantar proyecto Spring Boot mínimo
+2. definir modelos mock mínimos
+3. definir store en memoria
+4. cargar escenario mock inicial
+5. exponer health y reset de escenario
+6. exponer bandejas
+7. exponer actas por bandeja
+8. exponer detalle de acta
+9. exponer historial de eventos
+10. exponer primera acción operativa mock
+11. luego agregar documentos simulados
+12. luego agregar firma simulada
+13. luego agregar notificaciones simuladas y reintentos
+
+Reglas de implementación:
+
+- Controllers finos
+- Services simples y directos
+- Modelos mock claros
+- Store en memoria centralizado o fácil de entender
+- Nada de formularios complejos al inicio
+- Nada de validaciones sofisticadas al inicio
+- Nada de infraestructura no imprescindible
+
+Primer slice mínimo recomendado:
+
+- bandejas
+- actas por bandeja
+- detalle de acta
+- historial de eventos
+- una acción que cambie estado y agregue evento
+
+Criterio general:
+
+- primero lograr recorrido visible
+- después agregar profundidad
+- siempre priorizar feedback rápido y facilidad de demo
