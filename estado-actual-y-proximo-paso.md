@@ -1,220 +1,106 @@
-# Estado actual y próximo paso
+# ESTADO ACTUAL — PROTOTIPO FALTAS
 
-## Estado actual consolidado
+## Nivel de avance
 
-El proyecto se encuentra en un punto de madurez alta a nivel de spec.
+El prototipo backend se encuentra funcional y ejecutable.
 
-Ya quedaron bastante consolidados:
+Incluye:
 
-- enfoque `spec-as-source`
-- dominio orientado a `Acta`
-- modelo event-driven
-- `ActaEvento` append-only
-- `ActaSnapshot` como proyección operativa principal
-- flujo D1–D8
-- D2 = Enriquecimiento
-- procesos transversales P1 documental, P2 económico y P3 notificación
-- bandejas como vistas operativas
-- convención física `Fal`, `Num`, `Stor`
-- reglas de naming auxiliar corto
-- GIS municipal `geo_gmat_*` con EPSG:22195
-- shape de domicilios ya bastante cerrado
-- `spec/13-ddl` madura
-- `spec/14-sql-operativo` madura
+- dataset mock inicial (10 actas)
+- store en memoria (PrototipoStore)
+- endpoints de lectura completos
+- endpoints de acciones principales
 
-En este punto, el proyecto ya no necesita más expansión general de spec como prioridad inmediata.
+## Acciones implementadas
 
----
+1. pasar-a-notificacion
+   - D3 → D4
+   - genera evento FIRMA_COMPLETADA
+   - crea notificación inicial
 
-## Decisiones cerradas recientemente
+2. registrar-notificacion-positiva
+   - D4 → D5
+   - evento NOTIFICACION_ENTREGADA
+   - marca notificación como ENTREGADA
 
-### Backend productivo futuro
+3. cerrar-acta
+   - D5 → CERRADA
+   - evento CIERRE_ANALISIS
 
-Se cerró la línea base de implementación backend real:
+4. archivar-acta
+   - D5 → ARCHIVO
+   - evento ARCHIVADO_DESDE_ANALISIS
 
-- Spring Boot moderno
-- code-first
-- sin XML
-- Java Config + anotaciones
-- `application.yml`
-- Spring JDBC
-- `JdbcClient` como API preferida
-- SQL explícito
-- parámetros nombrados
-- sin JPA/Hibernate
-- sin `JpaRepository` / `CrudRepository`
+## Estado del flujo
 
-Archivo asociado:
+Cubierto parcialmente:
 
-- `spec/04-backend/10-implementacion-base-spring-jdbc.md`
+D3 → D4 → D5 → (CERRADA | ARCHIVO)
 
-### Orquestación de trabajo con IA
+## Lo que falta
 
-Se formalizó el flujo SDD / spec-driven con roles:
+Para considerar el sistema como simulador integral:
 
-- Byte = arquitecto
-- Cursor = implementador
-- Gemini = auditor crítico
+### 1. Bandejas faltantes
+- completar universo real (≈21 bandejas definidas en spec)
 
-Archivo asociado:
+### 2. Acciones faltantes
+- flujo documental completo
+- generación de documentos
+- múltiples estados de firma
+- notificación:
+  - negativa
+  - vencida
+  - reintentos
+- reingreso desde archivo
+- derivaciones
 
-- `spec/00-overview/06-orquestacion-de-agentes-y-flujo-sdd.md`
+### 3. Simulación rica
+- documentos dinámicos
+- múltiples notificaciones por acta
+- estados intermedios
 
-### Prototipo de validación
-
-Se definió construir un prototipo previo a la implementación productiva real.
-
-Características cerradas del prototipo:
-
-- simulador funcional integral del negocio
-- de punta a punta
-- con datos mockeados
-- con estado en memoria
-- sin base real
-- sin Informix
-- sin integraciones reales
-- con bandejas, eventos, documentos simulados, firma simulada, notificaciones, reintentos, archivo, cerrado y navegación completa del circuito
-
-Regla importante:
-
-- este prototipo es **descartable**
-- no debe considerarse base evolutiva del backend real
-- una vez validado con la Dirección, debe eliminarse por completo del repo
-
-Archivo asociado:
-
-- `spec/03-bandejas/99-prototipo-validacion-direccion.md`
-
-### Módulo del prototipo
-
-Se decidió que el prototipo debe vivir separado del backend real.
-
-Ubicación prevista:
-
-- `backend/api-faltas-prototipo/`
-
-No corresponde usar `api-faltas-core` para este objetivo.
-
-### Cursor Rules
-
-Se definieron rules para el backend real y, adicionalmente, rules específicas para el prototipo:
-
-- prototipo descartable en memoria
-- construcción incremental por slices mínimos
-
-Esto deja preparado el contexto para empezar a generar código con Cursor sin mezclar reglas de producción con reglas del simulador.
+### 4. Coherencia global
+- matriz bandeja → acciones → destino
+- cobertura de todos los caminos
 
 ---
 
-## Lectura correcta del momento actual
+# PRÓXIMO PASO
 
-El siguiente paso lógico ya no es profundizar más la spec en abstracto.
+Construir MATRIZ DEL SIMULADOR:
 
-El siguiente paso correcto es:
+Por cada bandeja:
 
-- bajar a código el prototipo
-- validarlo con la Dirección
-- ajustar lógica operativa y nombres si hiciera falta
-- recién después pasar a implementación productiva real
+- qué muestra
+- acciones disponibles
+- evento generado
+- cambios en ActaMock
+- impacto en documentos
+- impacto en notificaciones
+- bandeja destino
 
----
+Luego:
 
-## Próximo paso concreto
+Implementar acciones faltantes de forma incremental,
+manteniendo patrón actual:
 
-### Crear el backend del prototipo
-
-Ubicación prevista:
-
-- `backend/api-faltas-prototipo/`
-
-Naturaleza de este módulo:
-
-- backend simple
-- Spring Boot liviano
-- estado en memoria
-- dataset mock precargado
-- sin persistencia real
-- sin infraestructura definitiva
-- orientado solo a validar negocio
-
-### Objetivo inmediato del módulo
-
-Permitir:
-
-- listar bandejas
-- ver actas mock
-- abrir detalle de acta
-- ver historial de eventos
-- ver documentos simulados
-- ver notificaciones simuladas
-- ejecutar acciones mock
-- recorrer el circuito completo de punta a punta
+- enum + record
+- método en store
+- endpoint controller
 
 ---
 
-## Orden sugerido de implementación
+# OBJETIVO FINAL
 
-1. crear estructura mínima de `backend/api-faltas-prototipo`
-2. levantar proyecto Spring Boot mínimo
-3. definir modelos mock básicos
-4. definir store en memoria
-5. cargar escenario inicial con 8 a 12 actas mock
-6. exponer endpoints mínimos de salud y reset
-7. exponer bandejas
-8. exponer actas por bandeja
-9. exponer detalle de acta
-10. exponer historial de eventos
-11. exponer primera acción operativa mock
-12. agregar lógica documental simulada
-13. agregar lógica de firma simulada
-14. agregar lógica de notificación y reintentos simulados
+Simulador completo que permita:
 
----
+- recorrer TODO el sistema
+- ejecutar TODAS las acciones
+- validar TODOS los caminos del negocio
 
-## Criterios para la implementación del prototipo
+Base para:
 
-- priorizar simplicidad
-- evitar sobrearquitectura
-- evitar infraestructura real
-- evitar decisiones de largo plazo innecesarias
-- exponer toda la lógica visible del negocio
-- permitir iteración rápida con Cursor
-- hacer algo descartable, claro y útil para validación
-
----
-
-## Qué no hacer ahora
-
-- no implementar Informix todavía
-- no conectar persistencia real
-- no armar workers reales
-- no meter seguridad real
-- no sobrediseñar capas pensando en producción
-- no reutilizar este prototipo como backend real futuro
-
----
-
-## Resultado esperado del próximo tramo
-
-Quedar con un primer backend de prototipo capaz de:
-
-- levantar rápido
-- cargar escenarios mock
-- exponer bandejas y detalle
-- registrar acciones simuladas
-- mostrar eventos, documentos y notificaciones
-- servir de base para una demo funcional con la Dirección
-
----
-
-## Regla final
-
-Hasta validar este prototipo con la Dirección, el foco no es producción.
-
-El foco es:
-
-- validar lógica de negocio
-- validar recorrido operativo
-- validar nombres, bandejas y acciones
-- corregir rápido
-- recién después bajar a implementación productiva seria
+- validación funcional con usuarios
+- diseño de UI real
+- posterior implementación productiva
