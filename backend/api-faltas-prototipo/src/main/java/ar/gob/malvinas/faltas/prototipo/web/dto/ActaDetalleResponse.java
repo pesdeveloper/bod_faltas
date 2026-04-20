@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.prototipo.web.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ActaDetalleResponse(
         String id,
@@ -17,5 +18,7 @@ public record ActaDetalleResponse(
         String resumenHecho,
         String bandejaActual,
         boolean tieneDocumentos,
-        boolean tieneNotificaciones) {
+        boolean tieneNotificaciones,
+        List<String> piezasRequeridas,
+        List<String> piezasGeneradas) {
 }

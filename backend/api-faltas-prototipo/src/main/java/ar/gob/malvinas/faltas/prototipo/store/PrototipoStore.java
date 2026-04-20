@@ -4,6 +4,7 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
+import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ public class PrototipoStore {
             "PENDIENTE_NOTIFICACION",
             "EN_NOTIFICACION",
             "PENDIENTE_ANALISIS",
+            "PENDIENTES_RESOLUCION_REDACCION",
             "ARCHIVO",
             "CERRADAS");
 
@@ -35,6 +37,7 @@ public class PrototipoStore {
     private static final String BANDEJA_PENDIENTE_NOTIFICACION = "PENDIENTE_NOTIFICACION";
     private static final String BANDEJA_EN_NOTIFICACION = "EN_NOTIFICACION";
     private static final String BANDEJA_PENDIENTE_ANALISIS = "PENDIENTE_ANALISIS";
+    private static final String BANDEJA_PENDIENTES_RESOLUCION_REDACCION = "PENDIENTES_RESOLUCION_REDACCION";
     private static final String BANDEJA_ARCHIVO = "ARCHIVO";
     private static final String BANDEJA_CERRADAS = "CERRADAS";
     private static final String BLOQUE_ARCHIVO = "ARCHIVO";
@@ -46,22 +49,12 @@ public class PrototipoStore {
     private static final String ESTADO_PENDIENTE_ENVIO = "PENDIENTE_ENVIO";
     private static final String ESTADO_PENDIENTE_REVISION = "PENDIENTE_REVISION";
     private static final String ESTADO_ENTREGADA = "ENTREGADA";
-
-    public enum PasarANotificacionEstado {
-        OK,
-        NOT_FOUND,
-        CONFLICT
-    }
-
-    /**
-     * Resultado interno de la acción demo; en OK los tres strings son no nulos.
-     */
-    public record PasarANotificacionResultado(
-            PasarANotificacionEstado estado,
-            String actaId,
-            String bandejaActual,
-            String estadoProcesoActual) {
-    }
+    private static final String PIEZA_MEDIDA_PREVENTIVA = "MEDIDA_PREVENTIVA";
+    private static final String PIEZA_NOTIFICACION_ACTA = "NOTIFICACION_ACTA";
+    private static final String ESTADO_PENDIENTE_FIRMA_PIEZAS = "PENDIENTE_FIRMA_PIEZAS";
+    private static final String ESTADO_PENDIENTE_PRODUCCION_PIEZAS = "PENDIENTE_PRODUCCION_PIEZAS";
+    private static final String ESTADO_DOC_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
+    private static final String ESTADO_DOC_FIRMADO = "FIRMADO";
 
     public enum RegistrarNotificacionPositivaEstado {
         OK,
@@ -102,6 +95,46 @@ public class PrototipoStore {
             String estadoProcesoActual) {
     }
 
+    public enum GenerarMedidaPreventivaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record GenerarMedidaPreventivaResultado(
+            GenerarMedidaPreventivaEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum GenerarNotificacionActaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record GenerarNotificacionActaResultado(
+            GenerarNotificacionActaEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum FirmarDocumentoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record FirmarDocumentoResultado(
+            FirmarDocumentoEstado estado,
+            String actaId,
+            String documentoId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
     public record BandejaConteo(String codigo, int cantidadActas) {
     }
 
@@ -109,6 +142,7 @@ public class PrototipoStore {
     private final Map<String, List<ActaEventoMock>> eventosPorActa = new LinkedHashMap<>();
     private final Map<String, List<ActaDocumentoMock>> documentosPorActa = new LinkedHashMap<>();
     private final Map<String, List<ActaNotificacionMock>> notificacionesPorActa = new LinkedHashMap<>();
+    private final Map<String, ActaPiezasRequeridasMock> piezasRequeridasPorActa = new LinkedHashMap<>();
 
     public Map<String, ActaMock> getActas() {
         return actas;
@@ -126,11 +160,16 @@ public class PrototipoStore {
         return notificacionesPorActa;
     }
 
+    public Map<String, ActaPiezasRequeridasMock> getPiezasRequeridasPorActa() {
+        return piezasRequeridasPorActa;
+    }
+
     public void clearAll() {
         actas.clear();
         eventosPorActa.clear();
         documentosPorActa.clear();
         notificacionesPorActa.clear();
+        piezasRequeridasPorActa.clear();
     }
 
     public List<BandejaConteo> listarBandejasConConteoOrdenadas() {
@@ -209,72 +248,63 @@ public class PrototipoStore {
     }
 
     /**
-     * Demo: firma completada → bandeja notificación (solo desde bandeja PENDIENTE_FIRMA).
+     * Si la acta no declara piezas requeridas (caso típico fuera de
+     * PENDIENTES_RESOLUCION_REDACCION), devuelve {@link Optional#empty()}.
      */
-    public PasarANotificacionResultado pasarActaANotificacion(String actaId) {
-        ActaMock actual = actas.get(actaId);
-        if (actual == null) {
-            return new PasarANotificacionResultado(PasarANotificacionEstado.NOT_FOUND, null, null, null);
+    public Optional<ActaPiezasRequeridasMock> findPiezasRequeridas(String actaId) {
+        return Optional.ofNullable(piezasRequeridasPorActa.get(actaId));
+    }
+
+    /**
+     * Catálogo de piezas requeridas; lista vacía si la acta no declara piezas.
+     */
+    public List<String> listarPiezasRequeridas(String actaId) {
+        ActaPiezasRequeridasMock p = piezasRequeridasPorActa.get(actaId);
+        if (p == null || p.piezasRequeridas() == null || p.piezasRequeridas().isEmpty()) {
+            return List.of();
         }
-        if (!BANDEJA_PENDIENTE_FIRMA.equals(actual.bandejaActual())) {
-            return new PasarANotificacionResultado(PasarANotificacionEstado.CONFLICT, null, null, null);
+        return List.copyOf(p.piezasRequeridas());
+    }
+
+    /**
+     * Piezas ya producidas; lista vacía si la acta no declara piezas o no
+     * se produjo ninguna todavía.
+     */
+    public List<String> listarPiezasGeneradas(String actaId) {
+        ActaPiezasRequeridasMock p = piezasRequeridasPorActa.get(actaId);
+        if (p == null || p.piezasGeneradas() == null || p.piezasGeneradas().isEmpty()) {
+            return List.of();
         }
+        return List.copyOf(p.piezasGeneradas());
+    }
 
-        ActaMock actualizada = new ActaMock(
-                actual.id(),
-                actual.numeroActa(),
-                actual.dominioReferencia(),
-                BLOQUE_D4,
-                ESTADO_PENDIENTE_ENVIO,
-                actual.situacionAdministrativaActual(),
-                actual.estaCerrada(),
-                actual.permiteReingreso(),
-                actual.tieneDocumentos(),
-                true,
-                actual.fechaCreacion(),
-                actual.infractorNombre(),
-                actual.infractorDocumento(),
-                actual.inspectorNombre(),
-                actual.resumenHecho(),
-                BANDEJA_PENDIENTE_NOTIFICACION);
-        actas.put(actaId, actualizada);
-
-        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        int siguiente = eventos.size() + 1;
-        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
-        LocalDateTime fechaEvento = eventos.stream()
-                .map(ActaEventoMock::fechaHora)
-                .max(Comparator.naturalOrder())
-                .map(t -> t.plusMinutes(1))
-                .orElse(LocalDateTime.now());
-        eventos.add(new ActaEventoMock(
-                idEvento,
-                actaId,
-                fechaEvento,
-                "FIRMA_COMPLETADA",
-                "D3_DOCUMENTAL",
-                BLOQUE_D4,
-                "Acta firmada; pasa a notificación."));
-
-        if (!actual.tieneNotificaciones()) {
-            List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-            if (notifs.isEmpty()) {
-                String idNotif = "NOT-" + sufijoActa + "-01";
-                notifs.add(new ActaNotificacionMock(
-                        idNotif,
-                        actaId,
-                        "POSTAL",
-                        ESTADO_PENDIENTE_ENVIO,
-                        resumenDestinatarioDemo(actual)));
-            }
+    /**
+     * Piezas requeridas que todavía no fueron producidas. Si la acta no
+     * declara piezas requeridas, lista vacía.
+     */
+    public List<String> listarPiezasPendientes(String actaId) {
+        ActaPiezasRequeridasMock p = piezasRequeridasPorActa.get(actaId);
+        if (p == null || p.piezasRequeridas() == null || p.piezasRequeridas().isEmpty()) {
+            return List.of();
         }
+        List<String> generadas = p.piezasGeneradas() == null ? List.of() : p.piezasGeneradas();
+        return p.piezasRequeridas().stream()
+                .filter(req -> !generadas.contains(req))
+                .toList();
+    }
 
-        return new PasarANotificacionResultado(
-                PasarANotificacionEstado.OK,
-                actualizada.id(),
-                actualizada.bandejaActual(),
-                actualizada.estadoProcesoActual());
+    /**
+     * {@code true} si la acta declara piezas requeridas y todas están ya
+     * producidas. {@code false} si aún falta alguna, o si la acta no
+     * declara piezas (en ese caso la regla de múltiples piezas no aplica).
+     */
+    public boolean todasLasPiezasProducidas(String actaId) {
+        ActaPiezasRequeridasMock p = piezasRequeridasPorActa.get(actaId);
+        if (p == null || p.piezasRequeridas() == null || p.piezasRequeridas().isEmpty()) {
+            return false;
+        }
+        List<String> generadas = p.piezasGeneradas() == null ? List.of() : p.piezasGeneradas();
+        return generadas.containsAll(p.piezasRequeridas());
     }
 
     /**
@@ -461,6 +491,352 @@ public class PrototipoStore {
         return new ArchivarActaResultado(
                 ArchivarActaEstado.OK,
                 actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual());
+    }
+
+    /**
+     * Demo: produce la pieza MEDIDA_PREVENTIVA (solo desde PENDIENTES_RESOLUCION_REDACCION
+     * y solo si la acta declara esa pieza como requerida). Si aún quedan otras piezas
+     * por producir, la acta permanece en la misma bandeja con estado coherente; si no
+     * queda ninguna pieza pendiente, pasa a la bandeja PENDIENTE_FIRMA conservando el
+     * bloque D5_ANALISIS (la pieza producida en análisis espera ahora su firma; no se
+     * retrocede a un bloque documental previo).
+     */
+    public GenerarMedidaPreventivaResultado generarMedidaPreventiva(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new GenerarMedidaPreventivaResultado(GenerarMedidaPreventivaEstado.NOT_FOUND, null, null, null);
+        }
+        if (!BANDEJA_PENDIENTES_RESOLUCION_REDACCION.equals(actual.bandejaActual())) {
+            return new GenerarMedidaPreventivaResultado(GenerarMedidaPreventivaEstado.CONFLICT, null, null, null);
+        }
+
+        ActaPiezasRequeridasMock piezas = piezasRequeridasPorActa.get(actaId);
+        if (piezas == null
+                || piezas.piezasRequeridas() == null
+                || !piezas.piezasRequeridas().contains(PIEZA_MEDIDA_PREVENTIVA)) {
+            return new GenerarMedidaPreventivaResultado(GenerarMedidaPreventivaEstado.CONFLICT, null, null, null);
+        }
+        List<String> generadasActuales = piezas.piezasGeneradas() == null
+                ? new ArrayList<>()
+                : new ArrayList<>(piezas.piezasGeneradas());
+        if (generadasActuales.contains(PIEZA_MEDIDA_PREVENTIVA)) {
+            return new GenerarMedidaPreventivaResultado(GenerarMedidaPreventivaEstado.CONFLICT, null, null, null);
+        }
+
+        generadasActuales.add(PIEZA_MEDIDA_PREVENTIVA);
+        piezasRequeridasPorActa.put(actaId, new ActaPiezasRequeridasMock(
+                actaId,
+                piezas.piezasRequeridas(),
+                generadasActuales));
+
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+
+        List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguienteDoc = docs.size() + 1;
+        String idDoc = "DOC-" + sufijoActa + "-" + String.format("%02d", siguienteDoc);
+        docs.add(new ActaDocumentoMock(
+                idDoc,
+                actaId,
+                PIEZA_MEDIDA_PREVENTIVA,
+                ESTADO_DOC_PENDIENTE_FIRMA,
+                "medida_preventiva_" + sufijoActa + ".pdf"));
+
+        List<String> piezasPendientes = piezas.piezasRequeridas().stream()
+                .filter(req -> !generadasActuales.contains(req))
+                .toList();
+        boolean todasProducidas = piezasPendientes.isEmpty();
+
+        String bloqueDestino = actual.bloqueActual();
+        String estadoDestino;
+        String bandejaDestino;
+        if (todasProducidas) {
+            estadoDestino = ESTADO_PENDIENTE_FIRMA_PIEZAS;
+            bandejaDestino = BANDEJA_PENDIENTE_FIRMA;
+        } else {
+            estadoDestino = ESTADO_PENDIENTE_PRODUCCION_PIEZAS;
+            bandejaDestino = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                bloqueDestino,
+                estadoDestino,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                true,
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                bandejaDestino);
+        actas.put(actaId, actualizada);
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguienteEvt = eventos.size() + 1;
+        String idEvt = "EVT-" + sufijoActa + "-" + String.format("%02d", siguienteEvt);
+        LocalDateTime fechaEvento = eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        String descripcionEvento = todasProducidas
+                ? "Medida preventiva producida; piezas completas, queda pendiente su firma."
+                : "Medida preventiva producida; aún resta producir otras piezas requeridas.";
+        eventos.add(new ActaEventoMock(
+                idEvt,
+                actaId,
+                fechaEvento,
+                "MEDIDA_PREVENTIVA_GENERADA",
+                actual.bloqueActual(),
+                bloqueDestino,
+                descripcionEvento));
+
+        return new GenerarMedidaPreventivaResultado(
+                GenerarMedidaPreventivaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual());
+    }
+
+    /**
+     * Demo: produce la pieza NOTIFICACION_ACTA (solo desde PENDIENTES_RESOLUCION_REDACCION
+     * y solo si la acta declara esa pieza como requerida). Si aún quedan otras piezas
+     * por producir, la acta permanece en la misma bandeja con estado coherente; si no
+     * queda ninguna pieza pendiente, pasa a la bandeja PENDIENTE_FIRMA conservando el
+     * bloque actual del expediente (no se rebobina a un bloque documental previo
+     * genérico) y adoptando el estado agregador PENDIENTE_FIRMA_PIEZAS, que no
+     * depende de cuál fue la última pieza generada.
+     */
+    public GenerarNotificacionActaResultado generarNotificacionActa(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new GenerarNotificacionActaResultado(GenerarNotificacionActaEstado.NOT_FOUND, null, null, null);
+        }
+        if (!BANDEJA_PENDIENTES_RESOLUCION_REDACCION.equals(actual.bandejaActual())) {
+            return new GenerarNotificacionActaResultado(GenerarNotificacionActaEstado.CONFLICT, null, null, null);
+        }
+
+        ActaPiezasRequeridasMock piezas = piezasRequeridasPorActa.get(actaId);
+        if (piezas == null
+                || piezas.piezasRequeridas() == null
+                || !piezas.piezasRequeridas().contains(PIEZA_NOTIFICACION_ACTA)) {
+            return new GenerarNotificacionActaResultado(GenerarNotificacionActaEstado.CONFLICT, null, null, null);
+        }
+        List<String> generadasActuales = piezas.piezasGeneradas() == null
+                ? new ArrayList<>()
+                : new ArrayList<>(piezas.piezasGeneradas());
+        if (generadasActuales.contains(PIEZA_NOTIFICACION_ACTA)) {
+            return new GenerarNotificacionActaResultado(GenerarNotificacionActaEstado.CONFLICT, null, null, null);
+        }
+
+        generadasActuales.add(PIEZA_NOTIFICACION_ACTA);
+        piezasRequeridasPorActa.put(actaId, new ActaPiezasRequeridasMock(
+                actaId,
+                piezas.piezasRequeridas(),
+                generadasActuales));
+
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+
+        List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguienteDoc = docs.size() + 1;
+        String idDoc = "DOC-" + sufijoActa + "-" + String.format("%02d", siguienteDoc);
+        docs.add(new ActaDocumentoMock(
+                idDoc,
+                actaId,
+                PIEZA_NOTIFICACION_ACTA,
+                ESTADO_DOC_PENDIENTE_FIRMA,
+                "notificacion_acta_" + sufijoActa + ".pdf"));
+
+        List<String> piezasPendientes = piezas.piezasRequeridas().stream()
+                .filter(req -> !generadasActuales.contains(req))
+                .toList();
+        boolean todasProducidas = piezasPendientes.isEmpty();
+
+        String bloqueDestino = actual.bloqueActual();
+        String estadoDestino;
+        String bandejaDestino;
+        if (todasProducidas) {
+            estadoDestino = ESTADO_PENDIENTE_FIRMA_PIEZAS;
+            bandejaDestino = BANDEJA_PENDIENTE_FIRMA;
+        } else {
+            estadoDestino = ESTADO_PENDIENTE_PRODUCCION_PIEZAS;
+            bandejaDestino = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                bloqueDestino,
+                estadoDestino,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                true,
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                bandejaDestino);
+        actas.put(actaId, actualizada);
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguienteEvt = eventos.size() + 1;
+        String idEvt = "EVT-" + sufijoActa + "-" + String.format("%02d", siguienteEvt);
+        LocalDateTime fechaEvento = eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        String descripcionEvento = todasProducidas
+                ? "Notificación del acta producida; piezas completas, queda pendiente su firma."
+                : "Notificación del acta producida; aún resta producir otras piezas requeridas.";
+        eventos.add(new ActaEventoMock(
+                idEvt,
+                actaId,
+                fechaEvento,
+                "NOTIFICACION_ACTA_GENERADA",
+                actual.bloqueActual(),
+                bloqueDestino,
+                descripcionEvento));
+
+        return new GenerarNotificacionActaResultado(
+                GenerarNotificacionActaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual());
+    }
+
+    /**
+     * Demo: firma individual de un documento puntual de la acta. Los documentos
+     * tienen identidad propia y se firman de a uno. La acta sólo abandona la
+     * bandeja PENDIENTE_FIRMA cuando todos los documentos firmables pasan a
+     * estado FIRMADO. Si aún quedan documentos pendientes, la acta permanece
+     * en PENDIENTE_FIRMA con estado {@code PENDIENTE_FIRMA_PIEZAS} y su bloque
+     * actual; cuando se firma el último, pasa a PENDIENTE_NOTIFICACION con
+     * bloque D4_NOTIFICACION y estado PENDIENTE_ENVIO (no se rebobina bloque).
+     */
+    public FirmarDocumentoResultado firmarDocumento(String actaId, String documentoId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new FirmarDocumentoResultado(FirmarDocumentoEstado.NOT_FOUND, null, null, null, null);
+        }
+        if (!BANDEJA_PENDIENTE_FIRMA.equals(actual.bandejaActual())) {
+            return new FirmarDocumentoResultado(FirmarDocumentoEstado.CONFLICT, null, null, null, null);
+        }
+
+        List<ActaDocumentoMock> docs = documentosPorActa.get(actaId);
+        if (docs == null || docs.isEmpty()) {
+            return new FirmarDocumentoResultado(FirmarDocumentoEstado.NOT_FOUND, null, null, null, null);
+        }
+        int indice = -1;
+        for (int i = 0; i < docs.size(); i++) {
+            if (docs.get(i).id().equals(documentoId)) {
+                indice = i;
+                break;
+            }
+        }
+        if (indice < 0) {
+            return new FirmarDocumentoResultado(FirmarDocumentoEstado.NOT_FOUND, null, null, null, null);
+        }
+        ActaDocumentoMock doc = docs.get(indice);
+        if (!ESTADO_DOC_PENDIENTE_FIRMA.equals(doc.estadoDocumento())) {
+            return new FirmarDocumentoResultado(FirmarDocumentoEstado.CONFLICT, null, null, null, null);
+        }
+
+        docs.set(indice, new ActaDocumentoMock(
+                doc.id(),
+                doc.actaId(),
+                doc.tipoDocumento(),
+                ESTADO_DOC_FIRMADO,
+                doc.nombreArchivo()));
+
+        boolean restanPendientes = docs.stream()
+                .anyMatch(d -> ESTADO_DOC_PENDIENTE_FIRMA.equals(d.estadoDocumento()));
+
+        String bloqueOrigen = actual.bloqueActual();
+        String bloqueDestino;
+        String estadoDestino;
+        String bandejaDestino;
+        boolean tieneNotificacionesDestino;
+        if (restanPendientes) {
+            bloqueDestino = actual.bloqueActual();
+            estadoDestino = ESTADO_PENDIENTE_FIRMA_PIEZAS;
+            bandejaDestino = BANDEJA_PENDIENTE_FIRMA;
+            tieneNotificacionesDestino = actual.tieneNotificaciones();
+        } else {
+            bloqueDestino = BLOQUE_D4;
+            estadoDestino = ESTADO_PENDIENTE_ENVIO;
+            bandejaDestino = BANDEJA_PENDIENTE_NOTIFICACION;
+            tieneNotificacionesDestino = true;
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                bloqueDestino,
+                estadoDestino,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                tieneNotificacionesDestino,
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                bandejaDestino);
+        actas.put(actaId, actualizada);
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        int siguienteEvt = eventos.size() + 1;
+        String idEvt = "EVT-" + sufijoActa + "-" + String.format("%02d", siguienteEvt);
+        LocalDateTime fechaEvento = eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        String descripcionEvento = restanPendientes
+                ? "Documento " + documentoId + " firmado; aún quedan documentos pendientes de firma en la acta."
+                : "Documento " + documentoId + " firmado; último pendiente, acta pasa a notificación.";
+        eventos.add(new ActaEventoMock(
+                idEvt,
+                actaId,
+                fechaEvento,
+                "DOCUMENTO_FIRMADO",
+                bloqueOrigen,
+                bloqueDestino,
+                descripcionEvento));
+
+        if (!restanPendientes && !actual.tieneNotificaciones()) {
+            List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+            if (notifs.isEmpty()) {
+                String idNotif = "NOT-" + sufijoActa + "-01";
+                notifs.add(new ActaNotificacionMock(
+                        idNotif,
+                        actaId,
+                        "POSTAL",
+                        ESTADO_PENDIENTE_ENVIO,
+                        resumenDestinatarioDemo(actual)));
+            }
+        }
+
+        return new FirmarDocumentoResultado(
+                FirmarDocumentoEstado.OK,
+                actualizada.id(),
+                documentoId,
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual());
     }

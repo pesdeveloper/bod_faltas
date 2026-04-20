@@ -4,6 +4,7 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
+import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class MockDataFactory {
     private static final String BANDEJA_PENDIENTE_NOTIFICACION = "PENDIENTE_NOTIFICACION";
     private static final String BANDEJA_EN_NOTIFICACION = "EN_NOTIFICACION";
     private static final String BANDEJA_PENDIENTE_ANALISIS = "PENDIENTE_ANALISIS";
+    private static final String BANDEJA_PENDIENTES_RESOLUCION_REDACCION = "PENDIENTES_RESOLUCION_REDACCION";
     private static final String BANDEJA_ARCHIVO = "ARCHIVO";
     private static final String BANDEJA_CERRADAS = "CERRADAS";
 
@@ -38,6 +40,10 @@ public class MockDataFactory {
         cargarActa0008(store);
         cargarActa0009(store);
         cargarActa0010(store);
+        cargarActa0011(store);
+        cargarActa0012(store);
+        cargarActa0013(store);
+        cargarActa0014(store);
     }
 
     private void cargarActa0001(PrototipoStore store) {
@@ -203,7 +209,7 @@ public class MockDataFactory {
                 "DOC-0003-01",
                 id,
                 "BORRADOR_ACTA",
-                "GENERADO",
+                "PENDIENTE_FIRMA",
                 "borrador_acta_0003.pdf"));
         docs.add(new ActaDocumentoMock(
                 "DOC-0003-02",
@@ -658,5 +664,291 @@ public class MockDataFactory {
                 "ADJUNTO",
                 "nota_duplicidad_0010.pdf"));
         store.getDocumentosPorActa().put(id, docs);
+    }
+
+    private void cargarActa0011(PrototipoStore store) {
+        String id = "ACTA-0011";
+        String bandeja = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0011",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_RESOLUCION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2025, 12, 5, 10, 15),
+                "Herrera, Marta",
+                "DNI 28.991.445",
+                "Oficial Cabrera",
+                "Conducir con licencia vencida (corresponde resolución administrativa).",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0011-01",
+                id,
+                LocalDateTime.of(2025, 12, 5, 10, 25),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta labrada en control vehicular."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0011-02",
+                id,
+                LocalDateTime.of(2025, 12, 20, 9, 0),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación cumplida; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0011-03",
+                id,
+                LocalDateTime.of(2026, 1, 12, 11, 30),
+                "DERIVACION_RESOLUCION",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Analista deriva a redacción de resolución; pieza no-fallo aún no producida."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0011-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_0011.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0011-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Marta Herrera — AR 334455"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of("RESOLUCION")),
+                new ArrayList<>()));
+    }
+
+    private void cargarActa0012(PrototipoStore store) {
+        String id = "ACTA-0012";
+        String bandeja = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0012",
+                "SEGURIDAD_VIAL",
+                "D5_ANALISIS",
+                "PENDIENTE_NULIDAD",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2025, 11, 18, 14, 50),
+                "Morales, Hernán",
+                "DNI 31.004.776",
+                "Oficial Pereyra",
+                "Acta con vicio formal detectado; corresponde redactar nulidad.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0012-01",
+                id,
+                LocalDateTime.of(2025, 11, 18, 15, 0),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada desde control móvil."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0012-02",
+                id,
+                LocalDateTime.of(2025, 12, 10, 10, 20),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación fehaciente registrada."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0012-03",
+                id,
+                LocalDateTime.of(2026, 1, 8, 16, 45),
+                "DERIVACION_NULIDAD",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Analista detecta vicio formal; deriva a redacción de nulidad."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0012-01",
+                id,
+                "INFORME_VICIO_FORMAL",
+                "ADJUNTO",
+                "informe_vicio_0012.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0012-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Hernán Morales — AR 556677"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of("NULIDAD")),
+                new ArrayList<>()));
+    }
+
+    private void cargarActa0013(PrototipoStore store) {
+        String id = "ACTA-0013";
+        String bandeja = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0013",
+                "SEGURIDAD_VIAL",
+                "D5_ANALISIS",
+                "PENDIENTE_MEDIDA_PREVENTIVA",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 1, 6, 22, 10),
+                "Quiroga, Sergio",
+                "DNI 26.884.230",
+                "Oficial Godoy",
+                "Retención preventiva de vehículo; corresponde generar medida preventiva.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0013-01",
+                id,
+                LocalDateTime.of(2026, 1, 6, 22, 20),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada con retención preventiva del vehículo."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0013-02",
+                id,
+                LocalDateTime.of(2026, 1, 7, 9, 30),
+                "OBSERVACION",
+                "D2_ENRIQUECIMIENTO",
+                "D2_ENRIQUECIMIENTO",
+                "Revisión inicial identifica necesidad de medida preventiva formal."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0013-03",
+                id,
+                LocalDateTime.of(2026, 1, 8, 11, 0),
+                "DERIVACION_MEDIDA_PREVENTIVA",
+                "D2_ENRIQUECIMIENTO",
+                "D5_ANALISIS",
+                "Expediente derivado a redacción de medida preventiva; pieza no-fallo aún no producida."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0013-01",
+                id,
+                "ACTA_RETENCION",
+                "ADJUNTO",
+                "acta_retencion_0013.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        // Caso demo con múltiples piezas requeridas: el acta debe permanecer en
+        // PENDIENTES_RESOLUCION_REDACCION hasta que NOTIFICACION_ACTA y
+        // MEDIDA_PREVENTIVA estén ambas producidas.
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of("NOTIFICACION_ACTA", "MEDIDA_PREVENTIVA")),
+                new ArrayList<>()));
+    }
+
+    private void cargarActa0014(PrototipoStore store) {
+        String id = "ACTA-0014";
+        String bandeja = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0014",
+                "ESTACIONAMIENTO",
+                "D5_ANALISIS",
+                "PENDIENTE_RECTIFICACION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2025, 12, 22, 8, 40),
+                "Ibarra, Lucía",
+                "DNI 33.770.118",
+                "Oficial Maldonado",
+                "Error material en datos del infractor; corresponde rectificación.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0014-01",
+                id,
+                LocalDateTime.of(2025, 12, 22, 8, 50),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta cargada desde dispositivo móvil."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0014-02",
+                id,
+                LocalDateTime.of(2026, 1, 5, 12, 15),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación entregada; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0014-03",
+                id,
+                LocalDateTime.of(2026, 1, 14, 10, 5),
+                "DERIVACION_RECTIFICACION",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Analista detecta error material; deriva a redacción de rectificación."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0014-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_0014.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0014-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Lucía Ibarra — AR 889900"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of("RECTIFICACION")),
+                new ArrayList<>()));
     }
 }

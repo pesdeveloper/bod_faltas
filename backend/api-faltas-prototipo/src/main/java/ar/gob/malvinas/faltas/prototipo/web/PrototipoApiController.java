@@ -14,7 +14,9 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.ActaNotificacionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.BandejaResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CerrarActaAccionResponse;
-import ar.gob.malvinas.faltas.prototipo.web.dto.PasarANotificacionAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.FirmarDocumentoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarMedidaPreventivaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNotificacionActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionPositivaAccionResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -72,9 +74,9 @@ public class PrototipoApiController {
 
     @GetMapping("/actas/{id}")
     public ActaDetalleResponse detalleActa(@PathVariable("id") String id) {
-        return store.findActa(id)
-                .map(this::mapActaDetalle)
+        ActaMock acta = store.findActa(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return mapActaDetalle(acta);
     }
 
     @GetMapping("/actas/{id}/eventos")
@@ -105,23 +107,6 @@ public class PrototipoApiController {
         return store.listarNotificacionesPorActa(id).stream()
                 .map(this::mapActaNotificacion)
                 .toList();
-    }
-
-    @PostMapping("/actas/{id}/acciones/pasar-a-notificacion")
-    public PasarANotificacionAccionResponse pasarANotificacion(@PathVariable("id") String id) {
-        PrototipoStore.PasarANotificacionResultado r = store.pasarActaANotificacion(id);
-        if (r.estado() == PrototipoStore.PasarANotificacionEstado.NOT_FOUND) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        if (r.estado() == PrototipoStore.PasarANotificacionEstado.CONFLICT) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
-        }
-        return new PasarANotificacionAccionResponse(
-                "OK",
-                "Acta pasada a notificación.",
-                r.actaId(),
-                r.bandejaActual(),
-                r.estadoProcesoActual());
     }
 
     @PostMapping("/actas/{id}/acciones/registrar-notificacion-positiva")
@@ -175,6 +160,60 @@ public class PrototipoApiController {
                 r.estadoProcesoActual());
     }
 
+    @PostMapping("/actas/{id}/acciones/generar-medida-preventiva")
+    public GenerarMedidaPreventivaAccionResponse generarMedidaPreventiva(@PathVariable("id") String id) {
+        PrototipoStore.GenerarMedidaPreventivaResultado r = store.generarMedidaPreventiva(id);
+        if (r.estado() == PrototipoStore.GenerarMedidaPreventivaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.GenerarMedidaPreventivaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new GenerarMedidaPreventivaAccionResponse(
+                "OK",
+                "Medida preventiva generada.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    @PostMapping("/actas/{id}/acciones/generar-notificacion-acta")
+    public GenerarNotificacionActaAccionResponse generarNotificacionActa(@PathVariable("id") String id) {
+        PrototipoStore.GenerarNotificacionActaResultado r = store.generarNotificacionActa(id);
+        if (r.estado() == PrototipoStore.GenerarNotificacionActaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.GenerarNotificacionActaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new GenerarNotificacionActaAccionResponse(
+                "OK",
+                "Notificación del acta generada.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    @PostMapping("/actas/{id}/acciones/firmar-documento/{documentoId}")
+    public FirmarDocumentoAccionResponse firmarDocumento(
+            @PathVariable("id") String id,
+            @PathVariable("documentoId") String documentoId) {
+        PrototipoStore.FirmarDocumentoResultado r = store.firmarDocumento(id, documentoId);
+        if (r.estado() == PrototipoStore.FirmarDocumentoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.FirmarDocumentoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new FirmarDocumentoAccionResponse(
+                "OK",
+                "Documento firmado.",
+                r.actaId(),
+                r.documentoId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
     private ActaBandejaItemResponse mapActaBandejaItem(ActaMock a) {
         return new ActaBandejaItemResponse(
                 a.id(),
@@ -202,7 +241,9 @@ public class PrototipoApiController {
                 a.resumenHecho(),
                 a.bandejaActual(),
                 a.tieneDocumentos(),
-                a.tieneNotificaciones());
+                a.tieneNotificaciones(),
+                store.listarPiezasRequeridas(a.id()),
+                store.listarPiezasGeneradas(a.id()));
     }
 
     private ActaEventoResponse mapActaEvento(ActaEventoMock e) {

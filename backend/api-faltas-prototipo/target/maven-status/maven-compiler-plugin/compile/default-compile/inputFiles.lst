@@ -4,6 +4,7 @@ S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\mal
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\domain\ActaEventoMock.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\domain\ActaMock.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\domain\ActaNotificacionMock.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\domain\ActaPiezasRequeridasMock.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\store\MockDataFactory.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\store\PrototipoStore.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\BandejaNombres.java
@@ -15,7 +16,9 @@ S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\mal
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\ArchivarActaAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\BandejaResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\CerrarActaAccionResponse.java
-S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\PasarANotificacionAccionResponse.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\FirmarDocumentoAccionResponse.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\GenerarMedidaPreventivaAccionResponse.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\GenerarNotificacionActaAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\RegistrarNotificacionPositivaAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\PrototipoApiController.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\PrototipoHealthResponse.java
