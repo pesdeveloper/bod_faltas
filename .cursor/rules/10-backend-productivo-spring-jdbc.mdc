@@ -1,0 +1,27 @@
+---
+description: Reglas del backend productivo Spring Boot + JDBC
+globs:
+  - backend/api-faltas-core/**/*.java
+  - backend/api-faltas-operaciones/**/*.java
+  - backend/worker-*/**/*.java
+alwaysApply: true
+---
+
+Este backend productivo usa Spring Boot moderno, sin XML y sin ORM.
+
+Reglas obligatorias:
+
+- No generar archivos XML de configuración.
+- Usar Java Config, anotaciones y `application.yml`.
+- No usar `@Entity`, `@Table`, `@Id`.
+- No usar Hibernate ni JPA.
+- No usar `JpaRepository`, `CrudRepository` ni equivalentes.
+- La persistencia debe implementarse con Spring JDBC.
+- La API preferida es `JdbcClient`.
+- El acceso a datos debe ser explícito, visible y revisable.
+- Escribir SQL explícito.
+- Usar parámetros nombrados.
+- Los repositories no deben contener lógica de negocio.
+- La lógica de negocio no debe vivir en controllers.
+- La transaccionalidad vive en servicios/casos de uso.
+- Evitar abstracciones innecesarias.

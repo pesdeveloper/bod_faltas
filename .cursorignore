@@ -1,4 +1,30 @@
+# build outputs
+**/target/**
+**/build/**
+**/out/**
+
+# tooling / local
+**/.idea/**
+**/.vscode/**
+**/.gradle/**
+**/.gemini/**
+
+# docs de trabajo y contexto histórico
 docs-trabajo/**
-prompt-de-reanudacion-chat.md
-estado-actual-y-proximo-paso.md
-99-prompts-slices-prototipo.md
+**/prompt-de-reanudacion-chat*.md
+**/estado-actual-y-proximo-paso*.md
+**/NOTAS.md
+
+# zonas fuera del foco actual del prototipo
+apps/**
+infra/**
+shared/**
+docs/**
+simulador/**
+sql/**
+
+# módulos backend no relevantes para este slice de demo
+backend/api-faltas-core/**
+backend/api-faltas-operaciones/**
+backend/worker-notificaciones/**
+backend/worker-snapshots/**

@@ -1,0 +1,28 @@
+---
+description: Reglas del prototipo descartable en memoria
+globs:
+  - backend/api-faltas-prototipo/**
+alwaysApply: true
+---
+
+Este módulo es un prototipo descartable para validación funcional.
+
+Reglas obligatorias:
+
+- Debe priorizar simplicidad, claridad y rapidez.
+- Debe usar estado en memoria.
+- Debe usar dataset mock precargado.
+- No usar base de datos real.
+- No usar Informix, H2, Flyway ni Liquibase.
+- No usar Spring JDBC ni JdbcClient.
+- No usar JPA/Hibernate.
+- No usar seguridad real.
+- No introducir workers, colas ni integraciones reales.
+- No sobrearquitectar.
+
+Objetivo del módulo:
+
+- simular la lógica operativa real
+- exponer bandejas, actas, eventos, documentos y notificaciones mock
+- permitir acciones mock que recorran el circuito completo
+- servir como simulador navegable

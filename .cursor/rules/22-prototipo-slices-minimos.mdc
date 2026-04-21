@@ -1,0 +1,16 @@
+---
+description: Guía para avanzar el prototipo en slices mínimos
+globs:
+  - backend/api-faltas-prototipo/**
+alwaysApply: false
+---
+
+Construir en slices mínimos funcionales.
+
+Reglas:
+
+- Avanzar en pasos pequeños, visibles y verificables.
+- Cada paso debe dejar algo ejecutable y navegable.
+- No tocar más archivos de los necesarios.
+- Antes de agregar complejidad, cerrar la consistencia del slice actual.
+- Preferir un cambio pequeño y correcto antes que un bloque grande y difuso.

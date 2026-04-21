@@ -1,5 +1,5 @@
 ---
-description: Reglas de dominio relevantes para implementación
+description: Reglas de dominio transversales del sistema de faltas
 globs:
   - backend/**/*.java
 alwaysApply: true

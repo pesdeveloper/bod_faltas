@@ -1,5 +1,5 @@
 ---
-description: Fuente de verdad y contexto del proyecto Faltas
+description: Fuente de verdad y criterio de continuidad
 globs:
   - backend/**
 alwaysApply: true
@@ -10,11 +10,12 @@ Este proyecto usa enfoque spec-as-source.
 Reglas obligatorias:
 
 - No rediseñar desde cero.
+- Priorizar continuidad sobre reinvención.
 - La fuente principal de verdad es:
   1. `spec/`
-  2. archivos de estado/reanudación del repo
-  3. instrucciones explícitas del chat actual
+  2. instrucciones explícitas del chat actual
+  3. archivos de estado/reanudación solo cuando se incluyan de forma intencional
 - Si hay contradicción entre inferencia y spec, priorizar la spec.
-- No inventar estructuras de dominio no documentadas.
+- No inventar estructuras no documentadas.
 - No introducir simplificaciones que rompan decisiones ya cerradas.
 - Priorizar correcciones quirúrgicas y continuidad.

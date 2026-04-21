@@ -1,3 +1,5 @@
+# PROMPT DE REANUDACIÓN — PROTOTIPO BACKEND FALTAS
+
 Estamos retomando el prototipo backend del sistema de faltas municipal.
 
 ## Proyecto
@@ -7,178 +9,216 @@ Estamos retomando el prototipo backend del sistema de faltas municipal.
 - sin base de datos
 - sin seguridad
 - store en memoria
-- enfoque: prototipo descartable, pero debe reflejar fielmente el modelo objetivo final
-- simplificación permitida: no modelar formularios complejos ni edición real de documentos
-- simplificación NO permitida: romper la lógica del flujo real del sistema
+- prototipo descartable en lo técnico, pero funcionalmente fiel al sistema real
 
-## Regla principal de trabajo
+## Norte del prototipo
 
-La demo no debe ser un atajo conceptual.
-Debe ser una base realista del sistema final.
+Este prototipo no debe quedar limitado a un subconjunto funcional permanente.
+
+La meta es que evolucione hasta representar de forma **navegable, accionable y coherente** el universo funcional del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual. :contentReference[oaicite:0]{index=0}
+
+### Simplificaciones permitidas
+- estado en memoria
+- dataset mock
+- sin base real
+- sin seguridad real
+- sin integraciones reales
+- acciones simples
+- formularios simplificados
+- documentos mock o edición documental no completa
+
+### Simplificaciones no permitidas
+- happy paths irreales
+- atajos conceptuales que contradigan el dominio
+- convivencia de circuitos viejos y nuevos si se contradicen
+- deformar estados, transiciones, firma o notificación por comodidad técnica
+
+## Regla principal
+
+La demo no debe ser un atajo conceptual.  
+Debe ser una base realista del sistema final. :contentReference[oaicite:1]{index=1}
 
 Eso implica:
 
-- los estados deben ser coherentes con el modelo final
-- las transiciones deben representar el flujo real
-- no dejar circuitos viejos simplificados conviviendo si contradicen el modelo correcto
-- cuando haya múltiples piezas o documentos, el estado del expediente debe ser agregador
-- el detalle fino debe vivir en estructuras específicas (documentos, piezas, etc.)
+- estados coherentes con el modelo final
+- transiciones representando el flujo real
+- un solo circuito verdadero por comportamiento
+- estado agregador cuando haya múltiples piezas o documentos
+- detalle fino en estructuras específicas
 
-## Estado funcional actual
+## Estado funcional consolidado
 
-El prototipo ya implementa lectura completa:
-
+### Lectura disponible
 - `GET /api/prototipo/health`
 - `GET /api/prototipo/bandejas`
 - `GET /api/prototipo/bandejas/{codigo}/actas`
 - `GET /api/prototipo/actas/{id}`
 - `GET /api/prototipo/actas/{id}/eventos`
 - `GET /api/prototipo/actas/{id}/documentos`
-- `GET /api/prototipo/actas/{id}/notificaciones`
+- `GET /api/prototipo/actas/{id}/notificaciones` :contentReference[oaicite:2]{index=2}
 
-También implementa acciones operativas ya funcionales:
-
+### Acciones implementadas
 - `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-positiva`
 - `POST /api/prototipo/actas/{id}/acciones/cerrar-acta`
 - `POST /api/prototipo/actas/{id}/acciones/archivar-acta`
 - `POST /api/prototipo/actas/{id}/acciones/generar-medida-preventiva`
 - `POST /api/prototipo/actas/{id}/acciones/generar-notificacion-acta`
-- `POST /api/prototipo/actas/{id}/acciones/firmar-documento/{documentoId}`
+- `POST /api/prototipo/actas/{id}/acciones/firmar-documento/{documentoId}` :contentReference[oaicite:3]{index=3}
 
-Importante:
-el endpoint viejo `pasar-a-notificacion` fue eliminado para evitar convivencia de dos modelos de firma distintos.
+## Decisiones cerradas
 
-## Decisiones importantes ya consolidadas
-
-### 1. Bandeja nueva incorporada
-Existe la bandeja:
-
-- `PENDIENTES_RESOLUCION_REDACCION`
-
-con casos mock de:
-- resolución pendiente
-- nulidad pendiente
-- medida preventiva pendiente
-- rectificación pendiente
-
-### 2. Múltiples piezas requeridas
-El prototipo soporta actas con múltiples piezas no-fallo requeridas.
-
-Se agregó estructura mock explícita:
-
-- `piezasRequeridas`
-- `piezasGeneradas`
-
-La regla correcta ya consolidada es:
-
-- mientras falte al menos una pieza requerida → la acta permanece en `PENDIENTES_RESOLUCION_REDACCION`
-- recién cuando todas las piezas requeridas fueron producidas → la acta pasa a `PENDIENTE_FIRMA`
-
-### 3. Estados agregadores correctos
-Se corrigieron dos malas simplificaciones:
-
-- NO usar el primer pendiente como estado (`PENDIENTE_` + primera pieza)
-- NO usar estado de firma dependiente de la última pieza generada
-
-Estados correctos ya adoptados:
-
-- `PENDIENTE_PRODUCCION_PIEZAS`
-- `PENDIENTE_FIRMA_PIEZAS`
-
-Detalle fino:
-- qué piezas faltan → en `piezasRequeridas` / `piezasGeneradas`
-- qué documentos faltan firmar → en documentos mock
-
-### 4. Firma correcta por documento
-La firma ya no se modela por “pieza” ni por firma global.
-
-Regla correcta ya implementada:
-
-- los documentos tienen identidad propia (`documentoId`)
+### Firma
+- el circuito viejo `pasar-a-notificacion` fue eliminado
+- la única verdad es `firmarDocumento(actaId, documentoId)`
+- los documentos tienen identidad propia
 - se firman de a uno
-- los documentos generados por acciones nuevas nacen en estado documental `PENDIENTE_FIRMA`
-- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los documentos firmables están en `FIRMADO`
+- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los documentos firmables están en `FIRMADO` :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
 
-### 5. Eliminación del circuito viejo
-Se eliminó el circuito viejo basado en `pasarActaANotificacion(...)`.
+### Piezas
+- existe la bandeja `PENDIENTES_RESOLUCION_REDACCION`
+- el prototipo soporta `piezasRequeridas` y `piezasGeneradas`
+- mientras falte al menos una pieza requerida, la acta permanece en esa bandeja
+- recién al completar todas las piezas requeridas pasa a `PENDIENTE_FIRMA` :contentReference[oaicite:6]{index=6}
 
-Ahora hay una sola verdad para el flujo de firma:
+### Estados agregadores
+- no usar el primer pendiente como estado
+- no usar la última pieza generada como estado de firma
+- estados correctos:
+  - `PENDIENTE_PRODUCCION_PIEZAS`
+  - `PENDIENTE_FIRMA_PIEZAS`
+- el detalle fino vive en piezas/documentos, no en el estado del expediente :contentReference[oaicite:7]{index=7}
 
-- `firmarDocumento(actaId, documentoId)`
-
-## Caso demo más importante
+## Casos demo clave
 
 ### ACTA-0013
-Es el caso canónico de demo para múltiples piezas y firma realista.
+Caso canónico para validar múltiples piezas y firma realista.
 
-Tiene:
-
-- bandeja inicial: `PENDIENTES_RESOLUCION_REDACCION`
-- piezas requeridas:
+- inicia en `PENDIENTES_RESOLUCION_REDACCION`
+- requiere:
   - `NOTIFICACION_ACTA`
   - `MEDIDA_PREVENTIVA`
 
 Flujo esperado:
-
 1. generar medida preventiva
 2. generar notificación del acta
-3. la acta pasa a `PENDIENTE_FIRMA`
+3. pasar a `PENDIENTE_FIRMA`
 4. firmar un documento
-5. la acta sigue en `PENDIENTE_FIRMA`
-6. firmar el documento restante
-7. la acta pasa a `PENDIENTE_NOTIFICACION`
-
-Este caso debe seguir siendo el principal para validar que:
-- múltiples piezas funcionan
-- múltiples documentos funcionan
-- la firma individual funciona
-- la salida de bandeja depende de completitud real
-
-## Acta demo antigua corregida
+5. seguir en `PENDIENTE_FIRMA`
+6. firmar el restante
+7. pasar a `PENDIENTE_NOTIFICACION` :contentReference[oaicite:8]{index=8}
 
 ### ACTA-0003
-Fue alineada al modelo nuevo:
+- quedó alineada al nuevo modelo
+- su documento principal nace en `PENDIENTE_FIRMA`
+- debe navegarse con `firmar-documento/{documentoId}` :contentReference[oaicite:9]{index=9}
 
-- `DOC-0003-01` ahora nace como `PENDIENTE_FIRMA`
-- ya no usa el circuito viejo de “pasar a notificación”
-- debe navegarse con `firmar-documento/{documentoId}`
+## Criterio de diseño
 
-## Criterio de diseño vigente
-
-Seguir manteniendo:
+Mantener:
 
 - store simple
 - controllers directos
-- records / enums simples
+- records y enums simples
 - sin framework genérico
 - sin DB
 - sin sobrearquitectura
 
-Pero siempre priorizando:
+Pero priorizando siempre:
 
 - coherencia con el modelo final
-- un solo circuito verdadero por comportamiento
-- estados agregadores bien definidos
-- detalle fino en estructuras específicas
+- un solo circuito verdadero
+- estados agregadores correctos
+- detalle fino en estructuras específicas :contentReference[oaicite:10]{index=10}
 
-## Qué revisar al retomar
+## Regla de trabajo para slices
 
-Antes de seguir sumando slices, revisar si el siguiente paso requiere:
+Cada slice debe definir explícitamente:
 
-- nuevo tipo de pieza no-fallo
-- nuevas notificaciones
-- reintentos
-- firma de otros documentos
-- o cierre de otro circuito de la demo
+1. objetivo puntual
+2. fuente de verdad
+3. alcance técnico
+4. exclusiones
+5. caso demo
+6. criterio de cierre
 
-También revisar si hay que limpiar el contexto de Cursor:
-- archivos irrelevantes del repo
-- docs que no aporten al bloque actual
-- artefactos de trabajo que puedan excluirse para bajar consumo de contexto
+### Reglas obligatorias
+- no reintroducir circuitos viejos
+- no dejar convivir dos modelos contradictorios
+- priorizar precisión quirúrgica
+- no tocar más archivos de los necesarios
+- si una simplificación rompe el modelo final, corregirla ahora
 
-## Instrucción de trabajo
+### Fuente de verdad
+- usar `spec/` como fuente principal
+- usar solo la parte mínima necesaria
+- usar `prompt-de-reanudacion-chat.md` y `estado-actual-y-proximo-paso.md` como marco de continuidad, no como reemplazo de la spec
 
-Actuá como arquitecto del prototipo.
-No improvises.
-No dejes convivir dos modelos contradictorios.
-Si aparece una simplificación que rompe el modelo final, corregirla ahora.
+### Alcance técnico
+- tocar solo controller, store, mocks, dtos, enums y helpers necesarios del prototipo
+- no arrastrar refactors fuera del circuito puntual
+
+## Regla de contexto para Cursor
+
+El contexto activo debe mantenerse chico.
+
+- cargar primero `prompt-de-reanudacion-chat.md`
+- cargar luego `estado-actual-y-proximo-paso.md`
+- cargar después solo la parte mínima necesaria de `spec/`
+- cargar solo los archivos del prototipo implicados en el slice
+- no cargar por defecto historial, notas, artefactos de trabajo ni módulos no relacionados
+
+El objetivo no es que Cursor vea todo el proyecto, sino solo lo necesario para resolver bien el slice actual.
+
+## Regla para refactors
+
+Ante un problema, distinguir:
+
+### A. Error de implementación puntual
+Ejemplos:
+- tocó un archivo de más
+- nombró algo mal
+- validó mal una condición menor
+
+Acción:
+- corregir código
+- no necesariamente tocar la spec
+
+### B. Error de interpretación del modelo
+Ejemplos:
+- mezcló circuitos
+- reintrodujo circuito viejo
+- confundió estado agregador con detalle fino
+- simplificó mal una transición
+- la fuente permitía entender mal la decisión
+
+Acción:
+- corregir código
+- y además fortalecer la fuente correcta
+
+### Regla de aprendizaje persistente
+Si una corrección importante revela ambigüedad o falta de precisión en la fuente, la lección no debe quedar solo en el código.
+
+Debe subirse a:
+- `spec/01-dominio/...` si era dominio
+- `spec/02-reglas-transversales/...` si era regla transversal
+- `spec/03-bandejas/...` si era flujo/bandeja/transición
+- `spec/04-backend/...` si era implementación futura
+- `prompt-de-reanudacion-chat.md` o `estado-actual-y-proximo-paso.md` si era método de trabajo o continuidad
+
+## Regla de continuidad mínima
+
+Todo nuevo slice debe poder plantearse usando como base:
+
+- `prompt-de-reanudacion-chat.md`
+- `estado-actual-y-proximo-paso.md`
+- un subconjunto pequeño y explícito de `spec/`
+
+Si para arrancar hace falta abrir demasiada historia o demasiados archivos, el slice está mal recortado o el estado actual no está suficientemente consolidado.
+
+## Instrucción final
+
+Actuar como arquitecto del prototipo.
+
+No improvisar.  
+No dejar convivir modelos contradictorios.  
+Si aparece una simplificación que rompe el modelo final, corregirla ahora. :contentReference[oaicite:11]{index=11}

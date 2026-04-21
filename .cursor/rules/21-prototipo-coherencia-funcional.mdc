@@ -1,0 +1,18 @@
+---
+description: Coherencia funcional obligatoria del prototipo
+globs:
+  - backend/api-faltas-prototipo/**
+alwaysApply: true
+---
+
+La demo no debe ser un atajo conceptual.
+
+Reglas obligatorias:
+
+- Debe reflejar fielmente el modelo final en términos de estados y transiciones.
+- No deben convivir circuitos viejos y nuevos si se contradicen.
+- Cuando haya múltiples piezas o documentos, el estado del expediente debe ser agregador.
+- El detalle fino debe vivir en estructuras específicas.
+- Si una simplificación rompe el modelo final, corregirla ahora.
+- Preferir un único circuito verdadero por comportamiento.
+- Si un circuito viejo queda obsoleto por refactor, eliminarlo completo.
