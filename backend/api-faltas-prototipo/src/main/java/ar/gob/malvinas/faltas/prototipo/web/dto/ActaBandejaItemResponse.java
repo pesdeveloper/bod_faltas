@@ -7,5 +7,6 @@ public record ActaBandejaItemResponse(
         String bloqueActual,
         String estadoProcesoActual,
         String situacionAdministrativaActual,
-        String bandejaActual) {
+        String bandejaActual,
+        String accionPendiente) {
 }

@@ -1,23 +1,21 @@
-# ESTADO ACTUAL — PROTOTIPO FALTAS
+﻿# ESTADO ACTUAL - PROTOTIPO FALTAS
+
+> Marco metodologico, reglas de trabajo y criterio de contexto: ver `docs-trabajo/prompt-de-reanudacion-chat.md`, `.cursor/rules/contexto-minimo.mdc` y `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc`.
 
 ## Nivel de avance
 
-El prototipo backend ya no es solo un happy path simple.
+El prototipo backend modela de forma fiel:
 
-Hoy modela de forma mucho más fiel:
-
-- producción de múltiples piezas no-fallo
+- produccion de multiples piezas no-fallo
 - permanencia en bandeja hasta completar piezas requeridas
 - firma individual por documento
-- salida de bandeja según completitud real de documentos firmables :contentReference[oaicite:12]{index=12}
+- salida de bandeja segun completitud real de documentos firmables
+- paso a notificacion por firma completa de documentos
+- retorno a analisis por resultados alternativos de notificacion
+- separacion operativa dentro de `PENDIENTE_ANALISIS` mediante `accionPendiente`
+- cierre y archivo desde analisis en casos demo concretos
 
-## Objetivo vigente
-
-El prototipo no debe quedar limitado a un subconjunto funcional permanente.
-
-Debe evolucionar hasta representar de forma **navegable, accionable y coherente** el universo funcional del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual real. :contentReference[oaicite:13]{index=13}
-
-## Lectura disponible
+## Endpoints de lectura vigentes
 
 - `GET /api/prototipo/health`
 - `GET /api/prototipo/bandejas`
@@ -25,198 +23,160 @@ Debe evolucionar hasta representar de forma **navegable, accionable y coherente*
 - `GET /api/prototipo/actas/{id}`
 - `GET /api/prototipo/actas/{id}/eventos`
 - `GET /api/prototipo/actas/{id}/documentos`
-- `GET /api/prototipo/actas/{id}/notificaciones` :contentReference[oaicite:14]{index=14}
+- `GET /api/prototipo/actas/{id}/notificaciones`
 
 ## Acciones implementadas
 
-- `registrar-notificacion-positiva`
-- `cerrar-acta`
-- `archivar-acta`
-- `generar-medida-preventiva`
-- `generar-notificacion-acta`
-- `firmar-documento/{documentoId}` :contentReference[oaicite:15]{index=15}
+- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-positiva`
+- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-negativa`
+- `POST /api/prototipo/actas/{id}/acciones/reintentar-notificacion`
+- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-vencida`
+- `POST /api/prototipo/actas/{id}/acciones/cerrar-acta`
+- `POST /api/prototipo/actas/{id}/acciones/archivar-acta`
+- `POST /api/prototipo/actas/{id}/acciones/generar-medida-preventiva`
+- `POST /api/prototipo/actas/{id}/acciones/generar-notificacion-acta`
+- `POST /api/prototipo/actas/{id}/acciones/firmar-documento/{documentoId}`
 
-## Refactors ya cerrados
+## Endpoint de utilidad
+
+- `POST /api/prototipo/reset` -- reinicializa el escenario mock al estado inicial
+
+## Refactors y decisiones cerradas
 
 ### Bandeja nueva
-- `PENDIENTES_RESOLUCION_REDACCION` :contentReference[oaicite:16]{index=16}
+- `PENDIENTES_RESOLUCION_REDACCION`
 
-### Múltiples piezas
+### Multiples piezas
 - existen `piezasRequeridas` y `piezasGeneradas`
 - si faltan piezas, permanece en `PENDIENTES_RESOLUCION_REDACCION`
-- si todas están producidas, pasa a `PENDIENTE_FIRMA` :contentReference[oaicite:17]{index=17}
+- si todas estan producidas, pasa a `PENDIENTE_FIRMA`
 
 ### Estados corregidos
 - `PENDIENTE_PRODUCCION_PIEZAS`
 - `PENDIENTE_FIRMA_PIEZAS`
-- ya no depende de la primera pieza pendiente ni de la última generada :contentReference[oaicite:18]{index=18}
+- ya no depende de la primera pieza pendiente ni de la ultima generada
 
 ### Firma correcta
 - documentos con `documentoId`
 - nacen en `PENDIENTE_FIRMA`
 - se firman de a uno
-- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los firmables están en `FIRMADO` :contentReference[oaicite:19]{index=19}
+- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los firmables estan en `FIRMADO`
 
 ### Circuito viejo eliminado
-- se eliminó `pasarActaANotificacion`
-- existe un único modelo de firma / transición a notificación :contentReference[oaicite:20]{index=20}
+- se elimino `pasarActaANotificacion`
+- existe un unico modelo de firma / transicion a notificacion
 
-## Casos demo principales
+### Resultados de notificacion ya modelados
+- positiva
+- negativa
+- reintento
+- vencida
+
+### Marcas operativas ya modeladas
+- `REINTENTAR_NOTIFICACION`
+- `EVALUAR_NOTIFICACION_VENCIDA`
+
+## Casos demo validados
 
 ### ACTA-0013
-Caso canónico actual.
+Caso canonico actual. Requiere `NOTIFICACION_ACTA` y `MEDIDA_PREVENTIVA`.
 
-Requiere:
-- `NOTIFICACION_ACTA`
-- `MEDIDA_PREVENTIVA`
-
-Recorrido esperado:
+Recorrido validado:
 1. generar medida preventiva
-2. generar notificación del acta
+2. generar notificacion del acta
 3. pasar a `PENDIENTE_FIRMA`
-4. firmar primer documento
-5. seguir en `PENDIENTE_FIRMA`
-6. firmar segundo documento
-7. pasar a `PENDIENTE_NOTIFICACION` :contentReference[oaicite:21]{index=21}
+4. firmar primer documento -> seguir en `PENDIENTE_FIRMA`
+5. firmar segundo documento -> pasar a `PENDIENTE_NOTIFICACION`
+6. registrar notificacion positiva -> pasar a `PENDIENTE_ANALISIS`
+7. cerrar acta desde analisis -> pasar a `CERRADAS`
 
 Expresa:
-- múltiples piezas
-- múltiples documentos
+- multiples piezas
+- multiples documentos
 - firma individual
-- transición realista :contentReference[oaicite:22]{index=22}
+- transicion realista a notificacion
+- retorno a analisis
+- cierre administrativo coherente
 
-### ACTA-0003
-- documento principal en `PENDIENTE_FIRMA`
-- firma por `documentoId`
-- transición por el único circuito vigente :contentReference[oaicite:23]{index=23}
+### ACTA-0006
+Caso corto validado para archivo desde analisis.
 
-## Criterio de diseño vigente
+Recorrido validado:
+1. iniciar en `PENDIENTE_ANALISIS`
+2. archivar acta
+3. pasar a `ARCHIVO`
 
-Seguir construyendo el prototipo como:
+Expresa:
+- archivo desde analisis
+- evento explicito de archivado
+- posibilidad de reingreso preservada
 
-- base realista del sistema final
-- sin formularios complejos
-- sin edición rica
-- con acciones disparadoras simples
-- pero con lógica y transiciones fieles al modelo real :contentReference[oaicite:24]{index=24}
+### ACTA-0004
+Caso validado para notificacion negativa y reintento.
 
-Mantener además:
+Recorrido validado:
+1. iniciar en `PENDIENTE_NOTIFICACION`
+2. registrar notificacion negativa
+3. pasar a `PENDIENTE_ANALISIS`
+4. quedar con `accionPendiente = REINTENTAR_NOTIFICACION`
+5. aparecer filtrada en `PENDIENTE_ANALISIS?accionPendiente=REINTENTAR_NOTIFICACION`
+6. reintentar notificacion
+7. volver a `PENDIENTE_NOTIFICACION`
+8. limpiar `accionPendiente`
 
-- store simple
-- controllers directos
-- records y enums simples
-- sin framework genérico
-- sin sobrearquitectura
-- un solo circuito verdadero
-- estados agregadores correctos
-- detalle fino en estructuras específicas :contentReference[oaicite:25]{index=25}
+Expresa:
+- resultado negativo de notificacion
+- separacion operativa dentro de analisis
+- filtro por `accionPendiente`
+- reintento como salida puntual del caso
 
-## Método operativo para continuar
+### ACTA-0005
+Caso validado para notificacion vencida.
 
-Cada próximo paso debe abrirse como slice mínimo funcional.
+Recorrido validado:
+1. iniciar en `EN_NOTIFICACION`
+2. registrar notificacion vencida
+3. pasar a `PENDIENTE_ANALISIS`
+4. quedar con `accionPendiente = EVALUAR_NOTIFICACION_VENCIDA`
+5. notificacion en estado `VENCIDA`
+6. evento `NOTIFICACION_VENCIDA`
+7. aparecer filtrada en `PENDIENTE_ANALISIS?accionPendiente=EVALUAR_NOTIFICACION_VENCIDA`
 
-### Antes de abrir un slice
-Revisar en este orden:
+Expresa:
+- vencimiento de notificacion
+- diferenciacion respecto de no entrega
+- clasificacion operativa en analisis para decision posterior
 
-1. si quedó algún circuito viejo conviviendo
-2. si quedaron nombres, comentarios o estados desalineados
-3. si el siguiente paso es una ampliación natural del circuito actual
-4. si existe un caso demo claro para validar el cambio
+## Que falta (funcionalidad aun no modelada)
 
-### Cada slice debe incluir
-- objetivo
-- fuente de verdad
-- alcance técnico
-- exclusiones
-- caso demo
-- criterio de cierre
+- decision posterior sobre notificacion vencida
+- reintento especifico para casos vencidos, si el modelo lo requiere
+- ampliar mas piezas no-fallo
+- ampliar mas circuitos de analisis y decisiones
+- ampliar cobertura de bandejas del universo completo
+- decidir si `accionPendiente` permanece como campo paralelo o sube luego a una estructura mas explicita
+- limpiar temas de encoding/comentarios en algunos archivos Java
 
-### Regla para la fuente de verdad
-No abrir toda la spec por defecto.
+## Proximo paso
 
-Para cada slice, recortar la fuente de verdad a un subconjunto chico y explícito de `spec/`.
+**El proximo slice funcional aun no esta elegido.**
 
-### Regla para el alcance técnico
-Tocar solo lo mínimo necesario del prototipo:
+Opciones candidatas actuales:
+1. decision posterior sobre notificacion vencida
+2. reintento especifico para casos vencidos
+3. mas piezas no-fallo
+4. otros circuitos de analisis y decisiones
+5. micro-slice tecnico de limpieza de encoding/comentarios
+6. otro caso demo fuerte
 
-- controller
-- store o servicio principal
-- mocks / datasets
-- dtos / records
-- enums / helpers afectados
+Elegir una opcion y redactar el slice antes de abrir codigo.
 
-Evitar tocar:
-- módulos backend productivos
-- persistencia real
-- workers
-- frontend
-- zonas no relacionadas del repo
-
-### Regla de prioridad
-Priorizar siempre:
-
-1. cerrar consistencia del flujo ya construido
-2. evitar convivencia de modelos contradictorios
-3. recién después sumar alcance funcional
-
-## Regla para refactors
-
-Si aparece un problema, distinguir:
-
-### A. Error de implementación puntual
-- corregir código
-- no necesariamente actualizar la spec
-
-### B. Error de interpretación del modelo
-- corregir código
-- y además corregir la spec o el contexto estable correspondiente
-
-## Regla de continuidad mínima
-
-Todo nuevo slice debe poder redactarse usando solo:
-
-- `prompt-de-reanudacion-chat.md`
-- `estado-actual-y-proximo-paso.md`
-- un subconjunto pequeño y explícito de `spec/`
-
-Si no alcanza con eso:
-- o el slice está demasiado grande
-- o el estado actual no está suficientemente consolidado
-
-## Qué falta
-
-Todavía falta, entre otras cosas:
-
-- ampliar más piezas no-fallo
-- ampliar más caminos de notificación
-- modelar resultados alternativos de notificación
-- reintentos
-- más circuitos de análisis y decisiones
-- más cobertura de bandejas del universo completo :contentReference[oaicite:26]{index=26}
-
-## Próximo paso sugerido
-
-Antes de seguir agregando funcionalidad, conviene:
-
-1. revisar consistencia global
-   - confirmar que no quedó ningún circuito viejo
-   - revisar nombres, comentarios y estados desactualizados
-
-2. revisar contexto de Cursor
-   - identificar archivos no necesarios
-   - reducir ruido contextual
-   - excluir artefactos y módulos irrelevantes
-
-3. elegir un único bloque funcional para continuar
-   - más piezas no-fallo
-   - notificación negativa / vencida / reintentos
-   - otros circuitos de firma
-   - otro caso demo fuerte :contentReference[oaicite:27]{index=27}
-
-## Instrucción final al retomar
+## Instruccion al retomar
 
 Actuar como arquitecto del prototipo.
 
 No improvisar.  
 No dejar convivir dos modelos contradictorios.  
-Si aparece una simplificación que rompe el modelo final, corregirla ahora. :contentReference[oaicite:28]{index=28}
+No abrir contexto de mas.  
+No permitir que Cursor lea o edite continuidad sin autorizacion explicita.  
+Si aparece una simplificacion que rompe el modelo final, corregirla ahora.

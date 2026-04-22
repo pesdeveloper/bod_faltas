@@ -17,12 +17,16 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.CerrarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.FirmarDocumentoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarMedidaPreventivaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNotificacionActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionNegativaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionPositivaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionVencidaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -66,8 +70,10 @@ public class PrototipoApiController {
     }
 
     @GetMapping("/bandejas/{codigo}/actas")
-    public List<ActaBandejaItemResponse> listarActasPorBandeja(@PathVariable("codigo") String codigo) {
-        return store.listarActasPorBandeja(codigo).stream()
+    public List<ActaBandejaItemResponse> listarActasPorBandeja(
+            @PathVariable("codigo") String codigo,
+            @RequestParam(value = "accionPendiente", required = false) String accionPendiente) {
+        return store.listarActasPorBandeja(codigo, accionPendiente).stream()
                 .map(this::mapActaBandejaItem)
                 .toList();
     }
@@ -121,6 +127,59 @@ public class PrototipoApiController {
         return new RegistrarNotificacionPositivaAccionResponse(
                 "OK",
                 "Notificación positiva registrada; acta pasa a análisis.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    @PostMapping("/actas/{id}/acciones/registrar-notificacion-negativa")
+    public RegistrarNotificacionNegativaAccionResponse registrarNotificacionNegativa(@PathVariable("id") String id) {
+        PrototipoStore.RegistrarNotificacionNegativaResultado r = store.registrarNotificacionNegativa(id);
+        if (r.estado() == PrototipoStore.RegistrarNotificacionNegativaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarNotificacionNegativaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarNotificacionNegativaAccionResponse(
+                "OK",
+                "Notificación negativa registrada; acta retorna a análisis con acción pendiente.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente());
+    }
+
+    @PostMapping("/actas/{id}/acciones/registrar-notificacion-vencida")
+    public RegistrarNotificacionVencidaAccionResponse registrarNotificacionVencida(@PathVariable("id") String id) {
+        PrototipoStore.RegistrarNotificacionVencidaResultado r = store.registrarNotificacionVencida(id);
+        if (r.estado() == PrototipoStore.RegistrarNotificacionVencidaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarNotificacionVencidaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarNotificacionVencidaAccionResponse(
+                "OK",
+                "Notificación vencida registrada; acta retorna a análisis con acción pendiente.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente());
+    }
+
+    @PostMapping("/actas/{id}/acciones/reintentar-notificacion")
+    public ReintentarNotificacionAccionResponse reintentarNotificacion(@PathVariable("id") String id) {
+        PrototipoStore.ReintentarNotificacionResultado r = store.reintentarNotificacion(id);
+        if (r.estado() == PrototipoStore.ReintentarNotificacionEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReintentarNotificacionEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new ReintentarNotificacionAccionResponse(
+                "OK",
+                "Reintento de notificación solicitado; acta vuelve a PENDIENTE_NOTIFICACION.",
                 r.actaId(),
                 r.bandejaActual(),
                 r.estadoProcesoActual());
@@ -222,7 +281,8 @@ public class PrototipoApiController {
                 a.bloqueActual(),
                 a.estadoProcesoActual(),
                 a.situacionAdministrativaActual(),
-                a.bandejaActual());
+                a.bandejaActual(),
+                store.getAccionPendiente(a.id()));
     }
 
     private ActaDetalleResponse mapActaDetalle(ActaMock a) {
@@ -243,7 +303,8 @@ public class PrototipoApiController {
                 a.tieneDocumentos(),
                 a.tieneNotificaciones(),
                 store.listarPiezasRequeridas(a.id()),
-                store.listarPiezasGeneradas(a.id()));
+                store.listarPiezasGeneradas(a.id()),
+                store.getAccionPendiente(a.id()));
     }
 
     private ActaEventoResponse mapActaEvento(ActaEventoMock e) {

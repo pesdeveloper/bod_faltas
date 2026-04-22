@@ -1,0 +1,52 @@
+---
+description: La continuidad estable y volátil del proyecto se mantiene manualmente y no debe ser reescrita ni releída innecesariamente por Cursor
+alwaysApply: true
+---
+
+# Continuidad solo humana
+
+## Objetivo
+
+Evitar que Cursor consuma contexto innecesario y reescriba artefactos de continuidad que deben mantenerse manualmente.
+
+## Regla principal
+
+Los siguientes archivos son artefactos de continuidad controlados manualmente:
+
+- `docs-trabajo/prompt-de-reanudacion-chat.md`
+- `docs-trabajo/estado-actual-y-proximo-paso.md`
+- `.cursor/rules/*.mdc`
+
+Cursor no debe reescribirlos, resumirlos, normalizarlos ni proponer una nueva redacción por iniciativa propia.
+
+## Lectura restringida
+
+Para slices funcionales:
+
+- no leer automáticamente el contenido completo de los archivos de continuidad
+- asumir que están vigentes
+- consultarlos solo si el prompt del slice lo pide explícitamente o si existe una duda real que impide resolver el cambio
+
+## Edición restringida
+
+No editar archivos de continuidad ni reglas `.mdc` salvo que ocurra una de estas dos condiciones:
+
+1. el objetivo del slice sea explícitamente documental, o
+2. se detecte un drift real y el prompt autorice explícitamente corregir continuidad
+
+## Regla de economía de contexto
+
+No gastar contexto en reexplicar, reescribir o volver a resumir continuidad ya consolidada.
+
+Si el slice es funcional:
+- priorizar código, mocks, controller, store, DTOs, enums y subconjunto mínimo de spec
+- no cargar continuidad completa salvo necesidad estricta
+
+## Salida esperada
+
+Si Cursor considera necesario tocar continuidad, primero debe decirlo explícitamente y justificar:
+- qué drift detectó
+- por qué impide cerrar el slice
+- qué archivo puntual habría que corregir
+
+Sin esa justificación, no debe tocar continuidad.

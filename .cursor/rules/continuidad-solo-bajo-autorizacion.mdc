@@ -1,0 +1,81 @@
+---
+description: La continuidad del proyecto solo puede leerse o editarse bajo autorización explícita del slice
+alwaysApply: true
+---
+
+# Continuidad solo bajo autorización
+
+## Objetivo
+
+Evitar consumo innecesario de contexto y cambios laterales sobre artefactos de continuidad durante slices funcionales.
+
+## Archivos protegidos de continuidad
+
+Los siguientes archivos se consideran continuidad controlada manualmente:
+
+- `docs-trabajo/prompt-de-reanudacion-chat.md`
+- `docs-trabajo/estado-actual-y-proximo-paso.md`
+- `.cursor/rules/*.mdc`
+
+## Regla principal
+
+En slices funcionales:
+
+- no leer automáticamente el contenido completo de archivos de continuidad
+- no resumirlos
+- no reescribirlos
+- no normalizarlos
+- no proponer nueva redacción
+- no tocarlos por iniciativa propia
+
+Se debe asumir que están vigentes salvo indicación explícita en el prompt.
+
+## Cuándo sí se pueden leer
+
+Solo se pueden leer archivos de continuidad si ocurre una de estas condiciones:
+
+1. el prompt del slice los pide explícitamente por nombre, o
+2. existe una duda real del slice que no puede resolverse sin consultar continuidad
+
+Aun en ese caso:
+- leer solo lo mínimo necesario
+- no reescribir nada automáticamente
+
+## Cuándo sí se pueden editar
+
+Solo se pueden editar archivos de continuidad si ocurre una de estas condiciones:
+
+1. el objetivo del slice es explícitamente documental, o
+2. el prompt autoriza expresamente corregir continuidad por drift real detectado
+
+Sin esa autorización, no deben editarse.
+
+## Regla de economía de contexto
+
+En slices funcionales, priorizar contexto en este orden:
+
+1. archivos del módulo afectado
+2. subconjunto mínimo de spec aplicable
+3. mocks, DTOs, enums, controller, store y helpers involucrados
+
+La continuidad no debe consumir contexto salvo necesidad estricta.
+
+## Si se detecta drift
+
+Si se detecta una desalineación entre continuidad y comportamiento real:
+
+- no corregirla automáticamente
+- no reescribir archivos de continuidad
+- reportarla de forma breve
+- indicar qué archivo puntual quedaría para un micro-slice documental posterior
+
+## Salida esperada
+
+Si Cursor considera necesario leer o tocar continuidad, debe explicitar antes:
+
+1. por qué es necesario
+2. qué archivo puntual necesita
+3. qué parte mínima necesita leer
+4. si el prompt autoriza o no editarlo
+
+Sin eso, no debe tocar continuidad.

@@ -1,0 +1,176 @@
+---
+description: Regla operativa estricta de limpieza y selección de contexto para Cursor
+alwaysApply: true
+---
+
+# Limpieza de contexto para Cursor — regla operativa estricta
+
+## Objetivo
+
+Reducir al mínimo el contexto activo para evitar ruido, consumo innecesario y razonamiento sobre archivos no relevantes.
+
+Cursor no debe cargar "todo el repo". Debe cargar solo el contexto mínimo necesario para el slice actual.
+
+---
+
+## Regla principal
+
+Antes de trabajar cualquier slice:
+
+1. cargar continuidad mínima
+2. cargar solo el módulo afectado
+3. cargar solo el subconjunto exacto de spec necesario
+4. excluir todo lo demás
+
+Si para resolver el slice hace falta abrir demasiados archivos, el slice está mal recortado o la selección de contexto está mal hecha.
+
+---
+
+## Cargar siempre primero
+
+### Continuidad mínima obligatoria
+
+- `docs-trabajo/prompt-de-reanudacion-chat.md`
+- `docs-trabajo/estado-actual-y-proximo-paso.md`
+
+Estos dos archivos son el marco base de continuidad. No reemplazan la spec, pero sí definen el contexto operativo vigente.
+
+---
+
+## Cargar del código solo lo estrictamente afectado
+
+Para slices del prototipo backend, cargar únicamente:
+
+- `backend/api-faltas-prototipo/src/main/java/.../PrototipoApiController.java`
+- `backend/api-faltas-prototipo/src/main/java/.../PrototipoStore.java`
+- `backend/api-faltas-prototipo/src/main/java/.../MockDataFactory.java`
+
+Y además solo si el slice lo necesita:
+
+- DTOs/records mínimos afectados
+- enums mínimos afectados
+- helpers mínimos afectados
+
+No cargar por defecto otros módulos Java del repo.
+
+---
+
+## Cargar de spec solo el subconjunto exacto del slice
+
+No abrir `spec/` completa.
+
+Abrir únicamente:
+
+- el bloque de dominio mínimo necesario
+- la bandeja exacta involucrada
+- la regla transversal exacta involucrada
+- el bloque backend exacto si aporta algo al slice
+
+### Ejemplos
+
+Si el slice trata firma:
+
+- regla de firma
+- bandeja de pendientes de firma
+- parte mínima de dominio/documento si hace falta
+
+Si el slice trata notificación:
+
+- bandeja/s de notificación
+- regla transversal de notificación si existe
+- parte mínima de dominio/notificación
+
+Si el slice trata análisis:
+
+- bandeja/s de análisis
+- parte mínima de dominio/acto/documento si aplica
+
+---
+
+## No cargar por defecto
+
+Excluir del contexto, salvo necesidad explícita y justificada:
+
+- `target/`
+- `.git/`
+- `.idea/`
+- `.vscode/`
+- archivos zip
+- scripts viejos u obsoletos
+- frontend
+- mobile
+- `infra/`
+- `sql/`
+- `simulador/`
+- notas históricas
+- artefactos de trabajo viejos
+- documentación no relacionada
+- módulos productivos no vinculados al slice actual
+
+---
+
+## Regla de lectura del repo
+
+No explorar el repo de forma horizontal y masiva.
+
+Primero identificar:
+
+1. qué comportamiento puntual se va a tocar
+2. qué archivos son la fuente real de ese comportamiento
+3. qué archivos solo agregan ruido
+
+Solo después abrir archivos.
+
+---
+
+## Regla de trabajo durante el slice
+
+Antes de modificar algo, validar:
+
+1. cuál es la única verdad vigente del circuito
+2. si existe algún resto de circuito viejo
+3. qué archivo es fuente real
+4. qué archivo solo refleja o consume el estado
+
+No mezclar:
+
+- refactor grande
+- ampliación funcional
+- limpieza general
+- renombres amplios
+- rediseño conceptual
+
+Hacer solo el cambio mínimo para cerrar el comportamiento puntual.
+
+---
+
+## Regla de salida esperada
+
+Toda intervención debe devolver:
+
+1. diagnóstico breve
+2. archivos realmente tocados
+3. por qué esos y no más
+4. cambio concreto realizado
+5. validación observable
+6. riesgos o pendientes si quedaron
+
+---
+
+## Regla de disciplina
+
+Si el cambio puede resolverse tocando 1 a 3 archivos, no abrir 15.
+Si el slice es puntual, el contexto también debe ser puntual.
+Menos contexto irrelevante = mejor precisión.
+
+---
+
+## Instrucción final
+
+Actuar como implementador disciplinado sobre contexto mínimo.
+
+- No abrir todo el repo.
+- No usar "por las dudas".
+- No mezclar modelos.
+- No reintroducir circuitos viejos.
+- Priorizar precisión quirúrgica y consistencia conceptual.

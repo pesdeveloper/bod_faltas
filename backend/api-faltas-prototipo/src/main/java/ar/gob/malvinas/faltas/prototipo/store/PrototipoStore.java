@@ -49,6 +49,23 @@ public class PrototipoStore {
     private static final String ESTADO_PENDIENTE_ENVIO = "PENDIENTE_ENVIO";
     private static final String ESTADO_PENDIENTE_REVISION = "PENDIENTE_REVISION";
     private static final String ESTADO_ENTREGADA = "ENTREGADA";
+    private static final String ESTADO_NO_ENTREGADA = "NO_ENTREGADA";
+    private static final String ESTADO_VENCIDA = "VENCIDA";
+    /**
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso volvi�� a
+     * anǭlisis por notificaci��n fallida y requiere decisi��n posterior. El
+     * campo es filtrable por API y sobrevive en el store aparte del record
+     * inmutable {@link ActaMock}.
+     */
+    public static final String ACCION_REINTENTAR_NOTIFICACION = "REINTENTAR_NOTIFICACION";
+    /**
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso volvió a
+     * análisis porque la notificación quedó vencida sin entrega ni rechazo
+     * explícito. Debe quedar distinguible del reintento por no entrega: acá
+     * no se asume todavía próximo paso (nuevo intento, archivo, apremio u
+     * otra salida), sólo que requiere decisión posterior.
+     */
+    public static final String ACCION_EVALUAR_NOTIFICACION_VENCIDA = "EVALUAR_NOTIFICACION_VENCIDA";
     private static final String PIEZA_MEDIDA_PREVENTIVA = "MEDIDA_PREVENTIVA";
     private static final String PIEZA_NOTIFICACION_ACTA = "NOTIFICACION_ACTA";
     private static final String ESTADO_PENDIENTE_FIRMA_PIEZAS = "PENDIENTE_FIRMA_PIEZAS";
@@ -67,6 +84,47 @@ public class PrototipoStore {
             String actaId,
             String bandejaActual,
             String estadoProcesoActual) {
+    }
+
+    public enum RegistrarNotificacionNegativaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarNotificacionNegativaResultado(
+            RegistrarNotificacionNegativaEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String accionPendiente) {
+    }
+
+    public enum ReintentarNotificacionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ReintentarNotificacionResultado(
+            ReintentarNotificacionEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum RegistrarNotificacionVencidaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarNotificacionVencidaResultado(
+            RegistrarNotificacionVencidaEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String accionPendiente) {
     }
 
     public enum CerrarActaEstado {
@@ -143,6 +201,13 @@ public class PrototipoStore {
     private final Map<String, List<ActaDocumentoMock>> documentosPorActa = new LinkedHashMap<>();
     private final Map<String, List<ActaNotificacionMock>> notificacionesPorActa = new LinkedHashMap<>();
     private final Map<String, ActaPiezasRequeridasMock> piezasRequeridasPorActa = new LinkedHashMap<>();
+    /**
+     * Marca operativa actual dentro de la bandeja. Se mantiene en un mapa
+     * paralelo para no cambiar el record {@link ActaMock} ni obligar a
+     * reescribir todas las transiciones previas. Si una acta no tiene marca,
+     * simplemente no aparece en el mapa.
+     */
+    private final Map<String, String> accionPendientePorActa = new LinkedHashMap<>();
 
     public Map<String, ActaMock> getActas() {
         return actas;
@@ -170,6 +235,15 @@ public class PrototipoStore {
         documentosPorActa.clear();
         notificacionesPorActa.clear();
         piezasRequeridasPorActa.clear();
+        accionPendientePorActa.clear();
+    }
+
+    /**
+     * Marca operativa vigente de la acta dentro de su bandeja, o {@code null}
+     * si la acta no tiene acci��n pendiente marcada.
+     */
+    public String getAccionPendiente(String actaId) {
+        return accionPendientePorActa.get(actaId);
     }
 
     public List<BandejaConteo> listarBandejasConConteoOrdenadas() {
@@ -195,11 +269,21 @@ public class PrototipoStore {
     }
 
     public List<ActaMock> listarActasPorBandeja(String codigoBandeja) {
+        return listarActasPorBandeja(codigoBandeja, null);
+    }
+
+    /**
+     * Listado de la bandeja con filtro opcional por acci��n pendiente. Si
+     * {@code accionPendiente} es {@code null} o en blanco, no se filtra.
+     */
+    public List<ActaMock> listarActasPorBandeja(String codigoBandeja, String accionPendiente) {
         if (codigoBandeja == null) {
             return List.of();
         }
+        String accionFiltro = (accionPendiente != null && !accionPendiente.isBlank()) ? accionPendiente : null;
         return actas.values().stream()
                 .filter(a -> codigoBandeja.equals(a.bandejaActual()))
+                .filter(a -> accionFiltro == null || accionFiltro.equals(accionPendientePorActa.get(a.id())))
                 .sorted(Comparator.comparing(ActaMock::id))
                 .toList();
     }
@@ -376,11 +460,284 @@ public class PrototipoStore {
                     resumenDestinatarioEntregadaDemo(actual)));
         }
 
+        accionPendientePorActa.remove(actaId);
+
         return new RegistrarNotificacionPositivaResultado(
                 RegistrarNotificacionPositivaEstado.OK,
                 actualizada.id(),
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual());
+    }
+
+    /**
+     * Demo: notificación no entregada → acta retorna a PENDIENTE_ANALISIS con
+     * marca operativa {@link #ACCION_REINTENTAR_NOTIFICACION}, para que el
+     * caso sea distinguible y filtrable dentro de la bandeja de análisis.
+     *
+     * <p>Sólo aplica desde PENDIENTE_NOTIFICACION o EN_NOTIFICACION. La
+     * notificación existente pasa a {@code NO_ENTREGADA}; si no había
+     * notificación cargada (caso demo atípico), se crea una con ese estado.
+     * Se registra un evento {@code NOTIFICACION_NO_ENTREGADA} observable por
+     * API. No se modelan todavía reintentos ni vencimientos.
+     */
+    public RegistrarNotificacionNegativaResultado registrarNotificacionNegativa(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new RegistrarNotificacionNegativaResultado(
+                    RegistrarNotificacionNegativaEstado.NOT_FOUND, null, null, null, null);
+        }
+        String bandeja = actual.bandejaActual();
+        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !BANDEJA_EN_NOTIFICACION.equals(bandeja)) {
+            return new RegistrarNotificacionNegativaResultado(
+                    RegistrarNotificacionNegativaEstado.CONFLICT, null, null, null, null);
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                true,
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, ACCION_REINTENTAR_NOTIFICACION);
+
+        List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        if (!notifs.isEmpty()) {
+            ActaNotificacionMock primera = notifs.get(0);
+            notifs.set(0, new ActaNotificacionMock(
+                    primera.id(),
+                    primera.actaId(),
+                    primera.canal(),
+                    ESTADO_NO_ENTREGADA,
+                    primera.destinatarioResumen()));
+        } else {
+            String idNotif = "NOT-" + sufijoActa + "-01";
+            notifs.add(new ActaNotificacionMock(
+                    idNotif,
+                    actaId,
+                    "POSTAL",
+                    ESTADO_NO_ENTREGADA,
+                    resumenDestinatarioNoEntregadaDemo(actual)));
+        }
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguiente = eventos.size() + 1;
+        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
+        LocalDateTime fechaEvento = eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        eventos.add(new ActaEventoMock(
+                idEvento,
+                actaId,
+                fechaEvento,
+                "NOTIFICACION_NO_ENTREGADA",
+                BLOQUE_D4,
+                BLOQUE_D5,
+                "Notificación no entregada; acta retorna a análisis con acción pendiente "
+                        + ACCION_REINTENTAR_NOTIFICACION + "."));
+
+        return new RegistrarNotificacionNegativaResultado(
+                RegistrarNotificacionNegativaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                ACCION_REINTENTAR_NOTIFICACION);
+    }
+
+    /**
+     * Demo: reintento de notificación desde análisis. Solo aplica si la acta
+     * está en {@link #BANDEJA_PENDIENTE_ANALISIS} y tiene
+     * {@code accionPendiente = REINTENTAR_NOTIFICACION}. Devuelve el caso al
+     * circuito operativo de notificación: acta a
+     * {@link #BANDEJA_PENDIENTE_NOTIFICACION} con bloque {@link #BLOQUE_D4}
+     * y estado {@link #ESTADO_PENDIENTE_ENVIO}; la notificación existente
+     * pasa a {@code PENDIENTE_ENVIO}; se limpia la marca
+     * {@code accionPendiente}; se registra evento
+     * {@code NOTIFICACION_REINTENTADA}. No se crea una segunda notificación.
+     */
+    public ReintentarNotificacionResultado reintentarNotificacion(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new ReintentarNotificacionResultado(
+                    ReintentarNotificacionEstado.NOT_FOUND, null, null, null);
+        }
+        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())
+                || !ACCION_REINTENTAR_NOTIFICACION.equals(accionPendientePorActa.get(actaId))) {
+            return new ReintentarNotificacionResultado(
+                    ReintentarNotificacionEstado.CONFLICT, null, null, null);
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D4,
+                ESTADO_PENDIENTE_ENVIO,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                true,
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_NOTIFICACION);
+        actas.put(actaId, actualizada);
+
+        List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        if (!notifs.isEmpty()) {
+            ActaNotificacionMock primera = notifs.get(0);
+            notifs.set(0, new ActaNotificacionMock(
+                    primera.id(),
+                    primera.actaId(),
+                    primera.canal(),
+                    ESTADO_PENDIENTE_ENVIO,
+                    primera.destinatarioResumen()));
+        } else {
+            String idNotif = "NOT-" + sufijoActa + "-01";
+            notifs.add(new ActaNotificacionMock(
+                    idNotif,
+                    actaId,
+                    "POSTAL",
+                    ESTADO_PENDIENTE_ENVIO,
+                    resumenDestinatarioDemo(actual)));
+        }
+
+        accionPendientePorActa.remove(actaId);
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguiente = eventos.size() + 1;
+        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
+        LocalDateTime fechaEvento = eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        eventos.add(new ActaEventoMock(
+                idEvento,
+                actaId,
+                fechaEvento,
+                "NOTIFICACION_REINTENTADA",
+                BLOQUE_D5,
+                BLOQUE_D4,
+                "Reintento de notificación solicitado desde análisis; acta vuelve a "
+                        + BANDEJA_PENDIENTE_NOTIFICACION + "."));
+
+        return new ReintentarNotificacionResultado(
+                ReintentarNotificacionEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual());
+    }
+
+    /**
+     * Demo: notificación vencida → acta retorna a PENDIENTE_ANALISIS con
+     * marca operativa {@link #ACCION_EVALUAR_NOTIFICACION_VENCIDA}, para que
+     * el caso quede distinguible del reintento por no entrega y pueda
+     * filtrarse dentro de la bandeja de análisis para decisión posterior.
+     *
+     * <p>Sólo aplica desde PENDIENTE_NOTIFICACION o EN_NOTIFICACION. La
+     * notificación existente pasa a {@code VENCIDA}; si no había notificación
+     * cargada (caso demo atípico), se crea una con ese estado. Se registra un
+     * evento {@code NOTIFICACION_VENCIDA} observable por API. No se modelan
+     * todavía reintentos automáticos por vencimiento ni la decisión posterior
+     * (nuevo intento, archivo, apremio u otra salida).
+     */
+    public RegistrarNotificacionVencidaResultado registrarNotificacionVencida(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new RegistrarNotificacionVencidaResultado(
+                    RegistrarNotificacionVencidaEstado.NOT_FOUND, null, null, null, null);
+        }
+        String bandeja = actual.bandejaActual();
+        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !BANDEJA_EN_NOTIFICACION.equals(bandeja)) {
+            return new RegistrarNotificacionVencidaResultado(
+                    RegistrarNotificacionVencidaEstado.CONFLICT, null, null, null, null);
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                true,
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, ACCION_EVALUAR_NOTIFICACION_VENCIDA);
+
+        List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        if (!notifs.isEmpty()) {
+            ActaNotificacionMock primera = notifs.get(0);
+            notifs.set(0, new ActaNotificacionMock(
+                    primera.id(),
+                    primera.actaId(),
+                    primera.canal(),
+                    ESTADO_VENCIDA,
+                    primera.destinatarioResumen()));
+        } else {
+            String idNotif = "NOT-" + sufijoActa + "-01";
+            notifs.add(new ActaNotificacionMock(
+                    idNotif,
+                    actaId,
+                    "POSTAL",
+                    ESTADO_VENCIDA,
+                    resumenDestinatarioVencidaDemo(actual)));
+        }
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguiente = eventos.size() + 1;
+        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
+        LocalDateTime fechaEvento = eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        eventos.add(new ActaEventoMock(
+                idEvento,
+                actaId,
+                fechaEvento,
+                "NOTIFICACION_VENCIDA",
+                BLOQUE_D4,
+                BLOQUE_D5,
+                "Notificación vencida sin entrega ni rechazo explícito; acta retorna a análisis con acción pendiente "
+                        + ACCION_EVALUAR_NOTIFICACION_VENCIDA + "."));
+
+        return new RegistrarNotificacionVencidaResultado(
+                RegistrarNotificacionVencidaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                ACCION_EVALUAR_NOTIFICACION_VENCIDA);
     }
 
     /**
@@ -431,6 +788,8 @@ public class PrototipoStore {
                 BLOQUE_D5,
                 BLOQUE_CERRADA,
                 "Análisis jurídico concluido; acta cerrada administrativamente."));
+
+        accionPendientePorActa.remove(actaId);
 
         return new CerrarActaResultado(
                 CerrarActaEstado.OK,
@@ -487,6 +846,8 @@ public class PrototipoStore {
                 BLOQUE_D5,
                 BLOQUE_ARCHIVO,
                 "Análisis jurídico archiva el acta; pasa a archivo operativo con posibilidad de reingreso."));
+
+        accionPendientePorActa.remove(actaId);
 
         return new ArchivarActaResultado(
                 ArchivarActaEstado.OK,
@@ -847,5 +1208,13 @@ public class PrototipoStore {
 
     private static String resumenDestinatarioEntregadaDemo(ActaMock a) {
         return a.infractorNombre() + " — constancia de entrega postal (demo)";
+    }
+
+    private static String resumenDestinatarioNoEntregadaDemo(ActaMock a) {
+        return a.infractorNombre() + " — devuelta por correo: destinatario no habido (demo)";
+    }
+
+    private static String resumenDestinatarioVencidaDemo(ActaMock a) {
+        return a.infractorNombre() + " — notificación vencida sin acuse (demo)";
     }
 }

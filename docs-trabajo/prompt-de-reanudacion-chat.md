@@ -1,4 +1,4 @@
-# PROMPT DE REANUDACIÓN — PROTOTIPO BACKEND FALTAS
+﻿# PROMPT DE REANUDACIÓN — PROTOTIPO BACKEND FALTAS
 
 Estamos retomando el prototipo backend del sistema de faltas municipal.
 
@@ -15,7 +15,7 @@ Estamos retomando el prototipo backend del sistema de faltas municipal.
 
 Este prototipo no debe quedar limitado a un subconjunto funcional permanente.
 
-La meta es que evolucione hasta representar de forma **navegable, accionable y coherente** el universo funcional del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual. :contentReference[oaicite:0]{index=0}
+La meta es que evolucione hasta representar de forma **navegable, accionable y coherente** el universo funcional del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual.
 
 ### Simplificaciones permitidas
 - estado en memoria
@@ -36,7 +36,7 @@ La meta es que evolucione hasta representar de forma **navegable, accionable y c
 ## Regla principal
 
 La demo no debe ser un atajo conceptual.  
-Debe ser una base realista del sistema final. :contentReference[oaicite:1]{index=1}
+Debe ser una base realista del sistema final.
 
 Eso implica:
 
@@ -46,24 +46,13 @@ Eso implica:
 - estado agregador cuando haya múltiples piezas o documentos
 - detalle fino en estructuras específicas
 
-## Estado funcional consolidado
+## Estado de continuidad
 
-### Lectura disponible
-- `GET /api/prototipo/health`
-- `GET /api/prototipo/bandejas`
-- `GET /api/prototipo/bandejas/{codigo}/actas`
-- `GET /api/prototipo/actas/{id}`
-- `GET /api/prototipo/actas/{id}/eventos`
-- `GET /api/prototipo/actas/{id}/documentos`
-- `GET /api/prototipo/actas/{id}/notificaciones` :contentReference[oaicite:2]{index=2}
+Para inventario vigente del prototipo, endpoints, acciones, estado actual y próximo paso sugerido, usar:
 
-### Acciones implementadas
-- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-positiva`
-- `POST /api/prototipo/actas/{id}/acciones/cerrar-acta`
-- `POST /api/prototipo/actas/{id}/acciones/archivar-acta`
-- `POST /api/prototipo/actas/{id}/acciones/generar-medida-preventiva`
-- `POST /api/prototipo/actas/{id}/acciones/generar-notificacion-acta`
-- `POST /api/prototipo/actas/{id}/acciones/firmar-documento/{documentoId}` :contentReference[oaicite:3]{index=3}
+- `docs-trabajo/estado-actual-y-proximo-paso.md`
+
+Ese archivo es la **verdad volátil** del prototipo.
 
 ## Decisiones cerradas
 
@@ -72,13 +61,13 @@ Eso implica:
 - la única verdad es `firmarDocumento(actaId, documentoId)`
 - los documentos tienen identidad propia
 - se firman de a uno
-- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los documentos firmables están en `FIRMADO` :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los documentos firmables están en `FIRMADO`
 
 ### Piezas
 - existe la bandeja `PENDIENTES_RESOLUCION_REDACCION`
 - el prototipo soporta `piezasRequeridas` y `piezasGeneradas`
 - mientras falte al menos una pieza requerida, la acta permanece en esa bandeja
-- recién al completar todas las piezas requeridas pasa a `PENDIENTE_FIRMA` :contentReference[oaicite:6]{index=6}
+- recién al completar todas las piezas requeridas pasa a `PENDIENTE_FIRMA`
 
 ### Estados agregadores
 - no usar el primer pendiente como estado
@@ -86,31 +75,60 @@ Eso implica:
 - estados correctos:
   - `PENDIENTE_PRODUCCION_PIEZAS`
   - `PENDIENTE_FIRMA_PIEZAS`
-- el detalle fino vive en piezas/documentos, no en el estado del expediente :contentReference[oaicite:7]{index=7}
+- el detalle fino vive en piezas/documentos, no en el estado del expediente
 
-## Casos demo clave
+### Notificación
+- existe notificación positiva
+- existe notificación negativa
+- existe reintento de notificación
+- existe notificación vencida
+- los resultados alternativos de notificación pueden devolver la acta a `PENDIENTE_ANALISIS`
+- la separación operativa dentro de la bandeja de análisis se resuelve con `accionPendiente`
+- no crear bandejas nuevas por microcaso mientras alcance con macro-bandeja + marca operativa visible y filtrable
+
+### Marcas operativas ya consolidadas
+- `REINTENTAR_NOTIFICACION`
+- `EVALUAR_NOTIFICACION_VENCIDA`
+
+## Casos demo consolidados
 
 ### ACTA-0013
-Caso canónico para validar múltiples piezas y firma realista.
+Caso canónico validado para múltiples piezas y firma realista.
 
-- inicia en `PENDIENTES_RESOLUCION_REDACCION`
-- requiere:
-  - `NOTIFICACION_ACTA`
-  - `MEDIDA_PREVENTIVA`
+Expresa:
+- múltiples piezas requeridas
+- múltiples documentos
+- firma individual por documento
+- permanencia en `PENDIENTE_FIRMA` hasta completar todas las firmas
+- paso a `PENDIENTE_NOTIFICACION`
+- acuse positivo
+- retorno a `PENDIENTE_ANALISIS`
+- cierre desde análisis
 
-Flujo esperado:
-1. generar medida preventiva
-2. generar notificación del acta
-3. pasar a `PENDIENTE_FIRMA`
-4. firmar un documento
-5. seguir en `PENDIENTE_FIRMA`
-6. firmar el restante
-7. pasar a `PENDIENTE_NOTIFICACION` :contentReference[oaicite:8]{index=8}
+### ACTA-0006
+Caso corto validado para:
 
-### ACTA-0003
-- quedó alineada al nuevo modelo
-- su documento principal nace en `PENDIENTE_FIRMA`
-- debe navegarse con `firmar-documento/{documentoId}` :contentReference[oaicite:9]{index=9}
+- archivo directo desde `PENDIENTE_ANALISIS`
+- conservación de posibilidad de reingreso
+- evento explícito de archivado desde análisis
+
+### ACTA-0004
+Caso validado para:
+
+- notificación negativa
+- retorno a `PENDIENTE_ANALISIS`
+- `accionPendiente = REINTENTAR_NOTIFICACION`
+- filtro por `accionPendiente`
+- reintento de notificación
+- vuelta a `PENDIENTE_NOTIFICACION`
+
+### ACTA-0005
+Caso validado para:
+
+- notificación vencida
+- retorno a `PENDIENTE_ANALISIS`
+- `accionPendiente = EVALUAR_NOTIFICACION_VENCIDA`
+- filtro específico dentro de la bandeja de análisis
 
 ## Criterio de diseño
 
@@ -128,7 +146,7 @@ Pero priorizando siempre:
 - coherencia con el modelo final
 - un solo circuito verdadero
 - estados agregadores correctos
-- detalle fino en estructuras específicas :contentReference[oaicite:10]{index=10}
+- detalle fino en estructuras específicas
 
 ## Regla de trabajo para slices
 
@@ -151,7 +169,10 @@ Cada slice debe definir explícitamente:
 ### Fuente de verdad
 - usar `spec/` como fuente principal
 - usar solo la parte mínima necesaria
-- usar `prompt-de-reanudacion-chat.md` y `estado-actual-y-proximo-paso.md` como marco de continuidad, no como reemplazo de la spec
+- usar `prompt-de-reanudacion-chat.md` como marco metodológico estable
+- usar `estado-actual-y-proximo-paso.md` como verdad volátil del prototipo
+- usar `.cursor/rules/contexto-minimo.mdc` como fuente normativa de manejo de contexto
+- usar `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc` para proteger continuidad en slices funcionales
 
 ### Alcance técnico
 - tocar solo controller, store, mocks, dtos, enums y helpers necesarios del prototipo
@@ -159,15 +180,21 @@ Cada slice debe definir explícitamente:
 
 ## Regla de contexto para Cursor
 
-El contexto activo debe mantenerse chico.
+La fuente normativa de manejo de contexto es:
 
-- cargar primero `prompt-de-reanudacion-chat.md`
-- cargar luego `estado-actual-y-proximo-paso.md`
-- cargar después solo la parte mínima necesaria de `spec/`
+- `.cursor/rules/contexto-minimo.mdc`
+
+Y la protección de continuidad está en:
+
+- `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc`
+
+Resumen operativo mínimo:
+
+- cargar primero lo mínimo indispensable
+- no leer continuidad completa por defecto en slices funcionales
+- no editar continuidad salvo autorización explícita
+- cargar solo la parte mínima necesaria de `spec/`
 - cargar solo los archivos del prototipo implicados en el slice
-- no cargar por defecto historial, notas, artefactos de trabajo ni módulos no relacionados
-
-El objetivo no es que Cursor vea todo el proyecto, sino solo lo necesario para resolver bien el slice actual.
 
 ## Regla para refactors
 
@@ -203,7 +230,10 @@ Debe subirse a:
 - `spec/02-reglas-transversales/...` si era regla transversal
 - `spec/03-bandejas/...` si era flujo/bandeja/transición
 - `spec/04-backend/...` si era implementación futura
-- `prompt-de-reanudacion-chat.md` o `estado-actual-y-proximo-paso.md` si era método de trabajo o continuidad
+- `prompt-de-reanudacion-chat.md` si era método de trabajo estable
+- `estado-actual-y-proximo-paso.md` si era estado actual o inventario vigente del prototipo
+- `.cursor/rules/contexto-minimo.mdc` si era disciplina de manejo de contexto
+- `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc` si era protección de continuidad
 
 ## Regla de continuidad mínima
 
@@ -211,9 +241,23 @@ Todo nuevo slice debe poder plantearse usando como base:
 
 - `prompt-de-reanudacion-chat.md`
 - `estado-actual-y-proximo-paso.md`
+- `.cursor/rules/contexto-minimo.mdc`
+- `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc`
 - un subconjunto pequeño y explícito de `spec/`
 
 Si para arrancar hace falta abrir demasiada historia o demasiados archivos, el slice está mal recortado o el estado actual no está suficientemente consolidado.
+
+## Estado actual del próximo paso
+
+El próximo slice funcional **todavía no está elegido**.
+
+Opciones candidatas actuales:
+
+1. decisión posterior sobre notificación vencida
+2. reintento específico para casos vencidos
+3. más piezas no-fallo
+4. otros circuitos de análisis y decisiones
+5. otro caso demo fuerte
 
 ## Instrucción final
 
@@ -221,4 +265,6 @@ Actuar como arquitecto del prototipo.
 
 No improvisar.  
 No dejar convivir modelos contradictorios.  
-Si aparece una simplificación que rompe el modelo final, corregirla ahora. :contentReference[oaicite:11]{index=11}
+No abrir contexto de más.  
+No dejar que Cursor toque continuidad sin autorización explícita.  
+Si aparece una simplificación que rompe el modelo final, corregirla ahora.

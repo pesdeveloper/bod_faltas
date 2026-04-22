@@ -19,7 +19,10 @@ S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\mal
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\FirmarDocumentoAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\GenerarMedidaPreventivaAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\GenerarNotificacionActaAccionResponse.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\RegistrarNotificacionNegativaAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\RegistrarNotificacionPositivaAccionResponse.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\RegistrarNotificacionVencidaAccionResponse.java
+S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\dto\ReintentarNotificacionAccionResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\PrototipoApiController.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\PrototipoHealthResponse.java
 S:\Source\Repos\Bod-Faltas\backend\api-faltas-prototipo\src\main\java\ar\gob\malvinas\faltas\prototipo\web\PrototipoResetResponse.java

@@ -20,5 +20,6 @@ public record ActaDetalleResponse(
         boolean tieneDocumentos,
         boolean tieneNotificaciones,
         List<String> piezasRequeridas,
-        List<String> piezasGeneradas) {
+        List<String> piezasGeneradas,
+        String accionPendiente) {
 }
