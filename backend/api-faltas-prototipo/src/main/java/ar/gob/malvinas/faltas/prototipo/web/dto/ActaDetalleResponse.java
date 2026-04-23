@@ -21,5 +21,7 @@ public record ActaDetalleResponse(
         boolean tieneNotificaciones,
         List<String> piezasRequeridas,
         List<String> piezasGeneradas,
-        String accionPendiente) {
+        String accionPendiente,
+        String motivoArchivo,
+        String tipoGestionExterna) {
 }

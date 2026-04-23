@@ -13,14 +13,20 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.ActaEventoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaNotificacionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.BandejaResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarPorVencimientoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CerrarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.DerivarAGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.FirmarDocumentoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarMedidaPreventivaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNotificacionActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNulidadAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionNegativaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionPositivaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionVencidaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarDesdeGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionVencidaAccionResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -185,6 +191,31 @@ public class PrototipoApiController {
                 r.estadoProcesoActual());
     }
 
+    /**
+     * Decisión posterior mínima sobre casos que volvieron a análisis por
+     * vencimiento de notificación (proceso del sistema que detecta plazos
+     * vencidos; en este prototipo se materializa manualmente vía el endpoint
+     * de notificación vencida). Solo aplica a actas en PENDIENTE_ANALISIS con
+     * accionPendiente = EVALUAR_NOTIFICACION_VENCIDA. Devuelve el caso a
+     * PENDIENTE_NOTIFICACION reutilizando la notificación existente.
+     */
+    @PostMapping("/actas/{id}/acciones/reintentar-notificacion-vencida")
+    public ReintentarNotificacionVencidaAccionResponse reintentarNotificacionVencida(@PathVariable("id") String id) {
+        PrototipoStore.ReintentarNotificacionVencidaResultado r = store.reintentarNotificacionVencida(id);
+        if (r.estado() == PrototipoStore.ReintentarNotificacionVencidaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReintentarNotificacionVencidaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new ReintentarNotificacionVencidaAccionResponse(
+                "OK",
+                "Decisión posterior al vencimiento: se reintenta la notificación; acta vuelve a PENDIENTE_NOTIFICACION.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
     @PostMapping("/actas/{id}/acciones/cerrar-acta")
     public CerrarActaAccionResponse cerrarActa(@PathVariable("id") String id) {
         PrototipoStore.CerrarActaResultado r = store.cerrarActaDesdeAnalisis(id);
@@ -202,6 +233,90 @@ public class PrototipoApiController {
                 r.estadoProcesoActual());
     }
 
+    /**
+     * Derivación efectiva a gestión externa con tipo APREMIO. Solo aplica a
+     * actas en PENDIENTE_ANALISIS con
+     * accionPendiente = DERIVAR_GESTION_EXTERNA (casos que ya atravesaron
+     * fallo + notificación de fallo + ventana de espera posterior de 5 días
+     * sin novedad). Materializa la salida del circuito interno: el acta sale
+     * de análisis, pasa a la macro-bandeja GESTION_EXTERNA y queda con
+     * tipoGestionExterna = APREMIO, reingresable. El retorno efectivo se
+     * modelará en un slice posterior.
+     */
+    @PostMapping("/actas/{id}/acciones/derivar-a-apremio")
+    public DerivarAGestionExternaAccionResponse derivarAApremio(@PathVariable("id") String id) {
+        PrototipoStore.DerivarAGestionExternaResultado r = store.derivarAApremio(id);
+        if (r.estado() == PrototipoStore.DerivarAGestionExternaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.DerivarAGestionExternaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new DerivarAGestionExternaAccionResponse(
+                "OK",
+                "Acta derivada efectivamente a gestión externa; tipo " + r.tipoGestionExterna() + ".",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.tipoGestionExterna());
+    }
+
+    /**
+     * Derivación efectiva a gestión externa con tipo JUZGADO_DE_PAZ.
+     * Alternativa tipada a {@code derivar-a-apremio}: misma precondición,
+     * mismo efecto sobre bandeja/bloque/estado/situación/reingreso, sólo
+     * cambia el {@code tipoGestionExterna} asignado.
+     */
+    @PostMapping("/actas/{id}/acciones/derivar-a-juzgado-de-paz")
+    public DerivarAGestionExternaAccionResponse derivarAJuzgadoDePaz(@PathVariable("id") String id) {
+        PrototipoStore.DerivarAGestionExternaResultado r = store.derivarAJuzgadoDePaz(id);
+        if (r.estado() == PrototipoStore.DerivarAGestionExternaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.DerivarAGestionExternaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new DerivarAGestionExternaAccionResponse(
+                "OK",
+                "Acta derivada efectivamente a gestión externa; tipo " + r.tipoGestionExterna() + ".",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.tipoGestionExterna());
+    }
+
+    /**
+     * Retorno efectivo desde la macro-bandeja GESTION_EXTERNA al circuito
+     * operativo. Solo aplica a actas en GESTION_EXTERNA que preserven
+     * {@code permiteReingreso = true}. Devuelve el caso a PENDIENTE_ANALISIS
+     * con marca operativa {@code REVISION_POST_GESTION_EXTERNA} y preserva el
+     * {@code tipoGestionExterna} original como trazabilidad sintética de la
+     * gestión externa de la que provino. En este slice el reingreso queda
+     * consumido (no se modelan todavía políticas diferenciadas por tipo).
+     */
+    @PostMapping("/actas/{id}/acciones/reingresar-desde-gestion-externa")
+    public ReingresarDesdeGestionExternaAccionResponse reingresarDesdeGestionExterna(@PathVariable("id") String id) {
+        PrototipoStore.ReingresarDesdeGestionExternaResultado r = store.reingresarActaDesdeGestionExterna(id);
+        if (r.estado() == PrototipoStore.ReingresarDesdeGestionExternaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeGestionExternaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        String mensaje = r.tipoGestionExternaPrevia() == null
+                ? "Retorno desde gestión externa; acta vuelve a PENDIENTE_ANALISIS."
+                : "Retorno desde gestión externa (tipo previo " + r.tipoGestionExternaPrevia()
+                        + "); acta vuelve a PENDIENTE_ANALISIS.";
+        return new ReingresarDesdeGestionExternaAccionResponse(
+                "OK",
+                mensaje,
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.tipoGestionExternaPrevia());
+    }
+
     @PostMapping("/actas/{id}/acciones/archivar-acta")
     public ArchivarActaAccionResponse archivarActa(@PathVariable("id") String id) {
         PrototipoStore.ArchivarActaResultado r = store.archivarActaDesdeAnalisis(id);
@@ -213,10 +328,67 @@ public class PrototipoApiController {
         }
         return new ArchivarActaAccionResponse(
                 "OK",
-                "Acta archivada desde análisis.",
+                "Acta archivada directamente desde análisis; motivo " + r.motivoArchivo() + ".",
                 r.actaId(),
                 r.bandejaActual(),
-                r.estadoProcesoActual());
+                r.estadoProcesoActual(),
+                r.motivoArchivo());
+    }
+
+    /**
+     * Archivo específico de casos que volvieron a análisis por evaluación de
+     * notificación vencida. No reutiliza la acción genérica para no diluir la
+     * semántica: el motivo de archivo resultante queda distinguido del
+     * archivo directo. Solo aplica a actas en PENDIENTE_ANALISIS con
+     * accionPendiente = EVALUAR_NOTIFICACION_VENCIDA.
+     */
+    @PostMapping("/actas/{id}/acciones/archivar-por-vencimiento")
+    public ArchivarPorVencimientoAccionResponse archivarPorVencimiento(@PathVariable("id") String id) {
+        PrototipoStore.ArchivarPorVencimientoResultado r = store.archivarPorVencimiento(id);
+        if (r.estado() == PrototipoStore.ArchivarPorVencimientoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ArchivarPorVencimientoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new ArchivarPorVencimientoAccionResponse(
+                "OK",
+                "Decisión posterior al vencimiento: acta archivada; motivo " + r.motivoArchivo() + ".",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.motivoArchivo());
+    }
+
+    /**
+     * Reingreso explícito desde la macro-bandeja ARCHIVO. Solo aplica a
+     * actas archivadas que preserven {@code permiteReingreso = true}. Devuelve
+     * el caso a PENDIENTE_ANALISIS con marca operativa
+     * {@code REVISION_POST_REINGRESO} para dejarlo distinguible dentro de
+     * análisis. No modifica {@code motivoArchivo}: la trazabilidad del motivo
+     * de archivo original se preserva explícitamente.
+     */
+    @PostMapping("/actas/{id}/acciones/reingresar-acta")
+    public ReingresarActaAccionResponse reingresarActa(@PathVariable("id") String id) {
+        PrototipoStore.ReingresarActaResultado r = store.reingresarActaDesdeArchivo(id);
+        if (r.estado() == PrototipoStore.ReingresarActaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarActaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        String mensaje = r.motivoArchivoPrevio() == null
+                ? "Reingreso desde archivo; acta vuelve a PENDIENTE_ANALISIS."
+                : "Reingreso desde archivo (motivo previo " + r.motivoArchivoPrevio()
+                        + "); acta vuelve a PENDIENTE_ANALISIS.";
+        return new ReingresarActaAccionResponse(
+                "OK",
+                mensaje,
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.motivoArchivoPrevio());
     }
 
     @PostMapping("/actas/{id}/acciones/generar-medida-preventiva")
@@ -253,6 +425,34 @@ public class PrototipoApiController {
                 r.estadoProcesoActual());
     }
 
+    /**
+     * Producción de la pieza NULIDAD como pieza no-fallo dentro del
+     * circuito documental/resolutivo. Solo aplica a actas en
+     * PENDIENTES_RESOLUCION_REDACCION que declaran NULIDAD como pieza
+     * requerida (caso demo alineado con spec: ACTA-0012 con
+     * estadoProcesoActual = PENDIENTE_NULIDAD). Semánticamente: produce la
+     * pieza nulidad, genera el documento asociado pendiente de firma y
+     * emite el evento NULIDAD_GENERADA; la transición de bandeja sigue la
+     * misma regla agregadora de piezas que MEDIDA_PREVENTIVA y
+     * NOTIFICACION_ACTA (no se declara nulidad como bandeja terminal).
+     */
+    @PostMapping("/actas/{id}/acciones/generar-nulidad")
+    public GenerarNulidadAccionResponse generarNulidad(@PathVariable("id") String id) {
+        PrototipoStore.GenerarNulidadResultado r = store.generarNulidad(id);
+        if (r.estado() == PrototipoStore.GenerarNulidadEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.GenerarNulidadEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new GenerarNulidadAccionResponse(
+                "OK",
+                "Nulidad generada.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
     @PostMapping("/actas/{id}/acciones/firmar-documento/{documentoId}")
     public FirmarDocumentoAccionResponse firmarDocumento(
             @PathVariable("id") String id,
@@ -282,7 +482,9 @@ public class PrototipoApiController {
                 a.estadoProcesoActual(),
                 a.situacionAdministrativaActual(),
                 a.bandejaActual(),
-                store.getAccionPendiente(a.id()));
+                store.getAccionPendiente(a.id()),
+                store.getMotivoArchivo(a.id()),
+                store.getTipoGestionExterna(a.id()));
     }
 
     private ActaDetalleResponse mapActaDetalle(ActaMock a) {
@@ -304,7 +506,9 @@ public class PrototipoApiController {
                 a.tieneNotificaciones(),
                 store.listarPiezasRequeridas(a.id()),
                 store.listarPiezasGeneradas(a.id()),
-                store.getAccionPendiente(a.id()));
+                store.getAccionPendiente(a.id()),
+                store.getMotivoArchivo(a.id()),
+                store.getTipoGestionExterna(a.id()));
     }
 
     private ActaEventoResponse mapActaEvento(ActaEventoMock e) {

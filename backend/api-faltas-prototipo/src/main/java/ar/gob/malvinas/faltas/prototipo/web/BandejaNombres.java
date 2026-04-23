@@ -15,6 +15,7 @@ final class BandejaNombres {
             Map.entry("EN_NOTIFICACION", "En notificación"),
             Map.entry("PENDIENTE_ANALISIS", "Pendiente análisis"),
             Map.entry("PENDIENTES_RESOLUCION_REDACCION", "Pendientes de resolución / redacción"),
+            Map.entry("GESTION_EXTERNA", "Gestión externa"),
             Map.entry("ARCHIVO", "Archivo"),
             Map.entry("CERRADAS", "Cerradas"));
 

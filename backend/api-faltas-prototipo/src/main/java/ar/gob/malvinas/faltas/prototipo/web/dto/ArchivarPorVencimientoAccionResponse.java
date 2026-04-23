@@ -1,6 +1,6 @@
 package ar.gob.malvinas.faltas.prototipo.web.dto;
 
-public record ArchivarActaAccionResponse(
+public record ArchivarPorVencimientoAccionResponse(
         String resultado,
         String mensaje,
         String actaId,

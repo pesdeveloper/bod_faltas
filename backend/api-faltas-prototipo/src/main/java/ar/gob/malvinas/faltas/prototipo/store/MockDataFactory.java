@@ -24,6 +24,7 @@ public class MockDataFactory {
     private static final String BANDEJA_EN_NOTIFICACION = "EN_NOTIFICACION";
     private static final String BANDEJA_PENDIENTE_ANALISIS = "PENDIENTE_ANALISIS";
     private static final String BANDEJA_PENDIENTES_RESOLUCION_REDACCION = "PENDIENTES_RESOLUCION_REDACCION";
+    private static final String BANDEJA_GESTION_EXTERNA = "GESTION_EXTERNA";
     private static final String BANDEJA_ARCHIVO = "ARCHIVO";
     private static final String BANDEJA_CERRADAS = "CERRADAS";
 
@@ -44,6 +45,9 @@ public class MockDataFactory {
         cargarActa0012(store);
         cargarActa0013(store);
         cargarActa0014(store);
+        cargarActa0015(store);
+        cargarActa0016(store);
+        cargarActa0017(store);
     }
 
     private void cargarActa0001(PrototipoStore store) {
@@ -487,6 +491,10 @@ public class MockDataFactory {
                 "ENTREGADA",
                 "Patricia Torres — notificación cumplida 20/10/2025"));
         store.getNotificacionesPorActa().put(id, notifs);
+
+        // Archivo directo histórico por resolución administrativa; no vino
+        // por evaluación de vencimiento.
+        store.setMotivoArchivo(id, PrototipoStore.MOTIVO_ARCHIVO_DESDE_ANALISIS_DIRECTO);
     }
 
     private void cargarActa0008(PrototipoStore store) {
@@ -664,6 +672,10 @@ public class MockDataFactory {
                 "ADJUNTO",
                 "nota_duplicidad_0010.pdf"));
         store.getDocumentosPorActa().put(id, docs);
+
+        // Archivo directo histórico por duplicidad; decisión tomada sin paso
+        // previo por evaluación de vencimiento.
+        store.setMotivoArchivo(id, PrototipoStore.MOTIVO_ARCHIVO_DESDE_ANALISIS_DIRECTO);
     }
 
     private void cargarActa0011(PrototipoStore store) {
@@ -950,5 +962,331 @@ public class MockDataFactory {
                 id,
                 new ArrayList<>(List.of("RECTIFICACION")),
                 new ArrayList<>()));
+    }
+
+    /**
+     * Caso demo "listo para derivación a gestión externa": el expediente ya
+     * atravesó fallo + notificación de fallo y la ventana de espera posterior
+     * (5 días por regla especial de notificación de fallo, ver
+     * {@code spec/02-reglas-transversales/02-reglas-de-notificacion.md}) se
+     * cumplió sin novedad. Queda en análisis pero marcado con
+     * {@link PrototipoStore#ACCION_DERIVAR_GESTION_EXTERNA}. La derivación
+     * efectiva a la bandeja {@code GESTION_EXTERNA} todavía no está modelada
+     * en el prototipo: en este slice sólo se expone la condición.
+     */
+    private void cargarActa0015(PrototipoStore store) {
+        String id = "ACTA-0015";
+        String bandeja = BANDEJA_PENDIENTE_ANALISIS;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0015",
+                "SEGURIDAD_VIAL",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2025, 10, 2, 9, 0),
+                "Vargas, Elena",
+                "DNI 29.884.551",
+                "Oficial Luna",
+                "Exceso de velocidad en ruta nacional; fallo firme sin novedad posterior.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0015-01",
+                id,
+                LocalDateTime.of(2025, 10, 2, 9, 15),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada desde control de ruta."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0015-02",
+                id,
+                LocalDateTime.of(2025, 11, 10, 10, 30),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación fehaciente del acta; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0015-03",
+                id,
+                LocalDateTime.of(2025, 12, 5, 11, 0),
+                "FALLO_EMITIDO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo dictado por autoridad competente."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0015-04",
+                id,
+                LocalDateTime.of(2025, 12, 12, 15, 45),
+                "NOTIFICACION_FALLO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo notificado al infractor; inicia ventana de espera de 5 días."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0015-05",
+                id,
+                LocalDateTime.of(2025, 12, 18, 9, 0),
+                "SEGUIMIENTO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Ventana de espera post notificación de fallo cumplida sin novedad; "
+                        + "caso en condición de derivación a gestión externa."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0015-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_0015.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0015-02",
+                id,
+                "FALLO",
+                "FIRMADO",
+                "fallo_0015.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0015-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Elena Vargas — AR 991122 (notificación del acta)"));
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0015-02",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Elena Vargas — AR 991133 (notificación del fallo)"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.setAccionPendiente(id, PrototipoStore.ACCION_DERIVAR_GESTION_EXTERNA);
+    }
+
+    /**
+     * Caso demo "no derivable todavía": expediente post fallo, con fallo
+     * notificado recientemente, cuya ventana de espera de 5 días todavía no
+     * se cumplió. Aunque comparte el mismo bloque D5_ANALISIS que el caso
+     * anterior, NO debe marcarse para derivación a gestión externa. Permite
+     * comprobar que el filtro por
+     * {@link PrototipoStore#ACCION_DERIVAR_GESTION_EXTERNA} diferencia este
+     * caso del "listo para derivación".
+     */
+    private void cargarActa0016(PrototipoStore store) {
+        String id = "ACTA-0016";
+        String bandeja = BANDEJA_PENDIENTE_ANALISIS;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0016",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2025, 11, 20, 10, 0),
+                "Duarte, Sofía",
+                "DNI 35.112.007",
+                "Oficial Herrera",
+                "Circulación sin seguro obligatorio; fallo notificado recientemente.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0016-01",
+                id,
+                LocalDateTime.of(2025, 11, 20, 10, 10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada desde control vehicular."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0016-02",
+                id,
+                LocalDateTime.of(2025, 12, 15, 11, 0),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación del acta entregada; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0016-03",
+                id,
+                LocalDateTime.of(2026, 1, 10, 9, 30),
+                "FALLO_EMITIDO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo dictado por autoridad competente."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0016-04",
+                id,
+                LocalDateTime.of(2026, 1, 16, 14, 20),
+                "NOTIFICACION_FALLO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo notificado al infractor; ventana de espera de 5 días en curso."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0016-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_0016.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0016-02",
+                id,
+                "FALLO",
+                "FIRMADO",
+                "fallo_0016.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0016-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Sofía Duarte — AR 223344 (notificación del acta)"));
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0016-02",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Sofía Duarte — AR 223355 (notificación del fallo)"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    /**
+     * Caso demo "ya derivado a Juzgado de Paz": el expediente atravesó fallo
+     * + notificación de fallo + ventana de espera posterior cumplida sin
+     * novedad, y fue efectivamente derivado a la macro-bandeja
+     * {@code GESTION_EXTERNA} con tipo
+     * {@link PrototipoStore#TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ}. Permite
+     * ver desde el reset un caso ya presente en la bandeja de gestión
+     * externa, distinguible por tipo del caso que se deriva a APREMIO vía
+     * la acción dedicada sobre ACTA-0015. Queda con
+     * {@code permiteReingreso = true} para habilitar el retorno efectivo
+     * en un slice posterior.
+     */
+    private void cargarActa0017(PrototipoStore store) {
+        String id = "ACTA-0017";
+        String bandeja = BANDEJA_GESTION_EXTERNA;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0017",
+                "TRANSITO_URBANO",
+                "GESTION_EXTERNA",
+                "EN_GESTION_EXTERNA",
+                "GESTION_EXTERNA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2025, 8, 18, 10, 30),
+                "Ocampo, Ricardo",
+                "DNI 27.115.443",
+                "Oficial Villalba",
+                "Conducir con VTV vencida; fallo firme derivado a Juzgado de Paz.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0017-01",
+                id,
+                LocalDateTime.of(2025, 8, 18, 10, 45),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada desde control vehicular."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0017-02",
+                id,
+                LocalDateTime.of(2025, 9, 25, 11, 15),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación fehaciente del acta; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0017-03",
+                id,
+                LocalDateTime.of(2025, 10, 20, 9, 30),
+                "FALLO_EMITIDO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo dictado por autoridad competente."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0017-04",
+                id,
+                LocalDateTime.of(2025, 10, 28, 14, 0),
+                "NOTIFICACION_FALLO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo notificado al infractor; inicia ventana de espera de 5 días."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0017-05",
+                id,
+                LocalDateTime.of(2025, 11, 5, 9, 0),
+                "SEGUIMIENTO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Ventana de espera post notificación de fallo cumplida sin novedad; "
+                        + "caso en condición de derivación a gestión externa."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0017-06",
+                id,
+                LocalDateTime.of(2025, 11, 6, 10, 30),
+                "DERIVACION_GESTION_EXTERNA",
+                "D5_ANALISIS",
+                "GESTION_EXTERNA",
+                "Análisis jurídico deriva efectivamente el caso a gestión externa; tipo "
+                        + PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ + "."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0017-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_0017.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0017-02",
+                id,
+                "FALLO",
+                "FIRMADO",
+                "fallo_0017.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0017-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Ricardo Ocampo — AR 667788 (notificación del acta)"));
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0017-02",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Ricardo Ocampo — AR 667799 (notificación del fallo)"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.setTipoGestionExterna(id, PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ);
     }
 }
