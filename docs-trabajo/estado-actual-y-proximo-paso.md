@@ -1,274 +1,419 @@
-﻿# ESTADO ACTUAL - PROTOTIPO FALTAS
+# ESTADO ACTUAL Y PRÓXIMO PASO — PROTOTIPO BACKEND FALTAS
 
-> Marco metodológico, reglas de trabajo y criterio de contexto: ver `docs-trabajo/prompt-de-reanudacion-chat.md`, `.cursor/rules/contexto-minimo.mdc` y `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc`.
+## Propósito del archivo
 
-## Nivel de avance
+Este archivo registra el **estado operativo vigente** del prototipo backend.
 
-El prototipo backend modela de forma fiel:
+No es fuente de verdad de dominio.  
+No reemplaza la `spec/`.  
+No reemplaza el `prompt-de-reanudacion-chat.md`.
 
-- producción de múltiples piezas no-fallo
-- permanencia en bandeja hasta completar piezas requeridas
+Su función es dejar visible, de forma compacta y práctica:
+
+- qué capacidades reales tiene hoy el prototipo
+- qué decisiones ya quedaron consolidadas
+- qué casos demo existen
+- qué falta realmente
+- cuál es el próximo paso natural
+
+---
+
+## 1. Estado actual resumido
+
+El prototipo backend ya cubre un conjunto funcional importante del circuito demo.
+
+### Capacidades hoy consolidadas
+
+- piezas múltiples por expediente
 - firma individual por documento
-- salida de bandeja según completitud real de documentos firmables
-- paso a notificación por firma completa de documentos
-- resultados alternativos de notificación
-- retorno a análisis por resultados alternativos de notificación
-- separación operativa dentro de `PENDIENTE_ANALISIS` mediante `accionPendiente`
-- semántica mínima de archivo mediante `motivoArchivo`
-- reingreso desde archivo
-- cierre desde análisis
-- gestión externa con ida, vuelta y re-derivación
-- nulidad correctamente reencuadrada como pieza no-fallo
-- store descompuesto por áreas funcionales
+- salida correcta desde `PENDIENTE_FIRMA` solo cuando todas las piezas firmables están firmadas
+- nulidad post-firma como salida terminal invalidante a `CERRADAS`
+- notificación con variantes mínimas útiles para demo
+- archivo con reingreso explícito
+- gestión externa con derivación y retorno
+- cierre desde análisis sujeto a regla de cerrabilidad
+- pago voluntario temprano
+- pago informado
+- comprobante mock
+- pago pendiente de confirmación
+- pago confirmado
+- pago observado
+- resultado final compatible con cierre:
+  - `ABSUELTO`
+  - `PAGO_CONFIRMADO`
+- cerrabilidad unificada
+- bloqueantes materiales/documentales
+- separación entre:
+  - origen material
+  - resolutorio documental
+  - cumplimiento material efectivo
+- vista de hechos materiales separada de la lectura de cerrabilidad
+- condiciones materiales tempranas desde `D1` / `D2`
+- recorrido demo reproducible de punta a punta
 
-## Endpoints de lectura vigentes
+---
 
-- `GET /api/prototipo/health`
-- `GET /api/prototipo/bandejas`
-- `GET /api/prototipo/bandejas/{codigo}/actas`
-- `GET /api/prototipo/actas/{id}`
-- `GET /api/prototipo/actas/{id}/eventos`
-- `GET /api/prototipo/actas/{id}/documentos`
-- `GET /api/prototipo/actas/{id}/notificaciones`
+## 2. Decisiones funcionales y estructurales ya cerradas
 
-## Acciones implementadas
+### 2.1 Firma
 
-### Notificación
-- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-positiva`
-- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-negativa`
-- `POST /api/prototipo/actas/{id}/acciones/reintentar-notificacion`
-- `POST /api/prototipo/actas/{id}/acciones/registrar-notificacion-vencida`
-- `POST /api/prototipo/actas/{id}/acciones/reintentar-notificacion-vencida`
+- el circuito viejo `pasar-a-notificacion` ya no es la verdad del sistema
+- la verdad vigente es la firma por documento
+- la operación central es `firmarDocumento(actaId, documentoId)`
+- la acta solo sale de `PENDIENTE_FIRMA` cuando todas las piezas firmables quedaron en `FIRMADO`
 
-### Archivo / reingreso
-- `POST /api/prototipo/actas/{id}/acciones/archivar-acta`
-- `POST /api/prototipo/actas/{id}/acciones/archivar-por-vencimiento`
-- `POST /api/prototipo/actas/{id}/acciones/reingresar-acta`
+### 2.2 Nulidad
 
-### Cierre
-- `POST /api/prototipo/actas/{id}/acciones/cerrar-acta`
+- la nulidad se modela como **pieza no-fallo**
+- no existe bandeja terminal `NULAS`
+- si el último documento firmado es de tipo `NULIDAD`, el expediente pasa a `CERRADAS`
+- nulidad post-firma **no** entra al circuito común de notificación
+- la nulidad post-firma es una salida terminal invalidante dentro del prototipo
 
-### Gestión externa
-- `POST /api/prototipo/actas/{id}/acciones/derivar-a-apremio`
-- `POST /api/prototipo/actas/{id}/acciones/derivar-a-juzgado-de-paz`
-- `POST /api/prototipo/actas/{id}/acciones/reingresar-desde-gestion-externa`
+### 2.3 Pago
 
-### Piezas / firma
-- `POST /api/prototipo/actas/{id}/acciones/generar-medida-preventiva`
-- `POST /api/prototipo/actas/{id}/acciones/generar-notificacion-acta`
-- `POST /api/prototipo/actas/{id}/acciones/generar-nulidad`
-- `POST /api/prototipo/actas/{id}/acciones/firmar-documento/{documentoId}`
+El prototipo distingue entre:
 
-## Endpoint de utilidad
+- solicitud de pago voluntario
+- pago informado
+- comprobante adjunto mock
+- pendiente de confirmación
+- pago confirmado
+- pago observado
 
-- `POST /api/prototipo/reset` — reinicializa el escenario mock al estado inicial
+Reglas vigentes:
 
-## Refactors y decisiones cerradas
+- informar pago no equivale a pago confirmado
+- adjuntar comprobante no equivale a pago confirmado
+- la confirmación mock del pago produce `resultadoFinal = PAGO_CONFIRMADO`
+- `PAGO_CONFIRMADO` **no** cierra automáticamente
 
-### Bandejas relevantes actualmente visibles
-- `ACTAS_EN_ENRIQUECIMIENTO`
-- `PENDIENTE_PREPARACION_DOCUMENTAL`
-- `PENDIENTE_FIRMA`
-- `PENDIENTE_NOTIFICACION`
-- `EN_NOTIFICACION`
-- `PENDIENTE_ANALISIS`
-- `PENDIENTES_RESOLUCION_REDACCION`
-- `GESTION_EXTERNA`
-- `ARCHIVO`
-- `CERRADAS`
+### 2.4 Cerrabilidad
 
-### Múltiples piezas
-- existen `piezasRequeridas` y `piezasGeneradas`
-- si faltan piezas, permanece en `PENDIENTES_RESOLUCION_REDACCION`
-- si todas están producidas, pasa a `PENDIENTE_FIRMA`
+La regla consolidada es:
 
-### Estados corregidos
-- `PENDIENTE_PRODUCCION_PIEZAS`
-- `PENDIENTE_FIRMA_PIEZAS`
+**Cerrable = (`ABSUELTO` o `PAGO_CONFIRMADO`) y sin pendientes materiales/documentales activos**
 
-### Firma correcta
-- documentos con `documentoId`
-- nacen en `PENDIENTE_FIRMA`
-- se firman de a uno
-- la acta solo sale de `PENDIENTE_FIRMA` cuando todos los firmables están en `FIRMADO`
+Eso implica:
 
-### Circuito viejo eliminado
-- se eliminó `pasarActaANotificacion`
-- existe un único modelo de firma / transición a notificación
+- ni `ABSUELTO`
+- ni `PAGO_CONFIRMADO`
 
-### Resultados de notificación modelados
-- positiva
-- negativa
-- reintento por no entrega
-- vencida
-- reintento post-vencimiento
+cierran por sí solos el expediente.
 
-### Marcas operativas ya modeladas
-- `REINTENTAR_NOTIFICACION`
-- `EVALUAR_NOTIFICACION_VENCIDA`
-- `REVISION_POST_REINGRESO`
-- `DERIVAR_GESTION_EXTERNA`
-- `REVISION_POST_GESTION_EXTERNA`
+El cierre sigue siendo una acción posterior y explícita.
 
-### Archivo
-- `ARCHIVO` sigue siendo macro-bandeja
-- existe `motivoArchivo`
-- motivos modelados:
-  - `ARCHIVO_DESDE_ANALISIS_DIRECTO`
-  - `ARCHIVO_POST_EVALUACION_VENCIMIENTO`
+### 2.5 Bloqueantes materiales/documentales
 
-### Reingreso desde archivo
-- vuelve a `PENDIENTE_ANALISIS`
-- preserva `motivoArchivo`
-- deja marca `REVISION_POST_REINGRESO`
+Bloqueantes mínimos vigentes:
 
-### Gestión externa
-- existe visibilidad previa en análisis de casos listos para derivación
-- existe `GESTION_EXTERNA` como macro-bandeja
-- tipos vigentes:
+- `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- `LIBERACION_RODADO`
+- `ENTREGA_DOCUMENTACION`
+
+Reglas vigentes:
+
+- el resolutorio documental no basta por sí solo
+- debe existir cumplimiento material efectivo
+- el expediente no queda cerrable mientras exista al menos un bloqueante activo
+
+### 2.6 Hechos materiales
+
+El prototipo ya separa mejor:
+
+- plano documental del expediente
+- plano de hechos materiales
+- plano de cerrabilidad
+
+En la lectura del detalle de acta ya existe una vista separada de `hechosMateriales`, independiente de la vista de `cerrabilidad`.
+
+### 2.7 Condiciones materiales tempranas
+
+Ya existe soporte mínimo para registrar desde etapas tempranas (`D1` / `D2`):
+
+- secuestro / retención de rodado
+- retención documental
+- medida preventiva aplicable
+
+Esto permite que más circuitos nazcan operativamente desde etapas tempranas y no solo desde seeds precargados.
+
+### 2.8 Archivo y reingreso
+
+- existe macro-bandeja `ARCHIVO`
+- existe motivo de archivo
+- existe reingreso explícito
+- el reingreso devuelve a `PENDIENTE_ANALISIS`
+- queda marca operativa de revisión post reingreso
+
+### 2.9 Gestión externa
+
+- existe macro-bandeja `GESTION_EXTERNA`
+- existen tipos mínimos útiles:
   - `APREMIO`
   - `JUZGADO_DE_PAZ`
-- existe derivación efectiva a ambos tipos
-- existe retorno efectivo a `PENDIENTE_ANALISIS`
-- existe re-derivación efectiva desde `REVISION_POST_GESTION_EXTERNA`
-- `tipoGestionExterna` se preserva como trazabilidad sintética
-- `permiteReingreso` no se consume artificialmente al retornar
-- la salida vuelve a quedar bloqueada naturalmente si el expediente abandona análisis por una salida terminal o equivalente
+- existe derivación
+- existe retorno a análisis
+- existe re-derivación
 
-### Nulidad
-- nulidad quedó reencuadrada correctamente como pieza no-fallo
-- no existe bandeja terminal `NULAS`
-- `ACTA-0012` es el caso demo alineado con spec
-- ya existe acción `generar-nulidad`
-- genera documento `NULIDAD` pendiente de firma
-- usa el mismo agregador de piezas existente
-- si completa piezas, pasa a `PENDIENTE_FIRMA`
+---
 
-### Cierre
-- existe cierre explícito desde análisis
-- lleva a `CERRADAS`
-- limpia marcas operativas cuando corresponde
-- genera evento `CIERRE_ANALISIS`
+## 3. Acciones y lecturas hoy vigentes
 
-### Refactor táctico ya realizado
-- archivo + reingreso separados por área funcional
-- notificación separada por área funcional
-- piezas + firma separadas por área funcional
-- gestión externa separada por área funcional
-- cierre separado por área funcional
-- `PrototipoStore` quedó como fachada pública liviana
-- existe `PrototipoConstantes` para frontera mínima entre áreas
+## 3.1 Lecturas principales
 
-## Casos demo validados
+El prototipo permite como mínimo:
 
-### ACTA-0013
-Caso canónico actual. Requiere `NOTIFICACION_ACTA` y `MEDIDA_PREVENTIVA`.
+- listar actas
+- consultar detalle de una acta
+- ver bloque actual, bandeja, situación operativa y acción pendiente
+- ver estado documental y piezas
+- ver cerrabilidad
+- ver bloqueantes de cierre
+- ver hechos materiales
+- ver eventos relevantes del caso demo
 
-Recorrido validado:
-1. generar medida preventiva
-2. generar notificación del acta
-3. pasar a `PENDIENTE_FIRMA`
-4. firmar primer documento -> seguir en `PENDIENTE_FIRMA`
-5. firmar segundo documento -> pasar a `PENDIENTE_NOTIFICACION`
-6. registrar notificación positiva -> pasar a `PENDIENTE_ANALISIS`
-7. cerrar acta desde análisis -> pasar a `CERRADAS`
+## 3.2 Acciones principales hoy disponibles
 
-### ACTA-0006
-Caso validado para archivo directo y reingreso.
+### Documentales / resolutivas
 
-Recorrido validado:
-1. iniciar en `PENDIENTE_ANALISIS`
-2. archivar acta
-3. pasar a `ARCHIVO`
-4. quedar con `motivoArchivo = ARCHIVO_DESDE_ANALISIS_DIRECTO`
-5. reingresar
-6. volver a `PENDIENTE_ANALISIS`
-7. quedar con `accionPendiente = REVISION_POST_REINGRESO`
+- generar piezas/documentos según el circuito demo
+- firmar documento individual
+- generar nulidad en el caso demo correspondiente
 
-### ACTA-0004
-Caso validado para notificación negativa y reintento por no entrega.
+### Notificación
 
-Recorrido validado:
-1. iniciar en `PENDIENTE_NOTIFICACION`
-2. registrar notificación negativa
-3. pasar a `PENDIENTE_ANALISIS`
-4. quedar con `accionPendiente = REINTENTAR_NOTIFICACION`
-5. aparecer filtrada en `PENDIENTE_ANALISIS?accionPendiente=REINTENTAR_NOTIFICACION`
-6. reintentar notificación
-7. volver a `PENDIENTE_NOTIFICACION`
-8. limpiar `accionPendiente`
+- registrar resultado de notificación
+- contemplar positivo / negativo / vencido / reintentos según el caso demo
 
-### ACTA-0005
-Caso validado para notificación vencida, reintento post-vencimiento y archivo post evaluación de vencimiento.
+### Archivo / reingreso
 
-Recorrido validado:
-1. iniciar en `EN_NOTIFICACION`
-2. registrar notificación vencida
-3. pasar a `PENDIENTE_ANALISIS`
-4. quedar con `accionPendiente = EVALUAR_NOTIFICACION_VENCIDA`
-5. notificación en estado `VENCIDA`
-6. evento `NOTIFICACION_VENCIDA`
-7. aparecer filtrada en `PENDIENTE_ANALISIS?accionPendiente=EVALUAR_NOTIFICACION_VENCIDA`
-8. reintentar notificación vencida -> volver a `PENDIENTE_NOTIFICACION`
-9. o archivar por vencimiento -> pasar a `ARCHIVO` con `ARCHIVO_POST_EVALUACION_VENCIMIENTO`
+- archivar
+- reingresar desde archivo
 
 ### Gestión externa
-Recorrido mínimo ya cubierto:
-1. caso listo para gestión externa en análisis (`DERIVAR_GESTION_EXTERNA`)
-2. derivación efectiva a `APREMIO` o `JUZGADO_DE_PAZ`
-3. permanencia en `GESTION_EXTERNA`
-4. reingreso a análisis (`REVISION_POST_GESTION_EXTERNA`)
-5. re-derivación efectiva desde esa marca
 
-### Nulidad
-Caso demo vigente:
-1. reset
-2. `ACTA-0012` en `PENDIENTES_RESOLUCION_REDACCION`
-3. `piezasRequeridas = ["NULIDAD"]`
-4. `POST generar-nulidad`
-5. pieza `NULIDAD` generada
-6. documento `NULIDAD` en `PENDIENTE_FIRMA`
-7. paso a `PENDIENTE_FIRMA` por completitud de piezas
+- derivar a gestión externa
+- retornar a análisis
+- re-derivar
 
-## Qué falta (funcionalidad aún no modelada)
+### Pago
 
-- decidir el comportamiento correcto post-firma de nulidad si la spec exige salida distinta del circuito común post-firma
-- ampliar otras decisiones posteriores desde análisis si todavía faltan salidas fuertes
-- ampliar cobertura funcional de inicio y enriquecimiento
-- evaluar si hacen falta más casos demo intermedios de piezas combinadas
-- micro-slice técnico de higiene de repo (`.gitignore` + `target/`) si se decide
-- actualizar continuidad y estado dentro del repo si el usuario lo autoriza explícitamente y el estado actual local quedó viejo
+- solicitar pago voluntario
+- registrar pago informado
+- adjuntar comprobante mock
+- confirmar pago informado
+- observar pago informado
 
-## Estado técnico del backend
+### Cerrabilidad / bloqueantes
 
-- `PrototipoStore` ya no concentra toda la lógica del prototipo
-- supports existentes:
-  - `ArchivoReingresoSupport`
-  - `NotificacionSupport`
-  - `PiezasFirmaSupport`
-  - `GestionExternaSupport`
-  - `CierreSupport`
-- working tree local ya fue limpiado de ruido regenerable bajo `target/`
-- sigue pendiente, si se decide, formalizar la higiene de repo con `.gitignore` y limpieza del índice
+- consultar cerrabilidad
+- registrar resolutorio documental de bloqueante
+- registrar cumplimiento material de bloqueante
+- cerrar expediente si ya está en condición de cierre
 
-## Próximo paso
+### Acciones tempranas
 
-**El próximo slice funcional aún no está elegido.**
+- registrar constatación material temprana:
+  - `SECUESTRO_RODADO`
+  - `RETENCION_DOCUMENTAL`
+  - `MEDIDA_PREVENTIVA_APLICABLE`
 
-Candidatos razonables:
-1. decidir el destino post-firma de nulidad si la spec no acompaña el circuito común
-2. ampliar otras decisiones fuertes desde análisis
-3. ampliar inicio / enriquecimiento
-4. micro-slice de higiene de repo
-5. actualización explícita de continuidad/estado en archivos del repo
+### Utilidad demo
 
-## Instrucción al retomar
+- reset del dataset demo
 
-Actuar como arquitecto del prototipo.
+> Nota: los nombres exactos de rutas/URIs pueden evolucionar.  
+> La verdad inmediata está en el controller actual del prototipo.
 
-No improvisar.  
-No dejar convivir modelos contradictorios.  
-No abrir contexto de más.  
-No permitir que Cursor lea o edite continuidad sin autorización explícita.  
-Separar por área funcional cuando haga falta, no por bandeja.  
-Si aparece una simplificación que rompe el modelo final, corregirla ahora.
+---
+
+## 4. Casos demo vigentes relevantes
+
+## 4.1 `ACTA-0012` — nulidad post-firma
+
+Caso demo útil para validar:
+
+- generación de nulidad
+- firma de documento `NULIDAD`
+- salida terminal a `CERRADAS`
+- no paso por notificación común
+
+## 4.2 `ACTA-0015` — gestión externa
+
+Caso demo útil para validar:
+
+- derivación a gestión externa
+- retorno a análisis
+- re-derivación
+
+## 4.3 `ACTA-0018` — pago confirmado sin bloqueantes
+
+Caso demo útil para validar:
+
+- flujo de pago sin complejidad material adicional
+- recorrido económico simple dentro del prototipo
+
+## 4.4 `ACTA-0019` — absolución + bloqueantes
+
+Caso demo útil para validar:
+
+- `resultadoFinal = ABSUELTO`
+- presencia de bloqueantes materiales
+- no cerrabilidad mientras existan
+- resolutorio documental
+- cumplimiento material
+- paso a cerrable
+- cierre posterior
+
+## 4.5 `ACTA-0021` — pago confirmado precargado + bloqueantes
+
+Caso demo útil para validar:
+
+- `resultadoFinal = PAGO_CONFIRMADO`
+- bloqueantes materiales
+- cerrabilidad material
+- sin depender del flujo real de pago
+
+## 4.6 `ACTA-0022` — flujo real de pago + bloqueantes
+
+Caso demo útil para validar:
+
+- solicitud de pago voluntario
+- pago informado
+- comprobante
+- confirmación de pago
+- entrada efectiva a `PAGO_CONFIRMADO`
+- bloqueantes materiales
+- resolutorio + cumplimiento material
+- cerrabilidad y cierre posterior
+
+## 4.7 `ACTA-0023` — foco en vista de hechos materiales
+
+Caso demo útil para validar:
+
+- separación de lectura entre expediente documental y hecho material
+- resolutorio en expediente sin hecho material cumplido
+- lectura fina del eje material
+
+## 4.8 `ACTA-0024` — demo reproducible punta a punta desde etapa temprana
+
+Caso demo útil para validar:
+
+- constataciones materiales tempranas
+- paso por análisis
+- circuito de pago
+- cerrabilidad
+- bloqueantes
+- resolutorio
+- cumplimiento material
+- cierre final
+
+Es hoy el mejor caso de recorrido integrado de punta a punta.
+
+---
+
+## 5. Recorrido demo integrado hoy disponible
+
+El recorrido más completo y reproducible es el de `ACTA-0024`.
+
+Secuencia funcional esperable:
+
+1. reset del dataset demo
+2. registrar constataciones materiales tempranas
+3. avanzar hasta el punto de análisis aplicable
+4. solicitar pago voluntario
+5. registrar pago informado
+6. adjuntar comprobante mock
+7. confirmar pago
+8. verificar que el expediente **no** sea cerrable si persisten bloqueantes
+9. registrar resolutorio documental por cada eje bloqueante
+10. registrar cumplimiento material efectivo por cada eje
+11. verificar `cerrable = true`
+12. ejecutar cierre final
+
+Este recorrido ya tiene soporte tanto documental como de test/recorrido reproducible.
+
+---
+
+## 6. Refactors / limpiezas ya consolidadas
+
+- eliminado el circuito conceptual viejo basado en “pasar a notificación” como verdad única
+- consolidada firma individual por documento
+- consolidado comportamiento correcto de nulidad post-firma
+- unificada regla de cerrabilidad para:
+  - `ABSUELTO`
+  - `PAGO_CONFIRMADO`
+- eliminado el supuesto falso de cierre automático por pago
+- eliminada la idea de que el resolutorio documental basta por sí solo
+- reducido el peso del reconocimiento manual de bloqueantes como requisito para existencia del bloqueo
+- reforzada la lectura separada entre expediente documental y hecho material
+
+---
+
+## 7. Qué falta realmente
+
+Lo pendiente real hoy, de forma resumida, es:
+
+### 7.1 Profundizar etapas tempranas
+
+- mejorar aún más `D1` / `D2`
+- acercar más condiciones y acciones tempranas al caso real
+- reforzar cómo nacen operativamente algunos circuitos desde labrado/enriquecimiento
+
+### 7.2 Ampliar fidelidad documental/operativa
+
+- enriquecer algunos circuitos documentales aún simplificados
+- seguir conectando condiciones tempranas con actuaciones posteriores
+
+### 7.3 Seguir endureciendo recorridos demo
+
+- más tests/recorridos reproducibles
+- más guardarraíles sobre regresiones
+
+### 7.4 No pendiente inmediato
+
+No están en foco inmediato:
+
+- seguridad real
+- base de datos real
+- integraciones reales
+- motor documental real
+- PDFs reales
+- firma digital real
+- tesorería real
+
+---
+
+## 8. Riesgos / bordes conocidos
+
+- el prototipo sigue siendo in-memory y demo-oriented
+- varias representaciones siguen simplificadas para favorecer navegabilidad y velocidad de iteración
+- no todo circuito temprano está todavía bajado con la misma profundidad
+- algunos nombres, seeds y ayudas demo podrían seguir requiriendo limpieza fina futura
+
+---
+
+## 9. Próximo paso natural
+
+El próximo paso natural, después de este estado consolidado, es **seguir profundizando etapas tempranas (`D1` / `D2`) con acciones operativas mínimas y coherentes**, reforzando la continuidad entre:
+
+- condiciones iniciales del caso
+- actuaciones tempranas
+- consecuencias posteriores
+- cerrabilidad final
+
+La prioridad no debería ser abrir frentes técnicos grandes, sino seguir cerrando huecos operativos reales del prototipo con slices chicos y claros.
+
+---
+
+## 10. Regla operativa para continuar
+
+Para próximos slices:
+
+- usar `spec/` como fuente principal de dominio
+- usar este archivo como inventario vivo
+- usar `prompt-de-reanudacion-chat.md` como marco metodológico
+- mantener slices mínimos
+- no mezclar problemas conceptuales distintos
+- tocar la menor cantidad posible de archivos
+- no tocar archivos de continuidad salvo autorización explícita

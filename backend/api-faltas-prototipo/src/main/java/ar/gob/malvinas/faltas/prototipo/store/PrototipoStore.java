@@ -84,6 +84,29 @@ public class PrototipoStore {
      */
     public static final String ACCION_REVISION_POST_GESTION_EXTERNA = "REVISION_POST_GESTION_EXTERNA";
     /**
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso ingresó a
+     * análisis porque en una etapa temprana del expediente se registró una
+     * solicitud de pago voluntario, y esa solicitud debe ser evaluada
+     * materialmente antes de definir la siguiente situación operativa
+     * (cierre por pago cumplido, continuación del circuito sancionatorio u
+     * otra salida). La spec admite originar la solicitud desde labradas o
+     * enriquecimiento (ver spec/03-bandejas/01-bandeja-labradas.md y
+     * spec/03-bandejas/02-bandeja-enriquecimiento.md), pero centraliza la
+     * evaluación en la bandeja de análisis / presentaciones / pagos
+     * (spec/03-bandejas/03-bandeja-analisis-presentaciones-pagos.md). Esta
+     * marca distingue el caso del resto de motivos por los que un
+     * expediente puede aparecer en análisis.
+     */
+    public static final String ACCION_EVALUAR_PAGO_VOLUNTARIO = "EVALUAR_PAGO_VOLUNTARIO";
+    /**
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: se informó un pago
+     * voluntario y se adjuntó comprobante mock; el caso requiere verificación
+     * interna (mock) para confirmarlo u observarlo. Se usa sólo como "tarea
+     * actual" (operativa) y NO colapsa la situación de pago, que vive aparte
+     * en {@link #getSituacionPago(String)}.
+     */
+    public static final String ACCION_VERIFICAR_PAGO_INFORMADO = "VERIFICAR_PAGO_INFORMADO";
+    /**
      * Motivo de archivo asignado cuando una acta es archivada directamente
      * desde análisis por decisión administrativa (acción genérica de archivo
      * sin paso previo por evaluación de vencimiento). Permite distinguir
@@ -307,6 +330,314 @@ public class PrototipoStore {
             String estadoProcesoActual) {
     }
 
+    /**
+     * Condición de material a registrar desde D1/D2: mismos
+     * {@code tipoDocumento} que anclan orígenes bloqueantes y hechos
+     * materiales (un solo modelo de expediente).
+     */
+    public enum TipoConstatacionMaterialTemprana {
+        SECUESTRO_RODADO,
+        RETENCION_DOCUMENTAL,
+        MEDIDA_PREVENTIVA_APLICABLE
+    }
+
+    public enum RegistrarConstatacionMaterialTempranaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarConstatacionMaterialTempranaResultado(
+            RegistrarConstatacionMaterialTempranaEstado estado,
+            String actaId,
+            String documentoId,
+            String tipoDocumento,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum RegistrarSolicitudPagoVoluntarioEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarSolicitudPagoVoluntarioResultado(
+            RegistrarSolicitudPagoVoluntarioEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String accionPendiente) {
+    }
+
+    /**
+     * Situación de pago mock, visible por API y separada de {@code accionPendiente}.
+     * Modela en mínimo: solicitud, pago informado, pendiente de confirmación,
+     * confirmado y observado.
+     */
+    public enum SituacionPagoMock {
+        SIN_PAGO,
+        SOLICITADO,
+        PAGO_INFORMADO,
+        PENDIENTE_CONFIRMACION,
+        CONFIRMADO,
+        OBSERVADO
+    }
+
+    /**
+     * Resultado final relevante para evaluar si el expediente puede quedar en
+     * condición de cierre (independiente de la bandeja y de los pendientes).
+     */
+    public enum ResultadoFinalCierreMock {
+        SIN_RESULTADO_FINAL,
+        ABSUELTO,
+        PAGO_CONFIRMADO
+    }
+
+    /**
+     * Pendiente material/documental que bloquea cierre mientras esté activo.
+     */
+    public enum PendienteBloqueanteCierreMock {
+        LEVANTAMIENTO_MEDIDA_PREVENTIVA,
+        LIBERACION_RODADO,
+        ENTREGA_DOCUMENTACION
+    }
+
+    /**
+     * Hecho operativo del expediente (precarga demo o circuito previo, p. ej.
+     * medida preventiva generada) que exige, antes del cierre, el documento
+     * resolutorio mock y además el registro de cumplimiento material efectivo
+     * (ver spec 06 medidas, §§3–4). Si la ancla ya figura en el expediente, el
+     * origen se refleja en cerrabilidad sin depender del POST de reconocimiento.
+     */
+    public enum OrigenBloqueanteCierreMaterialMock {
+        /**
+         * Requiere documento de levantamiento; el origen está implicado por la
+         * ancla {@code MEDIDA_PREVENTIVA} en el expediente (p. ej. la pieza
+         * agregada por {@link #generarMedidaPreventiva} o precarga demo
+         * coherente); {@link #reconocerOrigenBloqueanteMedidaPreventiva} es
+         * opcional e idempotente, mismo patrón que rodado y documentación.
+         */
+        MEDIDA_PREVENTIVA_ACTIVA,
+        /**
+         * Requiere acta / documento de liberación de rodado; origen implicado por
+         * ancla de secuestro/retención de vehículo ({@code ACTA_RETENCION});
+         * {@link #reconocerOrigenBloqueanteSecuestroRodado} es opcional.
+         */
+        RODADO_SECUESTRADO,
+        /**
+         * Requiere constancia de entrega o restitución de documentación; origen
+         * implicado por constatación de retención documental
+         * ({@code CONSTATACION_RETENCION_DOCUMENTACION});
+         * {@link #reconocerOrigenBloqueanteRetencionDocumental} es opcional.
+         */
+        DOCUMENTACION_RETENIDA
+    }
+
+    public record CerrabilidadActaVista(
+            ResultadoFinalCierreMock resultadoFinal,
+            boolean cerrable,
+            java.util.List<PendienteBloqueanteCierreMock> pendientesBloqueantes,
+            String motivoNoCerrable) {
+    }
+
+    /**
+     * Plano de hechos materiales explícito, separado del expediente documental:
+     * la fase {@link FaseEjeHechoMaterial#RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL}
+     * indica que existe documento resolutorio en el expediente pero aún no el
+     * registro de cumplimiento material efectivo.
+     */
+    public enum FaseEjeHechoMaterial {
+        /** No hay origen material reconocido para este eje en el acta. */
+        NO_APLICA,
+        /** Origen activo: falta incorporar el documento resolutorio mock. */
+        SITUACION_PENDIENTE_DE_RESOLUTORIO,
+        /**
+         * El resolutorio figura en expediente; el hecho material efectivo (p. ej.
+         * medida levantada, rodado liberado) aún no está verificado en la capa material.
+         */
+        RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL,
+        /** Hecho material efectivo registrado (mock); no sustituye la trazabilidad documental. */
+        CUMPLIMIENTO_MATERIAL_VERIFICADO
+    }
+
+    /**
+     * @param clave identificador estable para API (p. ej. {@code MEDIDA_PREVENTIVA})
+     * @param bloqueaCierre {@code true} solo en bandeja de análisis, cuando el eje
+     *     seguiría afectando el cierre; en etapas anteriores la fase y la
+     *     descripción reflejan ya la condición del caso sin anticipar el cómputo
+     *     de cierre.
+     */
+    public record EjeHechoMaterialVista(
+            String clave,
+            String etiqueta,
+            FaseEjeHechoMaterial fase,
+            boolean bloqueaCierre,
+            String descripcion) {
+    }
+
+    public record HechosMaterialesActaVista(java.util.List<EjeHechoMaterialVista> ejes) {
+    }
+
+    public enum MarcarResultadoAbsueltoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record MarcarResultadoAbsueltoResultado(
+            MarcarResultadoAbsueltoEstado estado,
+            String actaId,
+            String bandejaActual) {
+    }
+
+    public enum ResolverPendienteBloqueanteEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ResolverPendienteBloqueanteResultado(
+            ResolverPendienteBloqueanteEstado estado,
+            String actaId,
+            String pendienteResuelto,
+            ResultadoFinalCierreMock resultadoFinal,
+            boolean cerrable,
+            java.util.List<String> pendientesBloqueantesCierreRestantes,
+            String motivoNoCerrable) {
+    }
+
+    public enum RegistrarResolucionBloqueoCierreEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    /**
+     * Incorpora el documento resolutorio mock; no reemplaza el registro de
+     * {@linkplain #registrarCumplimientoMaterialBloqueoCierre cumplimiento
+     * material efectivo}. {@code pendienteAsociado} es el
+     * {@link PendienteBloqueanteCierreMock} de referencia, no implica cierre
+     * del bloqueo en sentido material.
+     */
+    public record RegistrarResolucionBloqueoCierreResultado(
+            RegistrarResolucionBloqueoCierreEstado estado,
+            String actaId,
+            String documentoId,
+            String tipoDocumento,
+            String pendienteAsociado,
+            ResultadoFinalCierreMock resultadoFinal,
+            boolean cerrable,
+            java.util.List<String> pendientesBloqueantesCierreRestantes,
+            String motivoNoCerrable) {
+    }
+
+    public enum RegistrarCumplimientoMaterialBloqueoCierreEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    /**
+     * Registro mock de que el hecho material quedó cumplido (medida levantada,
+     * rodado liberado, documentación entregada). Requiere documento
+     * resolutorio previo y el origen material correspondiente.
+     */
+    public record RegistrarCumplimientoMaterialBloqueoCierreResultado(
+            RegistrarCumplimientoMaterialBloqueoCierreEstado estado,
+            String actaId,
+            String pendienteCumplido,
+            ResultadoFinalCierreMock resultadoFinal,
+            boolean cerrable,
+            java.util.List<String> pendientesBloqueantesCierreRestantes,
+            String motivoNoCerrable) {
+    }
+
+    /**
+     * Reconocimiento explícito (mock) del hecho material que origina un
+     * bloqueante de cierre, anclado a documentación del expediente (ver
+     * {@link #reconocerOrigenBloqueanteMedidaPreventiva},
+     * {@link #reconocerOrigenBloqueanteSecuestroRodado} y
+     * {@link #reconocerOrigenBloqueanteRetencionDocumental}).
+     */
+    public enum ReconocerOrigenBloqueanteMaterialEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    /**
+     * @param origenBloqueante origen incorporado si {@code estado == OK};
+     *     {@code null} si no aplica
+     */
+    public record ReconocerOrigenBloqueanteMaterialResultado(
+            ReconocerOrigenBloqueanteMaterialEstado estado,
+            String actaId,
+            OrigenBloqueanteCierreMaterialMock origenBloqueante,
+            CerrabilidadActaVista cerrabilidad) {
+    }
+
+    /**
+     * Hecho informado por el administrado (mock): existe un pago informado y,
+     * opcionalmente, un comprobante adjunto (mock). La confirmación/observación
+     * se modela en {@link SituacionPagoMock}.
+     */
+    public record PagoInformadoMock(
+            java.time.LocalDateTime fechaInformado,
+            String comprobanteId,
+            String comprobanteNombreArchivo) {
+    }
+
+    public enum RegistrarPagoInformadoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarPagoInformadoResultado(
+            RegistrarPagoInformadoEstado estado,
+            String actaId,
+            SituacionPagoMock situacionPago) {
+    }
+
+    public enum AdjuntarComprobantePagoInformadoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record AdjuntarComprobantePagoInformadoResultado(
+            AdjuntarComprobantePagoInformadoEstado estado,
+            String actaId,
+            SituacionPagoMock situacionPago,
+            String accionPendiente,
+            PagoInformadoMock pagoInformado) {
+    }
+
+    public enum ConfirmarPagoInformadoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ConfirmarPagoInformadoResultado(
+            ConfirmarPagoInformadoEstado estado,
+            String actaId,
+            SituacionPagoMock situacionPago) {
+    }
+
+    public enum ObservarPagoInformadoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ObservarPagoInformadoResultado(
+            ObservarPagoInformadoEstado estado,
+            String actaId,
+            SituacionPagoMock situacionPago) {
+    }
+
     public enum FirmarDocumentoEstado {
         OK,
         NOT_FOUND,
@@ -338,6 +669,19 @@ public class PrototipoStore {
     private final Map<String, String> accionPendientePorActa = new LinkedHashMap<>();
 
     /**
+     * Situación de pago mock por acta. Si una acta no está en el mapa, se
+     * interpreta como {@link SituacionPagoMock#SIN_PAGO}.
+     */
+    private final Map<String, SituacionPagoMock> situacionPagoPorActa = new LinkedHashMap<>();
+
+    /**
+     * Hecho informado (mock) de pago voluntario por acta. La existencia del
+     * registro no implica confirmación: la confirmación vive en
+     * {@link #situacionPagoPorActa}.
+     */
+    private final Map<String, PagoInformadoMock> pagoInformadoPorActa = new LinkedHashMap<>();
+
+    /**
      * Soporte funcional del área archivo/reingreso: archivo directo desde
      * análisis, archivo post evaluación de vencimiento, reingreso desde
      * archivo, motivoArchivo y eventos asociados. Extraído del store para
@@ -359,28 +703,35 @@ public class PrototipoStore {
             new NotificacionSupport(actas, eventosPorActa, notificacionesPorActa, accionPendientePorActa);
 
     /**
+     * Resultado final para cierre, pendientes, cumplimientos materiales y
+     * cómputo de cerrabilidad. Debe declararse antes de
+     * {@link PiezasFirmaSupport} para enganchar el origen de medida activa
+     * tras {@code generarMedidaPreventiva}.
+     */
+    private final CerrabilidadSupport cerrabilidad =
+            new CerrabilidadSupport(actas, eventosPorActa, documentosPorActa);
+
+    /**
      * Soporte funcional del área piezas/firma: consulta de piezas,
      * producción de medida preventiva, producción de notificación del acta,
-     * firma individual de documentos y transición a
-     * {@code PENDIENTE_NOTIFICACION} cuando se cierra la firma. Extraído
-     * del store para bajar su tamaño/acoplamiento sin cambiar comportamiento
-     * observable. El store mantiene una fachada pública que delega aquí.
-     * Frontera con notificación: al cerrarse la firma, delega en
+     * producción de nulidad, firma individual de documentos y transición
+     * a {@code PENDIENTE_NOTIFICACION} cuando se cierra la firma, o a
+     * {@code CERRADAS} si entre los documentos firmados hay nulidad
+     * (salida invalidante). Extraído del store para bajar su
+     * tamaño/acoplamiento sin cambiar comportamiento observable. El store
+     * mantiene una fachada pública que delega aquí. Frontera con
+     * notificación: al cerrarse la firma por vía no-nulidad, delega en
      * {@link NotificacionSupport} la materialización inicial de la
      * notificación (única interacción cruzada entre ambas áreas).
      */
     private final PiezasFirmaSupport piezasFirma =
-            new PiezasFirmaSupport(actas, eventosPorActa, documentosPorActa, piezasRequeridasPorActa, notificacion);
-
-    /**
-     * Soporte funcional del área cierre: cierre desde análisis, evento
-     * {@code CIERRE_ANALISIS} asociado y limpieza de marca operativa
-     * pendiente en análisis. Extraído del store para cerrar la
-     * descompresión por área funcional sin cambiar comportamiento
-     * observable. El store mantiene una fachada pública que delega aquí.
-     */
-    private final CierreSupport cierre =
-            new CierreSupport(actas, eventosPorActa, accionPendientePorActa);
+            new PiezasFirmaSupport(
+                    actas,
+                    eventosPorActa,
+                    documentosPorActa,
+                    piezasRequeridasPorActa,
+                    notificacion,
+                    cerrabilidad);
 
     /**
      * Soporte funcional del área gestión externa: derivación efectiva de
@@ -394,6 +745,30 @@ public class PrototipoStore {
      */
     private final GestionExternaSupport gestionExterna =
             new GestionExternaSupport(actas, eventosPorActa, accionPendientePorActa);
+
+    /**
+     * Soporte funcional del área presentaciones / pagos (alcance mínimo):
+     * registra la solicitud de pago voluntario temprano originada en
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} y mueve el caso a
+     * {@code PENDIENTE_ANALISIS} con marca operativa
+     * {@link #ACCION_EVALUAR_PAGO_VOLUNTARIO}, respetando que la spec
+     * centraliza la evaluación material del pago en la bandeja de análisis
+     * / presentaciones / pagos
+     * ({@code spec/03-bandejas/03-bandeja-analisis-presentaciones-pagos.md}).
+     * Extraído del store para mantener la descompresión por área funcional.
+     */
+    private final PagoVoluntarioSupport pagoVoluntario =
+            new PagoVoluntarioSupport(actas, eventosPorActa, accionPendientePorActa, situacionPagoPorActa);
+
+    /**
+     * Soporte funcional del circuito mínimo de pago informado + comprobante +
+     * confirmación/observación mock, separado del registro de solicitud.
+     */
+    private final PagoInformadoSupport pagoInformado =
+            new PagoInformadoSupport(actas, eventosPorActa, accionPendientePorActa, situacionPagoPorActa, pagoInformadoPorActa);
+
+    private final CierreSupport cierre =
+            new CierreSupport(actas, eventosPorActa, accionPendientePorActa, cerrabilidad);
 
     public Map<String, ActaMock> getActas() {
         return actas;
@@ -422,6 +797,9 @@ public class PrototipoStore {
         notificacionesPorActa.clear();
         piezasRequeridasPorActa.clear();
         accionPendientePorActa.clear();
+        situacionPagoPorActa.clear();
+        pagoInformadoPorActa.clear();
+        cerrabilidad.clear();
         archivoReingreso.clear();
         gestionExterna.clear();
     }
@@ -452,6 +830,145 @@ public class PrototipoStore {
      */
     public String getTipoGestionExterna(String actaId) {
         return gestionExterna.getTipoGestionExterna(actaId);
+    }
+
+    /**
+     * Situación de pago mock visible por API. Si no hay valor cargado para la
+     * acta, se interpreta como {@link SituacionPagoMock#SIN_PAGO}.
+     */
+    public SituacionPagoMock getSituacionPago(String actaId) {
+        SituacionPagoMock v = situacionPagoPorActa.get(actaId);
+        return v != null ? v : SituacionPagoMock.SIN_PAGO;
+    }
+
+    /**
+     * Hecho informado por el administrado (mock): pago informado y/o
+     * comprobante adjunto. Puede ser {@code null} si no hay pago informado.
+     */
+    public PagoInformadoMock getPagoInformado(String actaId) {
+        return pagoInformadoPorActa.get(actaId);
+    }
+
+    public CerrabilidadActaVista getCerrabilidadActa(String actaId) {
+        ActaMock a = actas.get(actaId);
+        return cerrabilidad.getVistaCerrabilidad(a);
+    }
+
+    /**
+     * Hechos materiales efectivos por eje (medida, rodado, documentación), con
+     * fase explícita frente al plano documental.
+     */
+    public HechosMaterialesActaVista getHechosMaterialesActa(String actaId) {
+        return cerrabilidad.hechosMaterialesActa(actaId);
+    }
+
+    public MarcarResultadoAbsueltoResultado marcarResultadoAbsuelto(String actaId) {
+        return cerrabilidad.marcarResultadoAbsuelto(actaId);
+    }
+
+    public ResolverPendienteBloqueanteResultado resolverPendienteBloqueanteCierre(
+            String actaId,
+            PendienteBloqueanteCierreMock tipo) {
+        return cerrabilidad.resolverPendienteBloqueante(actaId, tipo);
+    }
+
+    /**
+     * Incorpora el documento resolutorio mock. El pendiente de cierre sigue
+     * hasta {@link #registrarCumplimientoMaterialBloqueoCierre} si aún faltaba
+     * cumplimiento material.
+     */
+    public RegistrarResolucionBloqueoCierreResultado registrarResolucionBloqueoCierreDocumental(
+            String actaId, PendienteBloqueanteCierreMock tipoPendiente) {
+        return cerrabilidad.registrarResolucionBloqueoCierreDocumental(actaId, tipoPendiente);
+    }
+
+    public RegistrarCumplimientoMaterialBloqueoCierreResultado registrarCumplimientoMaterialBloqueoCierre(
+            String actaId, PendienteBloqueanteCierreMock tipoPendiente) {
+        return cerrabilidad.registrarCumplimientoMaterialEfectivoBloqueoCierre(actaId, tipoPendiente);
+    }
+
+    /**
+     * Demo: incorpora el origen material {@link OrigenBloqueanteCierreMaterialMock#RODADO_SECUESTRADO}
+     * solo si el expediente incluye el ancla documental de retención/secuestro de
+     * vehículo ({@code ACTA_RETENCION}). Idempotente si el origen ya estaba.
+     */
+    public ReconocerOrigenBloqueanteMaterialResultado reconocerOrigenBloqueanteSecuestroRodado(String actaId) {
+        return cerrabilidad.reconocerOrigenBloqueanteSecuestroRodado(actaId);
+    }
+
+    /**
+     * Demo: incorpora el origen {@link OrigenBloqueanteCierreMaterialMock#MEDIDA_PREVENTIVA_ACTIVA}
+     * solo si el expediente incluye un documento con tipo {@code MEDIDA_PREVENTIVA}
+     * (p. ej. al producir la pieza vía {@link #generarMedidaPreventiva}). Idempotente
+     * si el origen ya constaba.
+     */
+    public ReconocerOrigenBloqueanteMaterialResultado reconocerOrigenBloqueanteMedidaPreventiva(String actaId) {
+        return cerrabilidad.reconocerOrigenBloqueanteMedidaPreventiva(actaId);
+    }
+
+    /**
+     * Demo: incorpora el origen material
+     * {@link OrigenBloqueanteCierreMaterialMock#DOCUMENTACION_RETENIDA} solo si el
+     * expediente incluye la constatación de retención documental
+     * ({@code CONSTATACION_RETENCION_DOCUMENTACION}). Idempotente si el origen ya estaba.
+     */
+    public ReconocerOrigenBloqueanteMaterialResultado reconocerOrigenBloqueanteRetencionDocumental(String actaId) {
+        return cerrabilidad.reconocerOrigenBloqueanteRetencionDocumental(actaId);
+    }
+
+    /**
+     * Incorpora al expediente el ancla de material correspondiente
+     * (constatación en labrado o enriquecimiento). Alimenta el mismo circuito
+     * que anclas precargadas y recepción posterior.
+     */
+    public RegistrarConstatacionMaterialTempranaResultado registrarConstatacionMaterialTemprana(
+            String actaId, TipoConstatacionMaterialTemprana tipo) {
+        return cerrabilidad.registrarConstatacionMaterialTemprana(actaId, tipo);
+    }
+
+    /**
+     * Mock interno: resultado final (demo / precarga). Uso: fábrica de datos.
+     */
+    public void setResultadoFinalCierreDemo(String actaId, ResultadoFinalCierreMock resultado) {
+        cerrabilidad.setResultadoFinalDemo(actaId, resultado);
+    }
+
+    /**
+     * Mock interno: orígenes materiales que condicionan pendientes
+     * bloqueantes (demo / precarga). Uso: fábrica de datos.
+     */
+    public void setOrigenesBloqueantesCierreMaterialDemo(
+            String actaId, java.util.Set<OrigenBloqueanteCierreMaterialMock> origenes) {
+        cerrabilidad.setOrigenesBloqueantesMaterialDemo(actaId, origenes);
+    }
+
+    /**
+     * Mock interno: hecho de pago informado precargado. Uso: fábrica de datos.
+     */
+    public void setPagoInformadoDemo(String actaId, PagoInformadoMock pago) {
+        if (actaId == null) {
+            return;
+        }
+        if (pago == null) {
+            pagoInformadoPorActa.remove(actaId);
+            return;
+        }
+        pagoInformadoPorActa.put(actaId, pago);
+    }
+
+    /**
+     * Helper interno de mocks: asigna situación de pago de una acta precargada.
+     * Uso restringido a la fábrica de datos demo.
+     */
+    public void setSituacionPago(String actaId, SituacionPagoMock situacionPago) {
+        if (actaId == null) {
+            return;
+        }
+        if (situacionPago == null || situacionPago == SituacionPagoMock.SIN_PAGO) {
+            situacionPagoPorActa.remove(actaId);
+            return;
+        }
+        situacionPagoPorActa.put(actaId, situacionPago);
     }
 
     /**
@@ -513,6 +1030,33 @@ public class PrototipoStore {
      * {@code accionPendiente} es {@code null} o en blanco, no se filtra.
      */
     public List<ActaMock> listarActasPorBandeja(String codigoBandeja, String accionPendiente) {
+        return listarActasPorBandeja(codigoBandeja, accionPendiente, null);
+    }
+
+    /**
+     * Listado de la bandeja con filtros opcionales por acción pendiente y por
+     * situación de pago mock. Si un filtro es {@code null} o en blanco, no se
+     * aplica.
+     */
+    public List<ActaMock> listarActasPorBandeja(
+            String codigoBandeja,
+            String accionPendiente,
+            SituacionPagoMock situacionPago) {
+        return listarActasPorBandeja(
+                codigoBandeja, accionPendiente, situacionPago, null, null, null);
+    }
+
+    /**
+     * Filtros opcionales de cerrabilidad (además de bandeja, acción y pago). Si
+     * un filtro es {@code null}, no aplica.
+     */
+    public List<ActaMock> listarActasPorBandeja(
+            String codigoBandeja,
+            String accionPendiente,
+            SituacionPagoMock situacionPago,
+            ResultadoFinalCierreMock filtroResultadoFinal,
+            Boolean filtroCerrable,
+            PendienteBloqueanteCierreMock filtroPendienteBloqueante) {
         if (codigoBandeja == null) {
             return List.of();
         }
@@ -520,6 +1064,13 @@ public class PrototipoStore {
         return actas.values().stream()
                 .filter(a -> codigoBandeja.equals(a.bandejaActual()))
                 .filter(a -> accionFiltro == null || accionFiltro.equals(accionPendientePorActa.get(a.id())))
+                .filter(a -> situacionPago == null || situacionPago.equals(getSituacionPago(a.id())))
+                .filter(a -> filtroResultadoFinal == null
+                        || filtroResultadoFinal.equals(cerrabilidad.getResultadoFinal(a.id())))
+                .filter(a -> filtroCerrable == null
+                        || cerrabilidad.coincideFiltroCerrable(a, filtroCerrable))
+                .filter(a -> filtroPendienteBloqueante == null
+                        || cerrabilidad.coincideFiltroPendiente(a, filtroPendienteBloqueante))
                 .sorted(Comparator.comparing(ActaMock::id))
                 .toList();
     }
@@ -642,6 +1193,49 @@ public class PrototipoStore {
      */
     public RegistrarNotificacionVencidaResultado registrarNotificacionVencida(String actaId) {
         return notificacion.registrarNotificacionVencida(actaId);
+    }
+
+    /**
+     * Demo: registrar que el administrado informó un pago (hecho informado),
+     * sin asumir confirmación. La verificación posterior se materializa
+     * separadamente con adjunto de comprobante + confirmación/observación.
+     */
+    public RegistrarPagoInformadoResultado registrarPagoInformado(String actaId) {
+        return pagoInformado.registrarPagoInformado(actaId);
+    }
+
+    /**
+     * Demo: adjuntar comprobante mock al pago informado. Deja el caso como
+     * pendiente de confirmación y marca la tarea operativa.
+     */
+    public AdjuntarComprobantePagoInformadoResultado adjuntarComprobantePagoInformado(
+            String actaId,
+            String comprobanteNombreArchivo) {
+        return pagoInformado.adjuntarComprobantePagoInformado(actaId, comprobanteNombreArchivo);
+    }
+
+    /**
+     * Demo: confirmar el pago informado (acción mock interna). Si el resultado
+     * final es ABSUELTO, no aplica. En caso contrario, deja
+     * {@link ResultadoFinalCierreMock#PAGO_CONFIRMADO} (no cierra el expediente).
+     */
+    public ConfirmarPagoInformadoResultado confirmarPagoInformado(String actaId) {
+        if (cerrabilidad.getResultadoFinal(actaId) == ResultadoFinalCierreMock.ABSUELTO) {
+            return new ConfirmarPagoInformadoResultado(
+                    ConfirmarPagoInformadoEstado.CONFLICT, actaId, getSituacionPago(actaId));
+        }
+        ConfirmarPagoInformadoResultado r = pagoInformado.confirmarPagoInformado(actaId);
+        if (r.estado() == ConfirmarPagoInformadoEstado.OK) {
+            cerrabilidad.setResultadoFinalDemo(actaId, ResultadoFinalCierreMock.PAGO_CONFIRMADO);
+        }
+        return r;
+    }
+
+    /**
+     * Demo: observar/rechazar/desconocer el pago informado (acción mock interna).
+     */
+    public ObservarPagoInformadoResultado observarPagoInformado(String actaId) {
+        return pagoInformado.observarPagoInformado(actaId);
     }
 
     /**
@@ -775,11 +1369,26 @@ public class PrototipoStore {
      * Demo: firma individual de un documento puntual de la acta. La acta
      * sólo abandona la bandeja PENDIENTE_FIRMA cuando todos los documentos
      * firmables pasan a estado FIRMADO; al firmarse el último, pasa a
-     * PENDIENTE_NOTIFICACION. Fachada pública; la lógica vive en
-     * {@link PiezasFirmaSupport}, que delega en {@link NotificacionSupport}
-     * la materialización inicial de la notificación cuando corresponde.
+     * PENDIENTE_NOTIFICACION, salvo que el documento recién firmado sea
+     * de tipo {@code NULIDAD}: en ese caso la acta pasa directamente a
+     * {@code CERRADAS} como salida invalidante del expediente, sin
+     * arrancar circuito de notificación. Fachada pública; la lógica vive
+     * en {@link PiezasFirmaSupport}, que delega en
+     * {@link NotificacionSupport} la materialización inicial de la
+     * notificación cuando corresponde.
      */
     public FirmarDocumentoResultado firmarDocumento(String actaId, String documentoId) {
         return piezasFirma.firmarDocumento(actaId, documentoId);
+    }
+
+    /**
+     * Demo: registra solicitud de pago voluntario en etapa temprana del
+     * expediente (antes de análisis formal) y mueve el caso a
+     * {@code PENDIENTE_ANALISIS} con marca operativa
+     * {@link #ACCION_EVALUAR_PAGO_VOLUNTARIO}. Fachada pública; la lógica
+     * vive en {@link PagoVoluntarioSupport}.
+     */
+    public RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(String actaId) {
+        return pagoVoluntario.registrarSolicitudPagoVoluntario(actaId);
     }
 }

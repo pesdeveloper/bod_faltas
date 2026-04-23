@@ -1,4 +1,4 @@
-﻿# PROMPT DE REANUDACIÓN — PROTOTIPO BACKEND FALTAS
+# PROMPT DE REANUDACIÓN — PROTOTIPO BACKEND FALTAS
 
 Estamos retomando el prototipo backend del sistema de faltas municipal.
 
@@ -6,32 +6,37 @@ Estamos retomando el prototipo backend del sistema de faltas municipal.
 
 - repo: `backend/api-faltas-prototipo`
 - stack: Java 21 + Spring Boot 3.5.x
-- sin base de datos
-- sin seguridad
+- sin base de datos real
+- sin seguridad real
 - store en memoria
 - prototipo descartable en lo técnico, pero funcionalmente fiel al sistema real
 
 ## Norte del prototipo
 
-Este prototipo no debe quedar limitado a un subconjunto funcional permanente.
+Este prototipo no debe quedar como una demo de happy path.
 
-La meta es que evolucione hasta representar de forma **navegable, accionable y coherente** el universo funcional del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual.
+La meta es que represente de forma **navegable, accionable y coherente** el comportamiento real del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual.
 
 ### Simplificaciones permitidas
+
 - estado en memoria
 - dataset mock
-- sin base real
+- sin DB real
 - sin seguridad real
 - sin integraciones reales
-- acciones simples
-- formularios simplificados
-- documentos mock o edición documental no completa
+- acciones mock
+- DTOs simples
+- documentos mock
+- circuitos operativos simplificados si mantienen fidelidad funcional
 
 ### Simplificaciones no permitidas
+
 - happy paths irreales
 - atajos conceptuales que contradigan el dominio
-- convivencia de circuitos viejos y nuevos si se contradicen
-- deformar estados, transiciones, firma, notificación, archivo, gestión externa o reingreso por comodidad técnica
+- convivencia de circuitos contradictorios
+- cerrar automáticamente cuando el modelo real exige más condiciones
+- confundir documento emitido con hecho material cumplido
+- deformar estados, transiciones, firma, notificación, archivo, gestión externa, reingreso o cierre por comodidad técnica
 
 ## Regla principal
 
@@ -40,171 +45,183 @@ Debe ser una base realista del sistema final.
 
 Eso implica:
 
-- estados coherentes con el modelo final
-- transiciones representando el flujo real
 - un solo circuito verdadero por comportamiento
-- estado agregador cuando haya múltiples piezas o documentos
+- estados agregadores correctos
 - detalle fino en estructuras específicas
+- transiciones coherentes con el modelo final
+- fidelidad entre resultado final del expediente y cerrabilidad real
 
 ## Estado de continuidad
 
-Para inventario vigente del prototipo, endpoints, acciones, estado actual y próximo paso sugerido, usar:
+Para inventario operativo vigente del prototipo, usar:
 
 - `docs-trabajo/estado-actual-y-proximo-paso.md`
 
 Ese archivo es la verdad volátil del prototipo.
 
-## Decisiones cerradas
+Este prompt es el marco metodológico y estructural.
+
+## Decisiones estructurales ya consolidadas
 
 ### Firma
+
 - el circuito viejo `pasar-a-notificacion` fue eliminado
 - la única verdad es `firmarDocumento(actaId, documentoId)`
 - los documentos tienen identidad propia
 - se firman de a uno
 - la acta solo sale de `PENDIENTE_FIRMA` cuando todos los documentos firmables están en `FIRMADO`
 
-### Piezas
-- existe la bandeja `PENDIENTES_RESOLUCION_REDACCION`
-- el prototipo soporta `piezasRequeridas` y `piezasGeneradas`
-- mientras falte al menos una pieza requerida, la acta permanece en esa bandeja
-- recién al completar todas las piezas requeridas pasa a `PENDIENTE_FIRMA`
+### Nulidad
 
-### Estados agregadores
-- no usar el primer pendiente como estado
-- no usar la última pieza generada como estado de firma
-- estados correctos:
+- nulidad se trata como **pieza no-fallo**
+- no existe bandeja terminal autónoma `NULAS`
+- vive dentro del circuito documental/resolutivo
+- el caso demo de nulidad se genera como documento `NULIDAD` pendiente de firma
+- cuando el **último documento firmado** es de tipo `NULIDAD`, la acta pasa a `CERRADAS`
+- nulidad post-firma **no** entra al circuito común de notificación
+- la salida post-firma de nulidad es terminal/invalidante dentro del prototipo actual
+
+### Piezas y agregadores
+
+- existen `piezasRequeridas` y `piezasGeneradas`
+- mientras falten piezas, la acta permanece en resolución/redacción
+- si todas están producidas, pasa a `PENDIENTE_FIRMA`
+- no usar el primer pendiente ni la última pieza como “estado”
+- estados agregadores correctos:
   - `PENDIENTE_PRODUCCION_PIEZAS`
   - `PENDIENTE_FIRMA_PIEZAS`
-- el detalle fino vive en piezas/documentos, no en el estado del expediente
-
-### Nulidad
-- nulidad **no** es bandeja terminal autónoma
-- nulidad se trata como **pieza no-fallo**
-- vive dentro de `PENDIENTES_RESOLUCION_REDACCION`
-- ya existe acción para producir la pieza `NULIDAD`
-- el caso demo alineado con spec es `ACTA-0012`
-- queda pendiente decidir el destino final post-firma de nulidad si la spec requiere un comportamiento distinto del circuito común
 
 ### Notificación
-- existe notificación positiva
-- existe notificación negativa
-- existe reintento por no entrega
-- existe notificación vencida
-- existe reintento post-vencimiento
-- la notificación vencida debe entenderse como resultado de un proceso del sistema que detecta vencimientos
-- en el prototipo se la materializa manualmente por API, pero esa acción representa el resultado de ese proceso, no una decisión primaria del operador
-- los resultados alternativos de notificación pueden devolver la acta a `PENDIENTE_ANALISIS`
-- la separación operativa dentro de la bandeja de análisis se resuelve con `accionPendiente`
-- no crear bandejas nuevas por microcaso mientras alcance con macro-bandeja + marca operativa visible y filtrable
 
-### Marcas operativas ya consolidadas
-- `REINTENTAR_NOTIFICACION`
-- `EVALUAR_NOTIFICACION_VENCIDA`
-- `REVISION_POST_REINGRESO`
-- `DERIVAR_GESTION_EXTERNA`
-- `REVISION_POST_GESTION_EXTERNA`
+- existen notificación positiva, negativa, vencida y reintentos
+- los resultados alternativos pueden devolver a `PENDIENTE_ANALISIS`
+- la separación operativa dentro de análisis se resuelve con `accionPendiente`
+- no abrir bandejas nuevas por microcaso si alcanza con macro-bandeja + marca operativa visible y filtrable
 
-### Archivo
+### Archivo / reingreso
+
 - `ARCHIVO` sigue siendo macro-bandeja
-- ya no es una salida completamente indiferenciada
 - existe semántica mínima de archivo mediante `motivoArchivo`
-- motivos actualmente modelados:
-  - `ARCHIVO_DESDE_ANALISIS_DIRECTO`
-  - `ARCHIVO_POST_EVALUACION_VENCIMIENTO`
-
-### Reingreso desde archivo
 - existe reingreso explícito desde archivo
-- solo aplica a casos archivados con `permiteReingreso = true`
-- el reingreso devuelve a `PENDIENTE_ANALISIS`
-- deja marca operativa `REVISION_POST_REINGRESO`
-- preserva el `motivoArchivo` previo como dato sintético del último archivo del que provino
-- el evento de reingreso queda registrado de forma explícita
+- el reingreso vuelve a `PENDIENTE_ANALISIS`
+- deja marca `REVISION_POST_REINGRESO`
 
 ### Gestión externa
-- existe visibilidad previa en análisis de casos listos para gestión externa
-- la marca operativa previa es `DERIVAR_GESTION_EXTERNA`
-- existe la macro-bandeja `GESTION_EXTERNA`
-- tipos mínimos hoy modelados:
+
+- existe macro-bandeja `GESTION_EXTERNA`
+- tipos mínimos vigentes:
   - `APREMIO`
   - `JUZGADO_DE_PAZ`
-- existe derivación efectiva a gestión externa
-- existe retorno efectivo desde gestión externa a `PENDIENTE_ANALISIS`
-- el retorno deja marca `REVISION_POST_GESTION_EXTERNA`
-- `tipoGestionExterna` se preserva como trazabilidad sintética
-- `permiteReingreso` no se consume artificialmente al volver
-- existe re-derivación efectiva desde `REVISION_POST_GESTION_EXTERNA`
-- la gestión externa queda abierta mientras el expediente no caiga en una salida terminal o invalidante como cierre o nulidad/causal equivalente definida por la spec
+- existe derivación efectiva
+- existe retorno a análisis
+- existe re-derivación
+- el tipo de gestión externa se conserva como trazabilidad sintética
 
-### Cierre
-- existe cierre explícito desde análisis
-- el cierre lleva a `CERRADAS`
-- limpia marcas operativas cuando corresponde
-- el evento `CIERRE_ANALISIS` forma parte del circuito consolidado
+### Pago voluntario / circuito de pago
 
-## Casos demo consolidados
+El prototipo ya distingue entre:
 
-### ACTA-0013
-Caso canónico validado para múltiples piezas y firma realista.
+- solicitud de pago voluntario
+- pago informado
+- comprobante adjunto mock
+- pago pendiente de confirmación
+- pago confirmado
+- pago observado
 
-Expresa:
-- múltiples piezas requeridas
-- múltiples documentos
-- firma individual por documento
-- permanencia en `PENDIENTE_FIRMA` hasta completar todas las firmas
-- paso a `PENDIENTE_NOTIFICACION`
-- acuse positivo
-- retorno a `PENDIENTE_ANALISIS`
-- cierre desde análisis
+Reglas:
 
-### ACTA-0006
-Caso validado para:
-- archivo directo desde análisis
-- semántica explícita de archivo directo
-- reingreso desde archivo
-- retorno a `PENDIENTE_ANALISIS`
+- el pago no se considera “real” por el solo hecho de ser informado
+- el comprobante no basta por sí solo
+- la confirmación mock de pago deja `resultadoFinal = PAGO_CONFIRMADO`
+- `PAGO_CONFIRMADO` no cierra automáticamente el expediente
 
-### ACTA-0004
-Caso validado para:
-- notificación negativa
-- retorno a `PENDIENTE_ANALISIS`
-- `accionPendiente = REINTENTAR_NOTIFICACION`
-- filtro por `accionPendiente`
-- reintento por no entrega
-- vuelta a `PENDIENTE_NOTIFICACION`
+### Resultado final y cerrabilidad
 
-### ACTA-0005
-Caso validado para:
-- notificación vencida
-- retorno a `PENDIENTE_ANALISIS`
-- `accionPendiente = EVALUAR_NOTIFICACION_VENCIDA`
-- reintento post-vencimiento
-- archivo post evaluación de vencimiento
-- filtro específico dentro de la bandeja de análisis
+Solo son compatibles con cierre:
 
-### Gestión externa
-Casos demo vigentes:
-- caso listo para derivación a gestión externa en análisis
-- derivación efectiva a `APREMIO`
-- derivación efectiva a `JUZGADO_DE_PAZ`
-- caso ya derivado precargado en `GESTION_EXTERNA`
-- retorno efectivo desde `GESTION_EXTERNA`
-- re-derivación efectiva desde `REVISION_POST_GESTION_EXTERNA`
+- `ABSUELTO`
+- `PAGO_CONFIRMADO`
 
-### Nulidad
-Caso demo vigente:
-- `ACTA-0012`
-- en `PENDIENTES_RESOLUCION_REDACCION`
-- con `PENDIENTE_NULIDAD`
-- pieza requerida `NULIDAD`
-- ya puede producir la pieza `NULIDAD` como documento pendiente de firma
+Pero eso **no** significa cierre automático.
+
+La regla consolidada es:
+
+**Cerrable = (`ABSUELTO` o `PAGO_CONFIRMADO`) y sin pendientes materiales/documentales activos**
+
+### Pendientes materiales / documentales
+
+Pendientes bloqueantes mínimos del prototipo:
+
+- `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- `LIBERACION_RODADO`
+- `ENTREGA_DOCUMENTACION`
+
+Reglas:
+
+- un documento resolutorio no equivale por sí solo al cumplimiento material
+- debe distinguirse entre:
+  - origen material
+  - documento resolutorio emitido
+  - cumplimiento material efectivo
+- el bloqueante desaparece por el cumplimiento material efectivo, no por la mera existencia del documento
+
+### Hechos materiales vs expediente documental
+
+El prototipo ya separa mejor la lectura entre:
+
+- plano documental del expediente
+- plano de hechos materiales
+- plano de cerrabilidad
+
+Se expone una vista de hechos materiales por eje, para distinguir:
+
+- sin origen
+- situación pendiente de resolutorio
+- resolutorio en expediente sin hecho material
+- cumplimiento material verificado
+
+La cerrabilidad sigue dependiendo de la lógica consolidada, no del solo expediente documental.
+
+### Condiciones materiales tempranas
+
+El prototipo ya soporta acciones tempranas mínimas en `D1` / `D2` para registrar:
+
+- secuestro / retención de rodado
+- retención documental
+- medida preventiva aplicable
+
+Estas acciones usan las mismas anclas documentales que luego alimentan:
+
+- hechos materiales
+- orígenes de bloqueo
+- cerrabilidad
+- circuito resolutorio posterior
+
+No debe existir una “doble verdad” entre condición temprana y bloqueo posterior.
+
+### Demo reproducible
+
+Existe un recorrido demo reproducible de punta a punta sobre un caso temprano, que combina:
+
+- constataciones materiales tempranas
+- paso a análisis
+- pago voluntario / pago informado / comprobante / confirmación
+- bloqueantes materiales
+- resolutorio documental
+- cumplimiento material efectivo
+- cerrabilidad
+- cierre final por API
+
+El detalle operativo de casos demo y endpoints vive en `estado-actual-y-proximo-paso.md`.
 
 ## Criterio de diseño
 
 Mantener:
 
 - store simple
+- supports funcionales por área
 - controllers directos
-- records y enums simples
+- records / enums simples
 - sin framework genérico
 - sin DB
 - sin sobrearquitectura
@@ -212,9 +229,9 @@ Mantener:
 Pero priorizando siempre:
 
 - coherencia con el modelo final
-- un solo circuito verdadero
-- estados agregadores correctos
-- detalle fino en estructuras específicas
+- un solo circuito verdadero por comportamiento
+- consistencia entre condiciones tempranas, circuito operativo y cierre
+- separación correcta entre documento, resultado final y hecho material
 
 ## Regla de trabajo para slices
 
@@ -228,24 +245,22 @@ Cada slice debe definir explícitamente:
 6. criterio de cierre
 
 ### Reglas obligatorias
+
 - no reintroducir circuitos viejos
 - no dejar convivir dos modelos contradictorios
 - priorizar precisión quirúrgica
 - no tocar más archivos de los necesarios
+- no mezclar varios problemas conceptuales distintos en el mismo slice
 - si una simplificación rompe el modelo final, corregirla ahora
 
-### Fuente de verdad
-- usar `spec/` como fuente principal
-- usar solo la parte mínima necesaria
-- no usar archivos de continuidad como fuente de verdad de dominio
-- usar `prompt-de-reanudacion-chat.md` como marco metodológico estable
-- usar `estado-actual-y-proximo-paso.md` como inventario volátil del prototipo
-- usar `.cursor/rules/contexto-minimo.mdc` como fuente normativa de manejo de contexto
-- usar `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc` para proteger continuidad en slices funcionales
+## Fuente de verdad
 
-### Alcance técnico
-- tocar solo controller, store, mocks, dtos, enums, supports y helpers necesarios del prototipo
-- no arrastrar refactors fuera del circuito puntual
+- usar `spec/` como fuente principal de dominio
+- usar solo la parte mínima necesaria
+- usar `docs-trabajo/estado-actual-y-proximo-paso.md` como inventario vivo del prototipo
+- usar este `prompt-de-reanudacion-chat.md` como marco metodológico y estructural
+- usar `.cursor/rules/contexto-minimo.mdc` como norma de manejo de contexto
+- usar `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc` para proteger continuidad
 
 ## Regla de contexto para Cursor
 
@@ -270,26 +285,32 @@ Resumen operativo mínimo:
 Ante un problema, distinguir:
 
 ### A. Error de implementación puntual
+
 Acción:
+
 - corregir código
 - no necesariamente tocar la spec
 
 ### B. Error de interpretación del modelo
+
 Acción:
+
 - corregir código
 - y además fortalecer la fuente correcta
 
-### Regla de aprendizaje persistente
+## Regla de aprendizaje persistente
+
 Si una corrección importante revela ambigüedad o falta de precisión en la fuente, la lección no debe quedar solo en el código.
 
-Debe subirse a:
+Debe subirse a la capa correcta:
+
 - `spec/01-dominio/...` si era dominio
 - `spec/02-reglas-transversales/...` si era regla transversal
 - `spec/03-bandejas/...` si era flujo/bandeja/transición
 - `spec/04-backend/...` si era implementación futura
-- `prompt-de-reanudacion-chat.md` si era método de trabajo estable
+- `prompt-de-reanudacion-chat.md` si era método o decisión estructural estable
 - `estado-actual-y-proximo-paso.md` si era inventario vigente del prototipo
-- `.cursor/rules/contexto-minimo.mdc` si era disciplina de manejo de contexto
+- `.cursor/rules/contexto-minimo.mdc` si era disciplina de contexto
 - `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc` si era protección de continuidad
 
 ## Regla de continuidad mínima
@@ -304,38 +325,27 @@ Todo nuevo slice debe poder plantearse usando como base:
 
 Si para arrancar hace falta abrir demasiada historia o demasiados archivos, el slice está mal recortado o el estado actual no está suficientemente consolidado.
 
-## Refactor táctico del prototipo
+## Puntos de entrada de código
 
-Ya se hizo la descompresión principal por área funcional:
+Los puntos de entrada habituales del prototipo son:
 
-- `ArchivoReingresoSupport`
-- `NotificacionSupport`
-- `PiezasFirmaSupport`
-- `GestionExternaSupport`
-- `CierreSupport`
+- controller del prototipo
+- `PrototipoStore`
+- supports funcionales por área
+- `MockDataFactory`
 
-`PrototipoStore` quedó como fachada pública sobre supports del dominio del prototipo.
+No asumir que todo debe tocarse.  
+Cada slice debe abrir solo la mínima superficie necesaria.
 
-### Constantes compartidas
-- existe `PrototipoConstantes` para constantes mínimas de frontera entre áreas
+## Próximo paso sugerido
 
-## Higiene técnica reciente
+Después de esta consolidación, el siguiente paso natural debe elegirse sobre base real del prototipo actual y del inventario vigente.
 
-- se limpió el working tree local de artefactos regenerables bajo `target/`
-- queda pendiente, si se decide, un micro-slice técnico para:
-  - ignorar `target/` en `.gitignore`
-  - sacar `target/` del índice si corresponde
+Priorizar:
 
-## Estado actual del próximo paso
-
-El próximo slice funcional todavía no está elegido.
-
-Opciones candidatas razonables:
-1. decidir el comportamiento post-firma de nulidad si la spec exige desvío del circuito común
-2. ampliar otras decisiones posteriores desde análisis que sigan faltando
-3. ampliar inicio / enriquecimiento
-4. micro-slice documental de actualización de continuidad y estado si hiciera falta
-5. micro-slice técnico de higiene de repo (`.gitignore` + `target/`)
+- slices mínimos funcionales
+- continuidad entre condiciones tempranas y circuitos posteriores
+- cierre de huecos operativos reales antes de abrir nuevos frentes grandes
 
 ## Instrucción final
 
@@ -344,6 +354,6 @@ Actuar como arquitecto del prototipo.
 No improvisar.  
 No dejar convivir modelos contradictorios.  
 No abrir contexto de más.  
-No dejar que Cursor toque continuidad sin autorización explícita.  
-Separar por área funcional cuando haga falta, no por bandeja.  
+No permitir que Cursor toque continuidad sin autorización explícita.  
+Separar por área funcional cuando haga falta, no por entusiasmo de refactor.  
 Si aparece una simplificación que rompe el modelo final, corregirla ahora.

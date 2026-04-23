@@ -48,6 +48,13 @@ public class MockDataFactory {
         cargarActa0015(store);
         cargarActa0016(store);
         cargarActa0017(store);
+        cargarActa0018PagoVoluntarioDemo(store);
+        cargarActa0019CerrabilidadMaterialesDemo(store);
+        cargarActa0020OrigenMedidaDesdeGenerarMedidaDemo(store);
+        cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(store);
+        cargarActa0022PagoRealYCerrabilidadMaterialDemo(store);
+        cargarActa0023HechoMaterialVsDocumentoResolutorioDemo(store);
+        cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(store);
     }
 
     private void cargarActa0001(PrototipoStore store) {
@@ -1288,5 +1295,574 @@ public class MockDataFactory {
         store.getNotificacionesPorActa().put(id, notifs);
 
         store.setTipoGestionExterna(id, PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ);
+    }
+
+    /**
+     * Caso demo del slice "pago informado + pendiente de confirmación +
+     * confirmación/observación mock". Parte en enriquecimiento para poder
+     * registrar solicitud de pago voluntario temprana y luego simular el pago
+     * informado + adjunto de comprobante + confirmación por API sin depender
+     * de integraciones externas. Sin anclas de bloqueo material: para
+     * {@code PAGO_CONFIRMADO} + bloqueos + cierre, ver {@code ACTA-0022}.
+     */
+    private void cargarActa0018PagoVoluntarioDemo(PrototipoStore store) {
+        String id = "ACTA-0018";
+        String bandeja = BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0018",
+                "TRANSITO_URBANO",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "ACTIVA",
+                false,
+                true,
+                false,
+                false,
+                LocalDateTime.of(2026, 2, 3, 10, 10),
+                "Demo Pago Voluntario",
+                "DNI 11.111.111",
+                "Oficial Demo",
+                "Caso demo: pago voluntario informado y confirmación mock.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0018-01",
+                id,
+                LocalDateTime.of(2026, 2, 3, 10, 15),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo creada para circuito de pago voluntario."));
+        store.getEventosPorActa().put(id, eventos);
+
+        // Situación de pago inicial: SIN_PAGO (default). Se recorre por API.
+    }
+
+    /**
+     * Caso demo principal (cerrabilidad + rama de absolución): {@code ACTA-0019},
+     * subtipo/caso {@code TRANSITO_URBANO} con estado
+     * {@code PENDIENTE_CIERRE_MATERIAL} en análisis, {@code resultadoFinal} mock
+     * {@code ABSUELTO} y tres orígenes con el mismo patrón: ancla documental en
+     * el expediente + {@link PrototipoStore#reconocerOrigenBloqueanteMedidaPreventiva},
+     * {@link PrototipoStore#reconocerOrigenBloqueanteSecuestroRodado} y
+     * {@link PrototipoStore#reconocerOrigenBloqueanteRetencionDocumental}. Cada
+     * bloqueo requiere documento resolutorio mock y luego cumplimiento material
+     * vía API; la resolución documental no sustituye el hecho material. La rama
+     * simétrica con {@code PAGO_CONFIRMADO} precargado es {@code ACTA-0021};
+     * el mismo criterio con {@code PAGO_CONFIRMADO} viniendo del flujo de
+     * pago informado + confirmación es {@code ACTA-0022}. Ver {@code ACTA-0020}
+     * para el reconocimiento de medida nacido junto a
+     * {@code generarMedidaPreventiva} (misma ancla {@code MEDIDA_PREVENTIVA}).
+     * El circuito sólo pago voluntario / informado sin material de cierre
+     * sigue en {@code ACTA-0018}.
+     */
+    private void cargarActa0019CerrabilidadMaterialesDemo(PrototipoStore store) {
+        String id = "ACTA-0019";
+        String bandeja = BANDEJA_PENDIENTE_ANALISIS;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0019",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_CIERRE_MATERIAL",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 3, 1, 9, 0),
+                "Demo Cerrabilidad",
+                "DNI 22.222.222",
+                "Oficial Demo",
+                "Caso demo ACTA-0019: absolución; medida, rodado y documentación (anclas + reconocimiento; mock).",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0019-01",
+                id,
+                LocalDateTime.of(2026, 3, 1, 9, 30),
+                "ALTA_DEMO_CERRABILIDAD",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Precarga demo: resultado ABSUELTO. Tres orígenes vía reconocimiento sobre anclas de expediente (mock)."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0019-00",
+                        id,
+                        "MEDIDA_PREVENTIVA",
+                        "PENDIENTE_FIRMA",
+                        "medida_preventiva_0019.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0019-01",
+                        id,
+                        "ACTA_RETENCION",
+                        "ADJUNTO",
+                        "acta_retencion_vehiculo_0019.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0019-02",
+                        id,
+                        "CONSTATACION_RETENCION_DOCUMENTACION",
+                        "ADJUNTO",
+                        "constatacion_retencion_doc_0019.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
+
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rMed =
+                store.reconocerOrigenBloqueanteMedidaPreventiva(id);
+        if (rMed.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0019: reconocer medida preventiva, esperado OK, obtuvo: " + rMed.estado());
+        }
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rRodado =
+                store.reconocerOrigenBloqueanteSecuestroRodado(id);
+        if (rRodado.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0019: reconocer secuestro rodado, esperado OK, obtuvo: " + rRodado.estado());
+        }
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rDoc =
+                store.reconocerOrigenBloqueanteRetencionDocumental(id);
+        if (rDoc.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0019: reconocer retención documental, esperado OK, obtuvo: " + rDoc.estado());
+        }
+    }
+
+    /**
+     * Demostración mínima: al producir medida preventiva con
+     * {@code generarMedidaPreventiva} se reconoce el origen
+     * {@code MEDIDA_PREVENTIVA_ACTIVA} (ancla {@code MEDIDA_PREVENTIVA} en
+     * expediente), con el mismo tronco que
+     * {@code reconocerOrigenBloqueanteMedidaPreventiva}. La acta queda en
+     * resolución / firma según el tramo del prototipo; no es el caso e2e de
+     * {@code ACTA-0019}, solo prueba el enganche con el circuito de piezas.
+     */
+    private void cargarActa0020OrigenMedidaDesdeGenerarMedidaDemo(PrototipoStore store) {
+        String id = "ACTA-0020";
+        String bandeja = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0020",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_PRODUCCION_PIEZAS",
+                "ACTIVA",
+                false,
+                true,
+                false,
+                false,
+                LocalDateTime.of(2026, 3, 2, 10, 0),
+                "Origen medida (demo)",
+                "DNI 11.111.111",
+                "Oficial Demo",
+                "Caso auxiliar: medida requerida; la generación de la pieza aporta el origen de medida activa al modelo de cierre.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(
+                new ActaEventoMock(
+                        "EVT-0020-01",
+                        id,
+                        LocalDateTime.of(2026, 3, 2, 10, 5),
+                        "ALTA_DEMO_MEDIDA",
+                        "D5_ANALISIS",
+                        "D5_ANALISIS",
+                        "Acta mínima para invocar generarMedidaPreventiva al cargar datos."));
+        store.getEventosPorActa().put(id, eventos);
+
+        store.getPiezasRequeridasPorActa()
+                .put(
+                        id,
+                        new ActaPiezasRequeridasMock(
+                                id, new ArrayList<>(List.of("MEDIDA_PREVENTIVA")), new ArrayList<>()));
+
+        PrototipoStore.GenerarMedidaPreventivaResultado r = store.generarMedidaPreventiva(id);
+        if (r.estado() != PrototipoStore.GenerarMedidaPreventivaEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0020: se esperaba generarMedidaPreventiva OK, obtuvo: " + r.estado());
+        }
+    }
+
+    /**
+     * Caso demo explícito (cerrabilidad + rama de pago confirmado): {@code ACTA-0021},
+     * mismo tronco operativo y mismas anclas/reconocimientos que
+     * {@link #cargarActa0019CerrabilidadMaterialesDemo(PrototipoStore)}, con
+     * {@code resultadoFinal} mock {@code PAGO_CONFIRMADO} precargado. Atajo
+     * para probar material de cierre sin el circuito de pago; el recorrido
+     * integrado pago real → {@code PAGO_CONFIRMADO} es {@code ACTA-0022}.
+     * Misma API: pendientes → resolución documental → cumplimiento material →
+     * {@code cerrable} → cierre vía {@code cerrarActaDesdeAnalisis}.
+     */
+    private void cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(PrototipoStore store) {
+        String id = "ACTA-0021";
+        String bandeja = BANDEJA_PENDIENTE_ANALISIS;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0021",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_CIERRE_MATERIAL",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 3, 2, 9, 0),
+                "Demo Pago confirmado (cerrabilidad)",
+                "DNI 33.333.333",
+                "Oficial Demo",
+                "Caso demo ACTA-0021: pago confirmado; medida, rodado y documentación (anclas + reconocimiento; mock).",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0021-01",
+                id,
+                LocalDateTime.of(2026, 3, 2, 9, 30),
+                "ALTA_DEMO_CERRABILIDAD_PAGO_CONFIRMADO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Precarga demo: resultado PAGO_CONFIRMADO. Tres orígenes vía reconocimiento sobre anclas de expediente (mock)."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0021-00",
+                        id,
+                        "MEDIDA_PREVENTIVA",
+                        "PENDIENTE_FIRMA",
+                        "medida_preventiva_0021.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0021-01",
+                        id,
+                        "ACTA_RETENCION",
+                        "ADJUNTO",
+                        "acta_retencion_vehiculo_0021.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0021-02",
+                        id,
+                        "CONSTATACION_RETENCION_DOCUMENTACION",
+                        "ADJUNTO",
+                        "constatacion_retencion_doc_0021.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO);
+
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rMed =
+                store.reconocerOrigenBloqueanteMedidaPreventiva(id);
+        if (rMed.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0021: reconocer medida preventiva, esperado OK, obtuvo: " + rMed.estado());
+        }
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rRodado =
+                store.reconocerOrigenBloqueanteSecuestroRodado(id);
+        if (rRodado.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0021: reconocer secuestro rodado, esperado OK, obtuvo: " + rRodado.estado());
+        }
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rDoc =
+                store.reconocerOrigenBloqueanteRetencionDocumental(id);
+        if (rDoc.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0021: reconocer retención documental, esperado OK, obtuvo: " + rDoc.estado());
+        }
+    }
+
+    /**
+     * Caso demo e2e: {@code ACTA-0022} — mismas anclas de expediente que
+     * {@link #cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(PrototipoStore)}
+     * ({@code MEDIDA_PREVENTIVA}, {@code ACTA_RETENCION},
+     * {@code CONSTATACION_RETENCION_DOCUMENTACION}), partida en
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} como {@link #cargarActa0018PagoVoluntarioDemo(PrototipoStore)}.
+     * No fija {@code resultadoFinal} ni invoca reconocimientos: el
+     * {@code PAGO_CONFIRMADO} nace solo al confirmar el pago informado, y
+     * entra a la misma {@link CerrabilidadSupport} que el resto. Las
+     * condiciones materiales iniciales se expresan con las anclas de
+     * expediente (misma fuente de verdad que el origen y que los
+     * bloqueos en análisis; sin segundo modelo); el POST de
+     * reconocimiento es opcional (idempotente).
+     * Secuencia API sugerida: {@code registrar-solicitud-pago-voluntario} →
+     * {@code registrar-pago-informado} → {@code adjuntar-comprobante-pago-informado}
+     * → {@code confirmar-pago-informado} (queda {@code PAGO_CONFIRMADO} y no
+     * cerrable mientras haya bloqueos) → por cada pendiente
+     * {@code registrar-resolucion-bloqueo-cierre} y
+     * {@code registrar-cumplimiento-material-bloqueo-cierre} →
+     * {@code cerrar-acta}.
+     */
+    private void cargarActa0022PagoRealYCerrabilidadMaterialDemo(PrototipoStore store) {
+        String id = "ACTA-0022";
+        String bandeja = BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0022",
+                "TRANSITO_URBANO",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 3, 4, 9, 0),
+                "Demo pago real + cerrabilidad (0022)",
+                "DNI 44.444.444",
+                "Oficial Demo",
+                "Caso en campo: rodado bajo retención, licencia/cedula retenida y medida preventiva aplicable; "
+                        + "sigue por pago y cierre material vía API sin precargar resultado final.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0022-01",
+                id,
+                LocalDateTime.of(2026, 3, 4, 8, 50),
+                "ALTA",
+                "D1_CAPTURA",
+                "D1_CAPTURA",
+                "Alta: infracción y acta; inspección en sitio (mock)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0022-02",
+                id,
+                LocalDateTime.of(2026, 3, 4, 8, 52),
+                "CONSTATACION_RODADO",
+                "D1_CAPTURA",
+                "D1_CAPTURA",
+                "Acta/constatación: rodado bajo retención o secuestro; refuerza ancla de expediente (mock)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0022-03",
+                id,
+                LocalDateTime.of(2026, 3, 4, 8, 53),
+                "CONSTATACION_DOCUMENTACION",
+                "D1_CAPTURA",
+                "D1_CAPTURA",
+                "Documentación retenida en la intervención; constatación vinculada a expediente (mock)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0022-04",
+                id,
+                LocalDateTime.of(2026, 3, 4, 8, 54),
+                "MEDIDA_PREVENTIVA_APLICABLE",
+                "D1_CAPTURA",
+                "D1_CAPTURA",
+                "Situación de medida preventiva aplicable según criterio de campo; ancla al circuito (mock)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0022-05",
+                id,
+                LocalDateTime.of(2026, 3, 4, 9, 15),
+                "PASE_DEMO",
+                "D2_ENRIQUECIMIENTO",
+                "D2_ENRIQUECIMIENTO",
+                "Precarga: anclas en expediente; PAGO_CONFIRMADO y etapa de cierre vía API."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0022-00",
+                        id,
+                        "MEDIDA_PREVENTIVA",
+                        "PENDIENTE_FIRMA",
+                        "medida_preventiva_0022.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0022-01",
+                        id,
+                        "ACTA_RETENCION",
+                        "ADJUNTO",
+                        "acta_retencion_vehiculo_0022.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0022-02",
+                        id,
+                        "CONSTATACION_RETENCION_DOCUMENTACION",
+                        "ADJUNTO",
+                        "constatacion_retencion_doc_0022.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+    }
+
+    /**
+     * Caso mínimo de separación expediente / hecho material: {@code ACTA-0023}.
+     * <ol>
+     *   <li>Origen material: ancla {@code MEDIDA_PREVENTIVA} en el expediente (sincroniza
+     *       el origen vía {@link CerrabilidadSupport}).</li>
+     *   <li>Resultado: {@code ABSUELTO} (cerrabilidad requiere además cierre de bloqueos).</li>
+     *   <li>Documento resolutorio {@code DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA} ya
+     *       en expediente: el bloqueo de cierre sigue activo (no basta el PDF).</li>
+     *   <li>En API detalle, {@code hechosMateriales} muestra
+     *       {@code RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL} en el eje medida;
+     *       {@code cerrable} es {@code false}.</li>
+     *   <li>Tras {@code POST registrar-cumplimiento-material-bloqueo-cierre} con
+     *       {@code LEVANTAMIENTO_MEDIDA_PREVENTIVA}, el eje pasa a
+     *       {@code CUMPLIMIENTO_MATERIAL_VERIFICADO} y, sin otros bloqueos, el
+     *       expediente queda en condición de cierre (misma lógica que
+     *       {@link #cargarActa0019CerrabilidadMaterialesDemo(PrototipoStore)} con
+     *       resolución explícita por API).</li>
+     * </ol>
+     */
+    private void cargarActa0023HechoMaterialVsDocumentoResolutorioDemo(PrototipoStore store) {
+        String id = "ACTA-0023";
+        String bandeja = BANDEJA_PENDIENTE_ANALISIS;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0023",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_CIERRE_MATERIAL",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 3, 5, 9, 0),
+                "Demo hecho material vs. documento (0023)",
+                "DNI 55.555.555",
+                "Oficial Demo",
+                "Caso ACTA-0023: ancla + resolutorio de medida en expediente; falta hecho material para cerrar.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0023-01",
+                id,
+                LocalDateTime.of(2026, 3, 5, 9, 20),
+                "ALTA_DEMO_HECHO_MATERIAL",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Demo: ancla y levantamiento documental precargados; cierre operativo requiere capa material."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0023-00",
+                        id,
+                        "MEDIDA_PREVENTIVA",
+                        "PENDIENTE_FIRMA",
+                        "medida_preventiva_0023.pdf"));
+        docs.add(
+                new ActaDocumentoMock(
+                        "DOC-0023-01",
+                        id,
+                        "DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA",
+                        "EMITIDO",
+                        "levantamiento_medida_0023.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
+    }
+
+    /**
+     * <p>Recorrido demo e2e (caso temprano + pago + cierre): {@code ACTA-0024}.
+     *
+     * <p>Partida: bandeja {@code ACTAS_EN_ENRIQUECIMIENTO}, bloque
+     * {@code D1_CAPTURA}, sin documentos de material precargados. Las
+     * anclas nacen solo por
+     * {@link PrototipoStore#registrarConstatacionMaterialTemprana}; en
+     * análisis, {@link CerrabilidadSupport} sincroniza orígenes bloqueantes
+     * desde el expediente (el POST {@code reconocer-origen-bloqueo-cierre-material}
+     * es opcional e idempotente, mismo criterio que {@code ACTA-0022}).
+     *
+     * <p>Base de URL: {@code /api/prototipo}. Antes de la demo, reiniciar
+     * estado: {@code POST /reset} (recomendado para una corrida limpia).
+     *
+     * <p>Secuencia exacta (orden de los tres bloques de material intercambiable
+     * solo en la etapa 1; en etapa 6 conviene alinearse al orden alfabético
+     * de pendientes: {@code ENTREGA_DOCUMENTACION},
+     * {@code LIBERACION_RODADO}, {@code LEVANTAMIENTO_MEDIDA_PREVENTIVA}):
+     *
+     * <ol>
+     *   <li><b>Constataciones tempranas (D1/D2).</b> Por cada
+     *       {@code tipo}:
+     *       {@code POST /actas/ACTA-0024/acciones/registrar-constatacion-material-temprana?tipo=...}
+     *       con
+     *       {@code SECUESTRO_RODADO}, {@code RETENCION_DOCUMENTAL},
+     *       {@code MEDIDA_PREVENTIVA_APLICABLE}. <i>Antes:</i> expediente
+     *       sin anclas. <i>Después:</i> tres documentos; bandeja sigue en
+     *       enriquecimiento.</li>
+     *   <li><b>Transición a análisis.</b>
+     *       {@code POST /actas/ACTA-0024/acciones/registrar-solicitud-pago-voluntario}
+     *       (única vía soportada desde enriquecimiento hacia
+     *       {@code PENDIENTE_ANALISIS} en este tramo; equivale a “paso al
+     *       punto donde aplica análisis”). <i>Antes:</i>
+     *       {@code ACTAS_EN_ENRIQUECIMIENTO}. <i>Después:</i>
+     *       {@code PENDIENTE_ANALISIS}, marca {@code ACCION_EVALUAR_PAGO_VOLUNTARIO},
+     *       situación de pago {@code SOLICITADO}.</li>
+     *   <li><b>Pago informado + comprobante + confirmación.</b>
+     *       {@code POST .../registrar-pago-informado} &rarr;
+     *       {@code POST .../adjuntar-comprobante-pago-informado} (query
+     *       opcional {@code nombreArchivo}) &rarr;
+     *       {@code POST .../confirmar-pago-informado}. <i>Después:</i>
+     *       {@code resultadoFinal} {@code PAGO_CONFIRMADO} y situación de
+     *       pago {@code CONFIRMADO}.</li>
+     *   <li><b>Verificación: no cerrable con bloqueos.</b> Opcional
+     *       {@code GET /actas/ACTA-0024} (y documentos / eventos). Con pago
+     *       confirmado y orígenes materializados, {@code cerrable} false y
+     *       {@code pendientesBloqueantesCierre} con tres ítems mientras
+     *       no haya resolución + cumplimiento por eje.</li>
+     *   <li><b>Resolutorio documental (por cada pendiente).</b>
+     *       {@code POST .../registrar-resolucion-bloqueo-cierre?tipo=ENTREGA_DOCUMENTACION}
+     *       (y análogos
+     *       {@code LIBERACION_RODADO}, {@code LEVANTAMIENTO_MEDIDA_PREVENTIVA}).
+     *       El bloqueo material sigue activo hasta el paso 6.</li>
+     *   <li><b>Cumplimiento material efectivo.</b>
+     *       {@code POST .../registrar-cumplimiento-material-bloqueo-cierre?tipo=...}
+     *       (mismos {@code tipo} que en 5). <i>Después del último:</i> lista
+     *       de pendientes vacía, {@code cerrable} true en
+     *       {@code GET /actas/ACTA-0024}.</li>
+     *   <li><b>Cierre.</b> {@code POST /actas/ACTA-0024/acciones/cerrar-acta}.
+     *       <i>Después:</i> acta en bandeja {@code CERRADAS}.</li>
+     * </ol>
+     *
+     * <p>Referencia de mismo tronco de pago y cierre sin constatación API:
+     * {@link #cargarActa0022PagoRealYCerrabilidadMaterialDemo(PrototipoStore)}.
+     */
+    private void cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(PrototipoStore store) {
+        String id = "ACTA-0024";
+        String bandeja = BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0024",
+                "TRANSITO_URBANO",
+                "D1_CAPTURA",
+                "EN_CURSO",
+                "ACTIVA",
+                false,
+                true,
+                false,
+                false,
+                LocalDateTime.of(2026, 3, 6, 8, 30),
+                "Demo constatación material temprana (0024)",
+                "DNI 66.666.666",
+                "Oficial Demo",
+                "Caso ACTA-0024: condiciones de material sin precarga; registrar por API en D1/D2.",
+                bandeja);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0024-01",
+                id,
+                LocalDateTime.of(2026, 3, 6, 8, 32),
+                "ALTA",
+                "D1_CAPTURA",
+                "D1_CAPTURA",
+                "Alta en sitio: expediente aún sin anclas de retención / medida (mock)."));
+        store.getEventosPorActa().put(id, eventos);
     }
 }

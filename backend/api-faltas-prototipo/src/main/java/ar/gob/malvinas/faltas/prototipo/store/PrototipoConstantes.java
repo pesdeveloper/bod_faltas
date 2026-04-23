@@ -17,6 +17,18 @@ final class PrototipoConstantes {
     /** Bandeja operativa donde cae el análisis jurídico del acta. */
     static final String BANDEJA_PENDIENTE_ANALISIS = "PENDIENTE_ANALISIS";
 
+    /**
+     * Bandeja de actas aún en labrado o enriquecimiento (D1/D2 en el
+     * recorrido mock).
+     */
+    static final String BANDEJA_ACTAS_EN_ENRIQUECIMIENTO = "ACTAS_EN_ENRIQUECIMIENTO";
+
+    /** Bloque de captura en sitio (D1), previo a enriquecimiento. */
+    static final String BLOQUE_D1_CAPTURA = "D1_CAPTURA";
+
+    /** Bloque de enriquecimiento (D2). */
+    static final String BLOQUE_D2_ENRIQUECIMIENTO = "D2_ENRIQUECIMIENTO";
+
     /** Bloque de proceso correspondiente al análisis jurídico (D5). */
     static final String BLOQUE_D5 = "D5_ANALISIS";
 
@@ -66,6 +78,47 @@ final class PrototipoConstantes {
      * {@link #BLOQUE_GESTION_EXTERNA} que pudieran modelarse a futuro.
      */
     static final String ESTADO_EN_GESTION_EXTERNA = "EN_GESTION_EXTERNA";
+
+    /**
+     * Documento mock de levantamiento de medida preventiva (resolutorio de
+     * cierre material; no requiere firma en el slice del prototipo).
+     */
+    static final String TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA =
+            "DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA";
+
+    /** Documento mock de liberación de rodado retenido/secuestrado. */
+    static final String TIPO_DOC_LIBERACION_RODADO = "DOC_LIBERACION_RODADO";
+
+    /** Documento mock de restitución / entrega de documentación retenida. */
+    static final String TIPO_DOC_RESTITUCION_DOCUMENTACION = "DOC_RESTITUCION_DOCUMENTACION";
+
+    /**
+     * Ancla material mínima (expediente): acta/acuse de retención o
+     * secuestro de vehículo, coherente con tránsito. Usada para reconocer
+     * el origen {@code RODADO_SECUESTRADO} sin precarga aislada.
+     */
+    static final String TIPO_DOC_ACUSE_RETENCION_VEHICULO = "ACTA_RETENCION";
+
+    /**
+     * Ancla material mínima (expediente): constatación de retención de
+     * documentación (carnet, cédula, etc.). Reconoce el origen
+     * {@code DOCUMENTACION_RETENIDA} sin precarga aislada.
+     */
+    static final String TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL = "CONSTATACION_RETENCION_DOCUMENTACION";
+
+    /**
+     * Ancla en expediente del acto / pieza de medida preventiva (mismo
+     * {@code tipoDocumento} que {@code generarMedidaPreventiva} incorpora vía
+     * producción de pieza). Reconoce el origen {@code MEDIDA_PREVENTIVA_ACTIVA}
+     * con el mismo patrón que secuestro de rodado y retención documental.
+     */
+    static final String TIPO_ANCLA_MEDIDA_PREVENTIVA = "MEDIDA_PREVENTIVA";
+
+    /** Estado documental mock para piezas resolutorias sin circuito de firma. */
+    static final String ESTADO_DOC_EMITIDO = "EMITIDO";
+
+    /** Anexo / constatación de campo aún no formalizada como pieza de firma. */
+    static final String ESTADO_DOC_ADJUNTO = "ADJUNTO";
 
     private PrototipoConstantes() {
     }

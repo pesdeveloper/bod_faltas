@@ -11,18 +11,33 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.ActaDetalleResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaDocumentoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaEventoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaNotificacionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.AdjuntarComprobantePagoInformadoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.BandejaResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarPorVencimientoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CerrarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.CerrabilidadResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.HechosMaterialesActaResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.HechosMaterialesEjeResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ComprobanteMockResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ConfirmarPagoInformadoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.DerivarAGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.FirmarDocumentoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarMedidaPreventivaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNotificacionActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNulidadAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.MarcarResultadoAbsueltoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ObservarPagoInformadoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.PagoInformadoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionNegativaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionPositivaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarSolicitudPagoVoluntarioAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionVencidaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarPagoInformadoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarConstatacionMaterialTempranaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarCumplimientoMaterialBloqueoCierreAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReconocerOrigenBloqueanteMaterialAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarResolucionBloqueoCierreAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarDesdeGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResponse;
@@ -78,8 +93,21 @@ public class PrototipoApiController {
     @GetMapping("/bandejas/{codigo}/actas")
     public List<ActaBandejaItemResponse> listarActasPorBandeja(
             @PathVariable("codigo") String codigo,
-            @RequestParam(value = "accionPendiente", required = false) String accionPendiente) {
-        return store.listarActasPorBandeja(codigo, accionPendiente).stream()
+            @RequestParam(value = "accionPendiente", required = false) String accionPendiente,
+            @RequestParam(value = "situacionPago", required = false) String situacionPago,
+            @RequestParam(value = "resultadoFinal", required = false) String resultadoFinal,
+            @RequestParam(value = "cerrable", required = false) Boolean cerrable,
+            @RequestParam(value = "pendienteBloqueante", required = false) String pendienteBloqueante) {
+        PrototipoStore.SituacionPagoMock filtroSituacionPago = parseSituacionPago(situacionPago);
+        PrototipoStore.ResultadoFinalCierreMock filtroRes = parseResultadoFinalCierre(resultadoFinal);
+        PrototipoStore.PendienteBloqueanteCierreMock filtroPend = parsePendienteBloqueante(pendienteBloqueante);
+        return store.listarActasPorBandeja(
+                codigo,
+                accionPendiente,
+                filtroSituacionPago,
+                filtroRes,
+                cerrable,
+                filtroPend).stream()
                 .map(this::mapActaBandejaItem)
                 .toList();
     }
@@ -154,6 +182,273 @@ public class PrototipoApiController {
                 r.bandejaActual(),
                 r.estadoProcesoActual(),
                 r.accionPendiente());
+    }
+
+    @PostMapping("/actas/{id}/acciones/registrar-solicitud-pago-voluntario")
+    public RegistrarSolicitudPagoVoluntarioAccionResponse registrarSolicitudPagoVoluntario(@PathVariable("id") String id) {
+        PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado r = store.registrarSolicitudPagoVoluntario(id);
+        if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarSolicitudPagoVoluntarioAccionResponse(
+                "OK",
+                "Solicitud de pago voluntario registrada; acta pasa a análisis para evaluación.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente());
+    }
+
+    @PostMapping("/actas/{id}/acciones/registrar-pago-informado")
+    public RegistrarPagoInformadoAccionResponse registrarPagoInformado(@PathVariable("id") String id) {
+        PrototipoStore.RegistrarPagoInformadoResultado r = store.registrarPagoInformado(id);
+        if (r.estado() == PrototipoStore.RegistrarPagoInformadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarPagoInformadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarPagoInformadoAccionResponse(
+                "OK",
+                "Pago informado registrado (mock). Aún sin confirmación interna.",
+                r.actaId(),
+                r.situacionPago().name());
+    }
+
+    @PostMapping("/actas/{id}/acciones/adjuntar-comprobante-pago-informado")
+    public AdjuntarComprobantePagoInformadoAccionResponse adjuntarComprobantePagoInformado(
+            @PathVariable("id") String id,
+            @RequestParam(value = "nombreArchivo", required = false) String nombreArchivo) {
+        PrototipoStore.AdjuntarComprobantePagoInformadoResultado r =
+                store.adjuntarComprobantePagoInformado(id, nombreArchivo);
+        if (r.estado() == PrototipoStore.AdjuntarComprobantePagoInformadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.AdjuntarComprobantePagoInformadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        PagoInformadoResponse pago = mapPagoInformado(r.pagoInformado());
+        return new AdjuntarComprobantePagoInformadoAccionResponse(
+                "OK",
+                "Comprobante adjuntado (mock); queda pendiente de confirmación interna.",
+                r.actaId(),
+                r.situacionPago().name(),
+                r.accionPendiente(),
+                pago);
+    }
+
+    @PostMapping("/actas/{id}/acciones/confirmar-pago-informado")
+    public ConfirmarPagoInformadoAccionResponse confirmarPagoInformado(@PathVariable("id") String id) {
+        PrototipoStore.ConfirmarPagoInformadoResultado r = store.confirmarPagoInformado(id);
+        if (r.estado() == PrototipoStore.ConfirmarPagoInformadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ConfirmarPagoInformadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new ConfirmarPagoInformadoAccionResponse(
+                "OK",
+                "Pago confirmado internamente (mock).",
+                r.actaId(),
+                r.situacionPago().name());
+    }
+
+    /**
+     * Resultado final mock: ABSUELTO. Solo desde {@code PENDIENTE_ANALISIS};
+     * incompat con {@code PAGO_CONFIRMADO}. No implica cierre.
+     */
+    @PostMapping("/actas/{id}/acciones/marcar-resultado-final-absuelto")
+    public MarcarResultadoAbsueltoAccionResponse marcarResultadoFinalAbsuelto(@PathVariable("id") String id) {
+        PrototipoStore.MarcarResultadoAbsueltoResultado r = store.marcarResultadoAbsuelto(id);
+        if (r.estado() == PrototipoStore.MarcarResultadoAbsueltoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.MarcarResultadoAbsueltoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        CerrabilidadResponse c = mapCerrabilidad(store.getCerrabilidadActa(r.actaId()));
+        return new MarcarResultadoAbsueltoAccionResponse(
+                "OK",
+                "Resultado final mock: ABSUELTO (no implica cierre automático).",
+                r.actaId(),
+                r.bandejaActual(),
+                c);
+    }
+
+    /**
+     * Registra el cumplimiento material efectivo (alias de
+     * {@code POST .../registrar-cumplimiento-material-bloqueo-cierre}).
+     */
+    @PostMapping("/actas/{id}/acciones/resolver-pendiente-bloqueante-cierre")
+    public RegistrarCumplimientoMaterialBloqueoCierreAccionResponse resolverPendienteBloqueanteCierre(
+            @PathVariable("id") String id,
+            @RequestParam("tipo") String tipo) {
+        return ejecutarRegistrarCumplimientoMaterialBloqueoCierre(id, tipo);
+    }
+
+    /**
+     * Constatación mínima en D1/D2: incorpora al expediente el ancla
+     * documental alineada con
+     * {@code ACTA_RETENCION}, {@code CONSTATACION_RETENCION_DOCUMENTACION} o
+     * {@code MEDIDA_PREVENTIVA}. Parámetro {@code tipo}:
+     * {@code SECUESTRO_RODADO}, {@code RETENCION_DOCUMENTAL},
+     * {@code MEDIDA_PREVENTIVA_APLICABLE}. Requiere
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} y bloque {@code D1_CAPTURA} o
+     * {@code D2_ENRIQUECIMIENTO}.
+     */
+    @PostMapping("/actas/{id}/acciones/registrar-constatacion-material-temprana")
+    public RegistrarConstatacionMaterialTempranaAccionResponse registrarConstatacionMaterialTemprana(
+            @PathVariable("id") String id, @RequestParam("tipo") String tipo) {
+        PrototipoStore.TipoConstatacionMaterialTemprana t;
+        try {
+            t = PrototipoStore.TipoConstatacionMaterialTemprana.valueOf(tipo);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipo inválido: " + tipo);
+        }
+        PrototipoStore.RegistrarConstatacionMaterialTempranaResultado r =
+                store.registrarConstatacionMaterialTemprana(id, t);
+        if (r.estado() == PrototipoStore.RegistrarConstatacionMaterialTempranaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarConstatacionMaterialTempranaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarConstatacionMaterialTempranaAccionResponse(
+                "OK",
+                "Constatación de material en expediente (D1/D2; mock; misma ancla que el circuito de cierre).",
+                r.actaId(),
+                r.documentoId(),
+                r.tipoDocumento(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    /**
+     * Reconoce el hecho material que origina un bloqueante de cierre, anclado
+     * a documentación del expediente. Parámetro {@code tipo}:
+     * {@code MEDIDA_ACTIVA} requiere documento de tipo
+     * {@code MEDIDA_PREVENTIVA}; {@code SECUESTRO_RODADO} requiere
+     * {@code ACTA_RETENCION}; {@code RETENCION_DOCUMENTAL} requiere
+     * {@code CONSTATACION_RETENCION_DOCUMENTACION}. Idempotente si el origen
+     * ya constaba.
+     */
+    @PostMapping("/actas/{id}/acciones/reconocer-origen-bloqueo-cierre-material")
+    public ReconocerOrigenBloqueanteMaterialAccionResponse reconocerOrigenBloqueoCierreMaterial(
+            @PathVariable("id") String id, @RequestParam("tipo") String tipo) {
+        TipoReconocimientoOrigenBloqueo t = TipoReconocimientoOrigenBloqueo.parse(tipo);
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado r;
+        if (t == TipoReconocimientoOrigenBloqueo.MEDIDA_ACTIVA) {
+            r = store.reconocerOrigenBloqueanteMedidaPreventiva(id);
+        } else if (t == TipoReconocimientoOrigenBloqueo.SECUESTRO_RODADO) {
+            r = store.reconocerOrigenBloqueanteSecuestroRodado(id);
+        } else {
+            r = store.reconocerOrigenBloqueanteRetencionDocumental(id);
+        }
+        if (r.estado() == PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        CerrabilidadResponse c = mapCerrabilidad(r.cerrabilidad());
+        return new ReconocerOrigenBloqueanteMaterialAccionResponse(
+                "OK",
+                "Origen material de bloqueo de cierre reconocido (mock).",
+                r.actaId(),
+                r.origenBloqueante().name(),
+                c);
+    }
+
+    /**
+     * Registra en el expediente el documento mock resolutorio (no sustituye el
+     * cumplimiento material; usar
+     * {@link #registrarCumplimientoMaterialBloqueoCierre(String, String)}).
+     * Parámetro {@code tipo}: LEVANTAMIENTO_MEDIDA_PREVENTIVA, LIBERACION_RODADO,
+     * ENTREGA_DOCUMENTACION. Requiere origen material y acta en
+     * {@code PENDIENTE_ANALISIS}.
+     */
+    @PostMapping("/actas/{id}/acciones/registrar-resolucion-bloqueo-cierre")
+    public RegistrarResolucionBloqueoCierreAccionResponse registrarResolucionBloqueoCierreDocumental(
+            @PathVariable("id") String id,
+            @RequestParam("tipo") String tipo) {
+        PrototipoStore.PendienteBloqueanteCierreMock t = parsePendienteBloqueanteRequired(tipo);
+        PrototipoStore.RegistrarResolucionBloqueoCierreResultado r =
+                store.registrarResolucionBloqueoCierreDocumental(id, t);
+        if (r.estado() == PrototipoStore.RegistrarResolucionBloqueoCierreEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        CerrabilidadResponse c = new CerrabilidadResponse(
+                r.resultadoFinal().name(),
+                r.cerrable(),
+                r.pendientesBloqueantesCierreRestantes(),
+                r.motivoNoCerrable());
+        return new RegistrarResolucionBloqueoCierreAccionResponse(
+                "OK",
+                "Documento resolutorio mock incorporado; el bloqueo persiste hasta registrar cumplimiento material efectivo.",
+                r.actaId(),
+                r.documentoId(),
+                r.tipoDocumento(),
+                r.pendienteAsociado(),
+                c);
+    }
+
+    /**
+     * Registro mock de cumplimiento material (medida levantada, rodado
+     * liberado, documentación entregada). Requiere documento resolutorio y origen
+     * coherentes. Parámetro {@code tipo} igual a
+     * {@link #registrarResolucionBloqueoCierreDocumental(String, String)}.
+     */
+    @PostMapping("/actas/{id}/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+    public RegistrarCumplimientoMaterialBloqueoCierreAccionResponse registrarCumplimientoMaterialBloqueoCierre(
+            @PathVariable("id") String id,
+            @RequestParam("tipo") String tipo) {
+        return ejecutarRegistrarCumplimientoMaterialBloqueoCierre(id, tipo);
+    }
+
+    private RegistrarCumplimientoMaterialBloqueoCierreAccionResponse ejecutarRegistrarCumplimientoMaterialBloqueoCierre(
+            String id, String tipo) {
+        PrototipoStore.PendienteBloqueanteCierreMock t = parsePendienteBloqueanteRequired(tipo);
+        PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreResultado r =
+                store.registrarCumplimientoMaterialBloqueoCierre(id, t);
+        if (r.estado() == PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        CerrabilidadResponse c = new CerrabilidadResponse(
+                r.resultadoFinal().name(),
+                r.cerrable(),
+                r.pendientesBloqueantesCierreRestantes(),
+                r.motivoNoCerrable());
+        return new RegistrarCumplimientoMaterialBloqueoCierreAccionResponse(
+                "OK",
+                "Cumplimiento material efectivo registrado (mock).",
+                r.actaId(),
+                r.pendienteCumplido(),
+                c);
+    }
+
+    @PostMapping("/actas/{id}/acciones/observar-pago-informado")
+    public ObservarPagoInformadoAccionResponse observarPagoInformado(@PathVariable("id") String id) {
+        PrototipoStore.ObservarPagoInformadoResultado r = store.observarPagoInformado(id);
+        if (r.estado() == PrototipoStore.ObservarPagoInformadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ObservarPagoInformadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new ObservarPagoInformadoAccionResponse(
+                "OK",
+                "Pago observado/no confirmado internamente (mock).",
+                r.actaId(),
+                r.situacionPago().name());
     }
 
     @PostMapping("/actas/{id}/acciones/registrar-notificacion-vencida")
@@ -482,18 +777,23 @@ public class PrototipoApiController {
                 a.estadoProcesoActual(),
                 a.situacionAdministrativaActual(),
                 a.bandejaActual(),
+                store.getSituacionPago(a.id()).name(),
                 store.getAccionPendiente(a.id()),
                 store.getMotivoArchivo(a.id()),
-                store.getTipoGestionExterna(a.id()));
+                store.getTipoGestionExterna(a.id()),
+                mapCerrabilidad(store.getCerrabilidadActa(a.id())));
     }
 
     private ActaDetalleResponse mapActaDetalle(ActaMock a) {
+        PrototipoStore.PagoInformadoMock pagoInformado = store.getPagoInformado(a.id());
         return new ActaDetalleResponse(
                 a.id(),
                 a.numeroActa(),
                 a.bloqueActual(),
                 a.estadoProcesoActual(),
                 a.situacionAdministrativaActual(),
+                store.getSituacionPago(a.id()).name(),
+                mapPagoInformado(pagoInformado),
                 a.estaCerrada(),
                 a.permiteReingreso(),
                 a.fechaCreacion(),
@@ -508,7 +808,91 @@ public class PrototipoApiController {
                 store.listarPiezasGeneradas(a.id()),
                 store.getAccionPendiente(a.id()),
                 store.getMotivoArchivo(a.id()),
-                store.getTipoGestionExterna(a.id()));
+                store.getTipoGestionExterna(a.id()),
+                mapCerrabilidad(store.getCerrabilidadActa(a.id())),
+                mapHechosMateriales(store.getHechosMaterialesActa(a.id())));
+    }
+
+    private HechosMaterialesActaResponse mapHechosMateriales(PrototipoStore.HechosMaterialesActaVista v) {
+        if (v == null || v.ejes() == null) {
+            return new HechosMaterialesActaResponse(List.of());
+        }
+        return new HechosMaterialesActaResponse(
+                v.ejes().stream()
+                        .map(
+                                e -> new HechosMaterialesEjeResponse(
+                                        e.clave(),
+                                        e.etiqueta(),
+                                        e.fase().name(),
+                                        e.bloqueaCierre(),
+                                        e.descripcion()))
+                        .toList());
+    }
+
+    private PrototipoStore.SituacionPagoMock parseSituacionPago(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return PrototipoStore.SituacionPagoMock.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "situacionPago inválida: " + raw);
+        }
+    }
+
+    private PrototipoStore.ResultadoFinalCierreMock parseResultadoFinalCierre(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return PrototipoStore.ResultadoFinalCierreMock.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resultadoFinal inválido: " + raw);
+        }
+    }
+
+    private PrototipoStore.PendienteBloqueanteCierreMock parsePendienteBloqueante(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return PrototipoStore.PendienteBloqueanteCierreMock.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "pendienteBloqueante inválido: " + raw);
+        }
+    }
+
+    private PrototipoStore.PendienteBloqueanteCierreMock parsePendienteBloqueanteRequired(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipo de pendiente requerido");
+        }
+        try {
+            return PrototipoStore.PendienteBloqueanteCierreMock.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipo de pendiente inválido: " + raw);
+        }
+    }
+
+    private CerrabilidadResponse mapCerrabilidad(PrototipoStore.CerrabilidadActaVista v) {
+        if (v == null) {
+            return new CerrabilidadResponse("SIN_RESULTADO_FINAL", false, List.of(), "Sin acta.");
+        }
+        return new CerrabilidadResponse(
+                v.resultadoFinal().name(),
+                v.cerrable(),
+                v.pendientesBloqueantes().stream().map(Enum::name).toList(),
+                v.motivoNoCerrable());
+    }
+
+    private PagoInformadoResponse mapPagoInformado(PrototipoStore.PagoInformadoMock p) {
+        if (p == null) {
+            return null;
+        }
+        ComprobanteMockResponse comprobante = null;
+        if (p.comprobanteId() != null || p.comprobanteNombreArchivo() != null) {
+            comprobante = new ComprobanteMockResponse(p.comprobanteId(), p.comprobanteNombreArchivo());
+        }
+        return new PagoInformadoResponse(p.fechaInformado(), comprobante);
     }
 
     private ActaEventoResponse mapActaEvento(ActaEventoMock e) {
@@ -537,5 +921,26 @@ public class PrototipoApiController {
                 n.canal(),
                 n.estadoNotificacion(),
                 n.destinatarioResumen());
+    }
+
+    private enum TipoReconocimientoOrigenBloqueo {
+        /**
+         * Ancla: documento de tipo {@code MEDIDA_PREVENTIVA} en el expediente
+         * (origen {@code MEDIDA_PREVENTIVA_ACTIVA}).
+         */
+        MEDIDA_ACTIVA,
+        SECUESTRO_RODADO,
+        RETENCION_DOCUMENTAL;
+
+        static TipoReconocimientoOrigenBloqueo parse(String raw) {
+            if (raw == null || raw.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipo requerido");
+            }
+            try {
+                return TipoReconocimientoOrigenBloqueo.valueOf(raw.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "tipo inválido: " + raw);
+            }
+        }
     }
 }

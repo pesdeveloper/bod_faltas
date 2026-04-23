@@ -9,6 +9,8 @@ public record ActaDetalleResponse(
         String bloqueActual,
         String estadoProcesoActual,
         String situacionAdministrativaActual,
+        String situacionPago,
+        PagoInformadoResponse pagoInformado,
         boolean estaCerrada,
         boolean permiteReingreso,
         LocalDateTime fechaCreacion,
@@ -23,5 +25,7 @@ public record ActaDetalleResponse(
         List<String> piezasGeneradas,
         String accionPendiente,
         String motivoArchivo,
-        String tipoGestionExterna) {
+        String tipoGestionExterna,
+        CerrabilidadResponse cerrabilidad,
+        HechosMaterialesActaResponse hechosMateriales) {
 }

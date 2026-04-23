@@ -40,14 +40,17 @@ final class CierreSupport {
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, String> accionPendientePorActa;
+    private final CerrabilidadSupport cerrabilidad;
 
     CierreSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
-            Map<String, String> accionPendientePorActa) {
+            Map<String, String> accionPendientePorActa,
+            CerrabilidadSupport cerrabilidad) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
+        this.cerrabilidad = cerrabilidad;
     }
 
     /**
@@ -65,6 +68,10 @@ final class CierreSupport {
                     PrototipoStore.CerrarActaEstado.NOT_FOUND, null, null, null);
         }
         if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())) {
+            return new PrototipoStore.CerrarActaResultado(
+                    PrototipoStore.CerrarActaEstado.CONFLICT, null, null, null);
+        }
+        if (!cerrabilidad.puedeCerrarDesdeAnalisis(actaId)) {
             return new PrototipoStore.CerrarActaResultado(
                     PrototipoStore.CerrarActaEstado.CONFLICT, null, null, null);
         }

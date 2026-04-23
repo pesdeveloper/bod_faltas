@@ -8,7 +8,9 @@ public record ActaBandejaItemResponse(
         String estadoProcesoActual,
         String situacionAdministrativaActual,
         String bandejaActual,
+        String situacionPago,
         String accionPendiente,
         String motivoArchivo,
-        String tipoGestionExterna) {
+        String tipoGestionExterna,
+        CerrabilidadResponse cerrabilidad) {
 }
