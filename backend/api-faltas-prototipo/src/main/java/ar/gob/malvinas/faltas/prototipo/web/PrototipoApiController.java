@@ -43,12 +43,17 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarDesdeGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionVencidaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.BromatologiaDatoResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.CrearActaMockDemoRequest;
+import ar.gob.malvinas.faltas.prototipo.web.dto.TransitoDatoResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -82,6 +87,21 @@ public class PrototipoApiController {
                 "OK",
                 "Escenario mock reinicializado",
                 store.getActas().size());
+    }
+
+    /**
+     * Alta mínima de acta mock en vivo (demo), numeración {@code ACTA-DEMO-nnnn}.
+     * Consistente con anclas y proyección material del prototipo in-memory.
+     */
+    @PostMapping("/actas/mock")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ActaDetalleResponse crearActaMockDemo(@RequestBody CrearActaMockDemoRequest request) {
+        PrototipoStore.CrearActaMockDemoResultado r = store.crearActaMockDemo(request);
+        if (r.estado() == PrototipoStore.CrearActaMockDemoEstado.BAD_REQUEST) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, r.mensaje() != null ? r.mensaje() : "Solicitud inválida (demo).");
+        }
+        return mapActaDetalle(r.acta());
     }
 
     @GetMapping("/bandejas")
@@ -895,7 +915,21 @@ public class PrototipoApiController {
                 store.getMotivoArchivo(a.id()),
                 store.getTipoGestionExterna(a.id()),
                 mapCerrabilidad(store.getCerrabilidadActa(a.id())),
-                mapHechosMateriales(store.getHechosMaterialesActa(a.id())));
+                mapHechosMateriales(store.getHechosMaterialesActa(a.id())),
+                store.getDependenciaDemo(a.id()).orElse(null),
+                store.getTipoActaAltaDemo(a.id()).orElse(null),
+                store.getActaTransitoMock(a.id())
+                        .map(
+                                t ->
+                                        new TransitoDatoResponse(
+                                                t.ejeUrbano(),
+                                                t.rodadoRetenidoOSecuestrado(),
+                                                t.documentacionRetenida(),
+                                                t.medidaPreventivaAplicable()))
+                        .orElse(null),
+                store.getActaBromatologiaMock(a.id())
+                        .map(b -> new BromatologiaDatoResponse(b.decomisoSustanciasAlimenticias()))
+                        .orElse(null));
     }
 
     private HechosMaterialesActaResponse mapHechosMateriales(PrototipoStore.HechosMaterialesActaVista v) {

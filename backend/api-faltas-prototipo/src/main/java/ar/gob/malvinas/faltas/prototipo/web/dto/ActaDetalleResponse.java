@@ -27,5 +27,9 @@ public record ActaDetalleResponse(
         String motivoArchivo,
         String tipoGestionExterna,
         CerrabilidadResponse cerrabilidad,
-        HechosMaterialesActaResponse hechosMateriales) {
+        HechosMaterialesActaResponse hechosMateriales,
+        String dependenciaDemo,
+        String tipoActaDemo,
+        TransitoDatoResponse datosTransito,
+        BromatologiaDatoResponse datosBromatologia) {
 }

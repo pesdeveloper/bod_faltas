@@ -7,6 +7,7 @@ package ar.gob.malvinas.faltas.prototipo.domain;
  * para nacimiento demo y proyección a anclas/condiciones de material.
  */
 public record ActaTransitoMock(
+        boolean ejeUrbano,
         boolean rodadoRetenidoOSecuestrado,
         boolean documentacionRetenida,
         boolean medidaPreventivaAplicable) {

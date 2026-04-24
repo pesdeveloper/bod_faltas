@@ -229,6 +229,20 @@ Según criterio, puede terminar generando otra acta, pero el modelo no debe impe
 
 El caso `ACTA-0026` representa una medida preventiva posterior durante trámite.
 
+#### Bromatología
+
+En actas de bromatología, el decomiso de sustancias alimenticias debe tratarse como dato propio del acta o de su satélite mock.
+
+No debe modelarse automáticamente como medida preventiva genérica.
+
+Regla vigente:
+
+- `decomisoSustanciasAlimenticias` es dato propio
+- no genera `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- no genera `LIBERACION_RODADO`
+- no genera `ENTREGA_DOCUMENTACION`
+- un posible eje futuro podría ser `LIBERACION_DECOMISO`, pero no está implementado todavía
+
 ### Endpoint de constatación material temprana
 
 El endpoint de constatación material temprana puede seguir existiendo como herramienta demo/técnica/regresión.
@@ -243,6 +257,35 @@ Reglas:
 - no debe exponerse como “acciones disponibles” genéricas para tránsito
 
 `ACTA-0025` puede usarse como caso de regresión del endpoint.
+
+### Alta mock mínima de acta demo
+
+El prototipo permite crear actas mock mínimas en vivo para la demo funcional-operativa.
+
+Objetivo:
+
+- permitir que usuarios del Tribunal creen casos durante la reunión
+- validar circuitos y movimientos operativos con botones de acciones de negocio
+- no depender únicamente de actas precargadas
+- no reemplazar el labrado real final
+
+Endpoint vigente:
+
+- `POST /api/prototipo/actas/mock`
+
+Reglas:
+
+- genera numeración demo automática `ACTA-DEMO-0001+`
+- nace en `ACTAS_EN_ENRIQUECIMIENTO`
+- queda visible en detalle
+- queda visible en listado de bandeja
+- permite dependencias demo:
+  - `TRANSITO`
+  - `INSPECCIONES`
+  - `FISCALIZACION`
+  - `BROMATOLOGIA`
+- permite flags mínimos por dependencia
+- no carga personas, artículos, normativa, domicilios completos, documentos reales, PDFs ni integraciones
 
 ### Resoluciones desde instancias operativas
 
@@ -450,6 +493,7 @@ Priorizar:
 - ejecutar `mvn test`
 - revisar nombres muy confusos si afectan demo
 - commitear estado consistente
+- preparar guion funcional de demo
 
 No priorizar ahora:
 

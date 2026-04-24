@@ -1803,7 +1803,7 @@ public class MockDataFactory {
     private void cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(PrototipoStore store) {
         String id = "ACTA-0024";
         String bandeja = BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
-        ActaTransitoMock tr = new ActaTransitoMock(true, true, true);
+        ActaTransitoMock tr = new ActaTransitoMock(true, true, true, true);
         store.putActaTransitoMock(id, tr);
         ActaMock acta = new ActaMock(
                 id,

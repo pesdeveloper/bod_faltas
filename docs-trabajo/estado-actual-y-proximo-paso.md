@@ -53,6 +53,7 @@ El prototipo backend ya cubre un conjunto funcional importante del circuito demo
 - condiciones materiales de tránsito nacidas desde datos mock del acta
 - medida preventiva posterior en contravención durante trámite administrativo
 - resoluciones permitidas desde `ENRIQUECIMIENTO` y otras instancias operativas
+- alta mock mínima de acta demo en vivo
 - recorridos demo reproducibles de punta a punta
 
 ---
@@ -244,7 +245,118 @@ Reglas vigentes:
 - requiere resolutorio documental
 - requiere cumplimiento material efectivo
 
-### 2.11 Resoluciones sobre el acta
+### 2.11 Alta mock mínima de acta demo
+
+El prototipo permite crear/labrar actas mock mínimas en vivo para la demo funcional-operativa.
+
+Objetivo:
+
+- no depender únicamente de actas precargadas
+- permitir que usuarios del Tribunal creen casos simples durante la reunión
+- validar circuitos reales mediante botones de acción de negocio
+- evitar carga completa de dominio real en esta etapa
+
+No se cargan todavía:
+
+- personas
+- infractores
+- artículos infringidos
+- normativa
+- domicilios completos
+- documentos reales
+- PDFs reales
+- firma real
+- integraciones
+
+Endpoint vigente:
+
+- `POST /api/prototipo/actas/mock`
+
+Reglas vigentes:
+
+- genera número demo automático:
+  - `ACTA-DEMO-0001`
+  - `ACTA-DEMO-0002`
+  - etc.
+- el id y el número de acta demo coinciden en el prototipo
+- el contador se reinicia con `POST /reset`
+- el acta nace en `ACTAS_EN_ENRIQUECIMIENTO`
+- queda visible en detalle
+- queda visible en listado de bandeja `ACTAS_EN_ENRIQUECIMIENTO`
+- genera evento mínimo de alta/labrado mock
+
+Dependencias demo mínimas:
+
+- `TRANSITO`
+- `INSPECCIONES`
+- `FISCALIZACION`
+- `BROMATOLOGIA`
+
+Datos mínimos según dependencia:
+
+#### Tránsito
+
+Datos posibles:
+
+- `ejeUrbano`
+- `rodadoRetenidoOSecuestrado`
+- `documentacionRetenida`
+
+Reglas:
+
+- se modelan como datos propios del acta de tránsito mock
+- usan `ActaTransitoMock`
+- no se modelan como acciones disponibles
+- si hay rodado retenido/secuestrado, proyecta `LIBERACION_RODADO`
+- si hay documentación retenida, proyecta `ENTREGA_DOCUMENTACION`
+
+#### Inspecciones
+
+Dato posible:
+
+- `medidaPreventivaClausura`
+
+Reglas:
+
+- se modela como medida preventiva de contravención/inspección
+- proyecta `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- no usa `ActaTransitoMock`
+
+#### Fiscalización
+
+Dato posible:
+
+- `medidaPreventivaParalizacionObra`
+
+Reglas:
+
+- se modela como medida preventiva de fiscalización/obra
+- proyecta `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- no usa `ActaTransitoMock`
+
+#### Bromatología
+
+Dato posible:
+
+- `decomisoSustanciasAlimenticias`
+
+Reglas:
+
+- se modela como dato propio del acta/satélite mock de bromatología
+- usa `ActaBromatologiaMock`
+- no es medida preventiva genérica
+- no genera `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- no genera `LIBERACION_RODADO`
+- no genera `ENTREGA_DOCUMENTACION`
+- un posible eje futuro sería `LIBERACION_DECOMISO`, pero no está implementado en este slice
+
+Validación:
+
+- dependencias desconocidas se rechazan
+- combinaciones inválidas de banderas por dependencia se rechazan con error controlado
+- no se reintroduce `hechosMateriales.accionesDisponibles`
+
+### 2.12 Resoluciones sobre el acta
 
 Regla vigente:
 
@@ -276,7 +388,7 @@ El eje material sigue siendo:
 
 - `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
 
-### 2.12 Archivo y reingreso
+### 2.13 Archivo y reingreso
 
 - existe macro-bandeja `ARCHIVO`
 - existe motivo de archivo
@@ -285,7 +397,7 @@ El eje material sigue siendo:
 - queda marca operativa de revisión post reingreso
 - mientras esté en `ARCHIVO`, no se admiten resoluciones internas
 
-### 2.13 Gestión externa
+### 2.14 Gestión externa
 
 - existe macro-bandeja `GESTION_EXTERNA`
 - existen tipos mínimos útiles:
@@ -318,6 +430,13 @@ El prototipo permite como mínimo:
 - ver eventos relevantes del caso demo
 
 ## 3.2 Acciones principales hoy disponibles
+
+### Alta mock demo
+
+- crear/labrar acta mock mínima mediante `POST /api/prototipo/actas/mock`
+- generar número demo automático
+- elegir dependencia demo
+- cargar flags mínimos por dependencia
 
 ### Documentales / resolutivas
 
@@ -495,6 +614,29 @@ Caso demo útil para validar:
 - cerrabilidad
 - cierre explícito
 
+## 4.12 `ACTA-DEMO-0001+` — actas mock creadas en vivo
+
+Casos generados durante la demo mediante:
+
+- `POST /api/prototipo/actas/mock`
+
+Útiles para validar:
+
+- creación de actas mínimas en vivo
+- numeración demo automática
+- aparición en detalle
+- aparición en bandeja `ACTAS_EN_ENRIQUECIMIENTO`
+- selección de dependencia demo
+- proyección de condiciones materiales según tipo
+- construcción de escenarios por usuarios del Tribunal durante la reunión
+
+Dependencias soportadas:
+
+- `TRANSITO`
+- `INSPECCIONES`
+- `FISCALIZACION`
+- `BROMATOLOGIA`
+
 ---
 
 ## 5. Recorrido demo integrado hoy disponible
@@ -525,6 +667,8 @@ Secuencia funcional esperable:
 
 También existe recorrido complementario `ACTA-0026` para demostrar medida preventiva posterior en contravención.
 
+Para la demo funcional-operativa, también puede usarse `POST /api/prototipo/actas/mock` para crear escenarios nuevos en vivo.
+
 ---
 
 ## 6. Refactors / limpiezas ya consolidadas
@@ -541,7 +685,9 @@ También existe recorrido complementario `ACTA-0026` para demostrar medida preve
 - eliminado `hechosMateriales.accionesDisponibles`
 - corregido `ACTA-0024` para que tránsito nazca desde datos mock del acta, no desde botones operativos
 - agregado `ActaTransitoMock`
+- agregado `ActaBromatologiaMock`
 - agregado caso `ACTA-0026` para medida preventiva posterior en contravención
+- agregado alta mock mínima de acta demo
 - separado eje material de circuito firma/notificación documental
 - evitado que `DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF` sea un bloqueante material
 - blindada resolución desde bandeja operativa adicional `PENDIENTE_FIRMA`
@@ -590,7 +736,18 @@ Y rechazo en:
 
 No hay tests dedicados para todas las demás bandejas operativas posibles.
 
-### 7.4 No pendiente inmediato
+### 7.4 Demo funcional-operativa
+
+El backend ya permite crear actas mock mínimas para la demo.
+
+Pendiente para la demo:
+
+- preparar guion de escenarios
+- definir qué botones se mostrarán en UI por bandeja
+- evitar presentar endpoints demo/técnicos como contratos finales
+- explicar claramente que el alta mock no reemplaza el labrado real futuro
+
+### 7.5 No pendiente inmediato
 
 No están en foco inmediato:
 
@@ -614,6 +771,8 @@ No están en foco inmediato:
 - el modelo de notificación real de resoluciones firmadas no está implementado
 - los documentos resolutivos con firma/notificación están representados solo a nivel mock
 - algunas bandejas operativas adicionales admiten resoluciones por regla general, pero no tienen test específico dedicado
+- `POST /api/prototipo/actas/mock` es un alta demo mínima, no el alta real final del sistema
+- bromatología/decomiso queda como dato propio del acta mock; el posible eje `LIBERACION_DECOMISO` no está implementado todavía
 
 ---
 
@@ -628,7 +787,8 @@ Orden recomendado:
 3. ejecutar `mvn test`
 4. corregir nombres mínimos si hay alguno muy confuso
 5. commitear estado backend demo
-6. recién después evaluar si queda algún micro-slice o si se pasa a otra capa
+6. preparar guion funcional de demo
+7. recién después evaluar si queda algún micro-slice o si se pasa a otra capa
 
 No conviene abrir ahora frentes grandes como DB real, seguridad real, PDFs reales o integraciones.
 

@@ -1,13 +1,16 @@
 package ar.gob.malvinas.faltas.prototipo.store;
 
+import ar.gob.malvinas.faltas.prototipo.domain.ActaBromatologiaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaTransitoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
+import ar.gob.malvinas.faltas.prototipo.web.dto.CrearActaMockDemoRequest;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,6 +18,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D1_CAPTURA;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_ADJUNTO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_ANCLA_MEDIDA_PREVENTIVA;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_VEHICULO;
 
 @Component
 public class PrototipoStore {
@@ -218,6 +230,28 @@ public class PrototipoStore {
             String actaId,
             String bandejaActual,
             String estadoProcesoActual) {
+    }
+
+    public enum CrearActaMockDemoEstado {
+        OK,
+        BAD_REQUEST
+    }
+
+    public record CrearActaMockDemoResultado(
+            CrearActaMockDemoEstado estado, String mensaje, ActaMock acta) {
+    }
+
+    public enum DependenciaActaDemo {
+        TRANSITO,
+        INSPECCIONES,
+        FISCALIZACION,
+        BROMATOLOGIA
+    }
+
+    public enum TipoActaDemo {
+        TRANSITO,
+        CONTRAVENCION,
+        BROMATOLOGIA
     }
 
     public enum ArchivarActaEstado {
@@ -739,6 +773,11 @@ public class PrototipoStore {
      */
     private final Map<String, ActaTransitoMock> actaTransitoMockPorActa = new LinkedHashMap<>();
 
+    private final Map<String, ActaBromatologiaMock> actaBromatologiaMockPorActa = new LinkedHashMap<>();
+    private final Map<String, String> dependenciaDemoPorActa = new LinkedHashMap<>();
+    private final Map<String, String> tipoActaDemoPorActa = new LinkedHashMap<>();
+    private final AtomicInteger contadorActaLabradoMockDemo = new AtomicInteger(0);
+
     /**
      * Soporte funcional del área archivo/reingreso: archivo directo desde
      * análisis, archivo post evaluación de vencimiento, reingreso desde
@@ -852,6 +891,29 @@ public class PrototipoStore {
         }
     }
 
+    public Optional<ActaBromatologiaMock> getActaBromatologiaMock(String actaId) {
+        return Optional.ofNullable(actaBromatologiaMockPorActa.get(actaId));
+    }
+
+    public void putActaBromatologiaMock(String actaId, ActaBromatologiaMock datos) {
+        if (actaId == null) {
+            return;
+        }
+        if (datos == null) {
+            actaBromatologiaMockPorActa.remove(actaId);
+        } else {
+            actaBromatologiaMockPorActa.put(actaId, datos);
+        }
+    }
+
+    public Optional<String> getDependenciaDemo(String actaId) {
+        return Optional.ofNullable(dependenciaDemoPorActa.get(actaId));
+    }
+
+    public Optional<String> getTipoActaAltaDemo(String actaId) {
+        return Optional.ofNullable(tipoActaDemoPorActa.get(actaId));
+    }
+
     public Map<String, List<ActaEventoMock>> getEventosPorActa() {
         return eventosPorActa;
     }
@@ -878,6 +940,10 @@ public class PrototipoStore {
         situacionPagoPorActa.clear();
         pagoInformadoPorActa.clear();
         actaTransitoMockPorActa.clear();
+        actaBromatologiaMockPorActa.clear();
+        dependenciaDemoPorActa.clear();
+        tipoActaDemoPorActa.clear();
+        contadorActaLabradoMockDemo.set(0);
         cerrabilidad.clear();
         archivoReingreso.clear();
         gestionExterna.clear();
@@ -1495,5 +1561,222 @@ public class PrototipoStore {
      */
     public RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(String actaId) {
         return pagoVoluntario.registrarSolicitudPagoVoluntario(actaId);
+    }
+
+    /**
+     * Crea un acta mock mínima para demo (numeración {@code ACTA-DEMO-nnnn}),
+     * con anclas/documentación coherente y satélites {@link ActaTransitoMock} /
+     * {@link ActaBromatologiaMock} según dependencia. Sin DB ni numeración
+     * real.
+     */
+    public CrearActaMockDemoResultado crearActaMockDemo(CrearActaMockDemoRequest r) {
+        if (r == null) {
+            return new CrearActaMockDemoResultado(CrearActaMockDemoEstado.BAD_REQUEST, "body requerido", null);
+        }
+        if (r.dependencia() == null || r.dependencia().isBlank()) {
+            return new CrearActaMockDemoResultado(
+                    CrearActaMockDemoEstado.BAD_REQUEST, "dependencia requerida", null);
+        }
+        final DependenciaActaDemo dep;
+        try {
+            dep = DependenciaActaDemo.valueOf(r.dependencia().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return new CrearActaMockDemoResultado(
+                    CrearActaMockDemoEstado.BAD_REQUEST, "dependencia desconocida: " + r.dependencia(), null);
+        }
+        boolean ejeUrbano = Boolean.TRUE.equals(r.ejeUrbano());
+        boolean rodado = Boolean.TRUE.equals(r.rodadoRetenidoOSecuestrado());
+        boolean doc = Boolean.TRUE.equals(r.documentacionRetenida());
+        boolean claus = Boolean.TRUE.equals(r.medidaPreventivaClausura());
+        boolean paral = Boolean.TRUE.equals(r.medidaPreventivaParalizacionObra());
+        boolean decom = Boolean.TRUE.equals(r.decomisoSustanciasAlimenticias());
+        TipoActaDemo tipo;
+        if (r.tipoActaDemo() != null && !r.tipoActaDemo().isBlank()) {
+            try {
+                tipo = TipoActaDemo.valueOf(r.tipoActaDemo().trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return new CrearActaMockDemoResultado(
+                        CrearActaMockDemoEstado.BAD_REQUEST, "tipoActaDemo inválido: " + r.tipoActaDemo(), null);
+            }
+        } else {
+            tipo =
+                    switch (dep) {
+                        case TRANSITO -> TipoActaDemo.TRANSITO;
+                        case BROMATOLOGIA -> TipoActaDemo.BROMATOLOGIA;
+                        case INSPECCIONES, FISCALIZACION -> TipoActaDemo.CONTRAVENCION;
+                    };
+        }
+        if (!validarTipoConDependencia(dep, tipo)) {
+            return new CrearActaMockDemoResultado(
+                    CrearActaMockDemoEstado.BAD_REQUEST, "dependencia y tipoActaDemo incompatibles (demo).", null);
+        }
+        if (!validarBanderasConDependencia(dep, ejeUrbano, rodado, doc, claus, paral, decom)) {
+            return new CrearActaMockDemoResultado(
+                    CrearActaMockDemoEstado.BAD_REQUEST, "banderas inválidas o incoherentes con la dependencia (demo).", null);
+        }
+
+        int n = contadorActaLabradoMockDemo.incrementAndGet();
+        String id = "ACTA-DEMO-" + String.format("%04d", n);
+        String numeracion = id;
+        while (actas.containsKey(id)) {
+            n = contadorActaLabradoMockDemo.incrementAndGet();
+            id = "ACTA-DEMO-" + String.format("%04d", n);
+            numeracion = id;
+        }
+        String sufijoDoc = "DEMO" + n;
+
+        dependenciaDemoPorActa.put(id, dep.name());
+        tipoActaDemoPorActa.put(id, tipo.name());
+        if (dep == DependenciaActaDemo.BROMATOLOGIA) {
+            actaBromatologiaMockPorActa.put(id, new ActaBromatologiaMock(decom));
+        }
+        if (dep == DependenciaActaDemo.TRANSITO) {
+            ActaTransitoMock tr = new ActaTransitoMock(ejeUrbano, rodado, doc, false);
+            actaTransitoMockPorActa.put(id, tr);
+            agregarAnclasMaterialesDesdeTransito(id, tr, sufijoDoc);
+        } else if (dep == DependenciaActaDemo.INSPECCIONES) {
+            anclaSoloMedida(id, claus, sufijoDoc, "ancla_clausura_inspeccion");
+        } else if (dep == DependenciaActaDemo.FISCALIZACION) {
+            anclaSoloMedida(id, paral, sufijoDoc, "ancla_paralizacion_obra");
+        }
+
+        List<ActaDocumentoMock> docsCreados = documentosPorActa.getOrDefault(id, List.of());
+        String dominio;
+        if (dep == DependenciaActaDemo.TRANSITO) {
+            dominio = ejeUrbano ? "TRANSITO_URBANO" : "TRANSITO";
+        } else if (dep == DependenciaActaDemo.BROMATOLOGIA) {
+            dominio = "BROMATOLOGIA";
+        } else {
+            dominio = dep == DependenciaActaDemo.INSPECCIONES ? "INSPECCIONES" : "FISCALIZACION_OBRA";
+        }
+        String res =
+                "Alta acta mock demo: dependencia "
+                        + dep
+                        + ", tipo "
+                        + tipo
+                        + (dep == DependenciaActaDemo.BROMATOLOGIA && decom
+                                ? "; decomiso (sust. alimenticias) en expediente (mock, no medida)."
+                                : ".");
+        ActaMock acta =
+                new ActaMock(
+                        id,
+                        numeracion,
+                        dominio,
+                        BLOQUE_D1_CAPTURA,
+                        "EN_CURSO",
+                        "ACTIVA",
+                        false,
+                        true,
+                        !docsCreados.isEmpty(),
+                        false,
+                        LocalDateTime.now(),
+                        "Infractor pendiente (demo)",
+                        "—",
+                        "Sistema (labrado demo)",
+                        res,
+                        BANDEJA_ACTAS_EN_ENRIQUECIMIENTO);
+        actas.put(id, acta);
+        int idxEvt = 1;
+        agregarEventoCrear(
+                id,
+                "EVT-" + id + "-" + String.format("%02d", idxEvt),
+                "LABRADO_MOCK",
+                "Alta acta mock mínima (prototipo in-memory) para prueba de circuito (demo " + n + ").");
+        return new CrearActaMockDemoResultado(CrearActaMockDemoEstado.OK, null, acta);
+    }
+
+    private void agregarEventoCrear(String actaId, String eventoId, String tipo, String descripcion) {
+        List<ActaEventoMock> lista = eventosPorActa.get(actaId);
+        if (lista == null) {
+            lista = new ArrayList<>();
+            eventosPorActa.put(actaId, lista);
+        }
+        lista.add(
+                new ActaEventoMock(
+                        eventoId,
+                        actaId,
+                        LocalDateTime.now(),
+                        tipo,
+                        BLOQUE_D1_CAPTURA,
+                        BLOQUE_D1_CAPTURA,
+                        descripcion));
+    }
+
+    private void agregarAnclasMaterialesDesdeTransito(
+            String id, ActaTransitoMock tr, String sf) {
+        int seq = 1;
+        if (tr.rodadoRetenidoOSecuestrado()) {
+            agregarOAncla(
+                    id,
+                    "DOC-" + sf + "-" + seq,
+                    TIPO_DOC_ACUSE_RETENCION_VEHICULO,
+                    "mock_retencion_rodado_" + seq + ".pdf");
+            seq++;
+        }
+        if (tr.documentacionRetenida()) {
+            agregarOAncla(
+                    id,
+                    "DOC-" + sf + "-" + seq,
+                    TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL,
+                    "mock_constatacion_doc_" + seq + ".pdf");
+            seq++;
+        }
+        if (tr.medidaPreventivaAplicable()) {
+            anclaMedida(
+                    id, "DOC-" + sf + "-" + seq, "mock_constatacion_medida_" + seq + ".pdf");
+        }
+    }
+
+    private void agregarOAncla(
+            String id, String docId, String tipo, String nombre) {
+        List<ActaDocumentoMock> docs = documentosPorActa.get(id);
+        if (docs == null) {
+            docs = new ArrayList<>();
+            documentosPorActa.put(id, docs);
+        }
+        docs.add(new ActaDocumentoMock(docId, id, tipo, ESTADO_DOC_ADJUNTO, nombre));
+    }
+
+    private void anclaMedida(String actaId, String docId, String nombre) {
+        List<ActaDocumentoMock> docs = documentosPorActa.get(actaId);
+        if (docs == null) {
+            docs = new ArrayList<>();
+            documentosPorActa.put(actaId, docs);
+        }
+        docs.add(
+                new ActaDocumentoMock(
+                        docId, actaId, TIPO_ANCLA_MEDIDA_PREVENTIVA, ESTADO_DOC_EMITIDO, nombre));
+    }
+
+    private void anclaSoloMedida(
+            String actaId, boolean requiere, String sf, String baseNombre) {
+        if (!requiere) {
+            return;
+        }
+        anclaMedida(actaId, "DOC-" + sf + "-1", baseNombre + ".pdf");
+    }
+
+    private static boolean validarBanderasConDependencia(
+            DependenciaActaDemo d,
+            boolean ejeU,
+            boolean rod,
+            boolean docR,
+            boolean claus,
+            boolean paral,
+            boolean decom) {
+        return switch (d) {
+            case TRANSITO -> !decom && !claus && !paral;
+            case INSPECCIONES -> !ejeU && !rod && !docR && !decom && !paral;
+            case FISCALIZACION -> !ejeU && !rod && !docR && !decom && !claus;
+            case BROMATOLOGIA -> !ejeU && !rod && !docR && !claus && !paral;
+        };
+    }
+
+    private static boolean validarTipoConDependencia(DependenciaActaDemo d, TipoActaDemo t) {
+        return switch (d) {
+            case TRANSITO -> t == TipoActaDemo.TRANSITO;
+            case BROMATOLOGIA -> t == TipoActaDemo.BROMATOLOGIA;
+            case INSPECCIONES, FISCALIZACION -> t == TipoActaDemo.CONTRAVENCION;
+        };
     }
 }
