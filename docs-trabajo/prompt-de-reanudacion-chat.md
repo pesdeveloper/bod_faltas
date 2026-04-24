@@ -15,7 +15,7 @@ Estamos retomando el prototipo backend del sistema de faltas municipal.
 
 Este prototipo no debe quedar como una demo de happy path.
 
-La meta es que represente de forma **navegable, accionable y coherente** el comportamiento real del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual.
+La meta es que represente de forma navegable, accionable y coherente el comportamiento real del sistema, con simplificaciones técnicas controladas pero sin romper el modelo conceptual.
 
 ### Simplificaciones permitidas
 
@@ -36,11 +36,15 @@ La meta es que represente de forma **navegable, accionable y coherente** el comp
 - convivencia de circuitos contradictorios
 - cerrar automáticamente cuando el modelo real exige más condiciones
 - confundir documento emitido con hecho material cumplido
+- confundir resolución generada con resolución firmada
+- confundir resolución firmada con resolución notificada
+- confundir notificación con cumplimiento material
 - deformar estados, transiciones, firma, notificación, archivo, gestión externa, reingreso o cierre por comodidad técnica
 
 ## Regla principal
 
-La demo no debe ser un atajo conceptual.  
+La demo no debe ser un atajo conceptual.
+
 Debe ser una base realista del sistema final.
 
 Eso implica:
@@ -50,6 +54,7 @@ Eso implica:
 - detalle fino en estructuras específicas
 - transiciones coherentes con el modelo final
 - fidelidad entre resultado final del expediente y cerrabilidad real
+- separación estricta entre documento, acto, firma, notificación, cumplimiento material y cierre
 
 ## Estado de continuidad
 
@@ -73,12 +78,12 @@ Este prompt es el marco metodológico y estructural.
 
 ### Nulidad
 
-- nulidad se trata como **pieza no-fallo**
+- nulidad se trata como pieza no-fallo
 - no existe bandeja terminal autónoma `NULAS`
 - vive dentro del circuito documental/resolutivo
 - el caso demo de nulidad se genera como documento `NULIDAD` pendiente de firma
-- cuando el **último documento firmado** es de tipo `NULIDAD`, la acta pasa a `CERRADAS`
-- nulidad post-firma **no** entra al circuito común de notificación
+- cuando el último documento firmado es de tipo `NULIDAD`, la acta pasa a `CERRADAS`
+- nulidad post-firma no entra al circuito común de notificación
 - la salida post-firma de nulidad es terminal/invalidante dentro del prototipo actual
 
 ### Piezas y agregadores
@@ -130,7 +135,7 @@ El prototipo ya distingue entre:
 
 Reglas:
 
-- el pago no se considera “real” por el solo hecho de ser informado
+- el pago no se considera real por el solo hecho de ser informado
 - el comprobante no basta por sí solo
 - la confirmación mock de pago deja `resultadoFinal = PAGO_CONFIRMADO`
 - `PAGO_CONFIRMADO` no cierra automáticamente el expediente
@@ -142,11 +147,11 @@ Solo son compatibles con cierre:
 - `ABSUELTO`
 - `PAGO_CONFIRMADO`
 
-Pero eso **no** significa cierre automático.
+Pero eso no significa cierre automático.
 
 La regla consolidada es:
 
-**Cerrable = (`ABSUELTO` o `PAGO_CONFIRMADO`) y sin pendientes materiales/documentales activos**
+Cerrable = (`ABSUELTO` o `PAGO_CONFIRMADO`) y sin pendientes materiales/documentales activos.
 
 ### Pendientes materiales / documentales
 
@@ -159,15 +164,21 @@ Pendientes bloqueantes mínimos del prototipo:
 Reglas:
 
 - un documento resolutorio no equivale por sí solo al cumplimiento material
+- la firma de un documento resolutorio no equivale al cumplimiento material
+- la notificación de un documento resolutorio no equivale al cumplimiento material
 - debe distinguirse entre:
   - origen material
   - documento resolutorio emitido
+  - documento pendiente de firma si aplica
+  - documento firmado si aplica
+  - documento pendiente/listo para notificación si aplica
+  - documento notificado si aplica
   - cumplimiento material efectivo
-- el bloqueante desaparece por el cumplimiento material efectivo, no por la mera existencia del documento
+- el bloqueante desaparece por el cumplimiento material efectivo, no por la mera existencia del documento, firma o notificación
 
 ### Hechos materiales vs expediente documental
 
-El prototipo ya separa mejor la lectura entre:
+El prototipo separa la lectura entre:
 
 - plano documental del expediente
 - plano de hechos materiales
@@ -182,37 +193,125 @@ Se expone una vista de hechos materiales por eje, para distinguir:
 
 La cerrabilidad sigue dependiendo de la lógica consolidada, no del solo expediente documental.
 
-### Condiciones materiales tempranas
+### Condiciones materiales según origen
 
-El prototipo ya soporta acciones tempranas mínimas en `D1` / `D2` para registrar:
+No todas las condiciones materiales nacen igual.
 
-- secuestro / retención de rodado
-- retención documental
-- medida preventiva aplicable
+#### Tránsito
 
-Estas acciones usan las mismas anclas documentales que luego alimentan:
+En actas de tránsito, la retención documental y la retención/secuestro de rodado deben tratarse como datos propios del acta de tránsito o de su satélite mock.
 
-- hechos materiales
-- orígenes de bloqueo
+No deben modelarse como acciones disponibles genéricas del circuito.
+
+Pueden proyectar:
+
+- `hechosMateriales`
+- `pendientesBloqueantesCierre`
+- `lecturaOperativa`
 - cerrabilidad
-- circuito resolutorio posterior
 
-No debe existir una “doble verdad” entre condición temprana y bloqueo posterior.
+El caso `ACTA-0024` representa este criterio con `ActaTransitoMock`.
 
-### Demo reproducible
+#### Contravención
 
-Existe un recorrido demo reproducible de punta a punta sobre un caso temprano, que combina:
+En actas de contravención, una medida preventiva puede nacer:
 
-- constataciones materiales tempranas
-- paso a análisis
-- pago voluntario / pago informado / comprobante / confirmación
-- bloqueantes materiales
-- resolutorio documental
-- cumplimiento material efectivo
-- cerrabilidad
-- cierre final por API
+- en el labrado del acta
+- durante el trámite administrativo
+- por inspección posterior
+- por noticia administrativa o nuevo hecho vinculado
 
-El detalle operativo de casos demo y endpoints vive en `estado-actual-y-proximo-paso.md`.
+Ejemplo:
+
+- rotura de faja de clausura
+
+Según criterio, puede terminar generando otra acta, pero el modelo no debe impedir que una medida preventiva posterior nazca dentro del proceso administrativo de una contravención existente.
+
+El caso `ACTA-0026` representa una medida preventiva posterior durante trámite.
+
+### Endpoint de constatación material temprana
+
+El endpoint de constatación material temprana puede seguir existiendo como herramienta demo/técnica/regresión.
+
+Pero no debe ser la verdad principal para datos constitutivos del acta de tránsito.
+
+Reglas:
+
+- debe estar restringido a D1/D2 o etapa temprana válida
+- debe controlar duplicados
+- no debe crear doble verdad con datos propios del acta
+- no debe exponerse como “acciones disponibles” genéricas para tránsito
+
+`ACTA-0025` puede usarse como caso de regresión del endpoint.
+
+### Resoluciones desde instancias operativas
+
+Desde `ENRIQUECIMIENTO` ya debe ser posible dictar resoluciones sobre el acta.
+
+En general, las resoluciones sobre el acta pueden dictarse en instancias operativas, salvo:
+
+- `GESTION_EXTERNA`
+- `ARCHIVO`
+- `CERRADAS`
+
+No debe limitarse por defecto la generación de resoluciones a `PENDIENTE_ANALISIS`.
+
+Regla vigente del prototipo:
+
+- se admiten en `ACTAS_EN_ENRIQUECIMIENTO`
+- se admiten en `PENDIENTE_ANALISIS`
+- se admiten en `PENDIENTE_FIRMA`
+- se rechazan en `GESTION_EXTERNA`
+- se rechazan en `ARCHIVO`
+- se rechazan en `CERRADAS`
+
+### Resolución, firma, notificación y cumplimiento material
+
+No asumir equivalencias falsas:
+
+- dictar/generar resolución no equivale a firmarla
+- firmar una resolución no equivale a notificarla
+- notificar una resolución no equivale a cumplimiento material efectivo
+
+Si el documento resolutivo requiere firma:
+
+- debe quedar pendiente de firma
+- debe pasar por el circuito/motor de firma vigente
+- no debe tratarse como firmado automáticamente
+
+Si además requiere notificación:
+
+- no debe quedar notificable antes de firmarse
+- recién luego de firmado puede quedar pendiente/listo para notificación, según el modelo vigente
+
+Si la resolución se vincula con un bloqueo material:
+
+- generar el documento no libera el bloqueo
+- firmar el documento no libera el bloqueo
+- notificar el documento no libera el bloqueo
+- solo el cumplimiento material efectivo libera el bloqueo
+
+Firma/notificación son propiedades o estados del documento resolutivo asociado, no nuevos ejes materiales de cierre.
+
+Ejemplo correcto:
+
+- eje material: `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- tipo documental posible: `DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF`
+
+El tipo documental no debe convertirse en un bloqueante material separado.
+
+### Bandeja operativa y documentos pendientes
+
+El acta puede estar en una bandeja operativa determinada y, al mismo tiempo, tener documentos resolutivos pendientes de firma o pendientes/listos para notificación.
+
+No asumir que todo el expediente debe moverse a una única bandeja global solo porque existe un documento pendiente de firma.
+
+Esto aplica especialmente a:
+
+- resoluciones sobre el acta
+- resoluciones de medidas preventivas
+- documentos de levantamiento de medidas
+- documentos que requieren firma y notificación
 
 ## Criterio de diseño
 
@@ -230,8 +329,9 @@ Pero priorizando siempre:
 
 - coherencia con el modelo final
 - un solo circuito verdadero por comportamiento
-- consistencia entre condiciones tempranas, circuito operativo y cierre
-- separación correcta entre documento, resultado final y hecho material
+- consistencia entre condiciones iniciales, circuito operativo y cierre
+- separación correcta entre documento, resultado final, firma, notificación y hecho material
+- no convertir variantes documentales en nuevos ejes materiales falsos
 
 ## Regla de trabajo para slices
 
@@ -333,8 +433,10 @@ Los puntos de entrada habituales del prototipo son:
 - `PrototipoStore`
 - supports funcionales por área
 - `MockDataFactory`
+- tests de integración del prototipo
 
-No asumir que todo debe tocarse.  
+No asumir que todo debe tocarse.
+
 Cada slice debe abrir solo la mínima superficie necesaria.
 
 ## Próximo paso sugerido
@@ -343,9 +445,21 @@ Después de esta consolidación, el siguiente paso natural debe elegirse sobre b
 
 Priorizar:
 
-- slices mínimos funcionales
-- continuidad entre condiciones tempranas y circuitos posteriores
-- cierre de huecos operativos reales antes de abrir nuevos frentes grandes
+- cerrar backend demo con diff limpio
+- asegurar archivos nuevos incorporados
+- ejecutar `mvn test`
+- revisar nombres muy confusos si afectan demo
+- commitear estado consistente
+
+No priorizar ahora:
+
+- DB real
+- seguridad real
+- integraciones reales
+- firma digital real
+- PDFs reales
+- tesorería real
+- notificación real
 
 ## Instrucción final
 

@@ -46,10 +46,14 @@ El prototipo backend ya cubre un conjunto funcional importante del circuito demo
 - separación entre:
   - origen material
   - resolutorio documental
+  - firma documental
+  - notificación documental
   - cumplimiento material efectivo
 - vista de hechos materiales separada de la lectura de cerrabilidad
-- condiciones materiales tempranas desde `D1` / `D2`
-- recorrido demo reproducible de punta a punta
+- condiciones materiales de tránsito nacidas desde datos mock del acta
+- medida preventiva posterior en contravención durante trámite administrativo
+- resoluciones permitidas desde `ENRIQUECIMIENTO` y otras instancias operativas
+- recorridos demo reproducibles de punta a punta
 
 ---
 
@@ -60,9 +64,42 @@ El prototipo backend ya cubre un conjunto funcional importante del circuito demo
 - el circuito viejo `pasar-a-notificacion` ya no es la verdad del sistema
 - la verdad vigente es la firma por documento
 - la operación central es `firmarDocumento(actaId, documentoId)`
+- los documentos tienen identidad propia
+- se firman de a uno
 - la acta solo sale de `PENDIENTE_FIRMA` cuando todas las piezas firmables quedaron en `FIRMADO`
+- un documento resolutivo puede estar pendiente de firma aunque el acta esté en una bandeja operativa distinta
 
-### 2.2 Nulidad
+### 2.2 Firma y notificación documental
+
+Regla consolidada:
+
+- generar/dictar una resolución no equivale a firmarla
+- firmar una resolución no equivale a notificarla
+- notificar una resolución no equivale a cumplimiento material efectivo
+
+Si un documento resolutivo requiere firma:
+
+- nace `PENDIENTE_FIRMA`
+- no queda firmado automáticamente
+- debe pasar por el circuito/mock de firma vigente
+
+Si además requiere notificación:
+
+- no debe quedar notificable antes de firmarse
+- luego de firmado puede quedar listo/pendiente para notificación según el modelo mock vigente
+- no se implementa notificación real en este prototipo
+
+Regla material:
+
+- ni generar el documento
+- ni firmarlo
+- ni notificarlo
+
+liberan por sí solos un bloqueo material.
+
+El bloqueo material se libera solo por cumplimiento material efectivo.
+
+### 2.3 Nulidad
 
 - la nulidad se modela como **pieza no-fallo**
 - no existe bandeja terminal `NULAS`
@@ -70,7 +107,7 @@ El prototipo backend ya cubre un conjunto funcional importante del circuito demo
 - nulidad post-firma **no** entra al circuito común de notificación
 - la nulidad post-firma es una salida terminal invalidante dentro del prototipo
 
-### 2.3 Pago
+### 2.4 Pago
 
 El prototipo distingue entre:
 
@@ -88,11 +125,11 @@ Reglas vigentes:
 - la confirmación mock del pago produce `resultadoFinal = PAGO_CONFIRMADO`
 - `PAGO_CONFIRMADO` **no** cierra automáticamente
 
-### 2.4 Cerrabilidad
+### 2.5 Cerrabilidad
 
 La regla consolidada es:
 
-**Cerrable = (`ABSUELTO` o `PAGO_CONFIRMADO`) y sin pendientes materiales/documentales activos**
+Cerrable = (`ABSUELTO` o `PAGO_CONFIRMADO`) y sin pendientes materiales/documentales activos.
 
 Eso implica:
 
@@ -103,7 +140,7 @@ cierran por sí solos el expediente.
 
 El cierre sigue siendo una acción posterior y explícita.
 
-### 2.5 Bloqueantes materiales/documentales
+### 2.6 Bloqueantes materiales/documentales
 
 Bloqueantes mínimos vigentes:
 
@@ -114,38 +151,141 @@ Bloqueantes mínimos vigentes:
 Reglas vigentes:
 
 - el resolutorio documental no basta por sí solo
+- la firma del resolutorio no basta por sí sola
+- la notificación del resolutorio no basta por sí sola
 - debe existir cumplimiento material efectivo
 - el expediente no queda cerrable mientras exista al menos un bloqueante activo
 
-### 2.6 Hechos materiales
+### 2.7 Hechos materiales
 
-El prototipo ya separa mejor:
+El prototipo separa:
 
 - plano documental del expediente
 - plano de hechos materiales
 - plano de cerrabilidad
 
-En la lectura del detalle de acta ya existe una vista separada de `hechosMateriales`, independiente de la vista de `cerrabilidad`.
+En la lectura del detalle de acta existe una vista separada de `hechosMateriales`, independiente de la vista de `cerrabilidad`.
 
-### 2.7 Condiciones materiales tempranas
+`hechosMateriales` expone:
 
-Ya existe soporte mínimo para registrar desde etapas tempranas (`D1` / `D2`):
+- ejes materiales
+- fase del eje
+- `ejeBloqueanteCierre`
+- `lecturaOperativa`
 
-- secuestro / retención de rodado
-- retención documental
-- medida preventiva aplicable
+La lectura distingue:
 
-Esto permite que más circuitos nazcan operativamente desde etapas tempranas y no solo desde seeds precargados.
+- condiciones materiales tempranas/iniciales
+- medida preventiva posterior durante trámite
+- resolutorios existentes sin cumplimiento material efectivo
 
-### 2.8 Archivo y reingreso
+### 2.8 Tránsito: condiciones materiales desde datos del acta
+
+Para tránsito, retención documental y retención/secuestro de rodado no se tratan como “botones” operativos del circuito.
+
+Regla vigente:
+
+- nacen como datos del acta de tránsito mock
+- se modelan mediante `ActaTransitoMock`
+- proyectan anclas documentales/orígenes materiales
+- alimentan:
+  - `hechosMateriales`
+  - `pendientesBloqueantesCierre`
+  - `lecturaOperativa`
+  - cerrabilidad
+
+`ACTA-0024` ya no depende de ejecutar acciones de constatación temprana para nacer con estas condiciones.
+
+No existe `hechosMateriales.accionesDisponibles`.
+
+### 2.9 Endpoint de constatación material temprana
+
+Sigue existiendo:
+
+- `registrar-constatacion-material-temprana`
+
+Pero su rol vigente es de herramienta demo/técnica/regresión, no verdad principal de `ACTA-0024`.
+
+Reglas vigentes:
+
+- restringido a etapa válida D1/D2
+- controla duplicados
+- rechaza fuera de etapa válida
+- no debe presentarse como mecanismo principal para datos constitutivos del acta de tránsito
+
+`ACTA-0025` queda como caso de regresión para este endpoint.
+
+### 2.10 Contravención: medida preventiva posterior
+
+En contravenciones, una medida preventiva puede:
+
+- nacer en el labrado
+- nacer después durante trámite administrativo
+- originarse por inspección posterior
+- originarse por noticia administrativa o nuevo hecho vinculado
+
+Ejemplo conceptual:
+
+- rotura de faja de clausura
+
+Esto puede terminar siendo otra acta según criterio, pero el modelo no debe impedir que, durante el proceso de una contravención existente, nazca una nueva medida preventiva.
+
+`ACTA-0026` representa este caso.
+
+Reglas vigentes:
+
+- no se mezcla con `ActaTransitoMock`
+- usa un endpoint específico:
+  - `registrar-medida-preventiva-posterior`
+- genera bloqueante:
+  - `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- se ve en `hechosMateriales`
+- afecta cerrabilidad
+- requiere resolutorio documental
+- requiere cumplimiento material efectivo
+
+### 2.11 Resoluciones sobre el acta
+
+Regla vigente:
+
+Desde `ENRIQUECIMIENTO` ya debe ser posible dictar resoluciones sobre el acta.
+
+En general, las resoluciones/resolutorios se admiten en instancias operativas, salvo:
+
+- `GESTION_EXTERNA`
+- `ARCHIVO`
+- `CERRADAS`
+
+No están limitadas rígidamente a `PENDIENTE_ANALISIS`.
+
+Está probado que se admiten en:
+
+- `ACTAS_EN_ENRIQUECIMIENTO`
+- `PENDIENTE_ANALISIS`
+- `PENDIENTE_FIRMA`
+
+Regla documental:
+
+- generar resolución no equivale a firmar
+- firmar no equivale a notificar
+- notificar no equivale a cumplimiento material
+
+`DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF` existe como tipo documental, no como eje/bloqueante material.
+
+El eje material sigue siendo:
+
+- `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+
+### 2.12 Archivo y reingreso
 
 - existe macro-bandeja `ARCHIVO`
 - existe motivo de archivo
 - existe reingreso explícito
 - el reingreso devuelve a `PENDIENTE_ANALISIS`
 - queda marca operativa de revisión post reingreso
+- mientras esté en `ARCHIVO`, no se admiten resoluciones internas
 
-### 2.9 Gestión externa
+### 2.13 Gestión externa
 
 - existe macro-bandeja `GESTION_EXTERNA`
 - existen tipos mínimos útiles:
@@ -154,6 +294,8 @@ Esto permite que más circuitos nazcan operativamente desde etapas tempranas y n
 - existe derivación
 - existe retorno a análisis
 - existe re-derivación
+- el tipo de gestión externa se conserva como trazabilidad sintética
+- mientras esté en `GESTION_EXTERNA`, no se admiten resoluciones internas
 
 ---
 
@@ -167,9 +309,12 @@ El prototipo permite como mínimo:
 - consultar detalle de una acta
 - ver bloque actual, bandeja, situación operativa y acción pendiente
 - ver estado documental y piezas
+- ver documentos del expediente
+- ver notificaciones mock asociadas
 - ver cerrabilidad
 - ver bloqueantes de cierre
 - ver hechos materiales
+- ver lectura operativa de hechos materiales
 - ver eventos relevantes del caso demo
 
 ## 3.2 Acciones principales hoy disponibles
@@ -179,11 +324,14 @@ El prototipo permite como mínimo:
 - generar piezas/documentos según el circuito demo
 - firmar documento individual
 - generar nulidad en el caso demo correspondiente
+- registrar resolutorio documental de bloqueante
+- registrar resolutorio con variante documental que requiere firma/notificación para levantamiento de medida
 
 ### Notificación
 
 - registrar resultado de notificación
 - contemplar positivo / negativo / vencido / reintentos según el caso demo
+- no se implementa notificación real de resoluciones firmadas en este prototipo
 
 ### Archivo / reingreso
 
@@ -211,12 +359,10 @@ El prototipo permite como mínimo:
 - registrar cumplimiento material de bloqueante
 - cerrar expediente si ya está en condición de cierre
 
-### Acciones tempranas
+### Condiciones materiales / medidas
 
-- registrar constatación material temprana:
-  - `SECUESTRO_RODADO`
-  - `RETENCION_DOCUMENTAL`
-  - `MEDIDA_PREVENTIVA_APLICABLE`
+- registrar constatación material temprana como herramienta demo/técnica/regresión
+- registrar medida preventiva posterior en contravención
 
 ### Utilidad demo
 
@@ -265,7 +411,16 @@ Caso demo útil para validar:
 - paso a cerrable
 - cierre posterior
 
-## 4.5 `ACTA-0021` — pago confirmado precargado + bloqueantes
+## 4.5 `ACTA-0020` — resolución en `PENDIENTE_FIRMA`
+
+Caso demo útil para validar:
+
+- existencia de bloqueante activo en `PENDIENTE_FIRMA`
+- posibilidad de registrar resolutorio desde una bandeja operativa distinta de `ENRIQUECIMIENTO` y `PENDIENTE_ANALISIS`
+- el resolutorio no mueve artificialmente la bandeja
+- el bloqueante sigue activo hasta cumplimiento material efectivo
+
+## 4.6 `ACTA-0021` — pago confirmado precargado + bloqueantes
 
 Caso demo útil para validar:
 
@@ -274,7 +429,7 @@ Caso demo útil para validar:
 - cerrabilidad material
 - sin depender del flujo real de pago
 
-## 4.6 `ACTA-0022` — flujo real de pago + bloqueantes
+## 4.7 `ACTA-0022` — flujo real de pago + bloqueantes
 
 Caso demo útil para validar:
 
@@ -287,7 +442,7 @@ Caso demo útil para validar:
 - resolutorio + cumplimiento material
 - cerrabilidad y cierre posterior
 
-## 4.7 `ACTA-0023` — foco en vista de hechos materiales
+## 4.8 `ACTA-0023` — foco en vista de hechos materiales
 
 Caso demo útil para validar:
 
@@ -295,43 +450,80 @@ Caso demo útil para validar:
 - resolutorio en expediente sin hecho material cumplido
 - lectura fina del eje material
 
-## 4.8 `ACTA-0024` — demo reproducible punta a punta desde etapa temprana
+## 4.9 `ACTA-0024` — tránsito con condiciones materiales desde `ActaTransitoMock`
 
 Caso demo útil para validar:
 
-- constataciones materiales tempranas
-- paso por análisis
+- condiciones materiales de tránsito nacidas desde datos mock del acta
+- retención documental
+- rodado retenido/secuestrado
+- medida preventiva aplicable
+- proyección a hechos materiales
+- proyección a bloqueantes
+- lectura operativa
 - circuito de pago
+- resolutorios documentales
+- resolutorio con circuito firma/notificación documental
+- cumplimiento material efectivo
 - cerrabilidad
-- bloqueantes
-- resolutorio
-- cumplimiento material
-- cierre final
+- cierre explícito
 
 Es hoy el mejor caso de recorrido integrado de punta a punta.
+
+## 4.10 `ACTA-0025` — regresión de constatación temprana D1/D2
+
+Caso demo/técnico útil para validar:
+
+- endpoint `registrar-constatacion-material-temprana`
+- restricción a D1/D2
+- rechazo fuera de etapa válida
+- control de duplicados
+- no contaminación de `ACTA-0024`
+
+## 4.11 `ACTA-0026` — contravención con medida preventiva posterior
+
+Caso demo útil para validar:
+
+- acta de contravención sin medida preventiva inicial
+- medida preventiva nacida durante trámite administrativo
+- ejemplo conceptual: rotura de faja de clausura
+- bloqueante `LEVANTAMIENTO_MEDIDA_PREVENTIVA`
+- hechos materiales
+- lectura operativa de medida posterior
+- resolutorio documental
+- cumplimiento material efectivo
+- cerrabilidad
+- cierre explícito
 
 ---
 
 ## 5. Recorrido demo integrado hoy disponible
 
-El recorrido más completo y reproducible es el de `ACTA-0024`.
+El recorrido más completo y reproducible sigue siendo `ACTA-0024`.
 
 Secuencia funcional esperable:
 
 1. reset del dataset demo
-2. registrar constataciones materiales tempranas
-3. avanzar hasta el punto de análisis aplicable
-4. solicitar pago voluntario
-5. registrar pago informado
-6. adjuntar comprobante mock
-7. confirmar pago
-8. verificar que el expediente **no** sea cerrable si persisten bloqueantes
-9. registrar resolutorio documental por cada eje bloqueante
-10. registrar cumplimiento material efectivo por cada eje
-11. verificar `cerrable = true`
-12. ejecutar cierre final
+2. consultar `ACTA-0024`
+3. verificar condiciones materiales nacidas desde `ActaTransitoMock`
+4. verificar `hechosMateriales`
+5. verificar `pendientesBloqueantesCierre`
+6. verificar `lecturaOperativa`
+7. solicitar pago voluntario
+8. registrar pago informado
+9. adjuntar comprobante mock
+10. confirmar pago
+11. verificar que el expediente no sea cerrable si persisten bloqueantes
+12. registrar resolutorio documental por cada eje bloqueante
+13. verificar que el expediente todavía no sea cerrable si falta cumplimiento material
+14. opcionalmente registrar resolutorio de levantamiento de medida con documento que requiere firma/notificación
+15. firmar el documento resolutivo si corresponde
+16. verificar que la firma no libera cumplimiento material
+17. registrar cumplimiento material efectivo por cada eje
+18. verificar `cerrable = true`
+19. ejecutar cierre final explícito
 
-Este recorrido ya tiene soporte tanto documental como de test/recorrido reproducible.
+También existe recorrido complementario `ACTA-0026` para demostrar medida preventiva posterior en contravención.
 
 ---
 
@@ -345,8 +537,14 @@ Este recorrido ya tiene soporte tanto documental como de test/recorrido reproduc
   - `PAGO_CONFIRMADO`
 - eliminado el supuesto falso de cierre automático por pago
 - eliminada la idea de que el resolutorio documental basta por sí solo
-- reducido el peso del reconocimiento manual de bloqueantes como requisito para existencia del bloqueo
-- reforzada la lectura separada entre expediente documental y hecho material
+- separada la lectura entre expediente documental y hecho material
+- eliminado `hechosMateriales.accionesDisponibles`
+- corregido `ACTA-0024` para que tránsito nazca desde datos mock del acta, no desde botones operativos
+- agregado `ActaTransitoMock`
+- agregado caso `ACTA-0026` para medida preventiva posterior en contravención
+- separado eje material de circuito firma/notificación documental
+- evitado que `DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF` sea un bloqueante material
+- blindada resolución desde bandeja operativa adicional `PENDIENTE_FIRMA`
 
 ---
 
@@ -354,21 +552,43 @@ Este recorrido ya tiene soporte tanto documental como de test/recorrido reproduc
 
 Lo pendiente real hoy, de forma resumida, es:
 
-### 7.1 Profundizar etapas tempranas
+### 7.1 Consolidar y versionar cambios
 
-- mejorar aún más `D1` / `D2`
-- acercar más condiciones y acciones tempranas al caso real
-- reforzar cómo nacen operativamente algunos circuitos desde labrado/enriquecimiento
+Hay varios archivos modificados y archivos nuevos sin tracking respecto de `HEAD`.
 
-### 7.2 Ampliar fidelidad documental/operativa
+Antes de cerrar el bloque backend demo, conviene:
 
-- enriquecer algunos circuitos documentales aún simplificados
-- seguir conectando condiciones tempranas con actuaciones posteriores
+- revisar diff final
+- asegurar que los nuevos archivos entren al control de versiones
+- commitear el estado consistente
 
-### 7.3 Seguir endureciendo recorridos demo
+### 7.2 Revisión final de nombres y narrativa demo
 
-- más tests/recorridos reproducibles
-- más guardarraíles sobre regresiones
+Hay nombres de endpoints o tests que pueden requerir aclaración en el guion demo:
+
+- `registrar-resolucion-bloqueo-cierre`
+- `registrar-constatacion-material-temprana`
+- algún nombre de test con typo o redacción fea
+
+No es urgente funcionalmente, pero puede mejorar claridad.
+
+### 7.3 Bordes no cubiertos por test específico
+
+La regla de resoluciones admite varias bandejas operativas.
+
+Hoy hay cobertura explícita en:
+
+- `ACTAS_EN_ENRIQUECIMIENTO`
+- `PENDIENTE_ANALISIS`
+- `PENDIENTE_FIRMA`
+
+Y rechazo en:
+
+- `GESTION_EXTERNA`
+- `ARCHIVO`
+- `CERRADAS`
+
+No hay tests dedicados para todas las demás bandejas operativas posibles.
 
 ### 7.4 No pendiente inmediato
 
@@ -381,6 +601,7 @@ No están en foco inmediato:
 - PDFs reales
 - firma digital real
 - tesorería real
+- notificación real de resoluciones
 
 ---
 
@@ -388,21 +609,28 @@ No están en foco inmediato:
 
 - el prototipo sigue siendo in-memory y demo-oriented
 - varias representaciones siguen simplificadas para favorecer navegabilidad y velocidad de iteración
-- no todo circuito temprano está todavía bajado con la misma profundidad
-- algunos nombres, seeds y ayudas demo podrían seguir requiriendo limpieza fina futura
+- algunos endpoints siguen siendo herramientas demo/técnicas y no contratos finales
+- `registrar-constatacion-material-temprana` debe explicarse como regresión/demo, no como verdad principal de tránsito
+- el modelo de notificación real de resoluciones firmadas no está implementado
+- los documentos resolutivos con firma/notificación están representados solo a nivel mock
+- algunas bandejas operativas adicionales admiten resoluciones por regla general, pero no tienen test específico dedicado
 
 ---
 
 ## 9. Próximo paso natural
 
-El próximo paso natural, después de este estado consolidado, es **seguir profundizando etapas tempranas (`D1` / `D2`) con acciones operativas mínimas y coherentes**, reforzando la continuidad entre:
+El próximo paso natural es **cerrar el bloque backend demo**, no abrir funcionalidad grande.
 
-- condiciones iniciales del caso
-- actuaciones tempranas
-- consecuencias posteriores
-- cerrabilidad final
+Orden recomendado:
 
-La prioridad no debería ser abrir frentes técnicos grandes, sino seguir cerrando huecos operativos reales del prototipo con slices chicos y claros.
+1. revisar diff final
+2. asegurar que archivos nuevos estén incorporados
+3. ejecutar `mvn test`
+4. corregir nombres mínimos si hay alguno muy confuso
+5. commitear estado backend demo
+6. recién después evaluar si queda algún micro-slice o si se pasa a otra capa
+
+No conviene abrir ahora frentes grandes como DB real, seguridad real, PDFs reales o integraciones.
 
 ---
 
@@ -417,3 +645,11 @@ Para próximos slices:
 - no mezclar problemas conceptuales distintos
 - tocar la menor cantidad posible de archivos
 - no tocar archivos de continuidad salvo autorización explícita
+- distinguir siempre:
+  - dato del acta
+  - acción demo/técnica
+  - documento resolutivo
+  - firma
+  - notificación
+  - cumplimiento material
+  - cierre

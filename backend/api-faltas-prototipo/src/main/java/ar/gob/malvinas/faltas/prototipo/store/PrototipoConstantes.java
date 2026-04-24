@@ -66,6 +66,18 @@ final class PrototipoConstantes {
     static final String BANDEJA_GESTION_EXTERNA = "GESTION_EXTERNA";
 
     /**
+     * Macro-bandeja de actas con expediente dado de baja operativa. No aplica
+     * dictar resolutorios de cierre mientras el caso no reingresa.
+     */
+    static final String BANDEJA_ARCHIVO = "ARCHIVO";
+
+    /**
+     * Actas conclusas en el trámite. No aplica acciones resolutorias
+     * incrementales.
+     */
+    static final String BANDEJA_CERRADAS = "CERRADAS";
+
+    /**
      * Bloque de proceso correspondiente a gestión externa. Se usa como
      * bloque, estado agregador y situación administrativa coherentes para
      * que el caso quede claramente identificado una vez derivado.
@@ -81,10 +93,22 @@ final class PrototipoConstantes {
 
     /**
      * Documento mock de levantamiento de medida preventiva (resolutorio de
-     * cierre material; no requiere firma en el slice del prototipo).
+     * cierre material; en el tronco por defecto: emitido, sin ingreso al
+     * circuito de notificación de acta).
      */
     static final String TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA =
             "DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA";
+
+    /**
+     * Forma documental posible del único eje material
+     * {@code LEVANTAMIENTO_MEDIDA_PREVENTIVA} (parámetro
+     * {@code documentoConCircuitoFirmaNotif} al registrar resolutorio). No
+     * constituye un bloqueante de cierre distinto: solo fija
+     * {@linkplain #ESTADO_DOC_PENDIENTE_FIRMA} y, tras firma in-situ, trazas
+     * lógicas sin notificar el acta.
+     */
+    static final String TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF =
+            "DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF";
 
     /** Documento mock de liberación de rodado retenido/secuestrado. */
     static final String TIPO_DOC_LIBERACION_RODADO = "DOC_LIBERACION_RODADO";
@@ -117,8 +141,45 @@ final class PrototipoConstantes {
     /** Estado documental mock para piezas resolutorias sin circuito de firma. */
     static final String ESTADO_DOC_EMITIDO = "EMITIDO";
 
+    /**
+     * Mismo sentido operativo que en
+     * {@code PiezasFirmaSupport} para producción de pieza.
+     */
+    static final String ESTADO_DOC_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
+
+    /**
+     * Mismo sentido operativo que en
+     * {@code PiezasFirmaSupport} luego de firma individual.
+     */
+    static final String ESTADO_DOC_FIRMADO = "FIRMADO";
+
     /** Anexo / constatación de campo aún no formalizada como pieza de firma. */
     static final String ESTADO_DOC_ADJUNTO = "ADJUNTO";
+
+    /**
+     * @return {@code true} salvo cierre, derivación a gestión externa, archivo
+     *     o bandeja terminal; dictar resolutorio o registrar cumplimiento
+     *     material no se limita a {@link #BANDEJA_PENDIENTE_ANALISIS}.
+     */
+    static boolean bandejaHabilitaResolucionBloqueoCierre(
+            boolean actaCerrada, String bandejaActual) {
+        if (actaCerrada) {
+            return false;
+        }
+        if (bandejaActual == null) {
+            return false;
+        }
+        if (BANDEJA_GESTION_EXTERNA.equals(bandejaActual)
+                || BANDEJA_ARCHIVO.equals(bandejaActual)
+                || BANDEJA_CERRADAS.equals(bandejaActual)) {
+            return false;
+        }
+        return true;
+    }
+
+    static boolean esResolutorioBloqueoCierreCircuitoFirmaYNotif(String tipoDocumento) {
+        return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF.equals(tipoDocumento);
+    }
 
     private PrototipoConstantes() {
     }

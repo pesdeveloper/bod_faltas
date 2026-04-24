@@ -20,12 +20,15 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_ADJUNTO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_PENDIENTE_FIRMA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_ANCLA_MEDIDA_PREVENTIVA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_VEHICULO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_LIBERACION_RODADO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_RESTITUCION_DOCUMENTACION;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaHabilitaResolucionBloqueoCierre;
 
 /**
  * Resultado final compatible con cierre (ABSUELTO / PAGO_CONFIRMADO), pendientes
@@ -49,6 +52,26 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DO
  * mock ({@link #registrarResolucionBloqueoCierreDocumental}).
  */
 final class CerrabilidadSupport {
+
+    private static final String LECTURA_OPERATIVA_CONDICIONES_TEMPRANAS_ACTIVAS =
+            "Existen condiciones materiales tempranas activas. Deberán resolverse documentalmente y"
+                    + " cumplirse materialmente antes del cierre.";
+    /**
+     * Ejes que aún exigen resolutorio: ancla vía
+     * {@link #registrarMedidaPreventivaPosterior} (evento
+     * {@link #TIPO_EVENTO_MEDIDA_PREVENTIVA_POSTERIOR_AL_LABRADO}).
+     */
+    private static final String LECTURA_OPERATIVA_MEDIDA_POSTERIOR_SIN_RESOLUTORIO =
+            "Existe una medida preventiva activa generada en trámite, posterior al labrado. Requiere"
+                    + " resolutorio documental y cumplimiento material efectivo antes del cierre (mock).";
+    private static final String LECTURA_OPERATIVA_FALTA_CUMPLIMIENTO_MATERIAL_EFECTIVO =
+            "Existen resolutorios documentales registrados, pero todavía falta cumplimiento material"
+                    + " efectivo.";
+
+    private static final String TIPO_EVENTO_MEDIDA_PREVENTIVA_POSTERIOR_AL_LABRADO =
+            "MEDIDA_PREVENTIVA_POSTERIOR_A_LABRADO";
+
+    private static final String BANDEJA_ARCHIVO = "ARCHIVO";
 
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
@@ -89,7 +112,7 @@ final class CerrabilidadSupport {
      */
     PrototipoStore.HechosMaterialesActaVista hechosMaterialesActa(String actaId) {
         if (actaId == null || !actas.containsKey(actaId)) {
-            return new PrototipoStore.HechosMaterialesActaVista(List.of());
+            return new PrototipoStore.HechosMaterialesActaVista(List.of(), null);
         }
         ActaMock a = actas.get(actaId);
         if (a != null && !a.estaCerrada()) {
@@ -122,7 +145,66 @@ final class CerrabilidadSupport {
                                 "DOCUMENTACION",
                                 "Documentación retenida",
                                 ors,
-                                evaluaBloqueoCierre)));
+                                evaluaBloqueoCierre)),
+                lecturaOperativaHechosMateriales(actaId));
+    }
+
+    /**
+     * Lectura para demo: solo cuando hay al menos un bloqueo material todavía
+     * activo. Si aún falta resolutorio documental en algún eje, el mensaje
+     * distingue anclas de etapa temprana (D1/D2, tránsito, etc.) de una medida
+     * preventiva incorporada en trámite
+     * ({@link #TIPO_EVENTO_MEDIDA_PREVENTIVA_POSTERIOR_AL_LABRADO};
+     * {@link #registrarMedidaPreventivaPosterior}). Si los resolutorios ya
+     * constan, el mensaje enfatiza el cumplimiento material efectivo pendiente.
+     */
+    private String lecturaOperativaHechosMateriales(String actaId) {
+        List<PrototipoStore.PendienteBloqueanteCierreMock> pend =
+                listarPendientesBloqueantesOrdenados(actaId);
+        if (pend.isEmpty()) {
+            return null;
+        }
+        for (PrototipoStore.PendienteBloqueanteCierreMock p : pend) {
+            if (!tieneDocumentoResolutorio(actaId, origenParaPendiente(p))) {
+                if (faseResolutorioPendienteSoloMedidaPreventivaPosteriorAlLabrado(actaId, pend)) {
+                    return LECTURA_OPERATIVA_MEDIDA_POSTERIOR_SIN_RESOLUTORIO;
+                }
+                return LECTURA_OPERATIVA_CONDICIONES_TEMPRANAS_ACTIVAS;
+            }
+        }
+        return LECTURA_OPERATIVA_FALTA_CUMPLIMIENTO_MATERIAL_EFECTIVO;
+    }
+
+    /**
+     * @return true si el expediente incorporó medida vía
+     *     {@link #registrarMedidaPreventivaPosterior} (evento de trazabilidad)
+     *     y, entre los bloqueos sin resolutorio, solo figura el
+     *     de medida.
+     */
+    private boolean faseResolutorioPendienteSoloMedidaPreventivaPosteriorAlLabrado(
+            String actaId, List<PrototipoStore.PendienteBloqueanteCierreMock> pend) {
+        if (!expedienteIncluyeEventoMedidaPreventivaPosteriorAlLabrado(actaId)) {
+            return false;
+        }
+        for (PrototipoStore.PendienteBloqueanteCierreMock p : pend) {
+            if (!tieneDocumentoResolutorio(actaId, origenParaPendiente(p))
+                    && p != PrototipoStore.PendienteBloqueanteCierreMock.LEVANTAMIENTO_MEDIDA_PREVENTIVA) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean expedienteIncluyeEventoMedidaPreventivaPosteriorAlLabrado(String actaId) {
+        List<ActaEventoMock> evs = eventosPorActa.get(actaId);
+        if (evs == null || evs.isEmpty()) {
+            return false;
+        }
+        return evs.stream()
+                .anyMatch(
+                        e ->
+                                TIPO_EVENTO_MEDIDA_PREVENTIVA_POSTERIOR_AL_LABRADO.equals(
+                                        e.tipoEvento()));
     }
 
     /**
@@ -149,8 +231,10 @@ final class CerrabilidadSupport {
                     etiqueta,
                     PrototipoStore.FaseEjeHechoMaterial.NO_APLICA,
                     false,
-                    "Sin origen material activo en este eje (mock).");
+                    "Sin origen material activo en este eje (mock).",
+                    null);
         }
+        String ejeBloqActivo = pendienteParaOrigen(origen).name();
         boolean doc = tieneDocumentoResolutorio(actaId, origen);
         if (tieneCumplimientoMaterialEfectivo(actaId, origen)) {
             return new PrototipoStore.EjeHechoMaterialVista(
@@ -158,7 +242,8 @@ final class CerrabilidadSupport {
                     etiqueta,
                     PrototipoStore.FaseEjeHechoMaterial.CUMPLIMIENTO_MATERIAL_VERIFICADO,
                     false,
-                    descripcionCumplimientoEje(etiqueta));
+                    descripcionCumplimientoEje(etiqueta),
+                    null);
         }
         if (!doc) {
             return new PrototipoStore.EjeHechoMaterialVista(
@@ -168,7 +253,8 @@ final class CerrabilidadSupport {
                     evaluaBloqueoCierre,
                     "Situación material activa: falta el documento resolutorio de "
                             + etiqueta
-                            + " en expediente (mock).");
+                            + " en expediente (mock).",
+                    ejeBloqActivo);
         }
         return new PrototipoStore.EjeHechoMaterialVista(
                 clave,
@@ -177,7 +263,8 @@ final class CerrabilidadSupport {
                 evaluaBloqueoCierre,
                 "Documento resolutorio incorporado; pendiente registro de hecho material efectivo: "
                         + descripcionCortaEje(etiqueta)
-                        + " (mock).");
+                        + " (mock).",
+                ejeBloqActivo);
     }
 
     private static String descripcionCumplimientoEje(String etiqueta) {
@@ -224,9 +311,17 @@ final class CerrabilidadSupport {
         origenesBloqueantesPorActa.put(actaId, EnumSet.copyOf(origenes));
     }
 
+    /**
+     * Pendientes de cierre material (resolutorio + cumplimiento aún requeridos) para
+     * cualquier acta no cerrada: incluye D1/D2, no solo
+     * {@code PENDIENTE_ANALISIS}, de modo que las
+     * anclas nacidas en constatación temprana sigan trazables como
+     * {@code LIBERACION_RODADO} y afines vía
+     * {@link PrototipoStore#getCerrabilidadActa} antes de llegar a análisis.
+     */
     List<PrototipoStore.PendienteBloqueanteCierreMock> listarPendientesBloqueantesOrdenados(String actaId) {
         ActaMock v = actas.get(actaId);
-        if (v == null || !BANDEJA_PENDIENTE_ANALISIS.equals(v.bandejaActual())) {
+        if (v == null || v.estaCerrada()) {
             return List.of();
         }
         ensureOrigenesSincronizados(actaId);
@@ -396,14 +491,24 @@ final class CerrabilidadSupport {
     private static PrototipoStore.OrigenBloqueanteCierreMaterialMock origenParaPendiente(
             PrototipoStore.PendienteBloqueanteCierreMock p) {
         return switch (p) {
-            case LEVANTAMIENTO_MEDIDA_PREVENTIVA -> PrototipoStore.OrigenBloqueanteCierreMaterialMock
-                    .MEDIDA_PREVENTIVA_ACTIVA;
+            case LEVANTAMIENTO_MEDIDA_PREVENTIVA ->
+                    PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA;
             case LIBERACION_RODADO -> PrototipoStore.OrigenBloqueanteCierreMaterialMock.RODADO_SECUESTRADO;
             case ENTREGA_DOCUMENTACION -> PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA;
         };
     }
 
-    private static String tipoDocumentoResolutorio(PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
+    private static String tipoDocumentoResolutorio(
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
+        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
+                && documentoConCircuitoFirmaNotifMedida) {
+            return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF;
+        }
+        return tipoDocumentoResolutorioSegunOrigen(o);
+    }
+
+    private static String tipoDocumentoResolutorioSegunOrigen(
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA -> TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA;
             case RODADO_SECUESTRADO -> TIPO_DOC_LIBERACION_RODADO;
@@ -411,7 +516,12 @@ final class CerrabilidadSupport {
         };
     }
 
-    private static String prefijoArchivoResolutorio(PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
+    private static String prefijoArchivoResolutorio(
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
+        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
+                && documentoConCircuitoFirmaNotifMedida) {
+            return "levantamiento_medida_cfn_";
+        }
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA -> "levantamiento_medida_";
             case RODADO_SECUESTRADO -> "liberacion_rodado_";
@@ -419,7 +529,12 @@ final class CerrabilidadSupport {
         };
     }
 
-    private static String eventoResolucion(PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
+    private static String eventoResolucion(
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
+        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
+                && documentoConCircuitoFirmaNotifMedida) {
+            return "LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF_INCORPORADO";
+        }
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA -> "LEVANTAMIENTO_MEDIDA_PREVENTIVA_EMITIDO";
             case RODADO_SECUESTRADO -> "LIBERACION_RODADO_EMITIDA";
@@ -427,7 +542,14 @@ final class CerrabilidadSupport {
         };
     }
 
-    private static String descripcionResolucion(PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
+    private static String descripcionResolucion(
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
+        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
+                && documentoConCircuitoFirmaNotifMedida) {
+            return "Documento de levantamiento de medida (circuito firma+notif mock) en expediente, pendiente"
+                    + " de firma; no inicia notificación de acta hasta constancia de firma. El eje de cierre"
+                    + " material sigue siendo LEVANTAMIENTO_MEDIDA_PREVENTIVA (mock).";
+        }
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA ->
                     "Documento de levantamiento de medida preventiva incorporado al expediente (mock).";
@@ -439,12 +561,21 @@ final class CerrabilidadSupport {
 
     private boolean tieneDocumentoResolutorio(
             String actaId, PrototipoStore.OrigenBloqueanteCierreMaterialMock origen) {
-        String tipo = tipoDocumentoResolutorio(origen);
+        String tipoEstandar = tipoDocumentoResolutorioSegunOrigen(origen);
         List<ActaDocumentoMock> docs = documentosPorActa.get(actaId);
         if (docs == null) {
             return false;
         }
-        return docs.stream().anyMatch(d -> tipo.equals(d.tipoDocumento()));
+        return docs.stream()
+                .anyMatch(
+                        d -> {
+                            String t = d.tipoDocumento();
+                            if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA) {
+                                return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF.equals(t)
+                                        || TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA.equals(t);
+                            }
+                            return tipoEstandar.equals(t);
+                        });
     }
 
     private boolean tieneCumplimientoMaterialEfectivo(
@@ -471,8 +602,14 @@ final class CerrabilidadSupport {
     }
 
     PrototipoStore.RegistrarResolucionBloqueoCierreResultado registrarResolucionBloqueoCierreDocumental(
-            String actaId, PrototipoStore.PendienteBloqueanteCierreMock tipoPendiente) {
+            String actaId,
+            PrototipoStore.PendienteBloqueanteCierreMock tipoPendiente,
+            boolean documentoConCircuitoFirmaNotif) {
         PrototipoStore.OrigenBloqueanteCierreMaterialMock origen = origenParaPendiente(tipoPendiente);
+        boolean circuitoSoloAplicaAMedida =
+                documentoConCircuitoFirmaNotif
+                        && tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock
+                                .LEVANTAMIENTO_MEDIDA_PREVENTIVA;
         ActaMock actual = actas.get(actaId);
         if (actual == null) {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.NOT_FOUND);
@@ -480,7 +617,7 @@ final class CerrabilidadSupport {
         if (actual.estaCerrada()) {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT);
         }
-        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())) {
+        if (!bandejaHabilitaResolucionBloqueoCierre(actual.estaCerrada(), actual.bandejaActual())) {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT);
         }
         ensureOrigenesSincronizados(actaId);
@@ -492,13 +629,14 @@ final class CerrabilidadSupport {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT);
         }
 
-        String tipoDoc = tipoDocumentoResolutorio(origen);
+        String tipoDoc = tipoDocumentoResolutorio(origen, circuitoSoloAplicaAMedida);
+        String estadoDocNuevo = circuitoSoloAplicaAMedida ? ESTADO_DOC_PENDIENTE_FIRMA : ESTADO_DOC_EMITIDO;
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguienteDoc = docs.size() + 1;
         String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
         String idDoc = "DOC-" + sufijoActa + "-" + String.format("%02d", siguienteDoc);
-        String nombreArchivo = prefijoArchivoResolutorio(origen) + sufijoActa + ".pdf";
-        docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDoc, ESTADO_DOC_EMITIDO, nombreArchivo));
+        String nombreArchivo = prefijoArchivoResolutorio(origen, circuitoSoloAplicaAMedida) + sufijoActa + ".pdf";
+        docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDoc, estadoDocNuevo, nombreArchivo));
 
         if (!actual.tieneDocumentos()) {
             actas.put(
@@ -525,10 +663,10 @@ final class CerrabilidadSupport {
         String bloqueOrigen = actual.bloqueActual();
         registrarEvento(
                 actaId,
-                eventoResolucion(origen),
+                eventoResolucion(origen, circuitoSoloAplicaAMedida),
                 bloqueOrigen,
                 bloqueOrigen,
-                descripcionResolucion(origen));
+                descripcionResolucion(origen, circuitoSoloAplicaAMedida));
 
         ActaMock post = actas.get(actaId);
         PrototipoStore.CerrabilidadActaVista vista = getVistaCerrabilidad(post);
@@ -559,7 +697,7 @@ final class CerrabilidadSupport {
             return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
                     .CONFLICT);
         }
-        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())) {
+        if (!bandejaHabilitaResolucionBloqueoCierre(actual.estaCerrada(), actual.bandejaActual())) {
             return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
                     .CONFLICT);
         }
@@ -799,18 +937,157 @@ final class CerrabilidadSupport {
     }
 
     /**
+     * Contravención (u otro trámite) en análisis: constata en expediente la
+     * medida preventiva a partir de una novedad posterior al labrado
+     * (p. ej. inspección que constata afectación de faja o clausura, sin
+     * detalle normativo en este mock). Misma ancla
+     * {@link PrototipoConstantes#TIPO_ANCLA_MEDIDA_PREVENTIVA} y circuito
+     * que al producir la pieza; distinto a
+     * {@link #registrarConstatacionMaterialTemprana} (D1/D2) y a datos de
+     * tránsito.
+     */
+    PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado registrarMedidaPreventivaPosterior(
+            String actaId) {
+        if (actaId == null) {
+            return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                    PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.NOT_FOUND,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+        }
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                    PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.NOT_FOUND,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+        }
+        if (actual.estaCerrada()) {
+            return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                    PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.CONFLICT,
+                    actaId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .ACTA_CERRADA);
+        }
+        if (BANDEJA_ARCHIVO.equals(actual.bandejaActual())) {
+            return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                    PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.CONFLICT,
+                    actaId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .ACTA_EN_ARCHIVO);
+        }
+        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())) {
+            return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                    PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.CONFLICT,
+                    actaId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .FUERA_PENDIENTE_ANALISIS);
+        }
+        if (expedienteIncluyeDocumentoConTipo(actaId, TIPO_ANCLA_MEDIDA_PREVENTIVA)) {
+            return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                    PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.CONFLICT,
+                    actaId,
+                    null,
+                    TIPO_ANCLA_MEDIDA_PREVENTIVA,
+                    null,
+                    null,
+                    PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .MEDIDA_YA_EN_EXPEDIENTE);
+        }
+
+        List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguiente = docs.size() + 1;
+        String sufijo = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String idDoc = "DOC-" + sufijo + "-" + String.format("%02d", siguiente);
+        String nombreArchivo = "medida_preventiva_posterior_tramite_" + sufijo.toLowerCase() + ".pdf";
+        docs.add(
+                new ActaDocumentoMock(
+                        idDoc, actaId, TIPO_ANCLA_MEDIDA_PREVENTIVA, ESTADO_DOC_EMITIDO, nombreArchivo));
+
+        if (!actual.tieneDocumentos()) {
+            actas.put(
+                    actaId,
+                    new ActaMock(
+                            actual.id(),
+                            actual.numeroActa(),
+                            actual.dominioReferencia(),
+                            actual.bloqueActual(),
+                            actual.estadoProcesoActual(),
+                            actual.situacionAdministrativaActual(),
+                            actual.estaCerrada(),
+                            actual.permiteReingreso(),
+                            true,
+                            actual.tieneNotificaciones(),
+                            actual.fechaCreacion(),
+                            actual.infractorNombre(),
+                            actual.infractorDocumento(),
+                            actual.inspectorNombre(),
+                            actual.resumenHecho(),
+                            actual.bandejaActual()));
+        }
+
+        ensureOrigenesSincronizados(actaId);
+        String bloque = BLOQUE_D5;
+        registrarEvento(
+                actaId,
+                TIPO_EVENTO_MEDIDA_PREVENTIVA_POSTERIOR_AL_LABRADO,
+                bloque,
+                bloque,
+                "Inspección o noticia en trámite, posterior al labrado, da lugar a ancla de medida"
+                        + " preventiva (mock; no etapa D1/D2; mismo tipo documental que pieza o constatación"
+                        + " coherente).");
+
+        ActaMock post = actas.get(actaId);
+        return new PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado(
+                PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.OK,
+                actaId,
+                idDoc,
+                TIPO_ANCLA_MEDIDA_PREVENTIVA,
+                post != null ? post.bandejaActual() : null,
+                post != null ? post.estadoProcesoActual() : null,
+                null);
+    }
+
+    /**
      * Registra en expediente el mismo ancla documental que alimenta
      * {@link #ensureOrigenesSincronizados} y el circuito de cierre, pero
      * desde D1/D2 (labrado / enriquecimiento), con evento de trazabilidad
-     * explícito. Idempotente de rechazo: si el ancla ya estaba, devuelve
-     * CONFLICT. No reemplaza a {@code reconocerOrigenBloqueante*}; el
-     * reconocimiento sigue siendo opcional.
+     * explícito. Requiere al menos un evento previo en el expediente (p. ej.
+     * {@code ALTA} en D1) para vincular la constatación a un despliegue temprano
+     * real, no a una marca aislada. Rechazo controlado: si el expediente ya
+     * incluía el {@code tipoDocumento} de esa constatación, devuelve CONFLICT
+     * (API 409) sin añadir documento ni evento, evitando doble ancla, doble
+     * origen y lecturas duplicadas. Si el acta no está en bandeja
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} con bloque {@code D1_CAPTURA} o
+     * {@code D2_ENRIQUECIMIENTO}, el rechazo no modifica el expediente
+     * (criterio de etapa D1/D2 en el prototipo). No reemplaza a {@code
+     * reconocerOrigenBloqueante*}; el reconocimiento sigue siendo opcional.
      */
     PrototipoStore.RegistrarConstatacionMaterialTempranaResultado registrarConstatacionMaterialTemprana(
             String actaId, PrototipoStore.TipoConstatacionMaterialTemprana tipo) {
         if (actaId == null || tipo == null) {
             return new PrototipoStore.RegistrarConstatacionMaterialTempranaResultado(
                     PrototipoStore.RegistrarConstatacionMaterialTempranaEstado.NOT_FOUND,
+                    null,
                     null,
                     null,
                     null,
@@ -825,6 +1102,7 @@ final class CerrabilidadSupport {
                     null,
                     null,
                     null,
+                    null,
                     null);
         }
         if (actual.estaCerrada()) {
@@ -834,7 +1112,8 @@ final class CerrabilidadSupport {
                     null,
                     null,
                     null,
-                    null);
+                    null,
+                    PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.FUERA_ETAPA_LABRADO_ENRIQUECIMIENTO);
         }
         if (!BANDEJA_ACTAS_EN_ENRIQUECIMIENTO.equals(actual.bandejaActual())) {
             return new PrototipoStore.RegistrarConstatacionMaterialTempranaResultado(
@@ -843,7 +1122,8 @@ final class CerrabilidadSupport {
                     null,
                     null,
                     null,
-                    null);
+                    null,
+                    PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.FUERA_ETAPA_LABRADO_ENRIQUECIMIENTO);
         }
         String b = actual.bloqueActual();
         if (b == null
@@ -854,7 +1134,19 @@ final class CerrabilidadSupport {
                     null,
                     null,
                     null,
-                    null);
+                    null,
+                    PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.FUERA_ETAPA_LABRADO_ENRIQUECIMIENTO);
+        }
+        List<ActaEventoMock> eventosExistentes = eventosPorActa.get(actaId);
+        if (eventosExistentes == null || eventosExistentes.isEmpty()) {
+            return new PrototipoStore.RegistrarConstatacionMaterialTempranaResultado(
+                    PrototipoStore.RegistrarConstatacionMaterialTempranaEstado.CONFLICT,
+                    actaId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.SIN_TRAZA_PREVIA);
         }
         String tipoDoc;
         String prefijoArchivo;
@@ -895,7 +1187,8 @@ final class CerrabilidadSupport {
                     null,
                     tipoDoc,
                     null,
-                    null);
+                    null,
+                    PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.TIPO_YA_EN_EXPEDIENTE);
         }
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguiente = docs.size() + 1;
@@ -936,7 +1229,8 @@ final class CerrabilidadSupport {
                 idDoc,
                 tipoDoc,
                 post != null ? post.bandejaActual() : null,
-                post != null ? post.estadoProcesoActual() : null);
+                post != null ? post.estadoProcesoActual() : null,
+                null);
     }
 
     private void registrarEvento(

@@ -12,10 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaHabilitaResolucionBloqueoCierre;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_NOTIFICACION;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D4;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_ENVIO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esResolutorioBloqueoCierreCircuitoFirmaYNotif;
 
 /**
  * Soporte funcional del área piezas/firma del prototipo. Extraído de
@@ -319,10 +321,6 @@ final class PiezasFirmaSupport {
             return new PrototipoStore.FirmarDocumentoResultado(
                     PrototipoStore.FirmarDocumentoEstado.NOT_FOUND, null, null, null, null);
         }
-        if (!BANDEJA_PENDIENTE_FIRMA.equals(actual.bandejaActual())) {
-            return new PrototipoStore.FirmarDocumentoResultado(
-                    PrototipoStore.FirmarDocumentoEstado.CONFLICT, null, null, null, null);
-        }
 
         List<ActaDocumentoMock> docs = documentosPorActa.get(actaId);
         if (docs == null || docs.isEmpty()) {
@@ -345,13 +343,36 @@ final class PiezasFirmaSupport {
             return new PrototipoStore.FirmarDocumentoResultado(
                     PrototipoStore.FirmarDocumentoEstado.CONFLICT, null, null, null, null);
         }
+        boolean colaDeFirma = BANDEJA_PENDIENTE_FIRMA.equals(actual.bandejaActual());
+        boolean firmaInSituResolutorioBloqueoCierre =
+                !colaDeFirma
+                        && esResolutorioBloqueoCierreCircuitoFirmaYNotif(doc.tipoDocumento())
+                        && bandejaHabilitaResolucionBloqueoCierre(
+                                actual.estaCerrada(), actual.bandejaActual());
+        if (!colaDeFirma && !firmaInSituResolutorioBloqueoCierre) {
+            return new PrototipoStore.FirmarDocumentoResultado(
+                    PrototipoStore.FirmarDocumentoEstado.CONFLICT, null, null, null, null);
+        }
 
-        docs.set(indice, new ActaDocumentoMock(
-                doc.id(),
-                doc.actaId(),
-                doc.tipoDocumento(),
-                ESTADO_DOC_FIRMADO,
-                doc.nombreArchivo()));
+        docs.set(
+                indice,
+                new ActaDocumentoMock(
+                        doc.id(), doc.actaId(), doc.tipoDocumento(), ESTADO_DOC_FIRMADO, doc.nombreArchivo()));
+
+        if (firmaInSituResolutorioBloqueoCierre) {
+            String descripcionSoloResolutorio =
+                    "Documento " + documentoId + " firmado (resolutorio de cierre material, circuito"
+                            + " firma+notif; la acta conserva su bandeja; no inicia tronco de notificación del acta).";
+            String blo = actual.bloqueActual();
+            registrarEvento(
+                    actaId, "DOCUMENTO_FIRMADO", blo, actual.bandejaActual(), descripcionSoloResolutorio);
+            return new PrototipoStore.FirmarDocumentoResultado(
+                    PrototipoStore.FirmarDocumentoEstado.OK,
+                    actual.id(),
+                    documentoId,
+                    actual.bandejaActual(),
+                    actual.estadoProcesoActual());
+        }
 
         boolean restanPendientes = docs.stream()
                 .anyMatch(d -> ESTADO_DOC_PENDIENTE_FIRMA.equals(d.estadoDocumento()));

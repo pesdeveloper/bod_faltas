@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.prototipo.store;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
+import ar.gob.malvinas.faltas.prototipo.domain.ActaTransitoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
 import org.springframework.stereotype.Component;
@@ -347,13 +348,53 @@ public class PrototipoStore {
         CONFLICT
     }
 
+    /**
+     * Detalle de CONFLICT: tipo duplicado, expediente no en D1/D2 enriquecimiento,
+     * o falta al menos un evento previo en trazabilidad.
+     */
+    public enum MotivoConflictoConstatacionMaterialTemprana {
+        TIPO_YA_EN_EXPEDIENTE,
+        FUERA_ETAPA_LABRADO_ENRIQUECIMIENTO,
+        SIN_TRAZA_PREVIA
+    }
+
     public record RegistrarConstatacionMaterialTempranaResultado(
             RegistrarConstatacionMaterialTempranaEstado estado,
             String actaId,
             String documentoId,
             String tipoDocumento,
             String bandejaActual,
-            String estadoProcesoActual) {
+            String estadoProcesoActual,
+            MotivoConflictoConstatacionMaterialTemprana motivoConflicto) {
+    }
+
+    /**
+     * Medida preventiva nacida durante trámite (p. ej. inspección posterior a
+     * labrado en contravención), no como constatación temprana D1/D2; incorpora
+     * el mismo ancla documental que el circuito de
+     * {@link #reconocerOrigenBloqueanteMedidaPreventiva} / cierre.
+     */
+    public enum RegistrarMedidaPreventivaPosteriorEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public enum MotivoConflictoRegistroMedidaPreventivaPosterior {
+        ACTA_CERRADA,
+        ACTA_EN_ARCHIVO,
+        FUERA_PENDIENTE_ANALISIS,
+        MEDIDA_YA_EN_EXPEDIENTE
+    }
+
+    public record RegistrarMedidaPreventivaPosteriorResultado(
+            RegistrarMedidaPreventivaPosteriorEstado estado,
+            String actaId,
+            String documentoId,
+            String tipoDocumento,
+            String bandejaActual,
+            String estadoProcesoActual,
+            MotivoConflictoRegistroMedidaPreventivaPosterior motivoConflicto) {
     }
 
     public enum RegistrarSolicitudPagoVoluntarioEstado {
@@ -467,16 +508,27 @@ public class PrototipoStore {
      *     seguiría afectando el cierre; en etapas anteriores la fase y la
      *     descripción reflejan ya la condición del caso sin anticipar el cómputo
      *     de cierre.
+     * @param descripcion texto de apoyo a la fase
+     * @param ejeBloqueanteCierre pendiente de cierre vinculado a este eje
+     *     (p. ej. {@code LIBERACION_RODADO}) cuando el origen material activo exige
+     *     cierre de circuito; {@code null} si no aplica aún o el hecho quedó
+     *     verificado materialmente.
      */
     public record EjeHechoMaterialVista(
             String clave,
             String etiqueta,
             FaseEjeHechoMaterial fase,
             boolean bloqueaCierre,
-            String descripcion) {
+            String descripcion,
+            String ejeBloqueanteCierre) {
     }
 
-    public record HechosMaterialesActaVista(java.util.List<EjeHechoMaterialVista> ejes) {
+    /**
+     * @param lecturaOperativa señal operativa para demo/UI: pendiente de tratamiento
+     *     documental o material, o {@code null} cuando no aplica.
+     */
+    public record HechosMaterialesActaVista(
+            java.util.List<EjeHechoMaterialVista> ejes, String lecturaOperativa) {
     }
 
     public enum MarcarResultadoAbsueltoEstado {
@@ -680,6 +732,12 @@ public class PrototipoStore {
      * {@link #situacionPagoPorActa}.
      */
     private final Map<String, PagoInformadoMock> pagoInformadoPorActa = new LinkedHashMap<>();
+    /**
+     * Mock de datos de tránsito por acta. Solo se puebla donde el escenario
+     * demo asigna flags explícitos (p. ej. nacimiento de condiciones
+     * materiales desde dato, no como acción de circuito).
+     */
+    private final Map<String, ActaTransitoMock> actaTransitoMockPorActa = new LinkedHashMap<>();
 
     /**
      * Soporte funcional del área archivo/reingreso: archivo directo desde
@@ -774,6 +832,26 @@ public class PrototipoStore {
         return actas;
     }
 
+    /**
+     * Satélite de tránsito precargado en carga demo; vacío si el acta no
+     * modela flags (no implica “sin tránsito” en el producto, sólo no demo).
+     */
+    public Optional<ActaTransitoMock> getActaTransitoMock(String actaId) {
+        return Optional.ofNullable(actaTransitoMockPorActa.get(actaId));
+    }
+
+    /** Carga demo: fija flags y documentos coherentes en {@link MockDataFactory}. */
+    public void putActaTransitoMock(String actaId, ActaTransitoMock datos) {
+        if (actaId == null) {
+            return;
+        }
+        if (datos == null) {
+            actaTransitoMockPorActa.remove(actaId);
+        } else {
+            actaTransitoMockPorActa.put(actaId, datos);
+        }
+    }
+
     public Map<String, List<ActaEventoMock>> getEventosPorActa() {
         return eventosPorActa;
     }
@@ -799,6 +877,7 @@ public class PrototipoStore {
         accionPendientePorActa.clear();
         situacionPagoPorActa.clear();
         pagoInformadoPorActa.clear();
+        actaTransitoMockPorActa.clear();
         cerrabilidad.clear();
         archivoReingreso.clear();
         gestionExterna.clear();
@@ -873,13 +952,24 @@ public class PrototipoStore {
     }
 
     /**
-     * Incorpora el documento resolutorio mock. El pendiente de cierre sigue
-     * hasta {@link #registrarCumplimientoMaterialBloqueoCierre} si aún faltaba
-     * cumplimiento material.
+     * Incorpora el documento resolutorio mock. El pendiente de cierre material
+     * (p. ej. {@link PendienteBloqueanteCierreMock#LEVANTAMIENTO_MEDIDA_PREVENTIVA})
+     * no se duplica: variaciones documentales (firma/notif) se indican con
+     * {@code documentoConCircuitoFirmaNotif} sobre el mismo eje, no con otro
+     * bloqueante.
      */
     public RegistrarResolucionBloqueoCierreResultado registrarResolucionBloqueoCierreDocumental(
             String actaId, PendienteBloqueanteCierreMock tipoPendiente) {
-        return cerrabilidad.registrarResolucionBloqueoCierreDocumental(actaId, tipoPendiente);
+        return cerrabilidad.registrarResolucionBloqueoCierreDocumental(
+                actaId, tipoPendiente, false);
+    }
+
+    public RegistrarResolucionBloqueoCierreResultado registrarResolucionBloqueoCierreDocumental(
+            String actaId,
+            PendienteBloqueanteCierreMock tipoPendiente,
+            boolean documentoConCircuitoFirmaNotif) {
+        return cerrabilidad.registrarResolucionBloqueoCierreDocumental(
+                actaId, tipoPendiente, documentoConCircuitoFirmaNotif);
     }
 
     public RegistrarCumplimientoMaterialBloqueoCierreResultado registrarCumplimientoMaterialBloqueoCierre(
@@ -924,6 +1014,21 @@ public class PrototipoStore {
     public RegistrarConstatacionMaterialTempranaResultado registrarConstatacionMaterialTemprana(
             String actaId, TipoConstatacionMaterialTemprana tipo) {
         return cerrabilidad.registrarConstatacionMaterialTemprana(actaId, tipo);
+    }
+
+    /**
+     * Demo: constata una medida preventiva aplicable durante el trámite (p. ej.
+     * contravención en análisis por inspección o noticia posterior al
+     * labrado), sin usar
+     * {@link #registrarConstatacionMaterialTemprana(constatación D1/D2)} ni
+     * satélite de tránsito. Requiere
+     * {@code PENDIENTE_ANALISIS}; el ancla documental
+     * {@code MEDIDA_PREVENTIVA} alinea con el cierre. Fachada; la lógica vive
+     * en el soporte de cerrabilidad.
+     */
+    public RegistrarMedidaPreventivaPosteriorResultado registrarMedidaPreventivaPosterior(
+            String actaId) {
+        return cerrabilidad.registrarMedidaPreventivaPosterior(actaId);
     }
 
     /**

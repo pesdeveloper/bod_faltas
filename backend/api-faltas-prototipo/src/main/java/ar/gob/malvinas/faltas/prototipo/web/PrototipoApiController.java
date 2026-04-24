@@ -35,6 +35,7 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarSolicitudPagoVoluntario
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionVencidaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarPagoInformadoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarConstatacionMaterialTempranaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarMedidaPreventivaPosteriorAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarCumplimientoMaterialBloqueoCierreAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReconocerOrigenBloqueanteMaterialAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarResolucionBloqueoCierreAccionResponse;
@@ -297,7 +298,8 @@ public class PrototipoApiController {
      * {@code SECUESTRO_RODADO}, {@code RETENCION_DOCUMENTAL},
      * {@code MEDIDA_PREVENTIVA_APLICABLE}. Requiere
      * {@code ACTAS_EN_ENRIQUECIMIENTO} y bloque {@code D1_CAPTURA} o
-     * {@code D2_ENRIQUECIMIENTO}.
+     * {@code D2_ENRIQUECIMIENTO}, y al menos un evento de trazabilidad previo
+     * en el expediente (p. ej. {@code ALTA} en D1).
      */
     @PostMapping("/actas/{id}/acciones/registrar-constatacion-material-temprana")
     public RegistrarConstatacionMaterialTempranaAccionResponse registrarConstatacionMaterialTemprana(
@@ -314,11 +316,85 @@ public class PrototipoApiController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         if (r.estado() == PrototipoStore.RegistrarConstatacionMaterialTempranaEstado.CONFLICT) {
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.TIPO_YA_EN_EXPEDIENTE) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Ya existe una constatación material temprana activa de este tipo para el acta (ancla"
+                                + " documental ya en expediente).");
+            }
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.FUERA_ETAPA_LABRADO_ENRIQUECIMIENTO) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "La constatación material temprana solo puede registrarse en etapa de labrado o"
+                                + " enriquecimiento (D1/D2, bandeja de actas en enriquecimiento).");
+            }
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoConstatacionMaterialTemprana.SIN_TRAZA_PREVIA) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Se requiere al menos un evento de trazabilidad en el expediente para registrar"
+                                + " constatación material temprana.");
+            }
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
         return new RegistrarConstatacionMaterialTempranaAccionResponse(
                 "OK",
                 "Constatación de material en expediente (D1/D2; mock; misma ancla que el circuito de cierre).",
+                r.actaId(),
+                r.documentoId(),
+                r.tipoDocumento(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    /**
+     * Incorpora ancla de medida preventiva nacida durante el trámite
+     * administrativo (p. ej. inspección posterior a labrado en
+     * contravención), en {@code PENDIENTE_ANALISIS}. No es constatación
+     * temprana D1/D2. Reutiliza el mismo criterio documental
+     * ({@code MEDIDA_PREVENTIVA}) que cierre y reconocimiento, sin datos de
+     * tránsito.
+     */
+    @PostMapping("/actas/{id}/acciones/registrar-medida-preventiva-posterior")
+    public RegistrarMedidaPreventivaPosteriorAccionResponse registrarMedidaPreventivaPosterior(
+            @PathVariable("id") String id) {
+        PrototipoStore.RegistrarMedidaPreventivaPosteriorResultado r = store.registrarMedidaPreventivaPosterior(id);
+        if (r.estado() == PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarMedidaPreventivaPosteriorEstado.CONFLICT) {
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .MEDIDA_YA_EN_EXPEDIENTE) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "El expediente ya contiene ancla de medida preventiva (MEDIDA_PREVENTIVA).");
+            }
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .FUERA_PENDIENTE_ANALISIS) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Registrar medida preventiva posterior solo aplica con acta en PENDIENTE_ANALISIS"
+                                + " (mock).");
+            }
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior
+                            .ACTA_EN_ARCHIVO) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "No aplica a acta en bandeja ARCHIVO (mock).");
+            }
+            if (r.motivoConflicto()
+                    == PrototipoStore.MotivoConflictoRegistroMedidaPreventivaPosterior.ACTA_CERRADA) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "No aplica a acta cerrada (mock).");
+            }
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarMedidaPreventivaPosteriorAccionResponse(
+                "OK",
+                "Medida preventiva registrada desde trámite posterior al labrado (ancla al circuito de cierre;"
+                        + " mock).",
                 r.actaId(),
                 r.documentoId(),
                 r.tipoDocumento(),
@@ -366,17 +442,26 @@ public class PrototipoApiController {
      * Registra en el expediente el documento mock resolutorio (no sustituye el
      * cumplimiento material; usar
      * {@link #registrarCumplimientoMaterialBloqueoCierre(String, String)}).
-     * Parámetro {@code tipo}: LEVANTAMIENTO_MEDIDA_PREVENTIVA, LIBERACION_RODADO,
-     * ENTREGA_DOCUMENTACION. Requiere origen material y acta en
-     * {@code PENDIENTE_ANALISIS}.
+     * Parámetro {@code tipo}: bloque de cierre material
+     * ({@code LEVANTAMIENTO_MEDIDA_PREVENTIVA}, {@code LIBERACION_RODADO},
+     * {@code ENTREGA_DOCUMENTACION}). Opcional {@code documentoConCircuitoFirmaNotif}
+     * (por defecto {@code false}): si es {@code true} y el tipo es
+     * levantamiento de medida, el documento se emite con circuito
+     * firma+notif mock ({@code PENDIENTE_FIRMA} / tipo
+     * {@code DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF}) sin sumar otro
+     * bloqueante material. Requiere origen material; la acta no debe estar
+     * cerrada ni en {@code GESTION_EXTERNA}, {@code ARCHIVO} ni
+     * {@code CERRADAS} (tampoco limitado a {@code PENDIENTE_ANALISIS}).
      */
     @PostMapping("/actas/{id}/acciones/registrar-resolucion-bloqueo-cierre")
     public RegistrarResolucionBloqueoCierreAccionResponse registrarResolucionBloqueoCierreDocumental(
             @PathVariable("id") String id,
-            @RequestParam("tipo") String tipo) {
+            @RequestParam("tipo") String tipo,
+            @RequestParam(value = "documentoConCircuitoFirmaNotif", defaultValue = "false")
+                    boolean documentoConCircuitoFirmaNotif) {
         PrototipoStore.PendienteBloqueanteCierreMock t = parsePendienteBloqueanteRequired(tipo);
         PrototipoStore.RegistrarResolucionBloqueoCierreResultado r =
-                store.registrarResolucionBloqueoCierreDocumental(id, t);
+                store.registrarResolucionBloqueoCierreDocumental(id, t, documentoConCircuitoFirmaNotif);
         if (r.estado() == PrototipoStore.RegistrarResolucionBloqueoCierreEstado.NOT_FOUND) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
@@ -815,7 +900,7 @@ public class PrototipoApiController {
 
     private HechosMaterialesActaResponse mapHechosMateriales(PrototipoStore.HechosMaterialesActaVista v) {
         if (v == null || v.ejes() == null) {
-            return new HechosMaterialesActaResponse(List.of());
+            return new HechosMaterialesActaResponse(List.of(), null);
         }
         return new HechosMaterialesActaResponse(
                 v.ejes().stream()
@@ -825,8 +910,10 @@ public class PrototipoApiController {
                                         e.etiqueta(),
                                         e.fase().name(),
                                         e.bloqueaCierre(),
-                                        e.descripcion()))
-                        .toList());
+                                        e.descripcion(),
+                                        e.ejeBloqueanteCierre()))
+                        .toList(),
+                v.lecturaOperativa());
     }
 
     private PrototipoStore.SituacionPagoMock parseSituacionPago(String raw) {
