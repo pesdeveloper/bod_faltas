@@ -1,0 +1,118 @@
+<mat-sidenav-container class="demo-layout">
+  <mat-sidenav mode="side" opened class="demo-sidenav">
+    <mat-nav-list>
+      @for (b of bandejas; track b) {
+        <a
+          mat-list-item
+          [class.active]="b === bandejaSeleccionada()"
+          href="#"
+          (click)="$event.preventDefault(); seleccionarBandeja(b)"
+        >
+          {{ etiquetaBandeja(b) }}
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="demo-toolbar">
+      <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
+      <div class="demo-actions">
+        <button mat-stroked-button type="button" disabled>Crear demo tránsito</button>
+        <button mat-stroked-button type="button" disabled>Crear demo inspecciones</button>
+        <button mat-stroked-button type="button" disabled>Crear demo fiscalización</button>
+        <button mat-stroked-button type="button" disabled>Crear demo bromatología</button>
+      </div>
+    </mat-toolbar>
+
+    <div class="demo-content">
+      <section class="list-panel" aria-label="Listado de actas">
+        @if (listadoEstado() === 'loading') {
+          <div class="state-box">
+            <mat-spinner diameter="36"></mat-spinner>
+            <p>Cargando actas…</p>
+          </div>
+        } @else if (listadoEstado() === 'error') {
+          <div class="state-box">
+            <p>No se pudo cargar el listado.</p>
+            <p>{{ listadoError() }}</p>
+            <button mat-button type="button" (click)="recargarListado()">Reintentar</button>
+          </div>
+        } @else if (actas().length === 0) {
+          <div class="state-box">
+            <p>No hay actas en esta bandeja.</p>
+          </div>
+        } @else {
+          @for (acta of actas(); track acta.id) {
+            <button
+              type="button"
+              mat-button
+              class="acta-row"
+              [class.selected]="acta.id === actaSeleccionadaId()"
+              (click)="seleccionarActa(acta.id)"
+            >
+              <div class="row-main">
+                <span class="row-numero">{{ acta.numeroActa }}</span>
+                <span class="row-meta">{{ etiquetaBandeja(acta.bandejaActual) }}</span>
+              </div>
+              <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>
+              <div class="row-resumen">{{ acta.infractorNombre }}</div>
+              <div class="badges">
+                @for (badge of badgesDe(acta); track badge.etiqueta) {
+                  <span [class]="'badge ' + claseBadge(badge)">{{ badge.etiqueta }}</span>
+                }
+              </div>
+            </button>
+          }
+        }
+      </section>
+
+      <aside class="detail-panel" aria-label="Detalle del acta">
+        @if (!actaSeleccionadaId()) {
+          <div class="state-box">
+            <mat-icon class="placeholder-icon">description</mat-icon>
+            <p>Seleccioná un acta del listado para ver su detalle operativo.</p>
+          </div>
+        } @else if (detalleEstado() === 'loading') {
+          <div class="state-box">
+            <mat-spinner diameter="36"></mat-spinner>
+            <p>Cargando detalle…</p>
+          </div>
+        } @else if (detalleEstado() === 'error') {
+          <div class="state-box">
+            <p>No se pudo cargar el detalle.</p>
+            <p>{{ detalleError() }}</p>
+            <button mat-button type="button" (click)="recargarDetalle()">Reintentar</button>
+          </div>
+        } @else if (detalle()) {
+          <header class="detail-header">
+            <h2>{{ detalle()!.numeroActa }}</h2>
+          </header>
+          <dl class="detail-dl">
+            <dt>Dependencia</dt>
+            <dd>{{ detalle()!.dependenciaDemo ?? '—' }}</dd>
+            <dt>Bandeja</dt>
+            <dd>{{ etiquetaBandeja(detalle()!.bandejaActual) }}</dd>
+            @if (detalle()!.cerrabilidad.resultadoFinal) {
+              <dt>Resultado final</dt>
+              <dd>{{ detalle()!.cerrabilidad.resultadoFinal }}</dd>
+            }
+            <dt>Cerrable</dt>
+            <dd>{{ detalle()!.cerrabilidad.cerrable ? 'Sí' : 'No' }}</dd>
+          </dl>
+          <div class="badges">
+            @for (badge of badgesDe(detalle()!); track badge.etiqueta) {
+              <span [class]="'badge ' + claseBadge(badge)">{{ badge.etiqueta }}</span>
+            }
+          </div>
+          @if (detalle()!.resumenHecho) {
+            <section class="detail-resumen">
+              <strong>Resumen operativo</strong>
+              <p>{{ detalle()!.resumenHecho }}</p>
+            </section>
+          }
+        }
+      </aside>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
