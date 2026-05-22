@@ -1,0 +1,62 @@
+$script = @'
+$file = "apps\web-direccion-faltas\angular\src\app\features\demo\demo-shell.component.html"
+$abs = (Resolve-Path $file).Path
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$content = [System.IO.File]::ReadAllText($abs, $utf8)
+$anchor = '<section class="detail-card" aria-labelledby="lectura-operativa-titulo">'
+if ($content.IndexOf($anchor) -lt 0) { Write-Host 'ANCHOR NOT FOUND'; exit 1 }
+$insertion = @"
+<section class="detail-card" aria-labelledby="cierre-acta-titulo">
+            <h3 id="cierre-acta-titulo" class="detail-card__title">Cierre del acta</h3>
+            @if (cierreActaMensaje() || cierreActaError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (cierreActaMensaje()) {
+                  <p class="demo-feedback-ok">{{ cierreActaMensaje() }}</p>
+                }
+                @if (cierreActaError()) {
+                  <p class="demo-feedback-error">{{ cierreActaError() }}</p>
+                }
+              </div>
+            }
+            @if (d.estaCerrada) {
+              <p class="detail-empty">El acta ya esta cerrada.</p>
+            } @else if (actaEsCerrableDesdeBackend()) {
+              <p class="detail-card__text">El acta es cerrable, pero requiere cierre explicito.</p>
+              <div class="cierre-actions">
+                <button
+                  mat-flat-button
+                  type="button"
+                  color="primary"
+                  [disabled]="cerrandoActa()"
+                  (click)="cerrarActa()"
+                >
+                  @if (cerrandoActa()) {
+                    Cerrando...
+                  } @else {
+                    Cerrar acta
+                  }
+                </button>
+              </div>
+            } @else {
+              <p class="detail-card__hint">
+                @if (d.cerrabilidad?.motivoNoCerrable) {
+                  El acta no es cerrable: {{ d.cerrabilidad.motivoNoCerrable }}
+                } @else {
+                  El acta no es cerrable.
+                }
+              </p>
+              <div class="cierre-actions">
+                <button mat-flat-button type="button" color="primary" disabled>Cerrar acta</button>
+              </div>
+            }
+          </section>
+
+          
+"@
+$replacement = $insertion + $anchor
+$new = $content.Replace($anchor, $replacement)
+if ($new -eq $content) { Write-Host 'NO REPLACE' } else { [System.IO.File]::WriteAllText($abs, $new, $utf8); Write-Host ('OK new length={0}' -f $new.Length) }
+'@
+Set-Content -Path tmp-insert.ps1 -Value $script -Encoding UTF8
+powershell -NoProfile -ExecutionPolicy Bypass -File tmp-insert.ps1
+Remove-Item tmp-insert.ps1

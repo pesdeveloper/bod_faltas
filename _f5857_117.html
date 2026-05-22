@@ -1,0 +1,9 @@
+$path = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\features\demo\demo-shell.component.html'
+$c = [System.IO.File]::ReadAllText($path, [System.Text.UTF8Encoding]::new($false))
+$idx = $c.IndexOf('archivada. Para continuar')
+if ($idx -lt 0) { Write-Host 'NOT FOUND'; exit 1 }
+$s = $c.Substring([Math]::Max(0, $idx - 20), 80)
+Write-Host ('Context: ' + $s)
+$b = [System.Text.Encoding]::UTF8.GetBytes($s)
+$hex = ($b | ForEach-Object { $_.ToString('X2') }) -join ' '
+Write-Host ('Bytes: ' + $hex.Substring(0, [Math]::Min(200, $hex.Length)))

@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D1_CAPTURA;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaPermitePagoVoluntario;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_ADJUNTO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_ANCLA_MEDIDA_PREVENTIVA;
@@ -992,6 +993,61 @@ public class PrototipoStore {
      */
     public PagoInformadoMock getPagoInformado(String actaId) {
         return pagoInformadoPorActa.get(actaId);
+    }
+
+    /**
+     * Acciones del flujo de pago voluntario realmente disponibles para la
+     * acta, en el mismo orden en que la UI suele ofrecerlas. Refleja
+     * exactamente las precondiciones que aplican los handlers asociados;
+     * intentar invocar una acción que no figure en esta lista termina en
+     * 409.
+     *
+     * <p>Precondiciones reflejadas (alineadas con
+     * {@link PagoVoluntarioSupport} y {@link PagoInformadoSupport}):
+     * <ul>
+     *   <li>{@code SOLICITAR}: situación {@code SIN_PAGO} y acta en
+     *       bandeja interna operable (helper
+     *       {@link PrototipoConstantes#bandejaPermitePagoVoluntario}).
+     *       Decisión funcional: el infractor siempre puede pagar mientras
+     *       el expediente esté en una etapa interna operable; el origen
+     *       no se restringe a {@code ACTAS_EN_ENRIQUECIMIENTO}.</li>
+     *   <li>{@code INFORMAR}: situación {@code SOLICITADO} u
+     *       {@code OBSERVADO} (administrado puede (re)informar pago).</li>
+     *   <li>{@code ADJUNTAR_COMPROBANTE}: situación
+     *       {@code PAGO_INFORMADO} (existe pago informado sin
+     *       comprobante).</li>
+     *   <li>{@code CONFIRMAR} y {@code OBSERVAR}: situación
+     *       {@code PENDIENTE_CONFIRMACION}.</li>
+     * </ul>
+     *
+     * <p>Lista vacía si el acta no existe, está cerrada, o se encuentra en
+     * una bandeja terminal/externa ({@code ARCHIVO}, {@code CERRADAS},
+     * {@code GESTION_EXTERNA}): sobre esos estados no aplica ninguna
+     * acción del flujo de pago voluntario.
+     */
+    public List<String> getAccionesPagoVoluntarioDisponibles(String actaId) {
+        ActaMock acta = actas.get(actaId);
+        if (acta == null) {
+            return List.of();
+        }
+        if (!bandejaPermitePagoVoluntario(acta.estaCerrada(), acta.bandejaActual())) {
+            return List.of();
+        }
+        SituacionPagoMock situacion = getSituacionPago(actaId);
+        List<String> acciones = new ArrayList<>();
+        switch (situacion) {
+            case SIN_PAGO -> acciones.add("SOLICITAR");
+            case SOLICITADO, OBSERVADO -> acciones.add("INFORMAR");
+            case PAGO_INFORMADO -> acciones.add("ADJUNTAR_COMPROBANTE");
+            case PENDIENTE_CONFIRMACION -> {
+                acciones.add("CONFIRMAR");
+                acciones.add("OBSERVAR");
+            }
+            case CONFIRMADO -> {
+                // Terminal de pago: sin nuevas acciones de pago voluntario.
+            }
+        }
+        return acciones;
     }
 
     public CerrabilidadActaVista getCerrabilidadActa(String actaId) {

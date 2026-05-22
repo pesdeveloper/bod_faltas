@@ -27,6 +27,7 @@ public record ActaDetalleResponse(
         String motivoArchivo,
         String tipoGestionExterna,
         CerrabilidadResponse cerrabilidad,
+        List<String> accionesPagoVoluntarioDisponibles,
         HechosMaterialesActaResponse hechosMateriales,
         String dependenciaDemo,
         String tipoActaDemo,

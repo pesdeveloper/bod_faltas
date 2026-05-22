@@ -1,13 +1,37 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
 import {
   ActaDetalleDemo,
   ActaResumenDemo,
+  AdjuntarComprobantePagoInformadoAccionResponseDemo,
+  ArchivarActaAccionResponseDemo,
   BandejaCodigo,
+  CerrarActaAccionResponseDemo,
+  ConfirmarPagoInformadoAccionResponseDemo,
+  CrearActaMockDemoRequest,
+  DerivarAGestionExternaAccionResponseDemo,
+  DocumentoActaDemo,
+  EventoActaDemo,
+  FirmarDocumentoAccionResponseDemo,
+  GenerarMedidaPreventivaAccionResponseDemo,
+  GenerarNotificacionActaAccionResponseDemo,
+  GenerarNulidadAccionResponseDemo,
+  ObservarPagoInformadoAccionResponseDemo,
   PrototipoHealthResponse,
   PrototipoResetResponse,
+  RegistrarCumplimientoMaterialBloqueoCierreAccionResponseDemo,
+  RegistrarNotificacionNegativaAccionResponseDemo,
+  RegistrarNotificacionPositivaAccionResponseDemo,
+  RegistrarNotificacionVencidaAccionResponseDemo,
+  RegistrarPagoInformadoAccionResponseDemo,
+  RegistrarResolucionBloqueoCierreAccionResponseDemo,
+  RegistrarSolicitudPagoVoluntarioAccionResponseDemo,
+  ReingresarActaAccionResponseDemo,
+  ReingresarDesdeGestionExternaAccionResponseDemo,
+  TipoCumplimientoMaterialBloqueante,
+  TipoResolucionBloqueoCierre,
 } from '../models/prototipo-faltas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -31,5 +55,202 @@ export class PrototipoFaltasApiService {
 
   obtenerActa(id: string): Observable<ActaDetalleDemo> {
     return this.http.get<ActaDetalleDemo>(`${this.api.baseUrl}/actas/${id}`);
+  }
+
+  listarDocumentosActa(actaId: string): Observable<DocumentoActaDemo[]> {
+    return this.http.get<DocumentoActaDemo[]>(`${this.api.baseUrl}/actas/${actaId}/documentos`);
+  }
+
+  listarEventosActa(actaId: string): Observable<EventoActaDemo[]> {
+    return this.http.get<EventoActaDemo[]>(`${this.api.baseUrl}/actas/${actaId}/eventos`);
+  }
+
+  crearActaMockDemo(request: CrearActaMockDemoRequest): Observable<ActaDetalleDemo> {
+    return this.http.post<ActaDetalleDemo>(`${this.api.baseUrl}/actas/mock`, request);
+  }
+
+  firmarDocumento(
+    actaId: string,
+    documentoId: string,
+  ): Observable<FirmarDocumentoAccionResponseDemo> {
+    return this.http.post<FirmarDocumentoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/firmar-documento/${documentoId}`,
+      null,
+    );
+  }
+
+  generarNulidad(actaId: string): Observable<GenerarNulidadAccionResponseDemo> {
+    return this.http.post<GenerarNulidadAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/generar-nulidad`,
+      null,
+    );
+  }
+
+  generarMedidaPreventiva(
+    actaId: string,
+  ): Observable<GenerarMedidaPreventivaAccionResponseDemo> {
+    return this.http.post<GenerarMedidaPreventivaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/generar-medida-preventiva`,
+      null,
+    );
+  }
+
+  generarNotificacionActa(
+    actaId: string,
+  ): Observable<GenerarNotificacionActaAccionResponseDemo> {
+    return this.http.post<GenerarNotificacionActaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/generar-notificacion-acta`,
+      null,
+    );
+  }
+
+  cerrarActa(actaId: string): Observable<CerrarActaAccionResponseDemo> {
+    return this.http.post<CerrarActaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/cerrar-acta`,
+      null,
+    );
+  }
+
+  registrarCumplimientoMaterialBloqueoCierre(
+    actaId: string,
+    tipo: TipoCumplimientoMaterialBloqueante,
+  ): Observable<RegistrarCumplimientoMaterialBloqueoCierreAccionResponseDemo> {
+    const params = new HttpParams().set('tipo', tipo);
+    return this.http.post<RegistrarCumplimientoMaterialBloqueoCierreAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-cumplimiento-material-bloqueo-cierre`,
+      null,
+      { params },
+    );
+  }
+
+  registrarResolucionBloqueoCierreDocumental(
+    actaId: string,
+    tipo: TipoResolucionBloqueoCierre,
+  ): Observable<RegistrarResolucionBloqueoCierreAccionResponseDemo> {
+    const params = new HttpParams().set('tipo', tipo);
+    return this.http.post<RegistrarResolucionBloqueoCierreAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-resolucion-bloqueo-cierre`,
+      null,
+      { params },
+    );
+  }
+
+  registrarNotificacionPositiva(
+    actaId: string,
+  ): Observable<RegistrarNotificacionPositivaAccionResponseDemo> {
+    return this.http.post<RegistrarNotificacionPositivaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-notificacion-positiva`,
+      null,
+    );
+  }
+
+  registrarNotificacionNegativa(
+    actaId: string,
+  ): Observable<RegistrarNotificacionNegativaAccionResponseDemo> {
+    return this.http.post<RegistrarNotificacionNegativaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-notificacion-negativa`,
+      null,
+    );
+  }
+
+  registrarNotificacionVencida(
+    actaId: string,
+  ): Observable<RegistrarNotificacionVencidaAccionResponseDemo> {
+    return this.http.post<RegistrarNotificacionVencidaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-notificacion-vencida`,
+      null,
+    );
+  }
+
+  registrarSolicitudPagoVoluntario(
+    actaId: string,
+  ): Observable<RegistrarSolicitudPagoVoluntarioAccionResponseDemo> {
+    return this.http.post<RegistrarSolicitudPagoVoluntarioAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-solicitud-pago-voluntario`,
+      null,
+    );
+  }
+
+  registrarPagoInformado(
+    actaId: string,
+  ): Observable<RegistrarPagoInformadoAccionResponseDemo> {
+    return this.http.post<RegistrarPagoInformadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-pago-informado`,
+      null,
+    );
+  }
+
+  adjuntarComprobantePagoInformado(
+    actaId: string,
+    nombreArchivo?: string,
+  ): Observable<AdjuntarComprobantePagoInformadoAccionResponseDemo> {
+    let params = new HttpParams();
+    if (nombreArchivo && nombreArchivo.trim().length > 0) {
+      params = params.set('nombreArchivo', nombreArchivo);
+    }
+    return this.http.post<AdjuntarComprobantePagoInformadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/adjuntar-comprobante-pago-informado`,
+      null,
+      { params },
+    );
+  }
+
+  confirmarPagoInformado(
+    actaId: string,
+  ): Observable<ConfirmarPagoInformadoAccionResponseDemo> {
+    return this.http.post<ConfirmarPagoInformadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/confirmar-pago-informado`,
+      null,
+    );
+  }
+
+  observarPagoInformado(
+    actaId: string,
+  ): Observable<ObservarPagoInformadoAccionResponseDemo> {
+    return this.http.post<ObservarPagoInformadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/observar-pago-informado`,
+      null,
+    );
+  }
+
+  archivarActa(actaId: string): Observable<ArchivarActaAccionResponseDemo> {
+    return this.http.post<ArchivarActaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/archivar-acta`,
+      null,
+    );
+  }
+
+  reingresarActa(actaId: string): Observable<ReingresarActaAccionResponseDemo> {
+    return this.http.post<ReingresarActaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/reingresar-acta`,
+      null,
+    );
+  }
+
+  derivarAApremio(
+    actaId: string,
+  ): Observable<DerivarAGestionExternaAccionResponseDemo> {
+    return this.http.post<DerivarAGestionExternaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/derivar-a-apremio`,
+      null,
+    );
+  }
+
+  derivarAJuzgadoDePaz(
+    actaId: string,
+  ): Observable<DerivarAGestionExternaAccionResponseDemo> {
+    return this.http.post<DerivarAGestionExternaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/derivar-a-juzgado-de-paz`,
+      null,
+    );
+  }
+
+  reingresarDesdeGestionExterna(
+    actaId: string,
+  ): Observable<ReingresarDesdeGestionExternaAccionResponseDemo> {
+    return this.http.post<ReingresarDesdeGestionExternaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/reingresar-desde-gestion-externa`,
+      null,
+    );
   }
 }

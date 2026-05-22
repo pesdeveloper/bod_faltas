@@ -3,6 +3,7 @@ import { BandejaCodigo } from '../models/prototipo-faltas.models';
 export const BANDEJAS_DEMO: readonly BandejaCodigo[] = [
   'ACTAS_EN_ENRIQUECIMIENTO',
   'PENDIENTE_ANALISIS',
+  'PENDIENTES_RESOLUCION_REDACCION',
   'PENDIENTE_FIRMA',
   'PENDIENTE_NOTIFICACION',
   'EN_NOTIFICACION',
@@ -14,6 +15,7 @@ export const BANDEJAS_DEMO: readonly BandejaCodigo[] = [
 export const BANDEJA_ETIQUETAS: Record<BandejaCodigo, string> = {
   ACTAS_EN_ENRIQUECIMIENTO: 'Actas en enriquecimiento',
   PENDIENTE_ANALISIS: 'Pendiente de análisis',
+  PENDIENTES_RESOLUCION_REDACCION: 'Pendientes de redacción',
   PENDIENTE_FIRMA: 'Pendiente de firma',
   PENDIENTE_NOTIFICACION: 'Pendiente de notificación',
   EN_NOTIFICACION: 'En notificación',

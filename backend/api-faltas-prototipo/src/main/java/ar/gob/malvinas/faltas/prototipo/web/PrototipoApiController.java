@@ -915,6 +915,7 @@ public class PrototipoApiController {
                 store.getMotivoArchivo(a.id()),
                 store.getTipoGestionExterna(a.id()),
                 mapCerrabilidad(store.getCerrabilidadActa(a.id())),
+                store.getAccionesPagoVoluntarioDisponibles(a.id()),
                 mapHechosMateriales(store.getHechosMaterialesActa(a.id())),
                 store.getDependenciaDemo(a.id()).orElse(null),
                 store.getTipoActaAltaDemo(a.id()).orElse(null),

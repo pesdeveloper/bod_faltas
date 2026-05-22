@@ -177,6 +177,38 @@ final class PrototipoConstantes {
         return true;
     }
 
+    /**
+     * Permite originar / continuar el flujo de pago voluntario en cualquier
+     * bandeja interna operable. Excluye únicamente las bandejas
+     * terminales o externas ({@link #BANDEJA_ARCHIVO}, {@link
+     * #BANDEJA_CERRADAS}, {@link #BANDEJA_GESTION_EXTERNA}) y las actas
+     * cerradas.
+     *
+     * <p>Decisión funcional: el infractor siempre puede pagar mientras el
+     * expediente esté en una etapa interna operable; la spec admite
+     * originar la solicitud desde labradas o enriquecimiento (ver
+     * {@code spec/03-bandejas/01-bandeja-labradas.md} y
+     * {@code spec/03-bandejas/02-bandeja-enriquecimiento.md}) y centraliza
+     * la evaluación posterior en la bandeja de análisis / presentaciones /
+     * pagos ({@code spec/03-bandejas/03-bandeja-analisis-presentaciones-pagos.md}),
+     * pero el origen no se restringe a una sola bandeja interna.
+     */
+    static boolean bandejaPermitePagoVoluntario(
+            boolean actaCerrada, String bandejaActual) {
+        if (actaCerrada) {
+            return false;
+        }
+        if (bandejaActual == null) {
+            return false;
+        }
+        if (BANDEJA_GESTION_EXTERNA.equals(bandejaActual)
+                || BANDEJA_ARCHIVO.equals(bandejaActual)
+                || BANDEJA_CERRADAS.equals(bandejaActual)) {
+            return false;
+        }
+        return true;
+    }
+
     static boolean esResolutorioBloqueoCierreCircuitoFirmaYNotif(String tipoDocumento) {
         return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF.equals(tipoDocumento);
     }

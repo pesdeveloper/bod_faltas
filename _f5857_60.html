@@ -1,0 +1,50 @@
+$ErrorActionPreference = 'Stop'
+$path = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\core\models\prototipo-faltas.models.ts'
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$content = [System.IO.File]::ReadAllText($path, $utf8)
+$content = $content.TrimEnd("`r","`n")
+$nl = "`r`n"
+
+$appendix = @"
+
+/**
+ * Contrato POST /actas/{id}/acciones/archivar-acta
+ * - ArchivarActaAccionResponse.
+ *
+ * Precondición backend: acta en bandeja PENDIENTE_ANALISIS. Efecto: mueve
+ * el acta a la macro-bandeja ARCHIVO y deja explícito el motivoArchivo
+ * recibido del backend. Angular no infiere motivos.
+ */
+export interface ArchivarActaAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  motivoArchivo: string;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/reingresar-acta
+ * - ReingresarActaAccionResponse.
+ *
+ * Precondición backend: acta en bandeja ARCHIVO y permiteReingreso=true.
+ * Efecto: vuelve a PENDIENTE_ANALISIS con accionPendiente operativa
+ * REVISION_POST_REINGRESO. El motivoArchivoPrevio se preserva como
+ * trazabilidad y puede ser null si el acta fue archivada antes de
+ * registrar motivo.
+ */
+export interface ReingresarActaAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  accionPendiente: string;
+  motivoArchivoPrevio: string | null;
+}
+"@
+
+$content = $content + $nl + $appendix + $nl
+[System.IO.File]::WriteAllText($path, $content, $utf8)
+Write-Host 'OK models'

@@ -12,11 +12,12 @@ import java.util.Map;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_REVISION;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaPermitePagoVoluntario;
 
 /**
- * Soporte funcional del área presentaciones / pagos. Alcance mínimo del
- * slice: registrar la solicitud de pago voluntario temprano, es decir, una
- * solicitud que se origina antes de la etapa formal de análisis.
+ * Soporte funcional del área presentaciones / pagos. Alcance del slice:
+ * registrar la solicitud de pago voluntario originada por el infractor en
+ * cualquier etapa interna operable del expediente.
  *
  * <p>Respaldo de dominio:
  * <ul>
@@ -30,25 +31,23 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_
  *       solicitaron o registraron pago voluntario.</li>
  * </ul>
  *
- * <p>Circuito implementado (único verdadero): acta en
- * {@code ACTAS_EN_ENRIQUECIMIENTO} + acción
- * {@code registrar-solicitud-pago-voluntario} → acta pasa a
- * {@code PENDIENTE_ANALISIS} con marca operativa
- * {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}. No se modela
- * todavía cierre por pago cumplido: la resolución posterior queda en
- * análisis y puede cerrarse con la acción genérica ya existente
- * ({@link CierreSupport}). Esto es deliberado: la spec habilita el
- * origen temprano de la solicitud pero exige evaluación en análisis
- * antes del cierre.
+ * <p>Decisión funcional (único circuito verdadero): el infractor siempre
+ * puede pagar mientras el expediente esté en una bandeja interna
+ * operable. La precondición se delega en
+ * {@link PrototipoConstantes#bandejaPermitePagoVoluntario}, que excluye
+ * {@code ARCHIVO}, {@code CERRADAS} y {@code GESTION_EXTERNA}. Tras
+ * registrar la solicitud, el acta queda en {@code PENDIENTE_ANALISIS}
+ * con marca operativa
+ * {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}, alineada con la
+ * spec que centraliza la evaluación en análisis. No se modela cierre
+ * automático por pago: la resolución posterior queda en análisis y puede
+ * cerrarse con la acción genérica ya existente ({@link CierreSupport}).
  *
  * <p>No duplica estado: recibe por referencia las estructuras compartidas
  * del prototipo ({@code actas}, {@code eventosPorActa},
  * {@code accionPendientePorActa}).
  */
 final class PagoVoluntarioSupport {
-
-    private static final String BANDEJA_ACTAS_EN_ENRIQUECIMIENTO = "ACTAS_EN_ENRIQUECIMIENTO";
-    private static final String BLOQUE_D2_ENRIQUECIMIENTO = "D2_ENRIQUECIMIENTO";
 
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
@@ -67,14 +66,22 @@ final class PagoVoluntarioSupport {
     }
 
     /**
-     * Demo: solicitud de pago voluntario originada en etapa temprana del
-     * expediente (solo desde {@code ACTAS_EN_ENRIQUECIMIENTO}). Lleva al
+     * Demo: solicitud de pago voluntario originada por el infractor en
+     * cualquier bandeja interna operable (helper
+     * {@link PrototipoConstantes#bandejaPermitePagoVoluntario}). Lleva al
      * acta a {@code PENDIENTE_ANALISIS} con marca operativa
      * {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}, dentro del
      * bloque {@code D5_ANALISIS} y estado {@code PENDIENTE_REVISION}.
-     * Genera evento {@code PAGO_VOLUNTARIO_SOLICITADO} con origen
-     * {@code D2_ENRIQUECIMIENTO} y destino {@code D5_ANALISIS}. No cierra
-     * el expediente: el cierre depende del análisis material posterior
+     * Genera evento {@code PAGO_VOLUNTARIO_SOLICITADO} con bloque origen
+     * el bloque actual del acta y destino {@code D5_ANALISIS}.
+     *
+     * <p>Devuelve {@code CONFLICT} si el acta está cerrada, en bandeja
+     * terminal/externa ({@code ARCHIVO}, {@code CERRADAS},
+     * {@code GESTION_EXTERNA}) o si la situación de pago no es
+     * {@code SIN_PAGO}: estos casos quedan también fuera de la lista
+     * expuesta por {@link PrototipoStore#getAccionesPagoVoluntarioDisponibles}
+     * para mantener simetría entre lista y handler. No cierra el
+     * expediente: el cierre depende del análisis material posterior
      * (ver spec/03-bandejas/03-bandeja-analisis-presentaciones-pagos.md).
      */
     PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(String actaId) {
@@ -84,12 +91,20 @@ final class PagoVoluntarioSupport {
                     PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.NOT_FOUND,
                     null, null, null, null);
         }
-        if (!BANDEJA_ACTAS_EN_ENRIQUECIMIENTO.equals(actual.bandejaActual())) {
+        if (!bandejaPermitePagoVoluntario(actual.estaCerrada(), actual.bandejaActual())) {
+            return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, null);
+        }
+        PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        if (situacionActual != PrototipoStore.SituacionPagoMock.SIN_PAGO) {
             return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
                     PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT,
                     null, null, null, null);
         }
 
+        String bloqueOrigen = actual.bloqueActual();
         ActaMock actualizada = new ActaMock(
                 actual.id(),
                 actual.numeroActa(),
@@ -116,9 +131,9 @@ final class PagoVoluntarioSupport {
         registrarEvento(
                 actaId,
                 "PAGO_VOLUNTARIO_SOLICITADO",
-                BLOQUE_D2_ENRIQUECIMIENTO,
+                bloqueOrigen,
                 BLOQUE_D5,
-                "Solicitud de pago voluntario registrada en etapa temprana; "
+                "Solicitud de pago voluntario registrada por el infractor; "
                         + "expediente pasa a análisis para evaluación.");
 
         return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(

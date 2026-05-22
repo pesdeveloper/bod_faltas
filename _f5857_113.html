@@ -1,0 +1,25 @@
+$ErrorActionPreference = 'Stop'
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+$target = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\features\demo\demo-shell.component.html'
+$sectionPath = 'S:\Source\Repos\Bod-Faltas\.tmp-edits\archivo-section.html'
+
+$content = [System.IO.File]::ReadAllText($target, $utf8NoBom)
+$section = [System.IO.File]::ReadAllText($sectionPath, $utf8NoBom)
+
+# Normalizar EOL del fragmento al de destino (LF).
+$section = $section.Replace("`r`n", "`n")
+
+# Anclar: insertamos justo antes de "          <section class=\"detail-card\" aria-labelledby=\"notificacion-acta-titulo\">"
+$anchor = "          </section>`n`n          <section class=`"detail-card`" aria-labelledby=`"notificacion-acta-titulo`">"
+if (-not $content.Contains($anchor)) {
+  throw 'No se encontro el anchor de notificacion'
+}
+
+# El section ya viene con su separador final en blanco.
+$insertion = $section.TrimEnd("`n") + "`n"
+$replacement = "          </section>`n`n" + $insertion + "`n          <section class=`"detail-card`" aria-labelledby=`"notificacion-acta-titulo`">"
+
+$content = $content.Replace($anchor, $replacement)
+
+[System.IO.File]::WriteAllText($target, $content, $utf8NoBom)
+Write-Host 'OK html patched'

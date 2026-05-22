@@ -1,7 +1,6 @@
 export type BandejaCodigo =
   | 'ACTAS_EN_ENRIQUECIMIENTO'
   | 'PENDIENTE_ANALISIS'
-  | 'PENDIENTES_RESOLUCION_REDACCION'
   | 'PENDIENTE_FIRMA'
   | 'PENDIENTE_NOTIFICACION'
   | 'EN_NOTIFICACION'
@@ -95,7 +94,6 @@ export interface ActaDetalleDemo extends ActaResumenDemo {
   piezasRequeridas: string[];
   piezasGeneradas: string[];
   pagoInformado: PagoInformadoDemo | null;
-  accionesPagoVoluntarioDisponibles: string[];
   hechosMateriales: HechosMaterialesActaDemo | null;
   dependenciaDemo: string | null;
   tipoActaDemo: string | null;
@@ -152,60 +150,11 @@ export interface FirmarDocumentoAccionResponseDemo {
   bandejaActual: string;
   estadoProcesoActual: string;
 }
-/**
- * Contrato POST /actas/{id}/acciones/generar-nulidad
- * - GenerarNulidadAccionResponse.
- *
- * Sin body. Precondicion backend: acta en PENDIENTES_RESOLUCION_REDACCION
- * con pieza NULIDAD requerida y aun no generada. Efecto: materializa
- * documento NULIDAD en PENDIENTE_FIRMA y actualiza piezasGeneradas; la
- * bandeja/estado los define el agregador del backend.
- */
-export interface GenerarNulidadAccionResponseDemo {
-  resultado: string;
-  mensaje: string;
-  actaId: string;
-  bandejaActual: string;
-  estadoProcesoActual: string;
-}
-
-/**
- * Contrato POST /actas/{id}/acciones/generar-medida-preventiva
- * - GenerarMedidaPreventivaAccionResponse.
- */
-export interface GenerarMedidaPreventivaAccionResponseDemo {
-  resultado: string;
-  mensaje: string;
-  actaId: string;
-  bandejaActual: string;
-  estadoProcesoActual: string;
-}
-
-/**
- * Contrato POST /actas/{id}/acciones/generar-notificacion-acta
- * - GenerarNotificacionActaAccionResponse.
- */
-export interface GenerarNotificacionActaAccionResponseDemo {
-  resultado: string;
-  mensaje: string;
-  actaId: string;
-  bandejaActual: string;
-  estadoProcesoActual: string;
-}
-
 
 export type TipoCumplimientoMaterialBloqueante =
   | 'LEVANTAMIENTO_MEDIDA_PREVENTIVA'
   | 'LIBERACION_RODADO'
   | 'ENTREGA_DOCUMENTACION';
-
-/**
- * Tipos aceptados por el endpoint de resolucion documental de bloqueante
- * de cierre. Coinciden 1 a 1 con TipoCumplimientoMaterialBloqueante: la
- * resolucion documental es el paso previo al cumplimiento material y el
- * backend valida origen y bandeja (no se inventan tipos en Angular).
- */
-export type TipoResolucionBloqueoCierre = TipoCumplimientoMaterialBloqueante;
 
 /**
  * Contrato POST /actas/{id}/acciones/registrar-cumplimiento-material-bloqueo-cierre
@@ -216,25 +165,6 @@ export interface RegistrarCumplimientoMaterialBloqueoCierreAccionResponseDemo {
   mensaje: string;
   actaId: string;
   pendienteCumplido: string;
-  cerrabilidad: CerrabilidadDemo;
-}
-
-/**
- * Contrato POST /actas/{id}/acciones/registrar-resolucion-bloqueo-cierre
- * - RegistrarResolucionBloqueoCierreAccionResponse.
- *
- * Incorpora el documento resolutorio mock previo al cumplimiento material
- * efectivo. El bloqueante persiste hasta que se invoque
- * registrar-cumplimiento-material-bloqueo-cierre sobre el mismo tipo.
- * El backend no cambia bandeja al registrar resolucion: la mantiene.
- */
-export interface RegistrarResolucionBloqueoCierreAccionResponseDemo {
-  status: string;
-  mensaje: string;
-  actaId: string;
-  documentoId: string;
-  tipoDocumento: string;
-  pendienteAtendido: string;
   cerrabilidad: CerrabilidadDemo;
 }
 
@@ -376,8 +306,8 @@ export interface ObservarPagoInformadoAccionResponseDemo {
  * Contrato POST /actas/{id}/acciones/archivar-acta
  * - ArchivarActaAccionResponse.
  *
- * Precondicion backend: acta en bandeja PENDIENTE_ANALISIS. Efecto: mueve
- * el acta a la macro-bandeja ARCHIVO y deja explicito el motivoArchivo
+ * Precondición backend: acta en bandeja PENDIENTE_ANALISIS. Efecto: mueve
+ * el acta a la macro-bandeja ARCHIVO y deja explícito el motivoArchivo
  * recibido del backend. Angular no infiere motivos.
  */
 export interface ArchivarActaAccionResponseDemo {
@@ -393,7 +323,7 @@ export interface ArchivarActaAccionResponseDemo {
  * Contrato POST /actas/{id}/acciones/reingresar-acta
  * - ReingresarActaAccionResponse.
  *
- * Precondicion backend: acta en bandeja ARCHIVO y permiteReingreso=true.
+ * Precondición backend: acta en bandeja ARCHIVO y permiteReingreso=true.
  * Efecto: vuelve a PENDIENTE_ANALISIS con accionPendiente operativa
  * REVISION_POST_REINGRESO. El motivoArchivoPrevio se preserva como
  * trazabilidad y puede ser null si el acta fue archivada antes de
@@ -407,57 +337,4 @@ export interface ReingresarActaAccionResponseDemo {
   estadoProcesoActual: string;
   accionPendiente: string;
   motivoArchivoPrevio: string | null;
-}
-
-/**
- * Tipo de derivacion a gestion externa expuesto como par de endpoints
- * tipados del backend (no se inventan tipos en Angular). Cada valor mapea
- * 1 a 1 con un POST distinto:
- *  - APREMIO ......... POST /acciones/derivar-a-apremio
- *  - JUZGADO_DE_PAZ .. POST /acciones/derivar-a-juzgado-de-paz
- *
- * Las precondiciones (PENDIENTE_ANALISIS + marca operativa habilitadora)
- * son responsabilidad exclusiva del backend; Angular solo dispara la
- * accion contra el endpoint correspondiente.
- */
-export type TipoGestionExternaDemo = 'APREMIO' | 'JUZGADO_DE_PAZ';
-
-/**
- * Contrato POST /actas/{id}/acciones/derivar-a-apremio
- * y POST /actas/{id}/acciones/derivar-a-juzgado-de-paz
- * - DerivarAGestionExternaAccionResponse.
- *
- * Precondicion backend: acta en PENDIENTE_ANALISIS con accionPendiente
- * DERIVAR_GESTION_EXTERNA (primera derivacion) o
- * REVISION_POST_GESTION_EXTERNA (re-derivacion despues de un retorno).
- * Efecto: el acta sale del circuito interno y pasa a la macro-bandeja
- * GESTION_EXTERNA con el tipoGestionExterna asignado.
- */
-export interface DerivarAGestionExternaAccionResponseDemo {
-  resultado: string;
-  mensaje: string;
-  actaId: string;
-  bandejaActual: string;
-  estadoProcesoActual: string;
-  tipoGestionExterna: string;
-}
-
-/**
- * Contrato POST /actas/{id}/acciones/reingresar-desde-gestion-externa
- * - ReingresarDesdeGestionExternaAccionResponse.
- *
- * Precondicion backend: acta en GESTION_EXTERNA con permiteReingreso=true.
- * Efecto: vuelve a PENDIENTE_ANALISIS con accionPendiente operativa
- * REVISION_POST_GESTION_EXTERNA. El tipoGestionExternaPrevia se preserva
- * como trazabilidad sintetica de la gestion externa de la que provino
- * (puede ser null si no constaba tipo).
- */
-export interface ReingresarDesdeGestionExternaAccionResponseDemo {
-  resultado: string;
-  mensaje: string;
-  actaId: string;
-  bandejaActual: string;
-  estadoProcesoActual: string;
-  accionPendiente: string;
-  tipoGestionExternaPrevia: string | null;
 }

@@ -1,0 +1,65 @@
+          <section class="detail-card" aria-labelledby="archivo-acta-titulo">
+            <h3 id="archivo-acta-titulo" class="detail-card__title">Archivo / reingreso</h3>
+            @if (archivoMensaje() || archivoError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (archivoMensaje()) {
+                  <p class="demo-feedback-ok">{{ archivoMensaje() }}</p>
+                }
+                @if (archivoError()) {
+                  <p class="demo-feedback-error">{{ archivoError() }}</p>
+                }
+              </div>
+            }
+            <p class="detail-card__text">
+              Bandeja actual: {{ etiquetaBandeja(d.bandejaActual) }}.
+            </p>
+            @if (d.bandejaActual === 'ARCHIVO') {
+              <p class="detail-card__text">
+                El acta está archivada. Para continuar requiere reingreso explícito.
+              </p>
+              @if (actaPuedeReingresarDesdeBackend()) {
+                <div class="archivo-actions">
+                  <button
+                    mat-flat-button
+                    type="button"
+                    color="primary"
+                    [disabled]="ejecutandoArchivoAccion() !== null"
+                    (click)="reingresarActa()"
+                  >
+                    @if (ejecutandoArchivoAccion() === 'REINGRESAR') {
+                      Reingresando...
+                    } @else {
+                      Reingresar acta
+                    }
+                  </button>
+                </div>
+              } @else {
+                <p class="detail-card__hint">
+                  El reingreso ya fue consumido para esta acta archivada.
+                </p>
+              }
+            } @else if (actaPuedeArchivarseDesdeBackend()) {
+              <p class="detail-card__text">
+                El acta puede archivarse desde esta instancia operativa.
+              </p>
+              <div class="archivo-actions">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [disabled]="ejecutandoArchivoAccion() !== null"
+                  (click)="archivarActa()"
+                >
+                  @if (ejecutandoArchivoAccion() === 'ARCHIVAR') {
+                    Archivando...
+                  } @else {
+                    Archivar acta
+                  }
+                </button>
+              </div>
+            } @else {
+              <p class="detail-card__hint">
+                Archivo no disponible para la bandeja actual.
+              </p>
+            }
+          </section>
+

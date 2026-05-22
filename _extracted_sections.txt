@@ -1,0 +1,583 @@
+
+===== doc_list_full len=2752 from 00ccda2c-c1ae-4fa1-847a-fd16321f0438 =====
+<section class="detail-card" aria-labelledby="documentos-titulo">.*?</section>\\s*\\r?\
+\\s*<section class="detail-card" aria-labelledby="bloqueantes-titulo">'
+$newDocs = @'
+          <section class="detail-card" aria-labelledby="documentos-titulo">
+            <h3 id="documentos-titulo" class="detail-card__title">Documentos / piezas</h3>
+            @if (documentosEstado() === 'loading') {
+              <motion class="subresource-loading">
+                <mat-spinner diameter="28"></mat-spinner>
+                <span>Cargando documentos...</span>
+              </motion>
+            } @else if (documentosEstado() === 'error') {
+              <motion class="subresource-error">
+                <p>No se pudieron cargar los documentos.</p>
+                <p>{{ documentosError() }}</p>
+                <button mat-button type="button" (click)="recargarDocumentos()">Reintentar</button>
+              </motion>
+            } @else if (documentos().length === 0) {
+              <p class="detail-empty">Sin documentos registrados.</p>
+            } @else {
+              <ul class="doc-list">
+                @for (doc of documentos(); track doc.id) {
+                  <li class="doc-item">
+                    <div class="doc-item__head">
+                      <span class="doc-item__id">{{ doc.id }}</span>
+                      <span class="badge badge-doc-tipo">{{ doc.tipoDocumento }}</span>
+                      <span class="badge badge-doc-estado">{{ doc.estadoDocumento }}</span>
+                    </motion>
+                    <dl class="detail-dl detail-dl--compact doc-item__meta">
+                      <dt>Archivo</dt>
+                      <dd>{{ doc.nombreArchivo }}</dd>
+                    </dl>
+                  </li>
+                }
+              </ul>
+            }
+            @if (tienePiezasEnDetalle(d)) {
+              <div class="detail-piezas-resumen">
+                <p class="detail-subtitle">Resumen de piezas (detalle principal)</p>
+                @if (d.piezasRequeridas?.length) {
+                  <p class="detail-subtitle detail-subtitle--minor">Piezas requeridas</p>
+                  <ul class="detail-list">
+                    @for (pieza of d.piezasRequeridas; track pieza) {
+                      <li>{{ pieza }}</li>
+                    }
+                  </ul>
+                }
+                @if (d.piezasGeneradas?.length) {
+                  <p class="detail-subtitle detail-subtitle--minor">Piezas generadas</p>
+                  <ul class="detail-list">
+                    @for (pieza of d.piezasGeneradas; track pieza) {
+                      <li>{{ pieza }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
+          </section>
+
+
+===== eventos_full len=1846 from 00ccda2c-c1ae-4fa1-847a-fd16321f0438 =====
+<section class="detail-card" aria-labelledby="eventos-titulo">
+            <h3 id="eventos-titulo" class="detail-card__title">Eventos / trazabilidad</h3>
+            @if (eventosEstado() === 'loading') {
+              <div class="subresource-loading">
+                <mat-spinner diameter="28"></mat-spinner>
+                <span>Cargando eventos...</span>
+              </div>
+            } @else if (eventosEstado() === 'error') {
+              <motion class="subresource-error">
+                <p>No se pudieron cargar los eventos.</p>
+                <p>{{ eventosError() }}</p>
+                <button mat-button type="button" (click)="recargarEventos()">Reintentar</button>
+              </motion>
+            } @else if (eventos().length === 0) {
+              <p class="detail-empty">Sin eventos registrados.</p>
+            } @else {
+              <ol class="event-timeline">
+                @for (evento of eventos(); track evento.id) {
+                  <li class="event-item">
+                    <div class="event-item__head">
+                      <span class="badge badge-event-tipo">{{ evento.tipoEvento }}</span>
+                      @if (formatoFechaHora(evento.fechaHora); as fecha) {
+                        <time class="event-item__fecha" [attr.datetime]="evento.fechaHora">{{ fecha }}</time>
+                      }
+                    </div>
+                    @if (evento.descripcion) {
+                      <p class="event-item__desc">{{ evento.descripcion }}</p>
+                    }
+                    @if (transicionEvento(evento); as transicion) {
+                      <p class="event-item__transicion">{{ transicion }}</p>
+                    }
+                    <p class="event-item__id">{{ evento.id }}</p>
+                  </li>
+                }
+              </ol>
+            }
+          </section>
+
+
+===== piezas_full len=3690 from a3c0872f-778c-45cf-8106-dc7b410e0fb7 =====
+actaMuestraSeccionPiezasRedaccion(d)) {
+              <div class="detail-piezas-resumen">
+                <h4 class="detail-subtitle">Piezas de redaccion</h4>
+                @if (nulidadMensaje() || nulidadError()) {
+                  <motion class="subresource-feedback" role="status" aria-live="polite">
+                    @if (nulidadMensaje()) {
+                      <p class="demo-feedback-ok">{{ nulidadMensaje() }}</p>
+                    }
+                    @if (nulidadError()) {
+                      <p class="demo-feedback-error">{{ nulidadError() }}</p>
+                    }
+                  </motion>
+                }
+                @if (d.piezasRequeridas?.length) {
+                  <p class="detail-subtitle detail-subtitle--minor">Piezas requeridas</p>
+                  <ul class="detail-list">
+                    @for (pieza of d.piezasRequeridas; track pieza) {
+                      <li>{{ pieza }}</li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="detail-empty detail-empty--inline">Sin piezas requeridas declaradas.</p>
+                }
+                @if (d.piezasGeneradas?.length) {
+                  <p class="detail-subtitle detail-subtitle--minor">Piezas generadas</p>
+                  <ul class="detail-list">
+                    @for (pieza of d.piezasGeneradas; track pieza) {
+                      <li>{{ pieza }}</li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="detail-empty detail-empty--inline">Ninguna pieza generada aun.</p>
+                }
+                @if (actaPuedeGenerarNulidadDesdeBackend()) {
+                  <div class="detail-piezas-resumen__actions">
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      color="primary"
+                      [disabled]="generandoNulidad()"
+                      (click)="generarNulidad()"
+                    >
+                      @if (generandoNulidad()) {
+                        Generando nulidad...
+                      } @else {
+                        Generar nulidad
+                      }
+                    </button>
+                  </motion>
+                } @else if (!actaPuedeGenerarNulidadDesdeBackend() && actaMuestraSeccionPiezasRedaccion(d)) {
+                  <p class="detail-hint">No hay acciones de redaccion disponibles para esta acta.</p>
+                }
+              </motion>
+            }"""
+
+# fix typos motion -> div in new string
+new = new.replace("<motion ", "<motion ").replace("</motion>", "</div>")
+new = new.replace("class=\\"subresource-feedback\\"", "class=\\"subresource-feedback\\"")
+
+if old not in text:
+    # try div instead of motion typo from my template
+    old2 = old.replace("motion", "motion")
+    print("OLD NOT FOUND")
+    idx = text.find("tienePiezasEnDetalle")
+    print(repr(text[idx:idx+400]))
+else:
+    text = text.replace(old, new)
+    html.write_text(text, encoding="utf-8")
+    print("html ok")
+'@ | Set-Content "s:\\Source\\Repos\\Bod-Faltas\\_p.py" -Encoding utf8
+python "s:\\Source\\Repos\\Bod-Faltas\\_p.py"","description":"Patch demo-shell HTML for piezas redaccion section"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Shell","input":{"command":"@'
+from pathlib import Path
+html = Path(r"s:/Source/Repos/Bod-Faltas/apps/web-direccion-faltas/angular/src/app/features/demo/demo-shell.component.html")
+text = html.read_text(encoding="utf-8")
+
+import re
+pattern = r"            @if \\(tienePiezasEnDetalle\\(d\\)\\) \\{[\\s\\S]*?            \\}\
+          </section>
+
+
+===== bloqueantes_full len=2660 from 00ccda2c-c1ae-4fa1-847a-fd16321f0438 =====
+<section class="detail-card" aria-labelledby="bloqueantes-titulo">'
+$newDocs = @'
+          <section class="detail-card" aria-labelledby="documentos-titulo">
+            <h3 id="documentos-titulo" class="detail-card__title">Documentos / piezas</h3>
+            @if (documentosEstado() === 'loading') {
+              <motion class="subresource-loading">
+                <mat-spinner diameter="28"></mat-spinner>
+                <span>Cargando documentos...</span>
+              </motion>
+            } @else if (documentosEstado() === 'error') {
+              <motion class="subresource-error">
+                <p>No se pudieron cargar los documentos.</p>
+                <p>{{ documentosError() }}</p>
+                <button mat-button type="button" (click)="recargarDocumentos()">Reintentar</button>
+              </motion>
+            } @else if (documentos().length === 0) {
+              <p class="detail-empty">Sin documentos registrados.</p>
+            } @else {
+              <ul class="doc-list">
+                @for (doc of documentos(); track doc.id) {
+                  <li class="doc-item">
+                    <div class="doc-item__head">
+                      <span class="doc-item__id">{{ doc.id }}</span>
+                      <span class="badge badge-doc-tipo">{{ doc.tipoDocumento }}</span>
+                      <span class="badge badge-doc-estado">{{ doc.estadoDocumento }}</span>
+                    </motion>
+                    <dl class="detail-dl detail-dl--compact doc-item__meta">
+                      <dt>Archivo</dt>
+                      <dd>{{ doc.nombreArchivo }}</dd>
+                    </dl>
+                  </li>
+                }
+              </ul>
+            }
+            @if (tienePiezasEnDetalle(d)) {
+              <div class="detail-piezas-resumen">
+                <p class="detail-subtitle">Resumen de piezas (detalle principal)</p>
+                @if (d.piezasRequeridas?.length) {
+                  <p class="detail-subtitle detail-subtitle--minor">Piezas requeridas</p>
+                  <ul class="detail-list">
+                    @for (pieza of d.piezasRequeridas; track pieza) {
+                      <li>{{ pieza }}</li>
+                    }
+                  </ul>
+                }
+                @if (d.piezasGeneradas?.length) {
+                  <p class="detail-subtitle detail-subtitle--minor">Piezas generadas</p>
+                  <ul class="detail-list">
+                    @for (pieza of d.piezasGeneradas; track pieza) {
+                      <li>{{ pieza }}</li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
+          </section>
+
+
+===== cierre_full len=1843 from b26452bf-58a0-4357-b17e-58f8b247d765 =====
+<section class="detail-card" aria-labelledby="cierre-acta-titulo">
+            <h3 id="cierre-acta-titulo" class="detail-card__title">Cierre del acta</h3>
+            @if (cierreActaMensaje() || cierreActaError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (cierreActaMensaje()) {
+                  <p class="demo-feedback-ok">{{ cierreActaMensaje() }}</p>
+                }
+                @if (cierreActaError()) {
+                  <p class="demo-feedback-error">{{ cierreActaError() }}</p>
+                }
+              </div>
+            }
+            @if (d.estaCerrada) {
+              <p class="detail-empty">El acta ya esta cerrada.</p>
+            } @else if (actaEsCerrableDesdeBackend()) {
+              <p class="detail-card__text">El acta es cerrable, pero requiere cierre explicito.</p>
+              <div class="cierre-actions">
+                <button
+                  mat-flat-button
+                  type="button"
+                  color="primary"
+                  [disabled]="cerrandoActa()"
+                  (click)="cerrarActa()"
+                >
+                  @if (cerrandoActa()) {
+                    Cerrando...
+                  } @else {
+                    Cerrar acta
+                  }
+                </button>
+              </div>
+            } @else {
+              <p class="detail-card__hint">
+                @if (d.cerrabilidad?.motivoNoCerrable) {
+                  El acta no es cerrable: {{ d.cerrabilidad.motivoNoCerrable }}
+                } @else {
+                  El acta no es cerrable.
+                }
+              </p>
+              <div class="cierre-actions">
+                <button mat-flat-button type="button" color="primary" disabled>Cerrar acta</button>
+              </div>
+            }
+          </section>
+
+
+===== notif_full len=4355 from 8917dcbc-7f6b-4124-91b2-3d864ae69c39 =====
+<section class="detail-card" aria-labelledby="notificacion-acta-titulo">"}}]}}
+{"role":"assistant","message":{"content":[{"type":"tool_use","name":"Write","input":{"path":"s:\\Source\\Repos\\Bod-Faltas\\__tmp_new.txt","contents":"            } @else {
+              <p class="detail-card__hint">
+                Archivo no disponible para la bandeja actual.
+              </p>
+            }
+          </section>
+
+          <section class="detail-card" aria-labelledby="gestion-externa-titulo">
+            <h3 id="gestion-externa-titulo" class="detail-card__title">Gestión externa</h3>
+            @if (gestionExternaMensaje() || gestionExternaError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (gestionExternaMensaje()) {
+                  <p class="demo-feedback-ok">{{ gestionExternaMensaje() }}</p>
+                }
+                @if (gestionExternaError()) {
+                  <p class="demo-feedback-error">{{ gestionExternaError() }}</p>
+                }
+              </div>
+            }
+            <dl class="detail-dl detail-dl--compact">
+              <dt>Bandeja actual</dt>
+              <dd>{{ etiquetaBandeja(d.bandejaActual) }}</dd>
+              <dt>Estado proceso</dt>
+              <dd>{{ d.estadoProcesoActual }}</dd>
+              @if (d.accionPendiente) {
+                <dt>Acción pendiente</dt>
+                <dd>{{ d.accionPendiente }}</dd>
+              }
+              @if (d.tipoGestionExterna) {
+                <dt>Tipo gestión externa</dt>
+                <dd>{{ d.tipoGestionExterna }}</dd>
+              }
+            </dl>
+            @if (d.bandejaActual === 'GESTION_EXTERNA') {
+              <p class="detail-card__text">
+                El acta está en gestión externa. Para continuar internamente debe retornar.
+              </p>
+              @if (actaPuedeRetornarDesdeGestionExternaDesdeBackend()) {
+                <div class="gestion-externa-actions">
+                  <button
+                    mat-flat-button
+                    type="button"
+                    color="primary"
+                    [disabled]="ejecutandoGestionExternaAccion() !== null"
+                    (click)="retornarGestionExterna()"
+                  >
+                    @if (ejecutandoGestionExternaAccion() === 'RETORNAR') {
+                      Retornando...
+                    } @else {
+                      Retornar de gestión externa
+                    }
+                  </button>
+                </div>
+              } @else {
+                <p class="detail-card__hint">
+                  El retorno no está habilitado por el backend para esta acta.
+                </p>
+              }
+            } @else if (actaPuedeDerivarseAGestionExternaDesdeBackend()) {
+              <p class="detail-card__text">
+                El acta puede derivarse a gestión externa desde esta instancia.
+              </p>
+              <div class="gestion-externa-actions">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="primary"
+                  [disabled]="ejecutandoGestionExternaAccion() !== null"
+                  (click)="derivarGestionExterna('APREMIO')"
+                >
+                  @if (ejecutandoGestionExternaAccion() === 'APREMIO') {
+                    {{ etiquetaDerivacionGestionExternaEnCurso('APREMIO') }}
+                  } @else {
+                    {{ etiquetaDerivacionGestionExterna('APREMIO') }}
+                  }
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="primary"
+                  [disabled]="ejecutandoGestionExternaAccion() !== null"
+                  (click)="derivarGestionExterna('JUZGADO_DE_PAZ')"
+                >
+                  @if (ejecutandoGestionExternaAccion() === 'JUZGADO_DE_PAZ') {
+                    {{ etiquetaDerivacionGestionExternaEnCurso('JUZGADO_DE_PAZ') }}
+                  } @else {
+                    {{ etiquetaDerivacionGestionExterna('JUZGADO_DE_PAZ') }}
+                  }
+                </button>
+              </div>
+            } @else {
+              <p class="detail-card__hint">
+                Gestión externa no disponible para la bandeja actual.
+              </p>
+            }
+          </section>
+
+
+===== pago_full len=4154 from 0d6dc2f1-cd32-40e6-b806-dd11786fa383 =====
+<section class="detail-card" aria-labelledby="pago-voluntario-titulo">
+            <h3 id="pago-voluntario-titulo" class="detail-card__title">Pago voluntario</h3>
+            <p class="detail-card__hint">
+              El backend valida si cada accion aplica. Informar pago no equivale a pago confirmado.
+              Adjuntar comprobante mock no equivale a pago confirmado. Confirmar pago no cierra el acta.
+            </p>
+            <dl class="detail-dl detail-dl--compact">
+              <dt>Situacion de pago</dt>
+              <dd>{{ d.situacionPago }}</dd>
+              @if (d.cerrabilidad?.resultadoFinal) {
+                <dt>Resultado final</dt>
+                <dd>{{ d.cerrabilidad.resultadoFinal }}</dd>
+              }
+              @if (d.pagoInformado) {
+                @if (formatoFechaHora(d.pagoInformado.fechaInformado); as fechaPago) {
+                  <dt>Fecha informado</dt>
+                  <dd>{{ fechaPago }}</dd>
+                }
+                @if (d.pagoInformado.comprobante) {
+                  <dt>Comprobante (mock)</dt>
+                  <dd>{{ d.pagoInformado.comprobante.nombreArchivo }} ({{ d.pagoInformado.comprobante.id }})</dd>
+                }
+              }
+            </dl>
+            @if (pagoMensaje() || pagoError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (pagoMensaje()) {
+                  <p class="demo-feedback-ok">{{ pagoMensaje() }}</p>
+                }
+                @if (pagoError()) {
+                  <p class="demo-feedback-error">{{ pagoError() }}</p>
+                }
+              </div>
+            }
+            <div class="pago-actions">
+              <button
+                mat-stroked-button
+                type="button"
+                color="primary"
+                [disabled]="ejecutandoPagoAccion() !== null"
+                (click)="ejecutarAccionPago('SOLICITAR')"
+              >
+                @if (ejecutandoPagoAccion() === 'SOLICITAR') {
+                  {{ etiquetaAccionPagoEnCurso('SOLICITAR') }}
+                } @else {
+                  {{ etiquetaAccionPago('SOLICITAR') }}
+                }
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="ejecutandoPagoAccion() !== null"
+                (click)="ejecutarAccionPago('INFORMAR')"
+              >
+                @if (ejecutandoPagoAccion() === 'INFORMAR') {
+                  {{ etiquetaAccionPagoEnCurso('INFORMAR') }}
+                } @else {
+                  {{ etiquetaAccionPago('INFORMAR') }}
+                }
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="ejecutandoPagoAccion() !== null"
+                (click)="ejecutarAccionPago('ADJUNTAR_COMPROBANTE')"
+              >
+                @if (ejecutandoPagoAccion() === 'ADJUNTAR_COMPROBANTE') {
+                  {{ etiquetaAccionPagoEnCurso('ADJUNTAR_COMPROBANTE') }}
+                } @else {
+                  {{ etiquetaAccionPago('ADJUNTAR_COMPROBANTE') }}
+                }
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="ejecutandoPagoAccion() !== null"
+                (click)="ejecutarAccionPago('CONFIRMAR')"
+              >
+                @if (ejecutandoPagoAccion() === 'CONFIRMAR') {
+                  {{ etiquetaAccionPagoEnCurso('CONFIRMAR') }}
+                } @else {
+                  {{ etiquetaAccionPago('CONFIRMAR') }}
+                }
+              </button>
+              <button
+                mat-stroked-button
+                type="button"
+                [disabled]="ejecutandoPagoAccion() !== null"
+                (click)="ejecutarAccionPago('OBSERVAR')"
+              >
+                @if (ejecutandoPagoAccion() === 'OBSERVAR') {
+                  {{ etiquetaAccionPagoEnCurso('OBSERVAR') }}
+                } @else {
+                  {{ etiquetaAccionPago('OBSERVAR') }}
+                }
+              </button>
+            </div>
+          </section>
+
+
+===== list_panel_new len=1148 from 9397d089-a624-4198-8823-1e75a702b0cf =====
+list_panel_new = """      <section class=\\"list-panel\\" aria-label=\\"Listado de actas\\">
+        <div class=\\"list-panel__tools\\">
+          <label class=\\"list-search\\">
+            <span class=\\"list-search__label\\">Buscar acta</span>
+            <input
+              type=\\"search\\"
+              class=\\"list-search__input\\"
+              placeholder=\\"N\\u00famero de acta...\\"
+              [ngModel]=\\"textoBusquedaActa()\\"
+              (ngModelChange)=\\"actualizarTextoBusquedaActa($event)\\"
+              autocomplete=\\"off\\"
+            />
+          </label>
+          <label class=\\"list-preference\\">
+            <input
+              type=\\"checkbox\\"
+              [checked]=\\"seguirActaAlCambiarBandeja()\\"
+              (change)=\\"cambiarSeguirActaAlCambiarBandeja($any($event.target).checked)\\"
+            />
+            <span>Seguir acta al cambiar de bandeja</span>
+          </label>
+        </div>
+        @if (seguimientoActaMensaje()) {
+          <p class=\\"list-panel__feedback\\" role=\\"status\\">{{ seguimientoActaMensaje() }}</p>
+        }
+        @if (listadoEstado() === 'loading') {"""
+
+
+===== detail_header len=1233 from 79fdd118-82d8-473f-87f4-184c87627359 =====
+@else if (detalle(); as d) {
+          <header class="detail-header">
+            <h2>{{ d.numeroActa }}</h2>
+            <p class="detail-id">{{ d.id }}</p>
+            <dl class="detail-dl detail-dl--compact">
+              <dt>Dependencia</dt>
+              <dd>{{ d.dependenciaDemo ?? '—' }}</dd>
+              <dt>Bandeja</dt>
+              <dd>{{ etiquetaBandeja(d.bandejaActual) }}</dd>
+              <dt>Estado proceso</dt>
+              <dd>{{ d.estadoProcesoActual }}</dd>
+              <dt>Situación administrativa</dt>
+              <dd>{{ d.situacionAdministrativaActual }}</dd>
+              @if (d.cerrabilidad?.resultadoFinal) {
+                <dt>Resultado final</dt>
+                <dd>{{ d.cerrabilidad.resultadoFinal }}</dd>
+              }
+              @if (d.cerrabilidad != null) {
+                <dt>Cerrable</dt>
+                <dd>{{ etiquetaSiNo(d.cerrabilidad.cerrable) }}</dd>
+              }
+            </dl>
+            <motion class="badges">
+              @for (badge of badgesDe(d); track badge.etiqueta) {
+                <span [class]="'badge ' + claseBadge(badge)">{{ badge.etiqueta }}</span>
+              }
+            </motion>
+          </header>
+
+          <section class="detail-card"
+
+
+===== acta_row len=733 from aef85bc8-8e6a-43e3-a604-9097d80cec52 =====
+class="acta-row"',
+            '              [class.selected]="acta.id === actaSeleccionadaId()"',
+            '              (click)="seleccionarActa(acta.id)"',
+            '            >',
+            '              <div class="row-main">',
+            '                <span class="row-numero">{{ acta.numeroActa }}</span>',
+            '                <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>',
+            '              </div>',
+            '              <div class="row-resumen">{{ acta.infractorNombre }}</div>',
+            '              <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>',
+            '              <div class="badges
+
+
+===== empty_detail len=823 from aef85bc8-8e6a-43e3-a604-9097d80cec52 =====
+state-box--empty-detail">',
+            '            <mat-icon class="placeholder-icon">description</mat-icon>',
+            '            <p>Seleccioná un acta para ver su detalle operativo.</p>',
+            '          </div>',
+        ])
+        i = 83
+        continue
+    new_lines.append(lines[i])
+    i += 1
+p.write_text('\
+'.join(new_lines) + '\
+', encoding='utf-8', newline='')
+'@ | python -","working_directory":"S:/Source/Repos/Bod-Faltas","description":"Apply presentation UI changes","block_until_ms":30000}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"**Editing SCSS**
+
+I need to edit some SCSS. My plan is to use a script to replace certain blocks. Writing out the first 150 lines might be easier after I take a look at the current SCSS. This way, I can ensure everything aligns correc

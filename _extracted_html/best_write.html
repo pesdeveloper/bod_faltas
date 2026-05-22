@@ -1,0 +1,34 @@
+<mat-sidenav-container class="demo-layout">
+  <mat-sidenav mode="side" opened class="demo-sidenav">
+    <mat-nav-list>
+      @for (b of bandejas; track b) {
+        <a
+          mat-list-item
+          [class.active]="b === bandejaSeleccionada()"
+          href="#"
+          (click)="$event.preventDefault(); seleccionarBandeja(b)"
+        >
+          {{ etiquetaBandeja(b) }}
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="demo-toolbar">
+      <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
+      <motion class="demo-actions">
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('TRANSITO')">
+          Crear demo tránsito
+        </button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('INSPECCIONES')">
+          Crear demo inspecciones
+        </button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('FISCALIZACION')">
+          Crear demo fiscalización
+        </button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('BROMATOLOGIA')">
+          Crear demo bromatología
+        </button>
+      </motion>
+    </mat-toolbar>

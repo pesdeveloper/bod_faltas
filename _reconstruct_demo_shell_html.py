@@ -1,4 +1,8 @@
-<mat-sidenav-container class="demo-layout" [autosize]="true">
+from pathlib import Path
+
+OUT = Path(r"S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\features\demo\demo-shell.component.html")
+
+HTML = r'''<mat-sidenav-container class="demo-layout" [autosize]="true">
   <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
     <div class="sidenav-header">
       @if (!bandejasColapsadas()) {
@@ -161,31 +165,8 @@
         } @else if (detalle()) {
           @if (detalle(); as d) {
           <header class="detail-header">
-            <div class="detail-header__top">
-              <div class="detail-header__identity">
-                <h2>{{ d.numeroActa }}</h2>
-                <p class="detail-id">{{ d.id }}</p>
-              </div>
-              <button
-                mat-stroked-button
-                type="button"
-                class="detail-copy-state"
-                title="Copia un resumen compacto del acta para validación."
-                (click)="copiarEstadoActaActual()"
-              >
-                Copiar estado
-              </button>
-            </div>
-            @if (copiaEstadoMensaje() || copiaEstadoError()) {
-              <div class="detail-copy-state-feedback" role="status" aria-live="polite">
-                @if (copiaEstadoMensaje()) {
-                  <p class="demo-feedback-ok">{{ copiaEstadoMensaje() }}</p>
-                }
-                @if (copiaEstadoError()) {
-                  <p class="demo-feedback-error">{{ copiaEstadoError() }}</p>
-                }
-              </div>
-            }
+            <h2>{{ d.numeroActa }}</h2>
+            <p class="detail-id">{{ d.id }}</p>
             <dl class="detail-dl detail-dl--compact">
               <dt>Dependencia</dt>
               <dd>{{ d.dependenciaDemo ?? '—' }}</dd>
@@ -747,14 +728,8 @@
 
           <section class="detail-card" aria-labelledby="bloqueantes-titulo">
             <h3 id="bloqueantes-titulo" class="detail-card__title">Pendientes / bloqueantes</h3>
-            @if (cumplimientoMaterialMensaje() || cumplimientoMaterialError() || resolucionBloqueoCierreMensaje() || resolucionBloqueoCierreError()) {
+            @if (cumplimientoMaterialMensaje() || cumplimientoMaterialError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
-                @if (resolucionBloqueoCierreMensaje()) {
-                  <p class="demo-feedback-ok">{{ resolucionBloqueoCierreMensaje() }}</p>
-                }
-                @if (resolucionBloqueoCierreError()) {
-                  <p class="demo-feedback-error">{{ resolucionBloqueoCierreError() }}</p>
-                }
                 @if (cumplimientoMaterialMensaje()) {
                   <p class="demo-feedback-ok">{{ cumplimientoMaterialMensaje() }}</p>
                 }
@@ -768,21 +743,7 @@
                 @for (pendiente of pendientesBloqueantes(d); track pendiente) {
                   <li>
                     <span class="badge badge-warn">{{ pendiente }}</span>
-                    @if (puedeMostrarAccionResolucionBloqueoCierre(pendiente)) {
-                      <button
-                        mat-stroked-button
-                        type="button"
-                        color="primary"
-                        [disabled]="resolviendoBloqueoCierre() !== null"
-                        (click)="resolverBloqueoCierre(pendiente)"
-                      >
-                        @if (resolviendoBloqueoCierre() === pendiente) {
-                          {{ etiquetaResolucionBloqueoCierreEnCurso(resolviendoBloqueoCierre()!) }}
-                        } @else {
-                          {{ etiquetaResolucionBloqueoCierre(pendiente) }}
-                        }
-                      </button>
-                    } @else if (puedeMostrarAccionCumplimientoMaterial(pendiente)) {
+                    @if (puedeMostrarAccionCumplimientoMaterial(pendiente)) {
                       <button
                         mat-stroked-button
                         type="button"
@@ -851,3 +812,10 @@
     </div>
   </mat-sidenav-content>
 </mat-sidenav-container>
+'''
+
+OUT.write_text(HTML, encoding="utf-8", newline="\n")
+lines = HTML.count("\n") + (0 if HTML.endswith("\n") else 1)
+print(f"Wrote {OUT}")
+print(f"Bytes: {OUT.stat().st_size}")
+print(f"Lines: {lines}")

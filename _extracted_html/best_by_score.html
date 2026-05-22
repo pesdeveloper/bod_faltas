@@ -1,0 +1,254 @@
+<mat-sidenav-container class="demo-layout">
+  <mat-sidenav mode="side" opened class="demo-sidenav">
+    <mat-nav-list>
+      @for (b of bandejas; track b) {
+        <a
+          mat-list-item
+          [class.active]="b === bandejaSeleccionada()"
+          href="#"
+          (click)="$event.preventDefault(); seleccionarBandeja(b)"
+        >
+          {{ etiquetaBandeja(b) }}
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="demo-toolbar">
+      <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
+      <div class="demo-actions">
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('TRANSITO')">
+          Crear demo tránsito
+        </button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('INSPECCIONES')">
+          Crear demo inspecciones
+        </button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('FISCALIZACION')">
+          Crear demo fiscalización
+        </button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('BROMATOLOGIA')">
+          Crear demo bromatología
+        </button>
+      </div>
+    </mat-toolbar>
+"}}]}}
+{"role":"assistant","message":{"content":[{"type":"text","text":"[REDACTED]"},{"type":"tool_use","name":"Shell","input":{"command":"$html = @'
+<mat-sidenav-container class="demo-layout">
+  <mat-sidenav mode="side" opened class="demo-sidenav">
+    <mat-nav-list>
+      @for (b of bandejas; track b) {
+        <a
+          mat-list-item
+          [class.active]="b === bandejaSeleccionada()"
+          href="#"
+          (click)="$event.preventDefault(); seleccionarBandeja(b)"
+        >
+          {{ etiquetaBandeja(b) }}
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="demo-toolbar">
+      <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
+      <div class="demo-actions">
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('TRANSITO')">Crear demo tránsito</button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('INSPECCIONES')">Crear demo inspecciones</button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('FISCALIZACION')">Crear demo fiscalización</button>
+        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('BROMATOLOGIA')">Crear demo bromatología</button>
+      </div>
+    </mat-toolbar>
+
+    @if (creandoDemo() !== null || altaDemoMensaje() || altaDemoError()) {
+      <div class="demo-feedback" role="status" aria-live="polite">
+        @if (creandoDemo() !== null) {
+          <p class="demo-feedback-info">Creando acta demo ({{ creandoDemo() }})...</p>
+        }
+        @if (altaDemoMensaje()) {
+          <p class="demo-feedback-ok">{{ altaDemoMensaje() }}</p>
+        }
+        @if (altaDemoError()) {
+          <p class="demo-feedback-error">{{ altaDemoError() }}</p>
+        }
+      </div>
+    }
+
+    <div class="demo-content">
+      <section class="list-panel" aria-label="Listado de actas">
+        @if (listadoEstado() === 'loading') {
+          <div class="state-box">
+            <mat-spinner diameter="36"></mat-spinner>
+            <p>Cargando actas...</p>
+          </div>
+        } @else if (listadoEstado() === 'error') {
+          <div class="state-box">
+            <p>No se pudo cargar el listado.</p>
+            <p>{{ listadoError() }}</p>
+            <button mat-button type="button" (click)="recargarListado()">Reintentar</button>
+          </div>
+        } @else if (actas().length === 0) {
+          <div class="state-box">
+            <p>No hay actas en esta bandeja.</p>
+          </div>
+        } @else {
+          @for (acta of actas(); track acta.id) {
+            <button type="button" mat-button class="acta-row" [class.selected]="acta.id === actaSeleccionadaId()" (click)="seleccionarActa(acta.id)">
+              <div class="row-main">
+                <span class="row-numero">{{ acta.numeroActa }}</span>
+                <span class="row-meta">{{ etiquetaBandeja(acta.bandejaActual) }}</span>
+              </div>
+              <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>
+              <div class="row-resumen">{{ acta.infractorNombre }}</div>
+              <div class="badges">
+                @for (badge of badgesDe(acta); track badge.etiqueta) {
+                  <span [class]="'badge ' + claseBadge(badge)">{{ badge.etiqueta }}</span>
+                }
+              </div>
+            </button>
+          }
+        }
+      </section>
+
+      <aside class="detail-panel" aria-label="Detalle del acta">
+        @if (!actaSeleccionadaId()) {
+          <div class="state-box">
+            <mat-icon class="placeholder-icon">description</mat-icon>
+            <p>Seleccioná un acta del listado para ver su detalle operativo.</p>
+          </div>
+        } @else if (detalleEstado() === 'loading') {
+          <div class="state-box">
+            <mat-spinner diameter="36"></mat-spinner>
+            <p>Cargando detalle...</p>
+          </div>
+        } @else if (detalleEstado() === 'error') {
+          <div class="state-box">
+            <p>No se pudo cargar el detalle.</p>
+            <p>{{ detalleError() }}</p>
+            <button mat-button type="button" (click)="recargarDetalle()">Reintentar</button>
+          </div>
+        } @else if (detalle(); as d) {
+          <header class="detail-header">
+            <h2>{{ d.numeroActa }}</h2>
+            <p class="detail-id">{{ d.id }}</p>
+            <dl class="detail-dl detail-dl--compact">
+              <dt>Dependencia</dt>
+              <dd>{{ d.dependenciaDemo ?? '—' }}</dd>
+              <dt>Bandeja</dt>
+              <dd>{{ etiquetaBandeja(d.bandejaActual) }}</dd>
+              <dt>Estado proceso</dt>
+              <dd>{{ d.estadoProcesoActual }}</dd>
+              <dt>Situación administrativa</dt>
+              <dd>{{ d.situacionAdministrativaActual }}</dd>
+              @if (d.cerrabilidad?.resultadoFinal) {
+                <dt>Resultado final</dt>
+                <dd>{{ d.cerrabilidad.resultadoFinal }}</dd>
+              }
+              @if (d.cerrabilidad != null) {
+                <dt>Cerrable</dt>
+                <dd>{{ etiquetaSiNo(d.cerrabilidad.cerrable) }}</dd>
+              }
+            </dl>
+            <div class="badges">
+              @for (badge of badgesDe(d); track badge.etiqueta) {
+                <span [class]="'badge ' + claseBadge(badge)">{{ badge.etiqueta }}</span>
+              }
+            </div>
+          </header>
+
+          <section class="detail-card" aria-labelledby="lectura-operativa-titulo">
+            <h3 id="lectura-operativa-titulo" class="detail-card__title">Lectura operativa</h3>
+            @if (lecturaOperativa(d); as lectura) {
+              <p class="detail-card__text">{{ lectura }}</p>
+            } @else {
+              <p class="detail-empty">Sin lectura operativa informada.</p>
+            }
+          </section>
+
+          <section class="detail-card" aria-labelledby="documentos-titulo">
+            <h3 id="documentos-titulo" class="detail-card__title">Documentos / piezas</h3>
+            @if (tienePiezasDocumentales(d)) {
+              <ul class="detail-list detail-list--flags">
+                <li><span class="detail-label">Tiene documentos</span> {{ etiquetaSiNo(d.tieneDocumentos) }}</li>
+                <li><span class="detail-label">Tiene notificaciones</span> {{ etiquetaSiNo(d.tieneNotificaciones) }}</li>
+              </ul>
+              @if (d.piezasRequeridas?.length) {
+                <p class="detail-subtitle">Piezas requeridas</p>
+                <ul class="detail-list">
+                  @for (pieza of d.piezasRequeridas; track pieza) {
+                    <li>{{ pieza }}</li>
+                  }
+                </ul>
+              }
+              @if (d.piezasGeneradas?.length) {
+                <p class="detail-subtitle">Piezas generadas</p>
+                <ul class="detail-list">
+                  @for (pieza of d.piezasGeneradas; track pieza) {
+                    <li>{{ pieza }}</li>
+                  }
+                </ul>
+              }
+            } @else {
+              <p class="detail-empty">Sin documentos ni piezas informados en el detalle.</p>
+            }
+          </section>
+
+          <section class="detail-card" aria-labelledby="bloqueantes-titulo">
+            <h3 id="bloqueantes-titulo" class="detail-card__title">Pendientes / bloqueantes</h3>
+            @if (pendientesBloqueantes(d).length > 0) {
+              <ul class="detail-list">
+                @for (pendiente of pendientesBloqueantes(d); track pendiente) {
+                  <li><span class="badge badge-warn">{{ pendiente }}</span></li>
+                }
+              </ul>
+              @if (d.cerrabilidad?.motivoNoCerrable) {
+                <p class="detail-card__hint">{{ d.cerrabilidad.motivoNoCerrable }}</p>
+              }
+            } @else {
+              <p class="detail-empty">Sin bloqueantes activos informados.</p>
+            }
+          </section>
+
+          <section class="detail-card" aria-labelledby="hechos-titulo">
+            <h3 id="hechos-titulo" class="detail-card__title">Hechos materiales</h3>
+            @if (ejesHechosMateriales(d).length > 0) {
+              <ul class="detail-ejes">
+                @for (eje of ejesHechosMateriales(d); track eje.clave) {
+                  <li class="detail-eje">
+                    <div class="detail-eje__head">
+                      <strong>{{ eje.etiqueta }}</strong>
+                      <span class="badge badge-neutral">{{ eje.fase }}</span>
+                    </div>
+                    <dl class="detail-dl detail-dl--compact">
+                      <dt>Eje</dt>
+                      <dd>{{ eje.clave }}</dd>
+                      <dt>Bloquea cierre</dt>
+                      <dd>{{ etiquetaSiNo(eje.bloqueaCierre) }}</dd>
+                      @if (eje.ejeBloqueanteCierre) {
+                        <dt>Eje bloqueante</dt>
+                        <dd>{{ eje.ejeBloqueanteCierre }}</dd>
+                      }
+                    </dl>
+                    @if (eje.descripcion) {
+                      <p class="detail-card__text">{{ eje.descripcion }}</p>
+                    }
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="detail-empty">Sin hechos materiales informados.</p>
+            }
+          </section>
+
+          @if (d.resumenHecho) {
+            <section class="detail-card detail-card--muted" aria-labelledby="resumen-hecho-titulo">
+              <h3 id="resumen-hecho-titulo" class="detail-card__title">Resumen del hecho</h3>
+              <p class="detail-card__text">{{ d.resumenHecho }}</p>
+            </section>
+          }
+        }
+      </aside>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
