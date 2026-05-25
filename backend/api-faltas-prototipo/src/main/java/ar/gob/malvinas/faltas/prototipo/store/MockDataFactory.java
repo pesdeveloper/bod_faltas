@@ -6,11 +6,16 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaTransitoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
+import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Carga un escenario demo fijo en {@link PrototipoStore}.
@@ -62,6 +67,9 @@ public class MockDataFactory {
         cargarActa0028FalloApelacionPresencialDemo(store);
         cargarActa0029FalloVencimientoPlazoDemo(store);
         cargarActa0030ApelacionAceptadaAbsuelveDemo(store);
+        cargarActasNotificadorMunicipalDemo(store);
+        cargarActasPortalDomicilioElectronicoDemo(store);
+        cargarActasCorreoPostalDemo(store);
     }
 
     private void cargarActa0001(PrototipoStore store) {
@@ -2104,5 +2112,490 @@ public class MockDataFactory {
                 "DNI 40.001.030",
                 "Caso demo ACTA-0030: fallo condenatorio, apelación y resolución ACEPTADA_ABSUELVE.",
                 LocalDateTime.of(2026, 3, 13, 9, 0));
+    }
+
+    private void cargarActasNotificadorMunicipalDemo(PrototipoStore store) {
+        cargarActaNotificadorMunicipalDemo(
+                store,
+                "ACTA-0031",
+                "A-2026-0031",
+                "Demo Notificador Condenatorio",
+                "DNI 41.001.031",
+                "Caso demo ACTA-0031: fallo condenatorio en manos del notificador municipal.",
+                TipoNotificacion.FALLO_CONDENATORIO,
+                "FALLO_CONDENATORIO",
+                "fallo_condenatorio_0031.pdf",
+                LocalDateTime.of(2026, 3, 18, 9, 0));
+        cargarActaNotificadorMunicipalDemo(
+                store,
+                "ACTA-0032",
+                "A-2026-0032",
+                "Demo Notificador Absolutorio",
+                "DNI 41.001.032",
+                "Caso demo ACTA-0032: fallo absolutorio en manos del notificador municipal.",
+                TipoNotificacion.FALLO_ABSOLUTORIO,
+                "FALLO_ABSOLUTORIO",
+                "fallo_absolutorio_0032.pdf",
+                LocalDateTime.of(2026, 3, 19, 9, 0));
+        cargarActaNotificadorMunicipalDemo(
+                store,
+                "ACTA-0033",
+                "A-2026-0033",
+                "Demo Notificador Acta",
+                "DNI 41.001.033",
+                "Caso demo ACTA-0033: notificación inicial del acta por notificador municipal.",
+                TipoNotificacion.ACTA_INFRACCION,
+                "ACTA_FIRMADA",
+                "acta_firmada_0033.pdf",
+                LocalDateTime.of(2026, 3, 20, 9, 0));
+    }
+
+    private void cargarActaNotificadorMunicipalDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            TipoNotificacion tipoNotificacion,
+            String tipoDocumento,
+            String nombreArchivo,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "DEMO_NOTIFICADOR_MUNICIPAL",
+                "D4_NOTIFICACION",
+                "PENDIENTE_ENVIO",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Dirección de Faltas",
+                resumenHecho,
+                BANDEJA_PENDIENTE_NOTIFICACION);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo preparada para validación de notificador municipal."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(1),
+                "PENDIENTE_NOTIFICACION_MUNICIPAL",
+                "D4_NOTIFICACION",
+                "D4_NOTIFICACION",
+                "Notificación tipificada asignada al canal NOTIFICADOR_MUNICIPAL."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                tipoDocumento,
+                "FIRMADO",
+                nombreArchivo));
+        store.getDocumentosPorActa().put(id, docs);
+
+        String descripcion = switch (tipoNotificacion) {
+            case FALLO_CONDENATORIO -> infractorNombre + " — fallo condenatorio para acuse municipal";
+            case FALLO_ABSOLUTORIO -> infractorNombre + " — fallo absolutorio para acuse municipal";
+            case ACTA_INFRACCION -> infractorNombre + " — acta de infracción para acuse municipal";
+        };
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(ActaNotificacionMock.preparada(
+                "NOT-" + sufijo + "-01",
+                id,
+                tipoNotificacion,
+                CanalNotificacion.NOTIFICADOR_MUNICIPAL,
+                descripcion,
+                infractorNombre,
+                "Domicilio demo municipal " + sufijo,
+                fechaCreacion.plusDays(1),
+                "ASIGNACION_NOTIFICADOR_MUNICIPAL"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    private void cargarActasPortalDomicilioElectronicoDemo(PrototipoStore store) {
+        cargarActaPortalDomicilioElectronicoDemo(
+                store,
+                "ACTA-0034",
+                "A-2026-0034",
+                "Demo Portal Acta",
+                "DNI 42.001.034",
+                "Caso demo ACTA-0034: notificación inicial del acta por portal infractor.",
+                TipoNotificacion.ACTA_INFRACCION,
+                "ACTA_FIRMADA",
+                "acta_firmada_0034.pdf",
+                LocalDateTime.of(2026, 3, 21, 9, 0));
+        cargarActaPortalDomicilioElectronicoDemo(
+                store,
+                "ACTA-0035",
+                "A-2026-0035",
+                "Demo Portal Condenatorio",
+                "DNI 42.001.035",
+                "Caso demo ACTA-0035: fallo condenatorio pendiente de visualización en portal infractor.",
+                TipoNotificacion.FALLO_CONDENATORIO,
+                "FALLO_CONDENATORIO",
+                "fallo_condenatorio_0035.pdf",
+                LocalDateTime.of(2026, 3, 22, 9, 0));
+        cargarActaPortalDomicilioElectronicoDemo(
+                store,
+                "ACTA-0036",
+                "A-2026-0036",
+                "Demo Portal Absolutorio",
+                "DNI 42.001.036",
+                "Caso demo ACTA-0036: fallo absolutorio pendiente de visualización en portal infractor.",
+                TipoNotificacion.FALLO_ABSOLUTORIO,
+                "FALLO_ABSOLUTORIO",
+                "fallo_absolutorio_0036.pdf",
+                LocalDateTime.of(2026, 3, 23, 9, 0));
+    }
+
+    private void cargarActaPortalDomicilioElectronicoDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            TipoNotificacion tipoNotificacion,
+            String tipoDocumento,
+            String nombreArchivo,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "DEMO_PORTAL_INFRACTOR",
+                "D4_NOTIFICACION",
+                "PENDIENTE_ENVIO",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Dirección de Faltas",
+                resumenHecho,
+                BANDEJA_PENDIENTE_NOTIFICACION);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo preparada para validación de domicilio electrónico en portal."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(1),
+                "NOTIFICACION_PORTAL_PENDIENTE",
+                "D4_NOTIFICACION",
+                "D4_NOTIFICACION",
+                "Notificación tipificada puesta a disposición por DOMICILIO_ELECTRONICO."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                tipoDocumento,
+                "FIRMADO",
+                nombreArchivo));
+        store.getDocumentosPorActa().put(id, docs);
+
+        String descripcion = switch (tipoNotificacion) {
+            case FALLO_CONDENATORIO -> infractorNombre + " — fallo condenatorio disponible en portal infractor";
+            case FALLO_ABSOLUTORIO -> infractorNombre + " — fallo absolutorio disponible en portal infractor";
+            case ACTA_INFRACCION -> infractorNombre + " — acta de infracción disponible en portal infractor";
+        };
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(ActaNotificacionMock.preparada(
+                "NOT-" + sufijo + "-01",
+                id,
+                tipoNotificacion,
+                CanalNotificacion.DOMICILIO_ELECTRONICO,
+                descripcion,
+                infractorNombre,
+                "Domicilio electrónico demo " + infractorDocumento,
+                fechaCreacion.plusDays(1),
+                "PUESTA_DISPOSICION_PORTAL"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    private void cargarActasCorreoPostalDemo(PrototipoStore store) {
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0037",
+                "A-2026-0037",
+                "Demo Correo Fallo Condenatorio 1",
+                "DNI 43.001.037",
+                "Caso demo ACTA-0037: fallo condenatorio listo para lote de correo postal.",
+                TipoNotificacion.FALLO_CONDENATORIO,
+                LocalDateTime.of(2026, 3, 24, 9, 0));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0038",
+                "A-2026-0038",
+                "Demo Correo Acta Inicial 1",
+                "DNI 43.001.038",
+                "Caso demo ACTA-0038: acta de infracción lista para lote de correo postal.",
+                TipoNotificacion.ACTA_INFRACCION,
+                LocalDateTime.of(2026, 3, 25, 9, 0));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0039",
+                "A-2026-0039",
+                "Demo Correo Fallo Condenatorio 2",
+                "DNI 43.001.039",
+                "Caso demo ACTA-0039: segundo fallo condenatorio listo para selección parcial en correo postal.",
+                TipoNotificacion.FALLO_CONDENATORIO,
+                LocalDateTime.of(2026, 3, 26, 9, 0));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0040",
+                "A-2026-0040",
+                "Demo Correo Fallo Absolutorio",
+                "DNI 43.001.040",
+                "Caso demo ACTA-0040: fallo absolutorio listo para lote de correo postal.",
+                TipoNotificacion.FALLO_ABSOLUTORIO,
+                LocalDateTime.of(2026, 3, 27, 9, 0));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0041",
+                "A-2026-0041",
+                "Demo Correo Acta Inicial 2",
+                "DNI 43.001.041",
+                "Caso demo ACTA-0041: segunda acta de infracción lista para lote de correo postal.",
+                TipoNotificacion.ACTA_INFRACCION,
+                LocalDateTime.of(2026, 3, 28, 9, 0));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0042",
+                "A-2026-0042",
+                "Demo Correo Enviada Pendiente",
+                "DNI 43.001.042",
+                "Caso demo ACTA-0042: notificación postal enviada pendiente de respuesta.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.ENVIADA,
+                ResultadoNotificacion.SIN_RESULTADO,
+                "EN_TRAMITE",
+                LocalDateTime.of(2026, 3, 29, 9, 0));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0043",
+                "A-2026-0043",
+                "Demo Correo Entregada Positiva",
+                "DNI 43.001.043",
+                "Caso demo ACTA-0043: notificación postal entregada con resultado positivo.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.ENTREGADA,
+                ResultadoNotificacion.POSITIVA,
+                "ENTREGADA",
+                LocalDateTime.of(2026, 3, 30, 9, 0));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0044",
+                "A-2026-0044",
+                "Demo Correo Negativa",
+                "DNI 43.001.044",
+                "Caso demo ACTA-0044: notificación postal con resultado negativo.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.NEGATIVA,
+                ResultadoNotificacion.NEGATIVA,
+                "NO_ENTREGADA",
+                LocalDateTime.of(2026, 3, 31, 9, 0));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0045",
+                "A-2026-0045",
+                "Demo Correo Vencida",
+                "DNI 43.001.045",
+                "Caso demo ACTA-0045: notificación postal vencida sin respuesta.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.VENCIDA,
+                ResultadoNotificacion.VENCIDA,
+                "VENCIDA",
+                LocalDateTime.of(2026, 4, 1, 9, 0));
+    }
+
+    private void cargarActaCorreoPostalCandidataDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            TipoNotificacion tipoNotificacion,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "DEMO_CORREO_POSTAL",
+                "D4_NOTIFICACION",
+                "PENDIENTE_ENVIO",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Dirección de Faltas",
+                resumenHecho,
+                BANDEJA_PENDIENTE_NOTIFICACION);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo preparada para validación de correo postal."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(1),
+                "PENDIENTE_NOTIFICACION",
+                "D4_NOTIFICACION",
+                "D4_NOTIFICACION",
+                "Notificación tipificada lista para armado de lote postal."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        String tipoDocumento = switch (tipoNotificacion) {
+            case FALLO_CONDENATORIO -> "FALLO_CONDENATORIO";
+            case FALLO_ABSOLUTORIO -> "FALLO_ABSOLUTORIO";
+            default -> "ACTA_FIRMADA";
+        };
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                tipoDocumento,
+                "FIRMADO",
+                tipoDocumento.toLowerCase(Locale.ROOT) + "_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        String descripcion = switch (tipoNotificacion) {
+            case FALLO_CONDENATORIO -> infractorNombre + " — fallo condenatorio listo para correo postal";
+            case FALLO_ABSOLUTORIO -> infractorNombre + " — fallo absolutorio listo para correo postal";
+            case ACTA_INFRACCION -> infractorNombre + " — acta de infracción lista para correo postal";
+        };
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(ActaNotificacionMock.preparada(
+                "NOT-" + sufijo + "-01",
+                id,
+                tipoNotificacion,
+                CanalNotificacion.CORREO_POSTAL,
+                descripcion,
+                infractorNombre,
+                "Domicilio demo postal " + sufijo,
+                fechaCreacion.plusDays(1),
+                "PREPARACION_CORREO_POSTAL"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    private void cargarActaCorreoPostalNoCandidataDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            TipoNotificacion tipoNotificacion,
+            EstadoNotificacion estado,
+            ResultadoNotificacion resultado,
+            String estadoLegacy,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "DEMO_CORREO_POSTAL",
+                "D4_NOTIFICACION",
+                "EN_ENVIO",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Dirección de Faltas",
+                resumenHecho,
+                BANDEJA_EN_NOTIFICACION);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo de trazabilidad postal fuera de listas para lote."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        String descripcion = infractorNombre + " — correo postal " + estado.name().toLowerCase(Locale.ROOT) + " demo";
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + sufijo + "-01",
+                id,
+                "POSTAL",
+                estadoLegacy,
+                descripcion,
+                tipoNotificacion,
+                CanalNotificacion.CORREO_POSTAL,
+                estado,
+                resultado,
+                descripcion,
+                "CORREO_POSTAL_DEMO",
+                null,
+                null,
+                fechaCreacion.plusDays(1),
+                fechaCreacion.plusDays(2),
+                resultado == ResultadoNotificacion.SIN_RESULTADO ? null : fechaCreacion.plusDays(3),
+                "Observación demo correo postal " + estado.name(),
+                infractorNombre,
+                null,
+                "Domicilio demo postal " + sufijo,
+                null,
+                null));
+        store.getNotificacionesPorActa().put(id, notifs);
     }
 }

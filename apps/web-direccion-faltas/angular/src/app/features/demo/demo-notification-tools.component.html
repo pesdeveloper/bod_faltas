@@ -1,0 +1,17 @@
+<section class="notification-tools" aria-labelledby="notification-tools-title">
+  <h2 id="notification-tools-title" class="notification-tools__section-title">Operación de notificaciónes</h2>
+  <p class="notification-tools__subtitle">Herramientas demo</p>
+  <div class="notification-tools__actions">
+    <button
+      mat-stroked-button
+      type="button"
+      [class.notification-tools__action--active]="correoActivo"
+      (click)="abrirCorreoPostal.emit()"
+    >
+      Correo postal
+    </button>
+    <button mat-stroked-button type="button" (click)="abrirNotificadorMunicipal.emit()">
+      Notificador municipal
+    </button>
+  </div>
+</section>

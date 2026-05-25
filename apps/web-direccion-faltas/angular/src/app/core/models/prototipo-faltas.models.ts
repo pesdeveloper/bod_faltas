@@ -1,4 +1,4 @@
-export type BandejaCodigo =
+﻿export type BandejaCodigo =
   | 'ACTAS_EN_ENRIQUECIMIENTO'
   | 'PENDIENTE_ANALISIS'
   | 'PENDIENTES_RESOLUCION_REDACCION'
@@ -83,6 +83,58 @@ export interface ActaResumenDemo {
   cerrabilidad: CerrabilidadDemo;
 }
 
+
+/** Contrato GET /bandejas - SubBandejaResumenResponse. */
+export interface SubBandejaResumen {
+  codigo: string;
+  label: string;
+  cantidad: number;
+}
+
+/** Contrato GET /bandejas - BandejaResponse. */
+export interface BandejaResponse {
+  codigo: BandejaCodigo;
+  label: string;
+  cantidad: number;
+  subBandejas: SubBandejaResumen[];
+}
+
+/** Contrato GET /bandejas/{codigo}/actas - ActaBandejaItemResponse. */
+export interface ActaBandejaItem extends ActaResumenDemo {
+  subBandeja: string;
+  subBandejaLabel: string;
+  chip: string | null;
+  accionPrincipal: string | null;
+  prioridadSubBandeja: number;
+  chipsSecundarios: string[];
+}
+
+/** Contrato ActaNotificacionResponse en GET /actas/{id} (detalle). */
+export interface ActaNotificacionTipificadaDemo {
+  id: string;
+  actaId: string;
+  canal: string | null;
+  estadoNotificacion: string | null;
+  destinatarioResumen: string | null;
+  tipo: string | null;
+  canalTipificado: string | null;
+  estado: string | null;
+  resultado: string | null;
+  referencia: string | null;
+  eventoRelacionado: string | null;
+  loteId: string | null;
+  referenciaExterna: string | null;
+  fechaPreparacion: string | null;
+  fechaEnvio: string | null;
+  fechaResultado: string | null;
+  observacion: string | null;
+  destinatarioNombre: string | null;
+  destinatarioEmail: string | null;
+  domicilioTexto: string | null;
+  domicilioElectronicoVerificado: boolean | null;
+  diasPlazoNotificacionElectronica: number | null;
+}
+
 export interface ActaDetalleDemo extends ActaResumenDemo {
   estaCerrada: boolean;
   permiteReingreso: boolean;
@@ -115,6 +167,8 @@ export interface ActaDetalleDemo extends ActaResumenDemo {
    * montoPagoVoluntario. Null si aun no se dicto fallo condenatorio.
    */
   montoCondena: number | null;
+  /** Notificaciones tipificadas del acta (detalle). */
+  notificaciones?: ActaNotificacionTipificadaDemo[] | null;
 }
 
 export interface BadgeDemo {
@@ -265,6 +319,130 @@ export interface CerrarActaAccionResponseDemo {
 }
 
 export type ResultadoNotificacionDemo = 'POSITIVA' | 'NEGATIVA' | 'VENCIDA';
+
+
+export interface NotificacionCorreoLoteItemDemo {
+  notificacionId: string;
+  actaId: string;
+  acta: string;
+  tipo: string;
+  canal: string;
+  referenciaExterna: string;
+  estadoNotificacion: string;
+  resultadoNotificacion: string;
+  destinatario: string | null;
+  domicilio: string | null;
+  observacion: string | null;
+}
+
+export interface GenerarLoteCorreoRequestDemo {
+  tipo?: string;
+  notificacionIds?: string[];
+}
+
+export interface GenerarLoteCorreoResultadoDemo {
+  loteId: string;
+  cantidad: number;
+  nombreArchivo: string;
+  rutaArchivo: string | null;
+  notificaciones: NotificacionCorreoLoteItemDemo[];
+}
+
+
+
+export interface CorreoPostalNotificacionListaDemo {
+  notificacionId: string;
+  actaId: string;
+  acta: string;
+  tipo: string;
+  canal: string;
+  estado: string;
+  resultado: string;
+  destinatario: string | null;
+  domicilio: string | null;
+  observacion: string | null;
+}
+
+export interface CorreoLoteResumenDemo {
+  loteId: string;
+  cantidad: number;
+  nombreArchivo: string;
+  rutaArchivo: string | null;
+  estado: string;
+  fechaGeneracion: string | null;
+  tiposIncluidos: string[];
+  tipoDominante: string | null;
+  positivas: number;
+  negativas: number;
+  vencidas: number;
+  notificaciones: NotificacionCorreoLoteItemDemo[];
+}
+
+export interface CorreoPostalTrazabilidadDemo {
+  acta: string;
+  actaId: string;
+  notificacionId: string;
+  tipo: string;
+  canal: string;
+  estadoNotificacion: string;
+  resultadoNotificacion: string;
+  loteId: string | null;
+  estadoLote: string | null;
+  fechaGeneracion: string | null;
+  fechaProcesamiento: string | null;
+  observacion: string | null;
+  referenciaExterna: string | null;
+}
+
+export interface AnularLoteCorreoResultadoDemo {
+  estado: string;
+  mensaje: string;
+  loteId: string;
+}
+
+export interface ProcesarRespuestaCorreoResultadoDemo {
+  total: number;
+  positivas: number;
+  negativas: number;
+  vencidas: number;
+  errores: number;
+  detalleErrores: string[];
+  nombreArchivo: string | null;
+  rutaArchivoProcesado: string | null;
+}
+
+
+export interface NotificadorMunicipalNotificacionDemo {
+  notificacionId: string;
+  actaId: string;
+  acta: string;
+  tipo: string;
+  canal: string;
+  estado: string;
+  resultado: string;
+  destinatario: string | null;
+  domicilio: string | null;
+  observacion: string | null;
+  qrNotificacion: string | null;
+  fechaPreparacion: string | null;
+  fechaEnvio: string | null;
+}
+
+export interface NotificadorMunicipalAcuseRequestDemo {
+  resultado: ResultadoNotificacionDemo;
+  observacion?: string;
+}
+
+export interface NotificadorMunicipalAcuseResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  acta: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  notificacion: ActaNotificacionTipificadaDemo;
+  vista: NotificadorMunicipalNotificacionDemo;
+}
 
 /**
  * Contrato POST /actas/{id}/acciones/registrar-notificacion-positiva
@@ -616,6 +794,18 @@ export interface DictarFalloAccionResponseDemo {
   estadoProcesoActual: string;
   montoCondena?: number | null;
 }
+
+export interface NotificacionPortalPendienteDemo {
+  id: string;
+  tipo: string;
+  canal: string;
+  estado: string;
+  resultado: string;
+  destinatario: string | null;
+  resumen: string | null;
+  mensajeVisible: string | null;
+}
+
 export interface ActaInfractorResponseDemo {
   acta: string;
   codigoQr: string;
@@ -628,6 +818,9 @@ export interface ActaInfractorResponseDemo {
   puedeSolicitarPagoVoluntario: boolean;
   puedePagar: boolean;
   puedePresentarApelacion: boolean;
+  puedeConfirmarVisualizacionNotificacion: boolean;
+  notificacionPortalPendiente: NotificacionPortalPendienteDemo | null;
+  domicilioElectronicoVerificado: boolean | null;
   mensajeVisible: string | null;
 }
 

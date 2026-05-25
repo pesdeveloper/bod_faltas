@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, DestroyRef, ElementRef, NgZone, OnInit, QueryList, ViewChild, ViewChildren, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,13 +7,18 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { Observable, catchError, finalize, of, take } from 'rxjs';
 import { BANDEJAS_DEMO, etiquetaBandeja } from '../../core/constants/bandejas-demo.constants';
 import {
   AccionPagoCondenaDemo,
   AccionPagoVoluntarioDemo,
+  ActaBandejaItem,
   ActaDetalleDemo,
   ActaResumenDemo,
+  BandejaResponse,
+  SubBandejaResumen,
   BadgeDemo,
   BandejaCodigo,
   CrearActaMockDemoRequest,
@@ -31,6 +36,9 @@ import {
 } from '../../core/models/prototipo-faltas.models';
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
 import { PrototipoFaltasApiService } from '../../core/services/prototipo-faltas-api.service';
+import { DemoActaListComponent } from './demo-acta-list.component';
+import { DemoActaNotificacionesComponent } from './demo-acta-notificaciones.component';
+import { DemoCorreoPostalPageComponent } from './demo-correo-postal-page.component';
 
 type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -69,8 +77,8 @@ const TIPOS_CUMPLIMIENTO_MATERIAL: ReadonlyArray<TipoCumplimientoMaterialBloquea
 
 const ETIQUETA_CUMPLIMIENTO_MATERIAL: Record<TipoCumplimientoMaterialBloqueante, string> = {
   LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Registrar levantamiento material',
-  LIBERACION_RODADO: 'Registrar liberacion de rodado',
-  ENTREGA_DOCUMENTACION: 'Registrar entrega de documentacion',
+  LIBERACION_RODADO: 'Registrar liberación de rodado',
+  ENTREGA_DOCUMENTACION: 'Registrar entrega de documentación',
 };
 
 // Fases del eje material reportadas por el backend (HechosMaterialesEje.fase).
@@ -81,13 +89,13 @@ const FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE = 'RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_
 
 const ETIQUETA_RESOLUCION_BLOQUEO_CIERRE: Record<TipoResolucionBloqueoCierre, string> = {
   LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Resolver levantamiento de medida preventiva',
-  LIBERACION_RODADO: 'Resolver liberacion de rodado',
-  ENTREGA_DOCUMENTACION: 'Resolver entrega de documentacion',
+  LIBERACION_RODADO: 'Resolver liberación de rodado',
+  ENTREGA_DOCUMENTACION: 'Resolver entrega de documentación',
 };
 
 const ETIQUETA_RESOLUCION_BLOQUEO_CIERRE_EN_CURSO: Record<TipoResolucionBloqueoCierre, string> = {
   LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Resolviendo levantamiento...',
-  LIBERACION_RODADO: 'Resolviendo liberacion...',
+  LIBERACION_RODADO: 'Resolviendo liberación...',
   ENTREGA_DOCUMENTACION: 'Resolviendo entrega...',
 };
 
@@ -196,6 +204,27 @@ const BANDEJA_ABREVIATURAS: Record<BandejaCodigo, string> = {
   CERRADAS: 'CER',
 };
 
+const BANDEJA_ICONOS: Record<BandejaCodigo, string> = {
+  ACTAS_EN_ENRIQUECIMIENTO: 'playlist_add_check',
+  PENDIENTE_ANALISIS: 'manage_search',
+  PENDIENTES_RESOLUCION_REDACCION: 'edit_note',
+  PENDIENTE_FIRMA: 'draw',
+  PENDIENTE_NOTIFICACION: 'outgoing_mail',
+  EN_NOTIFICACION: 'local_shipping',
+  GESTION_EXTERNA: 'account_balance',
+  ARCHIVO: 'inventory_2',
+  CERRADAS: 'task_alt',
+};
+
+const BANDEJA_ICONOS_EXTRA: Record<string, string> = {
+  PENDIENTE_PREPARACION_DOCUMENTAL: 'edit_document',
+};
+
+const BANDEJA_ICONOS_LOOKUP: Record<string, string> = {
+  ...BANDEJA_ICONOS,
+  ...BANDEJA_ICONOS_EXTRA,
+};
+
 const STORAGE_SEGUIR_ACTA_AL_CAMBIAR_BANDEJA = 'faltas.demo.seguir-acta-al-cambiar-bandeja';
 
 interface AccionConBandejaResponseLike {
@@ -244,23 +273,30 @@ const ETIQUETA_DERIVACION_GESTION_EXTERNA_EN_CURSO: Record<TipoGestionExternaDem
     MatListModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    DemoActaListComponent,
+    DemoCorreoPostalPageComponent,
+    DemoActaNotificacionesComponent,
   ],
   templateUrl: './demo-shell.component.html',
   styleUrl: './demo-shell.component.scss',
 })
-export class DemoShellComponent implements OnInit, AfterViewInit {
+export class DemoShellComponent implements OnInit {
   private readonly api = inject(PrototipoFaltasApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly ngZone = inject(NgZone);
-  @ViewChild('actasListContainer') private readonly actasListContainer?: ElementRef<HTMLElement>;
-  @ViewChildren('actaRow') private readonly actaRows?: QueryList<ElementRef<HTMLElement>>;
+  private readonly router = inject(Router);
+  @ViewChild(DemoActaListComponent) private readonly actaListComponent?: DemoActaListComponent;
+  @ViewChild('actaDetailContainer') private readonly actaDetailContainer?: ElementRef<HTMLElement>;
 
-  readonly bandejas = BANDEJAS_DEMO;
   readonly etiquetaBandeja = etiquetaBandeja;
   readonly bandejasColapsadas = signal<boolean>(false);
+  readonly bandejasResumen = signal<BandejaResponse[]>([]);
+  readonly enCorreoPostal = signal(false);
+  readonly enNotificadorMunicipal = signal(false);
 
   readonly bandejaSeleccionada = signal<BandejaCodigo>('ACTAS_EN_ENRIQUECIMIENTO');
-  readonly actas = signal<ActaResumenDemo[]>([]);
+  readonly subBandejaSeleccionada = signal<string | null>(null);
+  readonly actas = signal<ActaBandejaItem[]>([]);
   readonly actaSeleccionadaId = signal<string | null>(null);
   readonly detalle = signal<ActaDetalleDemo | null>(null);
 
@@ -373,16 +409,20 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.restaurarPreferenciaSeguirActa();
+    this.actualizarVistaCorreoPostal(this.router.url);
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((event) => this.actualizarVistaCorreoPostal(event.urlAfterRedirects));
+    this.cargarBandejasResumen();
     this.cargarListado();
   }
 
-  ngAfterViewInit(): void {
-    this.actaRows?.changes.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.reintentarScrollPendienteAlRenderizarListado();
-    });
-  }
+  ngAfterViewInit(): void {}
 
-  actasFiltradas(): ActaResumenDemo[] {
+  actasFiltradas(): ActaBandejaItem[] {
     const termino = this.textoBusquedaActa().trim().toLowerCase();
     const items = this.actas();
     if (!termino) {
@@ -403,8 +443,76 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
   }
 
 
-  tituloBandejaActual(): string {
-    return etiquetaBandeja(this.bandejaSeleccionada());
+  tituloVistaPrincipal(): string {
+    if (this.enCorreoPostal()) {
+      return 'Correo postal';
+    }
+    const bandeja = this.bandejasResumen().find((item) => item.codigo === this.bandejaSeleccionada());
+    const labelBandeja = bandeja?.label ?? etiquetaBandeja(this.bandejaSeleccionada());
+    const subCodigo = this.subBandejaSeleccionada();
+    if (!subCodigo) {
+      return labelBandeja;
+    }
+    const subLabel =
+      bandeja?.subBandejas.find((sub) => sub.codigo === subCodigo)?.label ?? subCodigo;
+    return `${labelBandeja} › ${subLabel}`;
+  }
+
+  subBandejasVisibles(bandeja: BandejaResponse): SubBandejaResumen[] {
+    return bandeja.subBandejas.filter(
+      (sub) => sub.cantidad > 0 && sub.codigo.toUpperCase() !== 'TODAS',
+    );
+  }
+
+  subBandejasActuales(): SubBandejaResumen[] {
+    const bandeja = this.bandejasResumen().find((item) => item.codigo === this.bandejaSeleccionada());
+    if (!bandeja) {
+      return [];
+    }
+    return this.subBandejasVisibles(bandeja);
+  }
+
+  bandejaActivaResumen(): BandejaResponse | null {
+    return this.bandejasResumen().find((item) => item.codigo === this.bandejaSeleccionada()) ?? null;
+  }
+
+  labelBandejaActiva(): string {
+    const bandeja = this.bandejaActivaResumen();
+    return bandeja?.label ?? etiquetaBandeja(this.bandejaSeleccionada());
+  }
+
+  cantidadTotalBandejaActiva(): number {
+    return this.bandejaActivaResumen()?.cantidad ?? 0;
+  }
+
+  seleccionarFiltroOperativoDesdeResumen(subCodigo: string): void {
+    this.cambiarFiltroOperativo(subCodigo);
+  }
+
+  abrirCorreoPostal(): void {
+    void this.router.navigate(['/correo-postal']);
+  }
+
+  abrirNotificadorMunicipal(): void {
+    void this.router.navigate(['/notificador-municipal']);
+  }
+
+  refrescarLuegoDeOperacionCorreoPostal(): void {
+    this.cargarBandejasResumen();
+    this.cargarListado();
+  }
+
+  reintentarScrollPendienteAlRenderizarListado(): void {
+    this.reintentarScrollPendienteAlRenderizarListadoInterno();
+  }
+
+  enVistaOperativaNotificaciones(): boolean {
+    return this.enCorreoPostal() || this.enNotificadorMunicipal();
+  }
+
+  private actualizarVistaCorreoPostal(url: string): void {
+    this.enCorreoPostal.set(url.startsWith('/correo-postal'));
+    this.enNotificadorMunicipal.set(url.startsWith('/notificador-municipal'));
   }
 
   toggleBandejas(): void {
@@ -415,11 +523,41 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
     return BANDEJA_ABREVIATURAS[bandeja];
   }
 
+  iconoBandeja(bandeja: string): string {
+    return BANDEJA_ICONOS_LOOKUP[bandeja] ?? 'inbox';
+  }
+
+  formatearCantidadBandeja(cantidad: number): string {
+    return cantidad.toLocaleString('es-AR');
+  }
+
   seleccionarBandeja(bandeja: BandejaCodigo): void {
-    if (this.bandejaSeleccionada() === bandeja) {
+    const volverDesdeCorreoPostal =
+      this.enVistaOperativaNotificaciones() && this.bandejaSeleccionada() === bandeja;
+    if (this.enVistaOperativaNotificaciones()) {
+      void this.router.navigate(['/']);
+    }
+
+    const mismaBandeja = this.bandejaSeleccionada() === bandeja;
+    if (mismaBandeja && !volverDesdeCorreoPostal && this.subBandejaSeleccionada() === null) {
       return;
     }
+
     this.limpiarScrollActaPendiente();
+    const volverATodasEnMismaBandeja = mismaBandeja && this.subBandejaSeleccionada() !== null;
+    this.subBandejaSeleccionada.set(null);
+
+    if (volverATodasEnMismaBandeja) {
+      this.limpiarSeguimientoActaFeedback();
+      this.limpiarCopiaEstadoFeedback();
+      this.cargarListado({ actaIdScrollObjetivo: this.actaSeleccionadaId() });
+      return;
+    }
+
+    if (mismaBandeja && !volverDesdeCorreoPostal) {
+      return;
+    }
+
     this.bandejaSeleccionada.set(bandeja);
     this.actaSeleccionadaId.set(null);
     this.detalle.set(null);
@@ -444,6 +582,23 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
     this.limpiarSeguimientoActaFeedback();
     this.limpiarCopiaEstadoFeedback();
     this.cargarListado();
+  }
+
+
+  cambiarFiltroOperativo(subCodigo: string | null): void {
+    if (this.enVistaOperativaNotificaciones()) {
+      void this.router.navigate(['/']);
+    }
+
+    if (this.subBandejaSeleccionada() === subCodigo) {
+      return;
+    }
+
+    this.subBandejaSeleccionada.set(subCodigo);
+    this.limpiarScrollActaPendiente();
+    this.limpiarSeguimientoActaFeedback();
+    this.limpiarCopiaEstadoFeedback();
+    this.cargarListado({ actaIdScrollObjetivo: this.actaSeleccionadaId() });
   }
 
   seleccionarActa(id: string): void {
@@ -2419,7 +2574,7 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
       });
   }
 
-  private reintentarScrollPendienteAlRenderizarListado(): void {
+  private reintentarScrollPendienteAlRenderizarListadoInterno(): void {
     if (!this.pendingScrollToActaId) {
       return;
     }
@@ -2434,7 +2589,7 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const container = this.actasListContainer?.nativeElement;
+    const container = this.actaListComponent?.contenedor;
     if (!container) {
       if (attempt === 0) {
         setTimeout(() => this.scrollSelectedActaIntoView(actaId, 0));
@@ -2443,9 +2598,7 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
     }
 
     const row =
-      container.querySelector<HTMLElement>(`[data-acta-id="${CSS.escape(actaId)}"]`) ??
-      this.actaRows?.find((item) => item.nativeElement.dataset['actaId'] === actaId)?.nativeElement ??
-      null;
+this.actaListComponent?.buscarFila(actaId) ?? null;
 
     if (!row) {
       if (this.pendingScrollRetryDisponible && attempt === 0) {
@@ -2502,7 +2655,7 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
         return;
       }
 
-      const container = this.actasListContainer?.nativeElement;
+      const container = this.actaListComponent?.contenedor;
       const row = container?.querySelector<HTMLElement>(`[data-acta-id="${CSS.escape(actaId)}"]`) ?? null;
       if (!container || !row) {
         if (this.listadoEstado() === 'loading') {
@@ -2550,24 +2703,37 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
     this.cargarListado({ bandeja: 'ACTAS_EN_ENRIQUECIMIENTO', actaIdScrollObjetivo: actaId });
   }
 
+  private cargarBandejasResumen(): void {
+    this.api
+      .listarBandejas()
+      .pipe(
+        catchError(() => of([] as BandejaResponse[])),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((bandejas) => this.bandejasResumen.set(bandejas));
+  }
+
   private cargarListado(opciones?: {
     actaIdScrollObjetivo?: string | null;
     evaluarSeguimientoBandeja?: boolean;
     bandeja?: BandejaCodigo;
+    subBandeja?: string | null;
   }): void {
     const actaIdScrollObjetivo = opciones?.actaIdScrollObjetivo ?? null;
     const evaluarSeguimientoBandeja = opciones?.evaluarSeguimientoBandeja ?? false;
     const bandeja = opciones?.bandeja ?? this.bandejaSeleccionada();
+    const subBandeja = opciones?.subBandeja ?? this.subBandejaSeleccionada();
 
+    this.cargarBandejasResumen();
     this.listadoEstado.set('loading');
     this.listadoError.set(null);
     this.api
-      .listarActasPorBandeja(bandeja)
+      .listarActasPorBandeja(bandeja, subBandeja)
       .pipe(
         catchError((err) => {
           this.listadoError.set(mensajeErrorHttp(err));
           this.listadoEstado.set('error');
-          return of([] as ActaResumenDemo[]);
+          return of([] as ActaBandejaItem[]);
         }),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -2584,10 +2750,14 @@ export class DemoShellComponent implements OnInit, AfterViewInit {
         if (evaluarSeguimientoBandeja) {
           const encontrada = items.some((acta) => acta.id === actaIdScrollObjetivo);
           if (!encontrada) {
+            const bandejaResumen = this.bandejasResumen().find((item) => item.codigo === bandeja);
+            const labelBandeja = bandejaResumen?.label ?? etiquetaBandeja(bandeja);
+            const subLabel = subBandeja
+              ? bandejaResumen?.subBandejas.find((sub) => sub.codigo === subBandeja)?.label ?? subBandeja
+              : null;
+            const destino = subLabel ? `${labelBandeja} › ${subLabel}` : labelBandeja;
             this.seguimientoActaMensaje.set(
-              'El acta sigue seleccionada, pero no aparece en el listado de la bandeja ' +
-                etiquetaBandeja(bandeja) +
-                '.',
+              'El acta sigue seleccionada, pero no aparece en el listado de ' + destino + '.',
             );
             return;
           }

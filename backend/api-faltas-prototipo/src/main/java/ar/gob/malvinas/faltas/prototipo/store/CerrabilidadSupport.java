@@ -118,13 +118,12 @@ final class CerrabilidadSupport {
             return new PrototipoStore.HechosMaterialesActaVista(List.of(), null);
         }
         ActaMock a = actas.get(actaId);
-        if (a != null && !a.estaCerrada()) {
-            ensureOrigenesSincronizados(actaId);
-        }
-        EnumSet<PrototipoStore.OrigenBloqueanteCierreMaterialMock> ors = origenesBloqueantesPorActa
-                .getOrDefault(
-                        actaId,
-                        EnumSet.noneOf(PrototipoStore.OrigenBloqueanteCierreMaterialMock.class));
+        EnumSet<PrototipoStore.OrigenBloqueanteCierreMaterialMock> ors =
+                a != null && !a.estaCerrada()
+                        ? origenesBloqueantesEfectivosParaLectura(actaId)
+                        : origenesBloqueantesPorActa.getOrDefault(
+                                actaId,
+                                EnumSet.noneOf(PrototipoStore.OrigenBloqueanteCierreMaterialMock.class));
         boolean evaluaBloqueoCierre = a != null && evaluacionBloqueoCierreHechoMaterial(a);
         return new PrototipoStore.HechosMaterialesActaVista(
                 List.of(
@@ -327,10 +326,9 @@ final class CerrabilidadSupport {
         if (v == null || v.estaCerrada()) {
             return List.of();
         }
-        ensureOrigenesSincronizados(actaId);
         EnumSet<PrototipoStore.OrigenBloqueanteCierreMaterialMock> origenes =
-                origenesBloqueantesPorActa.get(actaId);
-        if (origenes == null || origenes.isEmpty()) {
+                origenesBloqueantesEfectivosParaLectura(actaId);
+        if (origenes.isEmpty()) {
             return List.of();
         }
         EnumSet<PrototipoStore.PendienteBloqueanteCierreMock> pend = EnumSet.noneOf(
@@ -448,6 +446,34 @@ final class CerrabilidadSupport {
             return false;
         }
         return docs.stream().anyMatch(d -> tipoDocumento.equals(d.tipoDocumento()));
+    }
+
+    /**
+     * Orígenes bloqueantes efectivos para lectura (bandejas, cerrabilidad,
+     * clasificación): fusiona lo persistido con anclas documentales del
+     * expediente sin mutar {@link #origenesBloqueantesPorActa}.
+     */
+    private EnumSet<PrototipoStore.OrigenBloqueanteCierreMaterialMock>
+            origenesBloqueantesEfectivosParaLectura(String actaId) {
+        if (actaId == null) {
+            return EnumSet.noneOf(PrototipoStore.OrigenBloqueanteCierreMaterialMock.class);
+        }
+        EnumSet<PrototipoStore.OrigenBloqueanteCierreMaterialMock> stored =
+                origenesBloqueantesPorActa.get(actaId);
+        EnumSet<PrototipoStore.OrigenBloqueanteCierreMaterialMock> efectivos =
+                stored != null
+                        ? EnumSet.copyOf(stored)
+                        : EnumSet.noneOf(PrototipoStore.OrigenBloqueanteCierreMaterialMock.class);
+        if (expedienteIncluyeDocumentoConTipo(actaId, TIPO_ANCLA_MEDIDA_PREVENTIVA)) {
+            efectivos.add(PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA);
+        }
+        if (expedienteIncluyeDocumentoConTipo(actaId, TIPO_DOC_ACUSE_RETENCION_VEHICULO)) {
+            efectivos.add(PrototipoStore.OrigenBloqueanteCierreMaterialMock.RODADO_SECUESTRADO);
+        }
+        if (expedienteIncluyeDocumentoConTipo(actaId, TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL)) {
+            efectivos.add(PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA);
+        }
+        return efectivos;
     }
 
     /**
@@ -805,7 +831,6 @@ final class CerrabilidadSupport {
         if (!BANDEJA_PENDIENTE_ANALISIS.equals(a.bandejaActual())) {
             return false;
         }
-        ensureOrigenesSincronizados(actaId);
         PrototipoStore.ResultadoFinalCierreMock rf = getResultadoFinal(actaId);
         List<PrototipoStore.PendienteBloqueanteCierreMock> pend = listarPendientesBloqueantesOrdenados(actaId);
         return condicionCierreSinCerrarExpediente(actaId, rf, pend);

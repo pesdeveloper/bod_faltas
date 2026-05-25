@@ -1,0 +1,90 @@
+demo-shell.component.html:126:                     title="Abre el portal infractor en una nueva pesta��a"
+demo-shell.component.html:136:                   title="Copia un resumen compacto del acta para validaci��n."
+demo-shell.component.html:160:               <dt>Situaci��n administrativa</dt>
+demo-shell.component.html:197:               <p class="detail-card__text">El acta es cerrable, pero requiere cierre expl��cito.</p>
+demo-shell.component.html:298:                 El acta está archivada. Para continuar requiere reingreso expl��cito.
+demo-shell.component.html:345:             <h3 id="gestion-externa-titulo" class="detail-card__title">Gesti��n externa</h3>
+demo-shell.component.html:362:                 <dt>Acci��n pendiente</dt>
+demo-shell.component.html:366:                 <dt>Tipo gesti��n externa</dt>
+demo-shell.component.html:372:                 El acta está en gesti��n externa. Para continuar internamente debe retornar.
+demo-shell.component.html:386:                       Retornar de gesti��n externa
+demo-shell.component.html:397:                 El acta puede derivarse a gesti��n externa desde esta instancia.
+demo-shell.component.html:433:             <h3 id="notificacion-acta-titulo" class="detail-card__title">Notificaci��n del acta</h3>
+demo-shell.component.html:446:                 Registrar resultado de notificaci��n (mock). No libera bloqueantes materiales ni cierra el acta.
+demo-shell.component.html:489:                 El acta retorn�� a anǭlisis por una notificaci��n no entregada. Puede reintentarse la notificaci��n para volver al circuito.
+demo-shell.component.html:502:                     Reintentar notificaci��n
+demo-shell.component.html:515:               La validaci��n final la realiza el backend; la pantalla muestra las
+demo-shell.component.html:516:               acciones disponibles segǧn la situaci��n de pago informada.
+demo-shell.component.html:519:               <dt>Situaci��n de pago</dt>
+demo-shell.component.html:552:                 Sin situaci��n de pago informada por el backend.
+demo-shell.component.html:556:                 Situaci��n de pago desconocida para la UI; no se muestran acciones.
+demo-shell.component.html:560:                 No hay acciones de pago disponibles para la situaci��n actual.
+demo-shell.component.html:609:             <h3 id="fallo-fondo-titulo" class="detail-card__title">Fallo / resoluci��n de fondo</h3>
+demo-shell.component.html:611:               Dicta el fallo en anǭlisis jur��dico. La validaci��n final la realiza el backend;
+demo-shell.component.html:612:               luego la firma y notificaci��n usan las acciones existentes.
+demo-shell.component.html:679:             <h3 id="apelacion-titulo" class="detail-card__title">Apelaci��n</h3>
+demo-shell.component.html:681:               Registra la presentaci��n presencial de apelaci��n sobre fallo condenatorio.
+demo-shell.component.html:711:                       Registrando apelaci��n...
+demo-shell.component.html:713:                       Registrar apelaci��n presencial
+demo-shell.component.html:739:             <h3 id="resolucion-apelacion-titulo" class="detail-card__title">Resoluci��n de apelaci��n</h3>
+demo-shell.component.html:741:               Resuelve una apelaci��n ya presentada sobre fallo condenatorio.
+demo-shell.component.html:764:                     Resolviendo apelaci��n...
+demo-shell.component.html:766:                     Rechazar apelaci��n
+demo-shell.component.html:777:                     Resolviendo apelaci��n...
+demo-shell.component.html:779:                     Aceptar apelaci��n y absolver
+demo-shell.component.html:799:             <h3 id="piezas-redaccion-titulo" class="detail-card__title">Piezas de redacci��n</h3>
+demo-shell.component.html:883:                       Generando notificaci��n del acta...
+demo-shell.component.html:885:                       Generar notificaci��n del acta
+demo-shell.component.html:891:               <p class="detail-hint">No hay acciones de redacci��n disponibles para esta acta.</p>
+demo-acta-list.component.ts:80:     return this.actasListContainer?.nativeElement ?? null;
+demo-acta-list.component.ts:93:       container?.querySelector<HTMLElement>(`[data-acta-id="${CSS.escape(actaId)}"]`) ??
+demo-acta-list.component.ts:94:       this.actaRows?.find((item) => item.nativeElement.dataset['actaId'] === actaId)?.nativeElement ??
+demo-acta-list.component.ts:115:     return ETIQUETA_BADGE_COMPACTA[texto] ?? this.humanizarCodigoVisual(texto);
+demo-shell.component.ts:443:     const labelBandeja = bandeja?.label ?? etiquetaBandeja(this.bandejaSeleccionada());
+demo-shell.component.ts:449:       bandeja?.subBandejas.find((sub) => sub.codigo === subCodigo)?.label ?? subCodigo;
+demo-shell.component.ts:783:     return ETIQUETA_DEPENDENCIA_DEMO[codigo] ?? codigo;
+demo-shell.component.ts:840:     this.montoCondenaInput.set(valor ?? '');
+demo-shell.component.ts:876:             montoCondena: this.montoCondenaParseado() ?? 0,
+demo-shell.component.ts:998:             (respuesta.mensaje ?? 'sin mensaje del backend') +
+demo-shell.component.ts:1257:     return eje?.fase ?? null;
+demo-shell.component.ts:1484:     const lista = this.detalle()?.accionesPagoVoluntarioDisponibles ?? [];
+demo-shell.component.ts:1522:     return valor ?? '-';
+demo-shell.component.ts:1534:     const lista = this.detalle()?.accionesPagoCondenaDisponibles ?? [];
+demo-shell.component.ts:1541:     const lista = this.detalle()?.accionesGestionExternaDisponibles ?? [];
+demo-shell.component.ts:1644:             (respuesta.mensaje ?? 'sin mensaje del backend') +
+demo-shell.component.ts:1655:     this.montoPagoVoluntarioInput.set(valor ?? '');
+demo-shell.component.ts:1707:         return this.api.registrarSolicitudPagoVoluntario(actaId, { monto: monto ?? 0 });
+demo-shell.component.ts:1970:     const requeridas = det.piezasRequeridas ?? [];
+demo-shell.component.ts:1971:     const generadas = det.piezasGeneradas ?? [];
+demo-shell.component.ts:1980:     return (det.piezasRequeridas?.length ?? 0) > 0 || (det.piezasGeneradas?.length ?? 0) > 0;
+demo-shell.component.ts:2091:     return ETIQUETA_BADGE_COMPACTA[texto] ?? this.humanizarCodigoVisual(texto);
+demo-shell.component.ts:2104:     return det.cerrabilidad?.pendientesBloqueantesCierre ?? [];
+demo-shell.component.ts:2108:     return det.hechosMateriales?.ejes ?? [];
+demo-shell.component.ts:2112:     return (det.piezasRequeridas?.length ?? 0) > 0 || (det.piezasGeneradas?.length ?? 0) > 0;
+demo-shell.component.ts:2201:       situacionPago: det.situacionPago ?? null,
+demo-shell.component.ts:2202:       montoPagoVoluntario: det.montoPagoVoluntario ?? null,
+demo-shell.component.ts:2203:       montoCondena: det.montoCondena ?? null,
+demo-shell.component.ts:2204:       situacionPagoCondena: det.situacionPagoCondena ?? null,
+demo-shell.component.ts:2205:       resultadoFinal: cerrabilidad?.resultadoFinal ?? null,
+demo-shell.component.ts:2206:       cerrable: cerrabilidad?.cerrable ?? false,
+demo-shell.component.ts:2207:       motivoCerrabilidad: cerrabilidad?.motivoNoCerrable ?? null,
+demo-shell.component.ts:2208:       accionPendiente: det.accionPendiente ?? null,
+demo-shell.component.ts:2209:       permiteReingreso: det.permiteReingreso ?? false,
+demo-shell.component.ts:2210:       tipoGestionExterna: det.tipoGestionExterna ?? null,
+demo-shell.component.ts:2211:       motivoArchivo: det.motivoArchivo ?? null,
+demo-shell.component.ts:2214:         requeridas: [...(det.piezasRequeridas ?? [])],
+demo-shell.component.ts:2215:         generadas: [...(det.piezasGeneradas ?? [])],
+demo-shell.component.ts:2274:       const origen = evento.bloqueOrigen?.trim() ?? '';
+demo-shell.component.ts:2275:       const destino = evento.bloqueDestino?.trim() ?? '';
+demo-shell.component.ts:2332:       ultimo: mensajes.at(-1) ?? null,
+demo-shell.component.ts:2333:       error: errores.at(-1) ?? null,
+demo-shell.component.ts:2475:     const actaId = respuesta?.actaId ?? this.actaSeleccionadaId();
+demo-shell.component.ts:2488:     this.refrescarActaSeleccionadaDesdeBackend(actaId ?? null);
+demo-shell.component.ts:2567: this.actaListComponent?.buscarFila(actaId) ?? null;
+demo-shell.component.ts:2625:       const row = container?.querySelector<HTMLElement>(`[data-acta-id="${CSS.escape(actaId)}"]`) ?? null;
+demo-shell.component.ts:2688:     const actaIdScrollObjetivo = opciones?.actaIdScrollObjetivo ?? null;
+demo-shell.component.ts:2689:     const evaluarSeguimientoBandeja = opciones?.evaluarSeguimientoBandeja ?? false;
+demo-shell.component.ts:2690:     const bandeja = opciones?.bandeja ?? this.bandejaSeleccionada();
+demo-shell.component.ts:2691:     const subBandeja = opciones?.subBandeja ?? this.subBandejaSeleccionada();
+demo-shell.component.ts:2720:             const labelBandeja = bandejaResumen?.label ?? etiquetaBandeja(bandeja);
+demo-shell.component.ts:2722:               ? bandejaResumen?.subBandejas.find((sub) => sub.codigo === subBandeja)?.label ?? subBandeja

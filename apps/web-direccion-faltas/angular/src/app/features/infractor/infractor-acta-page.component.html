@@ -61,6 +61,17 @@
               Pagar
             </button>
           }
+          @if (a.puedeConfirmarVisualizacionNotificacion) {
+            <button
+              mat-stroked-button
+              type="button"
+              color="primary"
+              [disabled]="registrandoVisualizacionNotificacion()"
+              (click)="confirmarVisualizacionNotificacion()"
+            >
+              Confirmar visualización de la notificación
+            </button>
+          }
           @if (a.puedePresentarApelacion) {
             <button
               mat-stroked-button
@@ -77,6 +88,22 @@
             </button>
           }
         </div>
+        @if (a.puedeConfirmarVisualizacionNotificacion && a.notificacionPortalPendiente?.mensajeVisible) {
+          <p class="infractor-info-message">
+            {{ a.notificacionPortalPendiente?.mensajeVisible }}
+          </p>
+        }
+        @if (visualizacionPortalMensaje()) {
+          <p
+            class="infractor-info-message"
+            [class.infractor-info-message--success]="visualizacionPortalMensajeTipo() === 'success'"
+            [class.infractor-info-message--error]="visualizacionPortalMensajeTipo() === 'error'"
+            role="status"
+            aria-live="polite"
+          >
+            {{ visualizacionPortalMensaje() }}
+          </p>
+        }
         @if (pagoVoluntarioPortalMensaje()) {
           <p class="infractor-info-message" role="status" aria-live="polite">
             {{ pagoVoluntarioPortalMensaje() }}

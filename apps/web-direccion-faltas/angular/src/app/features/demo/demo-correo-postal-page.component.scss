@@ -1,0 +1,393 @@
+﻿:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.correo-postal-page {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.correo-postal-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.correo-postal-page h2,
+.correo-postal-page h3,
+.correo-postal-page h4,
+.correo-postal-page p {
+  margin: 0;
+}
+
+.correo-postal-page h2 {
+  font-size: 1.15rem;
+}
+
+.correo-postal-page p {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.correo-postal-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.correo-postal-toolbar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.correo-postal-toolbar__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+}
+
+.correo-postal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  background: #fff;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.chip--active {
+  border-color: #1565c0;
+  background: rgba(21, 101, 192, 0.1);
+  color: #0d47a1;
+}
+
+.correo-postal-toolbar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.correo-postal-search {
+  display: grid;
+  gap: 0.35rem;
+  flex: 1 1 16rem;
+  min-width: 12rem;
+}
+
+.correo-postal-search span {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.correo-postal-search input {
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.correo-postal-toolbar__hint {
+  font-size: 0.8125rem;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.correo-postal-candidatas {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.correo-postal-candidatas h3 {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.58);
+  margin-bottom: 0.65rem;
+}
+
+.correo-postal-trazabilidad {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.correo-postal-trazabilidad h3 {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.58);
+  margin-bottom: 0.65rem;
+}
+
+.correo-postal-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .correo-postal-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.correo-postal-lotes,
+.correo-postal-detail {
+  min-width: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.correo-postal-lotes h3,
+.correo-postal-detail h3 {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.58);
+  margin-bottom: 0.65rem;
+}
+
+.correo-postal-lote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.correo-postal-lote-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  background: #fafafa;
+  padding: 0.55rem 0.65rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.correo-postal-lote-card:hover {
+  border-color: rgba(21, 101, 192, 0.45);
+}
+
+.correo-postal-lote-card--selected {
+  border-color: #1565c0;
+  background: rgba(21, 101, 192, 0.08);
+}
+
+.correo-postal-lote-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.correo-postal-lote-card__meta {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge--pendiente {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.badge--procesado {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge--anulado {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+.correo-postal-detail__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.correo-postal-panel__hint {
+  margin-top: 0.65rem;
+  max-width: 48rem;
+  font-size: 0.8125rem;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.correo-postal-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.correo-postal-loading--inline {
+  padding: 0.75rem 0;
+  border: none;
+  background: transparent;
+}
+
+.correo-postal-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.55);
+  font-style: italic;
+}
+
+.correo-postal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.demo-feedback-ok {
+  margin: 0;
+  color: #2e7d32;
+}
+
+.demo-feedback-warning {
+  margin: 0;
+  color: #ef6c00;
+}
+
+.demo-feedback-error {
+  margin: 0;
+  color: #c62828;
+}
+
+.detail-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  font-size: 0.875rem;
+}
+
+.detail-dl--compact {
+  margin: 0.5rem 0 0;
+}
+
+.detail-dl dt {
+  color: rgba(0, 0, 0, 0.55);
+  margin: 0;
+}
+
+.detail-dl dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.correo-postal-detail h4 {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.correo-postal-table-wrap {
+  overflow-x: auto;
+}
+
+.correo-postal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.correo-postal-table th,
+.correo-postal-table td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.correo-postal-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+
+.correo-postal-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.correo-postal-row--omitida {
+  opacity: 0.72;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+
+.correo-postal-flow {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 0.92rem;
+}
+
+.correo-postal-detail__step {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}

@@ -1,0 +1,375 @@
+﻿<section class="correo-postal-page" aria-labelledby="correo-postal-titulo">
+  <header class="correo-postal-page__header">
+    <div>
+      <h2 id="correo-postal-titulo">Correo postal</h2>
+      <p>Gestion demo de lotes CSV y respuestas simuladas del correo.</p>
+      <ol class="correo-postal-flow" aria-label="Flujo operativo">
+        <li>Elegi tipo de notificacion.</li>
+        <li>Revisa y selecciona notificaciones listas.</li>
+        <li>Genera lote.</li>
+        <li>Procesa respuesta del correo.</li>
+        <li>Consulta trazabilidad por acta.</li>
+      </ol>
+    </div>
+    <button mat-stroked-button type="button" [disabled]="cargando() || accionEnCurso() !== null" (click)="cargarDatos()">
+      Refrescar
+    </button>
+  </header>
+
+  @if (mensaje() || advertencia() || error() || loteUrlAdvertencia()) {
+    <div class="correo-postal-feedback" role="status" aria-live="polite">
+      @if (mensaje()) {
+        <p class="demo-feedback-ok">{{ mensaje() }}</p>
+      }
+      @if (advertencia()) {
+        <p class="demo-feedback-warning">{{ advertencia() }}</p>
+      }
+      @if (loteUrlAdvertencia()) {
+        <p class="demo-feedback-warning">{{ loteUrlAdvertencia() }}</p>
+      }
+      @if (error()) {
+        <p class="demo-feedback-error">{{ error() }}</p>
+      }
+    </div>
+  }
+
+  <div class="correo-postal-toolbar" aria-label="Filtros y acciones de correo postal">
+    <div class="correo-postal-toolbar__group">
+      <span class="correo-postal-toolbar__label">Tipo de notificacion</span>
+      <div class="correo-postal-chips">
+        @for (tipo of filtrosTipo; track tipo) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="filtroTipo() === tipo"
+            (click)="seleccionarFiltroTipo(tipo)"
+          >
+            {{ labelFiltroTipo(tipo) }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="correo-postal-toolbar__group">
+      <span class="correo-postal-toolbar__label">Estado del lote</span>
+      <div class="correo-postal-chips">
+        @for (estado of filtrosEstadoLote; track estado) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="filtroEstadoLote() === estado"
+            (click)="seleccionarFiltroEstadoLote(estado)"
+          >
+            {{ labelFiltroEstadoLote(estado) }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="correo-postal-toolbar__row">
+      <label class="correo-postal-search">
+        <span>Buscar acta</span>
+        <input
+          type="search"
+          name="consultaActa"
+          [(ngModel)]="consultaActa"
+          placeholder="Ej. A-2026-0030 o ACTA-0030"
+          (keyup.enter)="buscarActa()"
+        />
+      </label>
+      <button mat-stroked-button type="button" (click)="buscarActa()">Buscar trazabilidad</button>
+      <button mat-stroked-button type="button" [disabled]="!hayBusquedaActaActiva()" (click)="limpiarBusquedaActa()">
+        Limpiar busqueda
+      </button>
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="!puedeGenerarLote() || accionEnCurso() !== null"
+        (click)="generarLote()"
+      >
+        @if (accionEnCurso() === 'GENERAR_LOTE') {
+          Generando lote...
+        } @else if (cantidadSeleccionadas() > 0) {
+          Generar lote ({{ cantidadSeleccionadas() }})
+        } @else {
+          Generar lote
+        }
+      </button>
+    </div>
+
+    <p class="correo-postal-toolbar__hint">{{ mensajeConteoListas() }}</p>
+  </div>
+
+  <section class="correo-postal-candidatas" aria-label="Notificaciones listas para lote">
+    <h3>1. Notificaciones listas para lote</h3>
+    @if (cargando()) {
+      <div class="correo-postal-loading correo-postal-loading--inline">
+        <mat-spinner diameter="28"></mat-spinner>
+        <p>Cargando candidatas...</p>
+      </div>
+    } @else if (listasFiltradas().length === 0) {
+      <p class="correo-postal-empty">No hay notificaciones listas para lote con el filtro de tipo actual.</p>
+    } @else {
+      <p class="correo-postal-toolbar__hint">
+        {{ cantidadSeleccionadas() }} de {{ cantidadCandidatas() }} seleccionadas.
+      </p>
+      <div class="correo-postal-table-wrap">
+        <table class="correo-postal-table">
+          <thead>
+            <tr>
+              <th>
+                <label class="correo-postal-checkbox">
+                  <input
+                    type="checkbox"
+                    [checked]="todasCandidatasVisiblesSeleccionadas()"
+                    (change)="toggleTodasCandidatasVisibles($any($event.target).checked)"
+                  />
+                  <span>Todas</span>
+                </label>
+              </th>
+              <th>Acta</th>
+              <th>ActaId</th>
+              <th>Tipo</th>
+              <th>Destinatario</th>
+              <th>Domicilio</th>
+              <th>Estado</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of listasFiltradas(); track item.notificacionId) {
+              <tr [class.correo-postal-row--omitida]="!estaCandidataSeleccionada(item.notificacionId)">
+                <td>
+                  <input
+                    type="checkbox"
+                    [checked]="estaCandidataSeleccionada(item.notificacionId)"
+                    (change)="toggleCandidata(item.notificacionId, $any($event.target).checked)"
+                    [attr.aria-label]="'Incluir ' + item.notificacionId + ' en el proximo lote'"
+                  />
+                </td>
+                <td>{{ item.acta }}</td>
+                <td>{{ item.actaId }}</td>
+                <td>{{ labelTipoNotificacion(item.tipo) }}</td>
+                <td>{{ textoOpcional(item.destinatario) }}</td>
+                <td>{{ textoOpcional(item.domicilio) }}</td>
+                <td>{{ labelEstadoNotificacion(item.estado) }}</td>
+                <td>{{ labelResultadoNotificacion(item.resultado) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  @if (trazabilidadCargada()) {
+    <section class="correo-postal-trazabilidad" aria-label="Trazabilidad por acta">
+      <h3>4. Trazabilidad por acta</h3>
+      @if (trazabilidadCargando()) {
+        <div class="correo-postal-loading correo-postal-loading--inline">
+          <mat-spinner diameter="28"></mat-spinner>
+          <p>Consultando trazabilidad...</p>
+        </div>
+      } @else if (trazabilidadError()) {
+        <p class="correo-postal-empty">{{ trazabilidadError() }}</p>
+      } @else if (trazabilidad().length === 0) {
+        <p class="correo-postal-empty">No se encontraron notificaciones de correo postal para esa acta.</p>
+      } @else {
+        <div class="correo-postal-table-wrap">
+          <table class="correo-postal-table">
+            <thead>
+              <tr>
+                <th>Notificacion</th>
+                <th>Tipo</th>
+                <th>Situacion</th>
+                <th>Estado notif.</th>
+                <th>Resultado</th>
+                <th>Lote</th>
+                <th>Estado lote</th>
+                <th>Generacion</th>
+                <th>Procesamiento</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of trazabilidad(); track item.notificacionId + (item.loteId ?? '')) {
+                <tr>
+                  <td>{{ item.acta }} / {{ item.notificacionId }}</td>
+                  <td>{{ labelTipoNotificacion(item.tipo) }}</td>
+                  <td>{{ descripcionTrazabilidad(item) }}</td>
+                  <td>{{ labelEstadoNotificacion(item.estadoNotificacion) }}</td>
+                  <td>{{ labelResultadoNotificacion(item.resultadoNotificacion) }}</td>
+                  <td>{{ textoOpcional(item.loteId) }}</td>
+                  <td>{{ item.estadoLote ? labelEstadoLote(item.estadoLote) : '-' }}</td>
+                  <td>{{ textoOpcional(item.fechaGeneracion) }}</td>
+                  <td>{{ textoOpcional(item.fechaProcesamiento) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (cargando()) {
+    <div class="correo-postal-loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <p>Cargando datos de correo postal...</p>
+    </div>
+  } @else {
+    <div class="correo-postal-workspace">
+      <aside class="correo-postal-lotes" aria-label="Lotes de correo postal">
+        <h3>2. Lotes de correo</h3>
+        @if (lotesFiltrados().length === 0) {
+          <p class="correo-postal-empty">No hay lotes para el filtro de estado seleccionado.</p>
+        } @else {
+          <ul class="correo-postal-lote-list">
+            @for (lote of lotesFiltrados(); track lote.loteId) {
+              <li>
+                <button
+                  type="button"
+                  class="correo-postal-lote-card"
+                  [class.correo-postal-lote-card--selected]="loteSeleccionadoId() === lote.loteId"
+                  (click)="seleccionarLote(lote.loteId)"
+                >
+                  <div class="correo-postal-lote-card__top">
+                    <strong>{{ lote.loteId }}</strong>
+                    <span [class]="badgeClassEstadoLote(lote.estado)">{{ labelEstadoLote(lote.estado) }}</span>
+                  </div>
+                  <div class="correo-postal-lote-card__meta">
+                    <span>{{ lote.cantidad }} notif.</span>
+                    @if (lote.tipoDominante) {
+                      <span>{{ labelTipoNotificacion(lote.tipoDominante) }}</span>
+                    }
+                  </div>
+                  <div class="correo-postal-lote-card__meta">
+                    <span>{{ lote.nombreArchivo }}</span>
+                  </div>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </aside>
+
+      <section class="correo-postal-detail" aria-label="Detalle del lote seleccionado">
+        <h3 class="correo-postal-detail__step">3. Detalle y respuesta del lote</h3>
+        @if (!loteSeleccionado()) {
+          <p class="correo-postal-empty">Seleccione un lote de la lista para ver su detalle y acciones.</p>
+        } @else {
+          @let lote = loteSeleccionado()!;
+          <header class="correo-postal-detail__head">
+            <div>
+              <h3>{{ lote.loteId }}</h3>
+              <p>{{ lote.nombreArchivo }}</p>
+            </div>
+            <span [class]="badgeClassEstadoLote(lote.estado)">{{ labelEstadoLote(lote.estado) }}</span>
+          </header>
+
+          <dl class="detail-dl detail-dl--compact">
+            <dt>Cantidad</dt>
+            <dd>{{ lote.cantidad }}</dd>
+            <dt>Tipos incluidos</dt>
+            <dd>
+              @if (lote.tiposIncluidos.length === 0) {
+                -
+              } @else {
+                @for (tipo of lote.tiposIncluidos; track tipo; let last = $last) {
+                  {{ labelTipoNotificacion(tipo) }}@if (!last) {, }
+                }
+              }
+            </dd>
+            <dt>Tipo dominante</dt>
+            <dd>{{ lote.tipoDominante ? labelTipoNotificacion(lote.tipoDominante) : '-' }}</dd>
+            <dt>Positivas / Negativas / Vencidas</dt>
+            <dd>{{ lote.positivas }} / {{ lote.negativas }} / {{ lote.vencidas }}</dd>
+            <dt>Fecha generacion</dt>
+            <dd>{{ textoOpcional(lote.fechaGeneracion) }}</dd>
+            <dt>Ruta archivo</dt>
+            <dd>{{ textoOpcional(lote.rutaArchivo) }}</dd>
+          </dl>
+
+          <div class="correo-postal-actions">
+            @if (loteYaProcesado(lote)) {
+              <button mat-stroked-button type="button" disabled>
+                El lote ya fue procesado.
+              </button>
+            } @else {
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                [disabled]="!puedeProcesarRespuesta(lote) || accionEnCurso() !== null"
+                (click)="procesarRespuestaCorreoPostalDemo()"
+              >
+                @if (accionEnCurso() === 'PROCESAR_RESPUESTA') {
+                  Procesando respuesta...
+                } @else {
+                  Procesar respuesta CSV
+                }
+              </button>
+            }
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="!puedeAnularLote(lote) || accionEnCurso() !== null"
+              (click)="anularLoteSeleccionado()"
+            >
+              @if (accionEnCurso() === 'ANULAR_LOTE') {
+                Anulando...
+              } @else {
+                Anular lote
+              }
+            </button>
+          </div>
+
+          @if (ultimaRespuesta()) {
+            <p class="correo-postal-panel__hint">
+              Ultima respuesta demo: {{ ultimaRespuesta()!.total }} filas ({{ ultimaRespuesta()!.positivas }} positivas,
+              {{ ultimaRespuesta()!.negativas }} negativas, {{ ultimaRespuesta()!.vencidas }} vencidas).
+            </p>
+          }
+
+          <h4>Notificaciones del lote</h4>
+          @if (lote.notificaciones.length === 0) {
+            <p class="correo-postal-empty">Este lote no tiene notificaciones asociadas.</p>
+          } @else {
+            <div class="correo-postal-table-wrap">
+              <table class="correo-postal-table">
+                <thead>
+                  <tr>
+                    <th>Acta</th>
+                    <th>Tipo</th>
+                    <th>Canal</th>
+                    <th>Ref. externa</th>
+                    <th>Estado notif.</th>
+                    <th>Resultado</th>
+                    <th>Destinatario</th>
+                    <th>Domicilio</th>
+                    <th>Observacion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (n of lote.notificaciones; track n.notificacionId) {
+                    <tr>
+                      <td>{{ n.acta }}</td>
+                      <td>{{ labelTipoNotificacion(n.tipo) }}</td>
+                      <td>{{ n.canal }}</td>
+                      <td>{{ n.referenciaExterna }}</td>
+                      <td>{{ labelEstadoNotificacion(n.estadoNotificacion) }}</td>
+                      <td>{{ labelResultadoNotificacion(n.resultadoNotificacion) }}</td>
+                      <td>{{ textoOpcional(n.destinatario) }}</td>
+                      <td>{{ textoOpcional(n.domicilio) }}</td>
+                      <td>{{ textoOpcional(n.observacion) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+</section>

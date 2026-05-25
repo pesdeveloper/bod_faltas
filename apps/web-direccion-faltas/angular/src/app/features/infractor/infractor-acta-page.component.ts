@@ -10,6 +10,7 @@ import { PrototipoFaltasApiService } from '../../core/services/prototipo-faltas-
 
 type CargaEstado = 'loading' | 'ready' | 'not-found' | 'error';
 type ApelacionPortalMensajeTipo = 'success' | 'error';
+type VisualizacionPortalMensajeTipo = 'success' | 'error';
 
 @Component({
   selector: 'app-infractor-acta-page',
@@ -26,8 +27,11 @@ export class InfractorActaPageComponent implements OnInit {
   readonly estado = signal<CargaEstado>('loading');
   readonly acta = signal<ActaInfractorResponseDemo | null>(null);
   readonly registrandoApelacion = signal(false);
+  readonly registrandoVisualizacionNotificacion = signal(false);
   readonly apelacionPortalMensaje = signal<string | null>(null);
   readonly apelacionPortalMensajeTipo = signal<ApelacionPortalMensajeTipo | null>(null);
+  readonly visualizacionPortalMensaje = signal<string | null>(null);
+  readonly visualizacionPortalMensajeTipo = signal<VisualizacionPortalMensajeTipo | null>(null);
   readonly pagoVoluntarioPortalMensaje = signal<string | null>(null);
 
   private codigoQrActual: string | null = null;
@@ -105,9 +109,59 @@ export class InfractorActaPageComponent implements OnInit {
       });
   }
 
+
+  confirmarVisualizacionNotificacion(): void {
+    const codigoQr = this.codigoQrActual ?? this.acta()?.codigoQr ?? null;
+    if (!codigoQr || this.registrandoVisualizacionNotificacion()) {
+      return;
+    }
+
+    this.registrandoVisualizacionNotificacion.set(true);
+    this.visualizacionPortalMensaje.set(null);
+    this.visualizacionPortalMensajeTipo.set(null);
+
+    this.api
+      .confirmarVisualizacionNotificacionInfractorPorCodigoQr(codigoQr)
+      .pipe(
+        catchError((err: unknown) => {
+          const status =
+            err && typeof err === 'object' && 'status' in err
+              ? (err as { status?: number }).status
+              : undefined;
+
+          if (status === 404) {
+            this.estado.set('not-found');
+            this.acta.set(null);
+          } else if (status === 400) {
+            this.visualizacionPortalMensaje.set('No hay una notificación pendiente para confirmar desde el portal.');
+            this.visualizacionPortalMensajeTipo.set('error');
+          } else {
+            this.visualizacionPortalMensaje.set('No pudimos confirmar la visualización en este momento.');
+            this.visualizacionPortalMensajeTipo.set('error');
+          }
+
+          return of(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        this.registrandoVisualizacionNotificacion.set(false);
+        if (!respuesta) {
+          return;
+        }
+
+        this.acta.set(respuesta);
+        this.estado.set('ready');
+        this.visualizacionPortalMensaje.set('Visualización confirmada. La notificación fue registrada como recibida.');
+        this.visualizacionPortalMensajeTipo.set('success');
+      });
+  }
+
   private cargarActa(codigoQr: string): void {
     this.estado.set('loading');
     this.acta.set(null);
+    this.visualizacionPortalMensaje.set(null);
+    this.visualizacionPortalMensajeTipo.set(null);
 
     this.api
       .getActaInfractorPorCodigoQr(codigoQr)

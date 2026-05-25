@@ -1,0 +1,35 @@
+﻿<mat-sidenav-container class="demo-layout" [autosize]="true">
+  <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
+    <div class="sidenav-header">
+      @if (!bandejasColapsadas()) {
+        <span>Bandejas</span>
+      }
+      <button
+        mat-icon-button
+        type="button"
+        class="sidenav-toggle"
+        [attr.aria-expanded]="!bandejasColapsadas()"
+        aria-label="Alternar bandejas"
+        (click)="toggleBandejas()"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+    </div>
+    <mat-nav-list>
+      @for (b of bandejasResumen(); track b.codigo) {
+        <a
+          mat-list-item
+          class="sidenav-link"
+          [class.active]="enCorreoPostal() === false && b.codigo === bandejaSeleccionada()"
+          [attr.title]="b.label + ' (' + b.cantidad + ')'"
+          href="#"
+          (click)="$event.preventDefault(); seleccionarBandeja(b.codigo)"
+        >
+          @if (bandejasColapsadas()) {
+            <span class="sidenav-abbr">{{ abreviaturaBandeja(b.codigo) }}</span>
+          } @else {
+            <span class="sidenav-label">{{ b.label }} ({{ b.cantidad }})</span>
+          }
+        </a>
+      }
+    </mat-nav-list>

@@ -30,5 +30,8 @@ public record ActaInfractorResponse(
         boolean puedeSolicitarPagoVoluntario,
         boolean puedePagar,
         boolean puedePresentarApelacion,
+        boolean puedeConfirmarVisualizacionNotificacion,
+        NotificacionPortalPendienteResponse notificacionPortalPendiente,
+        Boolean domicilioElectronicoVerificado,
         String mensajeVisible) {
 }

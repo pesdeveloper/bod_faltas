@@ -1,0 +1,151 @@
+<section class="correo-postal-panel" aria-labelledby="correo-postal-titulo">
+  <div class="correo-postal-panel__header">
+    <div>
+      <h2 id="correo-postal-titulo">Correo postal</h2>
+      <p>Genera el lote CSV demo y procesa la respuesta local simulada del correo.</p>
+      <p class="correo-postal-panel__hint">
+        Procesar respuesta correo demo usa el archivo local <strong>respuesta-correo-demo.csv</strong>. Si no existe y hay envíos pendientes, el backend genera una respuesta positiva demo para esta sesión.
+      </p>
+    </div>
+    <button mat-button type="button" (click)="cerrar.emit()">Cerrar</button>
+  </div>
+
+  <div class="correo-postal-actions">
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="accionEnCurso() !== null"
+      (click)="generarLoteCorreoPostal()"
+    >
+      @if (accionEnCurso() === 'GENERAR_LOTE') {
+        Generando...
+      } @else {
+        Generar lote correo
+      }
+    </button>
+    <button
+      mat-stroked-button
+      type="button"
+      [disabled]="accionEnCurso() !== null"
+      (click)="procesarRespuestaCorreoPostalDemo()"
+    >
+      @if (accionEnCurso() === 'PROCESAR_RESPUESTA') {
+        Procesando...
+      } @else {
+        Procesar respuesta correo demo
+      }
+    </button>
+  </div>
+
+  @if (mensaje() || advertencia() || error()) {
+    <div class="correo-postal-feedback" role="status" aria-live="polite">
+      @if (mensaje()) {
+        <p class="demo-feedback-ok">{{ mensaje() }}</p>
+      }
+      @if (advertencia()) {
+        <p class="demo-feedback-warning">{{ advertencia() }}</p>
+      }
+      @if (error()) {
+        <p class="demo-feedback-error">{{ error() }}</p>
+      }
+    </div>
+  }
+
+  <div class="correo-postal-results" aria-label="Resumen de operaciónes de correo postal">
+    @if (lotesGenerados().length === 0 && !ÚltimaRespuesta()) {
+      <article class="correo-postal-card">
+        <h3>Resumen</h3>
+        <p>Todavía no hay operaciónes de correo postal en esta sesión.</p>
+      </article>
+    }
+
+    @if (lotesGenerados().length > 0) {
+      <article class="correo-postal-card correo-postal-card--wide">
+        <h3>Lotes generados en esta sesión</h3>
+        <ul class="correo-postal-lotes">
+          @for (lote of lotesGenerados(); track lote.loteId) {
+            <li>
+              <button
+                mat-button
+                type="button"
+                [class.correo-postal-lotes__item--selected]="loteSeleccionado()?.loteId === lote.loteId"
+                (click)="seleccionarLote(lote.loteId)"
+              >
+                <span>{{ lote.loteId }}</span>
+                <span>{{ lote.cantidad }} notificaciónes</span>
+                <span>{{ lote.nombreArchivo }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      </article>
+    }
+
+    @if (loteSeleccionado(); as lote) {
+      <article class="correo-postal-card">
+        <h3>Lote seleccionado</h3>
+        <dl class="detail-dl detail-dl--compact">
+          <dt>Lote</dt>
+          <dd>{{ lote.loteId }}</dd>
+          <dt>Cantidad</dt>
+          <dd>{{ lote.cantidad }}</dd>
+          <dt>Archivo</dt>
+          <dd>{{ lote.nombreArchivo }}</dd>
+          @if (lote.rutaArchivo) {
+            <dt>Ruta</dt>
+            <dd>{{ lote.rutaArchivo }}</dd>
+          }
+        </dl>
+        @if (lote.notificaciónes.length > 0) {
+          <h4>Notificaciónes incluidas</h4>
+          <ul class="correo-postal-list">
+            @for (notif of lote.notificaciónes; track notif.notificaciónId) {
+              <li>
+                <span>{{ notif.acta }}</span>
+                <span>{{ notif.tipo }}</span>
+                <span>{{ notif.canal }}</span>
+                <span>{{ notif.referenciaExterna }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </article>
+    }
+
+    @if (ÚltimaRespuesta(); as respuesta) {
+      <article class="correo-postal-card">
+        <h3>Última respuesta procesada</h3>
+        <p class="correo-postal-card__hint">Procesada desde el CSV demo local disponible.</p>
+        <dl class="detail-dl detail-dl--compact">
+          <dt>Total</dt>
+          <dd>{{ respuesta.total }}</dd>
+          <dt>Positivas</dt>
+          <dd>{{ respuesta.positivas }}</dd>
+          <dt>Negativas</dt>
+          <dd>{{ respuesta.negativas }}</dd>
+          <dt>Vencidas</dt>
+          <dd>{{ respuesta.vencidas }}</dd>
+          <dt>Errores</dt>
+          <dd>{{ respuesta.errores }}</dd>
+          @if (respuesta.nombreArchivo) {
+            <dt>Archivo</dt>
+            <dd>{{ respuesta.nombreArchivo }}</dd>
+          }
+          @if (respuesta.rutaArchivoProcesado) {
+            <dt>Procesado</dt>
+            <dd>{{ respuesta.rutaArchivoProcesado }}</dd>
+          }
+        </dl>
+        @if (respuesta.detalleErrores.length > 0) {
+          <h4>Detalle de errores</h4>
+          <ul class="detail-list">
+            @for (errorItem of respuesta.detalleErrores; track errorItem) {
+              <li>{{ errorItem }}</li>
+            }
+          </ul>
+        }
+      </article>
+    }
+  </div>
+</section>

@@ -1,0 +1,38 @@
+126:                     title="Abre el portal infractor en una nueva pesta��a"
+136:                   title="Copia un resumen compacto del acta para validaci��n."
+160:               <dt>Situaci��n administrativa</dt>
+197:               <p class="detail-card__text">El acta es cerrable, pero requiere cierre expl��cito.</p>
+298:                 El acta está archivada. Para continuar requiere reingreso expl��cito.
+345:             <h3 id="gestion-externa-titulo" class="detail-card__title">Gesti��n externa</h3>
+362:                 <dt>Acci��n pendiente</dt>
+366:                 <dt>Tipo gesti��n externa</dt>
+372:                 El acta está en gesti��n externa. Para continuar internamente debe retornar.
+386:                       Retornar de gesti��n externa
+397:                 El acta puede derivarse a gesti��n externa desde esta instancia.
+433:             <h3 id="notificacion-acta-titulo" class="detail-card__title">Notificaci��n del acta</h3>
+446:                 Registrar resultado de notificaci��n (mock). No libera bloqueantes materiales ni cierra el acta.
+489:                 El acta retorn�� a anǭlisis por una notificaci��n no entregada. Puede reintentarse la notificaci��n para volver al circuito.
+502:                     Reintentar notificaci��n
+515:               La validaci��n final la realiza el backend; la pantalla muestra las
+516:               acciones disponibles segǧn la situaci��n de pago informada.
+519:               <dt>Situaci��n de pago</dt>
+552:                 Sin situaci��n de pago informada por el backend.
+556:                 Situaci��n de pago desconocida para la UI; no se muestran acciones.
+560:                 No hay acciones de pago disponibles para la situaci��n actual.
+609:             <h3 id="fallo-fondo-titulo" class="detail-card__title">Fallo / resoluci��n de fondo</h3>
+611:               Dicta el fallo en anǭlisis jur��dico. La validaci��n final la realiza el backend;
+612:               luego la firma y notificaci��n usan las acciones existentes.
+679:             <h3 id="apelacion-titulo" class="detail-card__title">Apelaci��n</h3>
+681:               Registra la presentaci��n presencial de apelaci��n sobre fallo condenatorio.
+711:                       Registrando apelaci��n...
+713:                       Registrar apelaci��n presencial
+739:             <h3 id="resolucion-apelacion-titulo" class="detail-card__title">Resoluci��n de apelaci��n</h3>
+741:               Resuelve una apelaci��n ya presentada sobre fallo condenatorio.
+764:                     Resolviendo apelaci��n...
+766:                     Rechazar apelaci��n
+777:                     Resolviendo apelaci��n...
+779:                     Aceptar apelaci��n y absolver
+799:             <h3 id="piezas-redaccion-titulo" class="detail-card__title">Piezas de redacci��n</h3>
+883:                       Generando notificaci��n del acta...
+885:                       Generar notificaci��n del acta
+891:               <p class="detail-hint">No hay acciones de redacci��n disponibles para esta acta.</p>

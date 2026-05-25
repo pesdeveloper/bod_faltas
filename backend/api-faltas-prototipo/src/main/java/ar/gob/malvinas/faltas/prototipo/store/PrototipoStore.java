@@ -7,6 +7,14 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaTransitoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
+import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaAsignacion;
+import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaClasificador;
+import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaCodigo;
+import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaContexto;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CrearActaMockDemoRequest;
 import org.springframework.stereotype.Component;
 
@@ -870,7 +878,178 @@ public class PrototipoStore {
             String estadoProcesoActual) {
     }
 
+    public record NotificacionCorreoLoteItem(
+            String notificacionId,
+            String actaId,
+            String acta,
+            String tipo,
+            String canal,
+            String referenciaExterna,
+            String estadoNotificacion,
+            String resultadoNotificacion,
+            String destinatario,
+            String domicilio,
+            String observacion) {
+    }
+
+    public record CorreoPostalTrazabilidadItem(
+            String acta,
+            String actaId,
+            String notificacionId,
+            String tipo,
+            String canal,
+            String estadoNotificacion,
+            String resultadoNotificacion,
+            String loteId,
+            String estadoLote,
+            LocalDateTime fechaGeneracion,
+            LocalDateTime fechaProcesamiento,
+            String observacion,
+            String referenciaExterna) {
+    }
+
+    public record GenerarLoteCorreoResultado(
+            String loteId,
+            int cantidad,
+            String nombreArchivo,
+            String rutaArchivo,
+            List<NotificacionCorreoLoteItem> notificaciones) {
+    }
+
+    public record ProcesarRespuestaCorreoResultado(
+            int total,
+            int positivas,
+            int negativas,
+            int vencidas,
+            int errores,
+            List<String> detalleErrores,
+            String nombreArchivo,
+            String rutaArchivoProcesado) {
+    }
+
+    public record CorreoPostalNotificacionListaItem(
+            String notificacionId,
+            String actaId,
+            String acta,
+            String tipo,
+            String canal,
+            String estado,
+            String resultado,
+            String destinatario,
+            String domicilio,
+            String observacion) {
+    }
+
+    public record CorreoLoteResumen(
+            String loteId,
+            int cantidad,
+            String nombreArchivo,
+            String rutaArchivo,
+            String estado,
+            LocalDateTime fechaGeneracion,
+            List<String> tiposIncluidos,
+            String tipoDominante,
+            int positivas,
+            int negativas,
+            int vencidas,
+            List<NotificacionCorreoLoteItem> notificaciones) {
+    }
+
+    public record AnularLoteCorreoResultado(
+            String estado,
+            String mensaje,
+            String loteId) {
+
+        public static AnularLoteCorreoResultado ok(String loteId, String mensaje) {
+            return new AnularLoteCorreoResultado("OK", mensaje, loteId);
+        }
+
+        public static AnularLoteCorreoResultado notFound(String loteId) {
+            return new AnularLoteCorreoResultado("NOT_FOUND", "Lote no encontrado: " + loteId, loteId);
+        }
+
+        public static AnularLoteCorreoResultado conflict(String loteId, String mensaje) {
+            return new AnularLoteCorreoResultado("CONFLICT", mensaje, loteId);
+        }
+    }
+
+    public record NotificacionMunicipalVista(
+            String notificacionId,
+            String actaId,
+            String acta,
+            String tipo,
+            String canal,
+            String estado,
+            String resultado,
+            String destinatario,
+            String domicilio,
+            String observacion,
+            String qrNotificacion,
+            LocalDateTime fechaPreparacion,
+            LocalDateTime fechaEnvio) {
+    }
+
+    public enum ConfirmarVisualizacionNotificacionPortalEstado {
+        OK,
+        NOT_FOUND,
+        SIN_NOTIFICACION_PENDIENTE,
+        CONFLICT
+    }
+
+    public record ConfirmarVisualizacionNotificacionPortalResultado(
+            ConfirmarVisualizacionNotificacionPortalEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            ActaNotificacionMock notificacion) {
+    }
+
+    public enum RegistrarAcuseNotificadorMunicipalEstado {
+        OK,
+        NOT_FOUND,
+        WRONG_CHANNEL,
+        BAD_REQUEST,
+        CONFLICT
+    }
+
+    public record RegistrarAcuseNotificadorMunicipalResultado(
+            RegistrarAcuseNotificadorMunicipalEstado estado,
+            String actaId,
+            String acta,
+            String bandejaActual,
+            String estadoProcesoActual,
+            ActaNotificacionMock notificacion,
+            NotificacionMunicipalVista vista) {
+
+        static RegistrarAcuseNotificadorMunicipalResultado notFound() {
+            return new RegistrarAcuseNotificadorMunicipalResultado(
+                    RegistrarAcuseNotificadorMunicipalEstado.NOT_FOUND, null, null, null, null, null, null);
+        }
+
+        static RegistrarAcuseNotificadorMunicipalResultado wrongChannel(String actaId) {
+            return new RegistrarAcuseNotificadorMunicipalResultado(
+                    RegistrarAcuseNotificadorMunicipalEstado.WRONG_CHANNEL, actaId, null, null, null, null, null);
+        }
+
+        static RegistrarAcuseNotificadorMunicipalResultado badRequest(String actaId) {
+            return new RegistrarAcuseNotificadorMunicipalResultado(
+                    RegistrarAcuseNotificadorMunicipalEstado.BAD_REQUEST, actaId, null, null, null, null, null);
+        }
+
+        static RegistrarAcuseNotificadorMunicipalResultado conflict(String actaId) {
+            return new RegistrarAcuseNotificadorMunicipalResultado(
+                    RegistrarAcuseNotificadorMunicipalEstado.CONFLICT, actaId, null, null, null, null, null);
+        }
+    }
+
     public record BandejaConteo(String codigo, int cantidadActas) {
+    }
+
+    public record SubBandejaConteo(String codigo, int cantidad) {
+    }
+
+    public record BandejaResumenOperativo(
+            String codigo, int cantidadActas, List<SubBandejaConteo> subBandejas) {
     }
 
     private final Map<String, ActaMock> actas = new LinkedHashMap<>();
@@ -1068,6 +1247,24 @@ public class PrototipoStore {
                     cerrabilidad,
                     montoCondenaPorActa);
 
+    private final CorreoPostalNotificacionSupport correoPostal =
+            new CorreoPostalNotificacionSupport(
+                    actas,
+                    eventosPorActa,
+                    notificacionesPorActa,
+                    accionPendientePorActa,
+                    this::registrarNotificacionPositiva);
+
+    private final SubBandejaClasificador subBandejaClasificador = new SubBandejaClasificador();
+
+    private final NotificadorMunicipalSupport notificadorMunicipal =
+            new NotificadorMunicipalSupport(
+                    actas,
+                    eventosPorActa,
+                    notificacionesPorActa,
+                    accionPendientePorActa,
+                    this::registrarNotificacionPositiva);
+
     public Map<String, ActaMock> getActas() {
         return actas;
     }
@@ -1158,6 +1355,7 @@ public class PrototipoStore {
         archivoReingreso.clear();
         gestionExterna.clear();
         falloPlazoApelacion.clear();
+        correoPostal.reiniciarDemo();
     }
 
     /**
@@ -1485,25 +1683,94 @@ public class PrototipoStore {
     }
 
     public List<BandejaConteo> listarBandejasConConteoOrdenadas() {
-        Map<String, Integer> conteo = new HashMap<>();
-        for (ActaMock acta : actas.values()) {
+        return listarBandejasConResumenOperativo().stream()
+                .map(r -> new BandejaConteo(r.codigo(), r.cantidadActas()))
+                .toList();
+    }
+
+    /**
+     * Resumen de bandejas con conteo total y sub-bandejas dinámicas (solo cantidad &gt; 0).
+     */
+    public List<BandejaResumenOperativo> listarBandejasConResumenOperativo() {
+        Map<String, Integer> conteoBandejas = new HashMap<>();
+        Map<String, Map<String, Integer>> conteoSubBandejas = new HashMap<>();
+        for (ActaMock acta : new ArrayList<>(actas.values())) {
             String bandeja = acta.bandejaActual();
-            conteo.put(bandeja, conteo.getOrDefault(bandeja, 0) + 1);
+            conteoBandejas.put(bandeja, conteoBandejas.getOrDefault(bandeja, 0) + 1);
+            SubBandejaAsignacion asignacion = clasificarSubBandeja(acta.id());
+            conteoSubBandejas
+                    .computeIfAbsent(bandeja, k -> new HashMap<>())
+                    .merge(asignacion.subBandeja(), 1, Integer::sum);
         }
-        if (conteo.isEmpty()) {
+        if (conteoBandejas.isEmpty()) {
             return List.of();
         }
-        List<BandejaConteo> resultado = new ArrayList<>();
+        List<BandejaResumenOperativo> resultado = new ArrayList<>();
         for (String codigo : ORDEN_BANDEJAS_DEMO) {
-            Integer n = conteo.remove(codigo);
+            Integer n = conteoBandejas.remove(codigo);
             if (n != null) {
-                resultado.add(new BandejaConteo(codigo, n));
+                resultado.add(new BandejaResumenOperativo(codigo, n, construirSubBandejasVisibles(codigo, conteoSubBandejas)));
             }
         }
-        conteo.entrySet().stream()
+        conteoBandejas.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .forEach(e -> resultado.add(new BandejaConteo(e.getKey(), e.getValue())));
+                .forEach(e -> resultado.add(new BandejaResumenOperativo(
+                        e.getKey(),
+                        e.getValue(),
+                        construirSubBandejasVisibles(e.getKey(), conteoSubBandejas))));
         return resultado;
+    }
+
+    public SubBandejaContexto construirContextoSubBandeja(String actaId) {
+        ActaMock acta = actas.get(actaId);
+        if (acta == null) {
+            return null;
+        }
+        CerrabilidadActaVista cerrabilidadVista = getCerrabilidadActa(actaId);
+        ResultadoFinalCierreMock resultadoFinal = cerrabilidadVista != null
+                ? cerrabilidadVista.resultadoFinal()
+                : ResultadoFinalCierreMock.SIN_RESULTADO_FINAL;
+        boolean cerrable = cerrabilidadVista != null && cerrabilidadVista.cerrable();
+        List<String> pendientes = cerrabilidadVista != null && cerrabilidadVista.pendientesBloqueantes() != null
+                ? cerrabilidadVista.pendientesBloqueantes().stream().map(Enum::name).toList()
+                : List.of();
+        ActaPiezasRequeridasMock piezas = piezasRequeridasPorActa.get(actaId);
+        return new SubBandejaContexto(
+                acta,
+                getAccionPendiente(actaId),
+                getSituacionPago(actaId),
+                getSituacionPagoCondena(actaId),
+                getMotivoArchivo(actaId),
+                getTipoGestionExterna(actaId),
+                resultadoFinal,
+                cerrable,
+                pendientes,
+                listarDocumentosPorActa(actaId),
+                listarNotificacionesPorActa(actaId),
+                piezas != null ? piezas.piezasRequeridas() : List.of(),
+                piezas != null ? piezas.piezasGeneradas() : List.of());
+    }
+
+    public SubBandejaAsignacion clasificarSubBandeja(String actaId) {
+        SubBandejaContexto ctx = construirContextoSubBandeja(actaId);
+        if (ctx == null) {
+            return SubBandejaAsignacion.de(SubBandejaCodigo.ANALISIS_REVISION_GENERAL);
+        }
+        return subBandejaClasificador.clasificar(ctx);
+    }
+
+    public boolean esSubBandejaValidaParaBandeja(String codigoBandeja, String subBandeja) {
+        return SubBandejaCodigo.perteneceABandeja(codigoBandeja, subBandeja);
+    }
+
+    private List<SubBandejaConteo> construirSubBandejasVisibles(
+            String bandeja, Map<String, Map<String, Integer>> conteoSubBandejas) {
+        Map<String, Integer> conteos = conteoSubBandejas.getOrDefault(bandeja, Map.of());
+        return SubBandejaCodigo.deBandeja(bandeja).stream()
+                .map(SubBandejaCodigo::codigo)
+                .filter(c -> conteos.getOrDefault(c, 0) > 0)
+                .map(c -> new SubBandejaConteo(c, conteos.get(c)))
+                .toList();
     }
 
     public List<ActaMock> listarActasPorBandeja(String codigoBandeja) {
@@ -1542,11 +1809,37 @@ public class PrototipoStore {
             ResultadoFinalCierreMock filtroResultadoFinal,
             Boolean filtroCerrable,
             PendienteBloqueanteCierreMock filtroPendienteBloqueante) {
+        return listarActasPorBandeja(
+                codigoBandeja,
+                accionPendiente,
+                situacionPago,
+                filtroResultadoFinal,
+                filtroCerrable,
+                filtroPendienteBloqueante,
+                null);
+    }
+
+    /**
+     * Listado de bandeja con filtros existentes y filtro opcional por sub-bandeja operativa.
+     * Si {@code subBandeja} no es válida para la bandeja, devuelve lista vacía.
+     */
+    public List<ActaMock> listarActasPorBandeja(
+            String codigoBandeja,
+            String accionPendiente,
+            SituacionPagoMock situacionPago,
+            ResultadoFinalCierreMock filtroResultadoFinal,
+            Boolean filtroCerrable,
+            PendienteBloqueanteCierreMock filtroPendienteBloqueante,
+            String subBandeja) {
         if (codigoBandeja == null) {
             return List.of();
         }
+        String subBandejaFiltro = (subBandeja != null && !subBandeja.isBlank()) ? subBandeja.trim() : null;
+        if (subBandejaFiltro != null && !esSubBandejaValidaParaBandeja(codigoBandeja, subBandejaFiltro)) {
+            return List.of();
+        }
         String accionFiltro = (accionPendiente != null && !accionPendiente.isBlank()) ? accionPendiente : null;
-        return actas.values().stream()
+        return new ArrayList<>(actas.values()).stream()
                 .filter(a -> codigoBandeja.equals(a.bandejaActual()))
                 .filter(a -> accionFiltro == null || accionFiltro.equals(accionPendientePorActa.get(a.id())))
                 .filter(a -> situacionPago == null || situacionPago.equals(getSituacionPago(a.id())))
@@ -1556,6 +1849,8 @@ public class PrototipoStore {
                         || cerrabilidad.coincideFiltroCerrable(a, filtroCerrable))
                 .filter(a -> filtroPendienteBloqueante == null
                         || cerrabilidad.coincideFiltroPendiente(a, filtroPendienteBloqueante))
+                .filter(a -> subBandejaFiltro == null
+                        || subBandejaFiltro.equals(clasificarSubBandeja(a.id()).subBandeja()))
                 .sorted(Comparator.comparing(ActaMock::id))
                 .toList();
     }
@@ -1633,6 +1928,85 @@ public class PrototipoStore {
             return List.of();
         }
         return List.copyOf(lista);
+    }
+
+    public Optional<ActaNotificacionMock> findNotificacionPortalPendiente(String actaId) {
+        List<ActaNotificacionMock> lista = notificacionesPorActa.get(actaId);
+        if (lista == null || lista.isEmpty()) {
+            return Optional.empty();
+        }
+        return lista.stream()
+                .filter(this::esNotificacionPortalPendiente)
+                .sorted(Comparator.comparingInt((ActaNotificacionMock n) -> prioridadNotificacionPortal(n.tipo()))
+                        .thenComparing(ActaNotificacionMock::id))
+                .findFirst();
+    }
+
+    public ConfirmarVisualizacionNotificacionPortalResultado confirmarVisualizacionNotificacionPortal(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new ConfirmarVisualizacionNotificacionPortalResultado(
+                    ConfirmarVisualizacionNotificacionPortalEstado.NOT_FOUND, null, null, null, null);
+        }
+        Optional<ActaNotificacionMock> pendiente = findNotificacionPortalPendiente(actaId);
+        if (pendiente.isEmpty()) {
+            return new ConfirmarVisualizacionNotificacionPortalResultado(
+                    ConfirmarVisualizacionNotificacionPortalEstado.SIN_NOTIFICACION_PENDIENTE,
+                    actaId,
+                    actual.bandejaActual(),
+                    actual.estadoProcesoActual(),
+                    null);
+        }
+
+        ActaNotificacionMock notificacionPortal = pendiente.get();
+        if (notificacionPortal.tipo() == TipoNotificacion.ACTA_INFRACCION) {
+            if (!"PENDIENTE_NOTIFICACION".equals(actual.bandejaActual())
+                    && !"EN_NOTIFICACION".equals(actual.bandejaActual())) {
+                return new ConfirmarVisualizacionNotificacionPortalResultado(
+                        ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT,
+                        actaId,
+                        actual.bandejaActual(),
+                        actual.estadoProcesoActual(),
+                        null);
+            }
+            ActaMock actualizada = moverAAnalisisPorVisualizacionPortal(actual);
+            actas.put(actaId, actualizada);
+            accionPendientePorActa.remove(actaId);
+        } else {
+            RegistrarNotificacionPositivaResultado juridico =
+                    falloPlazoApelacion.registrarNotificacionPositivaDeFalloTipificada(
+                            actaId, notificacionPortal.tipo());
+            if (juridico.estado() == RegistrarNotificacionPositivaEstado.NOT_FOUND) {
+                return new ConfirmarVisualizacionNotificacionPortalResultado(
+                        ConfirmarVisualizacionNotificacionPortalEstado.NOT_FOUND, null, null, null, null);
+            }
+            if (juridico.estado() == RegistrarNotificacionPositivaEstado.CONFLICT) {
+                return new ConfirmarVisualizacionNotificacionPortalResultado(
+                        ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT,
+                        actaId,
+                        actual.bandejaActual(),
+                        actual.estadoProcesoActual(),
+                        null);
+            }
+        }
+
+        LocalDateTime fechaResultado = LocalDateTime.now();
+        ActaNotificacionMock actualizada = notificacionPortal.conVisualizacionPortal(
+                fechaResultado, "Visualización confirmada desde portal infractor");
+        reemplazarNotificacion(actualizada);
+        ActaMock actaActualizada = actas.get(actaId);
+        registrarEventoVisualizacionPortal(actaId, notificacionPortal.tipo());
+
+        return new ConfirmarVisualizacionNotificacionPortalResultado(
+                ConfirmarVisualizacionNotificacionPortalEstado.OK,
+                actaId,
+                actaActualizada != null ? actaActualizada.bandejaActual() : actual.bandejaActual(),
+                actaActualizada != null ? actaActualizada.estadoProcesoActual() : actual.estadoProcesoActual(),
+                actualizada);
+    }
+
+    public List<NotificacionMunicipalVista> listarNotificacionesNotificadorMunicipal() {
+        return notificadorMunicipal.listarPendientes();
     }
 
     /**
@@ -1723,6 +2097,78 @@ public class PrototipoStore {
      */
     public RegistrarNotificacionVencidaResultado registrarNotificacionVencida(String actaId) {
         return notificacion.registrarNotificacionVencida(actaId);
+    }
+
+    public RegistrarAcuseNotificadorMunicipalResultado registrarAcuseNotificadorMunicipal(
+            String notificacionId,
+            ResultadoNotificacion resultado,
+            String observacion) {
+        return notificadorMunicipal.registrarAcuse(notificacionId, resultado, observacion);
+    }
+
+    private boolean esNotificacionPortalPendiente(ActaNotificacionMock n) {
+        return n.canalTipificado() == CanalNotificacion.DOMICILIO_ELECTRONICO
+                && n.resultado() == ResultadoNotificacion.SIN_RESULTADO
+                && (n.estado() == EstadoNotificacion.PENDIENTE_PREPARACION
+                        || n.estado() == EstadoNotificacion.LISTA_PARA_ENVIO
+                        || n.estado() == EstadoNotificacion.ENVIADA);
+    }
+
+    private int prioridadNotificacionPortal(TipoNotificacion tipo) {
+        return switch (tipo) {
+            case FALLO_CONDENATORIO -> 1;
+            case FALLO_ABSOLUTORIO -> 2;
+            case ACTA_INFRACCION -> 3;
+        };
+    }
+
+    private ActaMock moverAAnalisisPorVisualizacionPortal(ActaMock actual) {
+        return new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                true,
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                "PENDIENTE_ANALISIS");
+    }
+
+    private void reemplazarNotificacion(ActaNotificacionMock actualizada) {
+        List<ActaNotificacionMock> lista = notificacionesPorActa.get(actualizada.actaId());
+        if (lista == null) {
+            return;
+        }
+        for (int i = 0; i < lista.size(); i++) {
+            if (actualizada.id().equals(lista.get(i).id())) {
+                lista.set(i, actualizada);
+                return;
+            }
+        }
+    }
+
+    private void registrarEventoVisualizacionPortal(String actaId, TipoNotificacion tipo) {
+        ActaMock acta = actas.get(actaId);
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        int siguiente = eventos.size() + 1;
+        String bloque = acta != null ? acta.bloqueActual() : "D5_ANALISIS";
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente),
+                actaId,
+                LocalDateTime.now(),
+                "NOTIFICACION_PORTAL_VISUALIZADA",
+                bloque,
+                bloque,
+                "Visualización confirmada desde portal infractor para " + tipo.name() + "."));
     }
 
     /**
@@ -2003,6 +2449,32 @@ public class PrototipoStore {
      */
     public boolean puedePresentarApelacion(String actaId) {
         return falloPlazoApelacion.puedePresentarApelacion(actaId);
+    }
+
+    public GenerarLoteCorreoResultado generarLoteCorreoPostalDemo(String tipo, List<String> notificacionIds)
+            throws java.io.IOException {
+        return correoPostal.generarLote(tipo, notificacionIds);
+    }
+
+    public ProcesarRespuestaCorreoResultado procesarRespuestaCorreoPostalDemo(String loteId)
+            throws java.io.IOException {
+        return correoPostal.procesarRespuestaDemo(loteId);
+    }
+
+    public List<CorreoPostalNotificacionListaItem> listarNotificacionesCorreoListasParaLote() {
+        return correoPostal.listarNotificacionesListasParaLote();
+    }
+
+    public List<CorreoLoteResumen> listarLotesCorreoGenerados() {
+        return correoPostal.listarLotesGenerados();
+    }
+
+    public AnularLoteCorreoResultado anularLoteCorreoPostalDemo(String loteId) {
+        return correoPostal.anularLote(loteId);
+    }
+
+    public List<CorreoPostalTrazabilidadItem> buscarTrazabilidadCorreoPorActa(String consultaActa) {
+        return correoPostal.buscarTrazabilidadPorActa(consultaActa);
     }
 
     /**

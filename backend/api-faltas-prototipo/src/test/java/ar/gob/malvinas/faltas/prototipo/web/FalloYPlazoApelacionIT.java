@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -96,6 +97,15 @@ class FalloYPlazoApelacionIT {
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_NOTIFICACION"))
                 .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_ENVIO"));
 
+        mvc.perform(get(B + "/actas/" + ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_ABSOLUTORIO')].estado")
+                        .value(hasItem("LISTA_PARA_ENVIO")))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_ABSOLUTORIO')].resultado")
+                        .value(hasItem("SIN_RESULTADO")))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'ACTA_INFRACCION')].resultado")
+                        .value(hasItem("POSITIVA")));
+
         mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/registrar-notificacion-positiva"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
@@ -104,7 +114,9 @@ class FalloYPlazoApelacionIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("ABSUELTO"))
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true));
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_ABSOLUTORIO')].resultado")
+                        .value(hasItem("POSITIVA")));
 
         String codigoQr = "QR-" + ACTA_ANALISIS_LIMPIA + "-DEMO";
         mvc.perform(get(B + "/infractor/actas/" + codigoQr))
@@ -184,6 +196,15 @@ class FalloYPlazoApelacionIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_NOTIFICACION"));
 
+        mvc.perform(get(B + "/actas/" + ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_CONDENATORIO')].estado")
+                        .value(hasItem("LISTA_PARA_ENVIO")))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_CONDENATORIO')].resultado")
+                        .value(hasItem("SIN_RESULTADO")))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'ACTA_INFRACCION')].resultado")
+                        .value(hasItem("POSITIVA")));
+
         mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/registrar-notificacion-positiva"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
@@ -193,7 +214,9 @@ class FalloYPlazoApelacionIT {
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENADO"))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
                 .andExpect(jsonPath("$.montoCondena").value(12345.67))
-                .andExpect(jsonPath("$.montoPagoVoluntario").value(nullValue()));
+                .andExpect(jsonPath("$.montoPagoVoluntario").value(nullValue()))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_CONDENATORIO')].resultado")
+                        .value(hasItem("POSITIVA")));
 
         String codigoQr = "QR-" + ACTA_ANALISIS_LIMPIA + "-DEMO";
         mvc.perform(get(B + "/infractor/actas/" + codigoQr))

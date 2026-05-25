@@ -38,5 +38,6 @@ public record ActaDetalleResponse(
         TransitoDatoResponse datosTransito,
         BromatologiaDatoResponse datosBromatologia,
         BigDecimal montoPagoVoluntario,
-        BigDecimal montoCondena) {
+        BigDecimal montoCondena,
+        List<ActaNotificacionResponse> notificaciones) {
 }

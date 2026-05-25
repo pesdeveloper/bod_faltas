@@ -1,0 +1,43 @@
+<section class="detail-card" aria-labelledby="notificaciones-tipificadas-titulo">
+  <h3 id="notificaciones-tipificadas-titulo" class="detail-card__title">Notificaciones</h3>
+  @if (notificacionesTipificadas().length === 0) {
+    <p class="detail-empty">Sin notificaciones tipificadas registradas.</p>
+  } @else {
+    <ul class="doc-list">
+      @for (notif of notificacionesTipificadas(); track notif.id) {
+        <li class="doc-item">
+          <div class="doc-item__head">
+            <span class="doc-item__id">{{ notif.id }}</span>
+            <span class="badge badge-doc-tipo">{{ notif.tipo }}</span>
+            <span class="badge badge-doc-estado">{{ notif.estado || notif.estadoNotificacion }}</span>
+            <span class="badge badge-neutral">{{ notif.resultado }}</span>
+          </div>
+          <dl class="detail-dl detail-dl--compact doc-item__meta">
+            <dt>Canal</dt>
+            <dd>{{ canalNotificacionTexto(notif) }}</dd>
+            @if (textoOpcionalNotificacion(notif.loteId); as loteId) {
+              <dt>Lote</dt>
+              <dd>{{ loteId }}</dd>
+            }
+            @if (textoOpcionalNotificacion(notif.referenciaExterna); as referenciaExterna) {
+              <dt>Referencia externa</dt>
+              <dd>{{ referenciaExterna }}</dd>
+            }
+            @if (destinatarioNotificacionTexto(notif); as destinatario) {
+              <dt>Destinatario</dt>
+              <dd>{{ destinatario }}</dd>
+            }
+            @if (textoOpcionalNotificacion(notif.domicilioTexto); as domicilio) {
+              <dt>Domicilio</dt>
+              <dd>{{ domicilio }}</dd>
+            }
+            @if (textoOpcionalNotificacion(notif.observacion); as observacion) {
+              <dt>Observación</dt>
+              <dd>{{ observacion }}</dd>
+            }
+          </dl>
+        </li>
+      }
+    </ul>
+  }
+</section>

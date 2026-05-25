@@ -3,6 +3,10 @@ package ar.gob.malvinas.faltas.prototipo.store;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
+import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,6 +21,8 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_ENVIO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_REVISION;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_FALLO_ABSOLUTORIO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO;
 
 /**
  * Soporte funcional del área notificación del prototipo. Extraído de
@@ -87,10 +93,12 @@ final class NotificacionSupport {
         ActaMock actualizada = moverAAnalisis(actual, true);
         actas.put(actaId, actualizada);
 
-        actualizarOCrearNotificacion(
+        actualizarOCrearNotificacionActa(
                 actaId,
                 actual,
                 ESTADO_ENTREGADA,
+                EstadoNotificacion.ENTREGADA,
+                ResultadoNotificacion.POSITIVA,
                 NotificacionSupport::resumenDestinatarioEntregadaDemo);
 
         accionPendientePorActa.remove(actaId);
@@ -134,10 +142,12 @@ final class NotificacionSupport {
 
         accionPendientePorActa.put(actaId, PrototipoStore.ACCION_REINTENTAR_NOTIFICACION);
 
-        actualizarOCrearNotificacion(
+        actualizarOCrearNotificacionActa(
                 actaId,
                 actual,
                 ESTADO_NO_ENTREGADA,
+                EstadoNotificacion.NEGATIVA,
+                ResultadoNotificacion.NEGATIVA,
                 NotificacionSupport::resumenDestinatarioNoEntregadaDemo);
 
         registrarEvento(
@@ -191,10 +201,12 @@ final class NotificacionSupport {
         ActaMock actualizada = moverAPendienteNotificacion(actual);
         actas.put(actaId, actualizada);
 
-        actualizarOCrearNotificacion(
+        actualizarOCrearNotificacionActa(
                 actaId,
                 actual,
                 ESTADO_PENDIENTE_ENVIO,
+                EstadoNotificacion.LISTA_PARA_ENVIO,
+                ResultadoNotificacion.SIN_RESULTADO,
                 NotificacionSupport::resumenDestinatarioDemo);
 
         accionPendientePorActa.remove(actaId);
@@ -245,10 +257,12 @@ final class NotificacionSupport {
 
         accionPendientePorActa.put(actaId, PrototipoStore.ACCION_EVALUAR_NOTIFICACION_VENCIDA);
 
-        actualizarOCrearNotificacion(
+        actualizarOCrearNotificacionActa(
                 actaId,
                 actual,
                 ESTADO_VENCIDA,
+                EstadoNotificacion.VENCIDA,
+                ResultadoNotificacion.VENCIDA,
                 NotificacionSupport::resumenDestinatarioVencidaDemo);
 
         registrarEvento(
@@ -291,10 +305,12 @@ final class NotificacionSupport {
         ActaMock actualizada = moverAPendienteNotificacion(actual);
         actas.put(actaId, actualizada);
 
-        actualizarOCrearNotificacion(
+        actualizarOCrearNotificacionActa(
                 actaId,
                 actual,
                 ESTADO_PENDIENTE_ENVIO,
+                EstadoNotificacion.LISTA_PARA_ENVIO,
+                ResultadoNotificacion.SIN_RESULTADO,
                 NotificacionSupport::resumenDestinatarioDemo);
 
         accionPendientePorActa.remove(actaId);
@@ -323,6 +339,39 @@ final class NotificacionSupport {
      * mínima del registro {@link ActaNotificacionMock} en estado
      * {@code PENDIENTE_ENVIO} con el resumen de destinatario demo.
      */
+    void asegurarNotificacionPendienteParaDocumento(String actaId, ActaMock acta, String tipoDocumento) {
+        TipoNotificacion tipo = tipoNotificacionParaDocumento(tipoDocumento);
+        List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        boolean yaExistePendiente = notifs.stream()
+                .anyMatch(n -> n.tipo() == tipo && n.resultado() == ResultadoNotificacion.SIN_RESULTADO);
+        if (yaExistePendiente) {
+            return;
+        }
+        if (tipo == TipoNotificacion.ACTA_INFRACCION
+                && notifs.stream().anyMatch(n -> n.tipo() == TipoNotificacion.ACTA_INFRACCION)) {
+            return;
+        }
+        String sufijoActa = sufijoActa(actaId);
+        String idNotif = "NOT-" + sufijoActa + "-" + String.format("%02d", notifs.size() + 1);
+        String descripcion = switch (tipo) {
+            case ACTA_INFRACCION -> resumenDestinatarioDemo(acta);
+            case FALLO_ABSOLUTORIO -> acta.infractorNombre()
+                    + " — pendiente notificación de fallo absolutorio (demo)";
+            case FALLO_CONDENATORIO -> acta.infractorNombre()
+                    + " — pendiente notificación de fallo condenatorio (demo)";
+        };
+        notifs.add(ActaNotificacionMock.preparada(
+                idNotif,
+                actaId,
+                tipo,
+                CanalNotificacion.CORREO_POSTAL,
+                descripcion,
+                acta.infractorNombre(),
+                "pendiente constancia de domicilio",
+                LocalDateTime.now(),
+                "DOCUMENTO_FIRMADO"));
+    }
+
     void asegurarNotificacionInicialPendiente(String actaId, ActaMock acta) {
         List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         if (!notifs.isEmpty()) {
@@ -330,12 +379,16 @@ final class NotificacionSupport {
         }
         String sufijoActa = sufijoActa(actaId);
         String idNotif = "NOT-" + sufijoActa + "-01";
-        notifs.add(new ActaNotificacionMock(
+        notifs.add(ActaNotificacionMock.preparada(
                 idNotif,
                 actaId,
-                CANAL_POSTAL,
-                ESTADO_PENDIENTE_ENVIO,
-                resumenDestinatarioDemo(acta)));
+                TipoNotificacion.ACTA_INFRACCION,
+                CanalNotificacion.CORREO_POSTAL,
+                resumenDestinatarioDemo(acta),
+                acta.infractorNombre(),
+                "pendiente constancia de domicilio",
+                LocalDateTime.now(),
+                "DOCUMENTO_FIRMADO"));
     }
 
     private ActaMock moverAAnalisis(ActaMock actual, boolean tieneNotificaciones) {
@@ -378,30 +431,74 @@ final class NotificacionSupport {
                 BANDEJA_PENDIENTE_NOTIFICACION);
     }
 
-    private void actualizarOCrearNotificacion(
+    private void actualizarOCrearNotificacionActa(
             String actaId,
             ActaMock acta,
             String nuevoEstado,
+            EstadoNotificacion nuevoEstadoTipificado,
+            ResultadoNotificacion nuevoResultado,
             java.util.function.Function<ActaMock, String> resumenSiNueva) {
         List<ActaNotificacionMock> notifs = notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        for (int i = 0; i < notifs.size(); i++) {
+            ActaNotificacionMock n = notifs.get(i);
+            if (n.tipo() == TipoNotificacion.ACTA_INFRACCION) {
+                notifs.set(i, n.conResultado(
+                        nuevoEstadoTipificado,
+                        nuevoResultado,
+                        nuevoEstado,
+                        n.destinatarioResumen(),
+                        nuevoResultado == ResultadoNotificacion.SIN_RESULTADO ? null : LocalDateTime.now(),
+                        null));
+                return;
+            }
+        }
         if (!notifs.isEmpty()) {
             ActaNotificacionMock primera = notifs.get(0);
-            notifs.set(0, new ActaNotificacionMock(
-                    primera.id(),
-                    primera.actaId(),
-                    primera.canal(),
+            notifs.set(0, primera.conResultado(
+                    nuevoEstadoTipificado,
+                    nuevoResultado,
                     nuevoEstado,
-                    primera.destinatarioResumen()));
+                    primera.destinatarioResumen(),
+                    nuevoResultado == ResultadoNotificacion.SIN_RESULTADO ? null : LocalDateTime.now(),
+                    null));
             return;
         }
         String sufijoActa = sufijoActa(actaId);
         String idNotif = "NOT-" + sufijoActa + "-01";
+        String resumen = resumenSiNueva.apply(acta);
         notifs.add(new ActaNotificacionMock(
                 idNotif,
                 actaId,
                 CANAL_POSTAL,
                 nuevoEstado,
-                resumenSiNueva.apply(acta)));
+                resumen,
+                TipoNotificacion.ACTA_INFRACCION,
+                CanalNotificacion.CORREO_POSTAL,
+                nuevoEstadoTipificado,
+                nuevoResultado,
+                resumen,
+                null,
+                null,
+                null,
+                nuevoResultado == ResultadoNotificacion.SIN_RESULTADO ? LocalDateTime.now() : null,
+                null,
+                nuevoResultado == ResultadoNotificacion.SIN_RESULTADO ? null : LocalDateTime.now(),
+                null,
+                acta.infractorNombre(),
+                null,
+                "pendiente constancia de domicilio",
+                null,
+                null));
+    }
+
+    private static TipoNotificacion tipoNotificacionParaDocumento(String tipoDocumento) {
+        if (TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumento)) {
+            return TipoNotificacion.FALLO_ABSOLUTORIO;
+        }
+        if (TIPO_DOC_FALLO_CONDENATORIO.equals(tipoDocumento)) {
+            return TipoNotificacion.FALLO_CONDENATORIO;
+        }
+        return TipoNotificacion.ACTA_INFRACCION;
     }
 
     private void registrarEvento(

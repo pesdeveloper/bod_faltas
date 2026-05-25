@@ -405,10 +405,8 @@ final class PiezasFirmaSupport {
                 actualizada.bloqueActual(),
                 descripcionEvento);
 
-        if (!restanPendientes
-                && !PIEZA_NULIDAD.equals(doc.tipoDocumento())
-                && !actual.tieneNotificaciones()) {
-            notificacion.asegurarNotificacionInicialPendiente(actaId, actual);
+        if (!restanPendientes && !PIEZA_NULIDAD.equals(doc.tipoDocumento())) {
+            notificacion.asegurarNotificacionPendienteParaDocumento(actaId, actual, doc.tipoDocumento());
         }
 
         return new PrototipoStore.FirmarDocumentoResultado(

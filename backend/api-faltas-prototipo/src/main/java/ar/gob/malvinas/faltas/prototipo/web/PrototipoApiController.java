@@ -4,6 +4,11 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
+import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaCodigo;
 import ar.gob.malvinas.faltas.prototipo.store.MockDataFactory;
 import ar.gob.malvinas.faltas.prototipo.store.PrototipoStore;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaBandejaItemResponse;
@@ -14,6 +19,7 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.ActaInfractorResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaNotificacionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.AdjuntarComprobantePagoInformadoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.BandejaResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.SubBandejaResumenResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarPorVencimientoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CerrarActaAccionResponse;
@@ -26,10 +32,15 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.DerivarAGestionExternaAccionResp
 import ar.gob.malvinas.faltas.prototipo.web.dto.DictarFalloAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.DictarFalloCondenatorioAccionRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.FirmarDocumentoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarLoteCorreoPostalRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarMedidaPreventivaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNotificacionActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNulidadAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.MarcarResultadoAbsueltoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalAcuseRequest;
+import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalAcuseResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalNotificacionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.NotificacionPortalPendienteResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ObservarPagoInformadoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.PagoInformadoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.PagoCondenaAccionResponse;
@@ -67,6 +78,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -117,8 +130,8 @@ public class PrototipoApiController {
 
     @GetMapping("/bandejas")
     public List<BandejaResponse> listarBandejas() {
-        return store.listarBandejasConConteoOrdenadas().stream()
-                .map(bc -> new BandejaResponse(bc.codigo(), BandejaNombres.nombre(bc.codigo()), bc.cantidadActas()))
+        return store.listarBandejasConResumenOperativo().stream()
+                .map(this::mapBandejaResponse)
                 .toList();
     }
 
@@ -129,7 +142,8 @@ public class PrototipoApiController {
             @RequestParam(value = "situacionPago", required = false) String situacionPago,
             @RequestParam(value = "resultadoFinal", required = false) String resultadoFinal,
             @RequestParam(value = "cerrable", required = false) Boolean cerrable,
-            @RequestParam(value = "pendienteBloqueante", required = false) String pendienteBloqueante) {
+            @RequestParam(value = "pendienteBloqueante", required = false) String pendienteBloqueante,
+            @RequestParam(value = "subBandeja", required = false) String subBandeja) {
         PrototipoStore.SituacionPagoMock filtroSituacionPago = parseSituacionPago(situacionPago);
         PrototipoStore.ResultadoFinalCierreMock filtroRes = parseResultadoFinalCierre(resultadoFinal);
         PrototipoStore.PendienteBloqueanteCierreMock filtroPend = parsePendienteBloqueante(pendienteBloqueante);
@@ -139,7 +153,8 @@ public class PrototipoApiController {
                 filtroSituacionPago,
                 filtroRes,
                 cerrable,
-                filtroPend).stream()
+                filtroPend,
+                subBandeja).stream()
                 .map(this::mapActaBandejaItem)
                 .toList();
     }
@@ -193,6 +208,28 @@ public class PrototipoApiController {
         return mapActaInfractor(actualizada);
     }
 
+    @PostMapping("/infractor/actas/{codigoQr}/acciones/confirmar-visualizacion-notificacion")
+    public ActaInfractorResponse confirmarVisualizacionNotificacionInfractorPorCodigoQr(
+            @PathVariable("codigoQr") String codigoQr) {
+        ActaMock acta = store.findActaPorCodigoQr(codigoQr)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PrototipoStore.ConfirmarVisualizacionNotificacionPortalResultado r =
+                store.confirmarVisualizacionNotificacionPortal(acta.id());
+        if (r.estado() == PrototipoStore.ConfirmarVisualizacionNotificacionPortalEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ConfirmarVisualizacionNotificacionPortalEstado.SIN_NOTIFICACION_PENDIENTE) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No hay notificación pendiente por DOMICILIO_ELECTRONICO para confirmar desde el portal.");
+        }
+        if (r.estado() == PrototipoStore.ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
+        return mapActaInfractor(actualizada);
+    }
+
     @GetMapping("/actas/{id}/eventos")
     public List<ActaEventoResponse> listarEventosActa(@PathVariable("id") String id) {
         if (!store.existeActa(id)) {
@@ -221,6 +258,124 @@ public class PrototipoApiController {
         return store.listarNotificacionesPorActa(id).stream()
                 .map(this::mapActaNotificacion)
                 .toList();
+    }
+
+    @GetMapping("/notificaciones/notificador-municipal")
+    public List<NotificadorMunicipalNotificacionResponse> listarNotificacionesNotificadorMunicipal() {
+        return store.listarNotificacionesNotificadorMunicipal().stream()
+                .map(PrototipoApiController::mapNotificadorMunicipalVista)
+                .toList();
+    }
+
+    @PostMapping("/notificaciones/notificador-municipal/{notificacionId}/acuse")
+    public NotificadorMunicipalAcuseResponse registrarAcuseNotificadorMunicipal(
+            @PathVariable("notificacionId") String notificacionId,
+            @RequestBody(required = false) NotificadorMunicipalAcuseRequest request) {
+        if (request == null || request.resultado() == null || request.resultado().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resultado requerido");
+        }
+        ResultadoNotificacion resultado;
+        try {
+            resultado = ResultadoNotificacion.valueOf(request.resultado().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "resultado inválido: " + request.resultado());
+        }
+        if (resultado == ResultadoNotificacion.SIN_RESULTADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resultado sin efecto");
+        }
+        PrototipoStore.RegistrarAcuseNotificadorMunicipalResultado r =
+                store.registrarAcuseNotificadorMunicipal(notificacionId, resultado, request.observacion());
+        if (r.estado() == PrototipoStore.RegistrarAcuseNotificadorMunicipalEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "notificacionId no existe: " + notificacionId);
+        }
+        if (r.estado() == PrototipoStore.RegistrarAcuseNotificadorMunicipalEstado.WRONG_CHANNEL) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "La notificación no pertenece al canal NOTIFICADOR_MUNICIPAL.");
+        }
+        if (r.estado() == PrototipoStore.RegistrarAcuseNotificadorMunicipalEstado.BAD_REQUEST) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resultado inválido para acuse municipal");
+        }
+        if (r.estado() == PrototipoStore.RegistrarAcuseNotificadorMunicipalEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new NotificadorMunicipalAcuseResponse(
+                "OK",
+                "Acuse municipal registrado.",
+                r.actaId(),
+                r.acta(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                mapActaNotificacion(r.notificacion()),
+                mapNotificadorMunicipalVista(r.vista()));
+    }
+
+    @GetMapping("/notificaciones/correo/listas-para-lote")
+    public List<PrototipoStore.CorreoPostalNotificacionListaItem> listarNotificacionesCorreoListasParaLote() {
+        return store.listarNotificacionesCorreoListasParaLote();
+    }
+
+    @GetMapping("/notificaciones/correo/lotes")
+    public List<PrototipoStore.CorreoLoteResumen> listarLotesCorreoGenerados() {
+        return store.listarLotesCorreoGenerados();
+    }
+
+    @PostMapping("/notificaciones/correo/lotes/{loteId}/anular")
+    public PrototipoStore.AnularLoteCorreoResultado anularLoteCorreoPostalDemo(
+            @PathVariable("loteId") String loteId) {
+        PrototipoStore.AnularLoteCorreoResultado resultado = store.anularLoteCorreoPostalDemo(loteId);
+        if ("NOT_FOUND".equals(resultado.estado())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, resultado.mensaje());
+        }
+        if ("CONFLICT".equals(resultado.estado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, resultado.mensaje());
+        }
+        return resultado;
+    }
+
+    @PostMapping("/notificaciones/correo/lotes/generar")
+    public PrototipoStore.GenerarLoteCorreoResultado generarLoteCorreoPostalDemo(
+            @RequestParam(name = "tipo", required = false) String tipo,
+            @RequestBody(required = false) GenerarLoteCorreoPostalRequest body) {
+        try {
+            String tipoParam = body != null && body.tipo() != null && !body.tipo().isBlank() ? body.tipo() : tipo;
+            List<String> notificacionIds = body != null ? body.notificacionIds() : null;
+            return store.generarLoteCorreoPostalDemo(tipoParam, notificacionIds);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "No se pudo generar el lote CSV de correo postal demo.",
+                    ex);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
+        }
+    }
+
+    @GetMapping("/notificaciones/correo/trazabilidad")
+    public List<PrototipoStore.CorreoPostalTrazabilidadItem> buscarTrazabilidadCorreoPostal(
+            @RequestParam("acta") String acta) {
+        return store.buscarTrazabilidadCorreoPorActa(acta);
+    }
+
+    @PostMapping("/notificaciones/correo/respuestas/procesar-demo")
+    public PrototipoStore.ProcesarRespuestaCorreoResultado procesarRespuestaCorreoPostalDemo(
+            @RequestParam(name = "loteId", required = false) String loteId) {
+        try {
+            return store.procesarRespuestaCorreoPostalDemo(loteId);
+        } catch (NoSuchFileException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No existe el CSV de respuesta demo: " + ex.getFile(),
+                    ex);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage(), ex);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "No se pudo procesar el CSV de respuesta de correo postal demo.",
+                    ex);
+        }
     }
 
     @PostMapping("/actas/{id}/acciones/registrar-notificacion-positiva")
@@ -1136,6 +1291,7 @@ public class PrototipoApiController {
     }
 
     private ActaBandejaItemResponse mapActaBandejaItem(ActaMock a) {
+        var clasificacion = store.clasificarSubBandeja(a.id());
         return new ActaBandejaItemResponse(
                 a.id(),
                 a.numeroActa(),
@@ -1148,7 +1304,29 @@ public class PrototipoApiController {
                 store.getAccionPendiente(a.id()),
                 store.getMotivoArchivo(a.id()),
                 store.getTipoGestionExterna(a.id()),
-                mapCerrabilidad(store.getCerrabilidadActa(a.id())));
+                mapCerrabilidad(store.getCerrabilidadActa(a.id())),
+                clasificacion.subBandeja(),
+                clasificacion.subBandejaLabel(),
+                clasificacion.chip(),
+                clasificacion.accionPrincipal(),
+                clasificacion.prioridadSubBandeja(),
+                clasificacion.chipsSecundarios());
+    }
+
+    private BandejaResponse mapBandejaResponse(PrototipoStore.BandejaResumenOperativo resumen) {
+        List<SubBandejaResumenResponse> subBandejas = resumen.subBandejas().stream()
+                .map(sb -> new SubBandejaResumenResponse(
+                        sb.codigo(),
+                        SubBandejaCodigo.porCodigo(sb.codigo())
+                                .map(SubBandejaCodigo::label)
+                                .orElse(sb.codigo()),
+                        sb.cantidad()))
+                .toList();
+        return new BandejaResponse(
+                resumen.codigo(),
+                BandejaNombres.nombre(resumen.codigo()),
+                resumen.cantidadActas(),
+                subBandejas);
     }
 
     private ActaDetalleResponse mapActaDetalle(ActaMock a) {
@@ -1197,7 +1375,10 @@ public class PrototipoApiController {
                         .map(b -> new BromatologiaDatoResponse(b.decomisoSustanciasAlimenticias()))
                         .orElse(null),
                 store.getMontoPagoVoluntario(a.id()),
-                store.getMontoCondena(a.id()));
+                store.getMontoCondena(a.id()),
+                store.listarNotificacionesPorActa(a.id()).stream()
+                        .map(this::mapActaNotificacion)
+                        .toList());
     }
 
     private ActaInfractorResponse mapActaInfractor(ActaMock a) {
@@ -1226,6 +1407,14 @@ public class PrototipoApiController {
                 && resultadoFinalEnum != PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME
                 && !enBandejaNoOperablePorPortal;
         boolean puedePresentarApelacion = store.puedePresentarApelacion(a.id());
+        ActaNotificacionMock notificacionPortalPendiente = store.findNotificacionPortalPendiente(a.id()).orElse(null);
+        boolean puedeConfirmarVisualizacionNotificacion = notificacionPortalPendiente != null;
+        Boolean domicilioElectronicoVerificado = store.listarNotificacionesPorActa(a.id()).stream()
+                .filter(n -> n.canalTipificado().name().equals("DOMICILIO_ELECTRONICO"))
+                .map(ActaNotificacionMock::domicilioElectronicoVerificado)
+                .filter(Boolean.TRUE::equals)
+                .findFirst()
+                .orElse(Boolean.FALSE);
 
         String mensajeVisible = computarMensajeVisibleInfractor(
                 estadoVisible, situacion, monto, puedePagar, puedeSolicitarPagoVoluntario);
@@ -1242,7 +1431,32 @@ public class PrototipoApiController {
                 puedeSolicitarPagoVoluntario,
                 puedePagar,
                 puedePresentarApelacion,
+                puedeConfirmarVisualizacionNotificacion,
+                mapNotificacionPortalPendiente(notificacionPortalPendiente),
+                domicilioElectronicoVerificado,
                 mensajeVisible);
+    }
+
+    private NotificacionPortalPendienteResponse mapNotificacionPortalPendiente(ActaNotificacionMock n) {
+        if (n == null) {
+            return null;
+        }
+        return new NotificacionPortalPendienteResponse(
+                n.id(),
+                n.tipo().name(),
+                n.canalTipificado().name(),
+                n.estado().name(),
+                n.resultado().name(),
+                primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
+                n.destinatarioResumen(),
+                "Al confirmar, se registrará la visualización de esta notificación en el portal infractor.");
+    }
+
+    private static String primerNoVacio(String primero, String segundo) {
+        if (primero != null && !primero.isBlank()) {
+            return primero;
+        }
+        return segundo;
     }
 
     private boolean estaEnBandejaNoOperablePorPortal(ActaMock a) {
@@ -1446,12 +1660,60 @@ public class PrototipoApiController {
     }
 
     private ActaNotificacionResponse mapActaNotificacion(ActaNotificacionMock n) {
+        if (n == null) {
+            return null;
+        }
+        TipoNotificacion tipo = n.tipo() != null ? n.tipo() : TipoNotificacion.ACTA_INFRACCION;
+        CanalNotificacion canal = n.canalTipificado() != null
+                ? n.canalTipificado()
+                : CanalNotificacion.CORREO_POSTAL;
+        EstadoNotificacion estado = n.estado() != null
+                ? n.estado()
+                : EstadoNotificacion.PENDIENTE_PREPARACION;
+        ResultadoNotificacion resultado = n.resultado() != null
+                ? n.resultado()
+                : ResultadoNotificacion.SIN_RESULTADO;
         return new ActaNotificacionResponse(
                 n.id(),
                 n.actaId(),
                 n.canal(),
                 n.estadoNotificacion(),
-                n.destinatarioResumen());
+                n.destinatarioResumen(),
+                tipo.name(),
+                canal.name(),
+                estado.name(),
+                resultado.name(),
+                n.referencia(),
+                n.eventoRelacionado(),
+                n.loteId(),
+                n.referenciaExterna(),
+                n.fechaPreparacion(),
+                n.fechaEnvio(),
+                n.fechaResultado(),
+                n.observacion(),
+                n.destinatarioNombre(),
+                n.destinatarioEmail(),
+                n.domicilioTexto(),
+                n.domicilioElectronicoVerificado(),
+                n.diasPlazoNotificacionElectronica());
+    }
+
+    private static NotificadorMunicipalNotificacionResponse mapNotificadorMunicipalVista(
+            PrototipoStore.NotificacionMunicipalVista v) {
+        return new NotificadorMunicipalNotificacionResponse(
+                v.notificacionId(),
+                v.actaId(),
+                v.acta(),
+                v.tipo(),
+                v.canal(),
+                v.estado(),
+                v.resultado(),
+                v.destinatario(),
+                v.domicilio(),
+                v.observacion(),
+                v.qrNotificacion(),
+                v.fechaPreparacion(),
+                v.fechaEnvio());
     }
 
     private enum TipoReconocimientoOrigenBloqueo {

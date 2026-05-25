@@ -1,11 +1,13 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+﻿import { HttpClient, HttpParams } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
 import {
+  ActaBandejaItem,
   ActaDetalleDemo,
   ActaInfractorResponseDemo,
   ActaResumenDemo,
+  BandejaResponse,
   AdjuntarComprobantePagoInformadoAccionResponseDemo,
   ArchivarActaAccionResponseDemo,
   BandejaCodigo,
@@ -18,11 +20,20 @@ import {
   DocumentoActaDemo,
   EventoActaDemo,
   FirmarDocumentoAccionResponseDemo,
+  AnularLoteCorreoResultadoDemo,
+  CorreoLoteResumenDemo,
+  CorreoPostalNotificacionListaDemo,
+  CorreoPostalTrazabilidadDemo,
+  GenerarLoteCorreoResultadoDemo,
   GenerarMedidaPreventivaAccionResponseDemo,
   GenerarNotificacionActaAccionResponseDemo,
   GenerarNulidadAccionResponseDemo,
+  NotificadorMunicipalAcuseRequestDemo,
+  NotificadorMunicipalAcuseResponseDemo,
+  NotificadorMunicipalNotificacionDemo,
   ObservarPagoInformadoAccionResponseDemo,
   PagoCondenaAccionResponseDemo,
+  ProcesarRespuestaCorreoResultadoDemo,
   PrototipoHealthResponse,
   PrototipoResetResponse,
   RegistrarCumplimientoMaterialBloqueoCierreAccionResponseDemo,
@@ -60,8 +71,21 @@ export class PrototipoFaltasApiService {
     return this.http.post<PrototipoResetResponse>(`${this.api.baseUrl}/reset`, null);
   }
 
-  listarActasPorBandeja(bandeja: BandejaCodigo): Observable<ActaResumenDemo[]> {
-    return this.http.get<ActaResumenDemo[]>(`${this.api.baseUrl}/bandejas/${bandeja}/actas`);
+  listarBandejas(): Observable<BandejaResponse[]> {
+    return this.http.get<BandejaResponse[]>(`${this.api.baseUrl}/bandejas`);
+  }
+
+  listarActasPorBandeja(
+    bandeja: BandejaCodigo,
+    subBandeja?: string | null,
+  ): Observable<ActaBandejaItem[]> {
+    let params = new HttpParams();
+    if (subBandeja && subBandeja.trim().length > 0) {
+      params = params.set('subBandeja', subBandeja.trim());
+    }
+    return this.http.get<ActaBandejaItem[]>(`${this.api.baseUrl}/bandejas/${bandeja}/actas`, {
+      params,
+    });
   }
 
   obtenerActa(id: string): Observable<ActaDetalleDemo> {
@@ -78,6 +102,15 @@ export class PrototipoFaltasApiService {
   registrarApelacionInfractorPorCodigoQr(codigoQr: string): Observable<ActaInfractorResponseDemo> {
     return this.http.post<ActaInfractorResponseDemo>(
       `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/registrar-apelacion`,
+      null,
+    );
+  }
+
+  confirmarVisualizacionNotificacionInfractorPorCodigoQr(
+    codigoQr: string,
+  ): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/confirmar-visualizacion-notificacion`,
       null,
     );
   }
@@ -157,6 +190,74 @@ export class PrototipoFaltasApiService {
       `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-resolucion-bloqueo-cierre`,
       null,
       { params },
+    );
+  }
+
+
+  listarNotificacionesNotificadorMunicipal(): Observable<NotificadorMunicipalNotificacionDemo[]> {
+    return this.http.get<NotificadorMunicipalNotificacionDemo[]>(
+      `${this.api.baseUrl}/notificaciones/notificador-municipal`,
+    );
+  }
+
+
+  listarNotificacionesCorreoListasParaLote(): Observable<CorreoPostalNotificacionListaDemo[]> {
+    return this.http.get<CorreoPostalNotificacionListaDemo[]>(
+      `${this.api.baseUrl}/notificaciones/correo/listas-para-lote`,
+    );
+  }
+
+  listarLotesCorreoGenerados(): Observable<CorreoLoteResumenDemo[]> {
+    return this.http.get<CorreoLoteResumenDemo[]>(`${this.api.baseUrl}/notificaciones/correo/lotes`);
+  }
+
+  anularLoteCorreoPostalDemo(loteId: string): Observable<AnularLoteCorreoResultadoDemo> {
+    return this.http.post<AnularLoteCorreoResultadoDemo>(
+      `${this.api.baseUrl}/notificaciones/correo/lotes/${encodeURIComponent(loteId)}/anular`,
+      null,
+    );
+  }
+
+  generarLoteCorreoPostalDemo(
+    tipo?: string,
+    notificacionIds?: string[],
+  ): Observable<GenerarLoteCorreoResultadoDemo> {
+    const params = tipo ? new HttpParams().set('tipo', tipo) : undefined;
+    const body =
+      notificacionIds && notificacionIds.length > 0
+        ? { tipo, notificacionIds }
+        : null;
+    return this.http.post<GenerarLoteCorreoResultadoDemo>(
+      `${this.api.baseUrl}/notificaciones/correo/lotes/generar`,
+      body,
+      params ? { params } : {},
+    );
+  }
+
+  buscarTrazabilidadCorreoPostal(acta: string): Observable<CorreoPostalTrazabilidadDemo[]> {
+    const params = new HttpParams().set('acta', acta.trim());
+    return this.http.get<CorreoPostalTrazabilidadDemo[]>(
+      `${this.api.baseUrl}/notificaciones/correo/trazabilidad`,
+      { params },
+    );
+  }
+
+  procesarRespuestaCorreoPostalDemo(loteId?: string): Observable<ProcesarRespuestaCorreoResultadoDemo> {
+    const params = loteId ? new HttpParams().set('loteId', loteId) : undefined;
+    return this.http.post<ProcesarRespuestaCorreoResultadoDemo>(
+      `${this.api.baseUrl}/notificaciones/correo/respuestas/procesar-demo`,
+      null,
+      params ? { params } : {},
+    );
+  }
+
+  registrarAcuseNotificadorMunicipal(
+    notificacionId: string,
+    body: NotificadorMunicipalAcuseRequestDemo,
+  ): Observable<NotificadorMunicipalAcuseResponseDemo> {
+    return this.http.post<NotificadorMunicipalAcuseResponseDemo>(
+      `${this.api.baseUrl}/notificaciones/notificador-municipal/${encodeURIComponent(notificacionId)}/acuse`,
+      body,
     );
   }
 

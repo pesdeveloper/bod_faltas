@@ -1,59 +1,96 @@
 <mat-sidenav-container class="demo-layout" [autosize]="true">
   <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
-    <div class="sidenav-header">
-      @if (!bandejasColapsadas()) {
-        <span>Bandejas</span>
-      }
-      <button
-        mat-icon-button
-        type="button"
-        class="sidenav-toggle"
-        [attr.aria-expanded]="!bandejasColapsadas()"
-        aria-label="Alternar bandejas"
-        (click)="toggleBandejas()"
-      >
-        <mat-icon>menu</mat-icon>
-      </button>
-    </div>
-    <mat-nav-list>
-      @for (b of bandejas; track b) {
-        <a
-          mat-list-item
-          class="sidenav-link"
-          [class.active]="b === bandejaSeleccionada()"
-          [attr.title]="etiquetaBandeja(b)"
-          href="#"
-          (click)="$event.preventDefault(); seleccionarBandeja(b)"
+    <div class="demo-sidenav-body">
+      <div class="sidenav-header">
+        @if (!bandejasColapsadas()) {
+          <span>Bandejas</span>
+        }
+        <button
+          mat-icon-button
+          type="button"
+          class="sidenav-toggle"
+          [attr.aria-expanded]="!bandejasColapsadas()"
+          aria-label="Alternar bandejas"
+          (click)="toggleBandejas()"
         >
-          @if (bandejasColapsadas()) {
-            <span class="sidenav-abbr">{{ abreviaturaBandeja(b) }}</span>
-          } @else {
-            <span class="sidenav-label">{{ etiquetaBandeja(b) }}</span>
-          }
-        </a>
-      }
-    </mat-nav-list>
+          <mat-icon>menu</mat-icon>
+        </button>
+      </div>
+      <mat-nav-list class="sidenav-bandejas">
+        @for (b of bandejasResumen(); track b.codigo) {
+          <a
+            mat-list-item
+            class="sidenav-link"
+            [class.active]="!enVistaOperativaNotificaciones() && b.codigo === bandejaSeleccionada()"
+            [attr.title]="b.label + ' (' + b.cantidad + ')'"
+            href="#"
+            (click)="$event.preventDefault(); seleccionarBandeja(b.codigo)"
+          >
+            @if (bandejasColapsadas()) {
+              <mat-icon class="sidenav-icon sidenav-icon--solo" aria-hidden="true">{{ iconoBandeja(b.codigo) }}</mat-icon>
+            } @else {
+              <span class="sidenav-link__body">
+                <mat-icon class="sidenav-icon" aria-hidden="true">{{ iconoBandeja(b.codigo) }}</mat-icon>
+                <span class="sidenav-label" [title]="b.label">{{ b.label }}</span>
+                <span class="sidenav-count">{{ formatearCantidadBandeja(b.cantidad) }}</span>
+              </span>
+            }
+          </a>
+        }
+      </mat-nav-list>
+      <section class="sidenav-operacion" aria-label="Operación de notificaciones">
+        <div class="sidenav-section-divider" aria-hidden="true"></div>
+        @if (!bandejasColapsadas()) {
+          <h2 class="sidenav-section-title">Operación de notificaciones</h2>
+        }
+        <mat-nav-list class="sidenav-operacion-list">
+          <a
+            mat-list-item
+            class="sidenav-link sidenav-link--operacion"
+            [class.active]="enCorreoPostal()"
+            title="Correo postal"
+            aria-label="Correo postal"
+            href="#"
+            (click)="$event.preventDefault(); abrirCorreoPostal()"
+          >
+            @if (bandejasColapsadas()) {
+              <mat-icon class="sidenav-icon sidenav-icon--solo" aria-hidden="true">local_post_office</mat-icon>
+            } @else {
+              <span class="sidenav-link__body sidenav-link__body--no-badge">
+                <mat-icon class="sidenav-icon" aria-hidden="true">local_post_office</mat-icon>
+                <span class="sidenav-label">Correo postal</span>
+              </span>
+            }
+          </a>
+          <a
+            mat-list-item
+            class="sidenav-link sidenav-link--operacion sidenav-link--demo"
+            [class.active]="enNotificadorMunicipal()"
+            title="Notificador municipal"
+            aria-label="Notificador municipal"
+            href="#"
+            (click)="$event.preventDefault(); abrirNotificadorMunicipal()"
+          >
+            @if (bandejasColapsadas()) {
+              <mat-icon class="sidenav-icon sidenav-icon--solo" aria-hidden="true">campaign</mat-icon>
+            } @else {
+              <span class="sidenav-link__body sidenav-link__body--no-badge">
+                <mat-icon class="sidenav-icon" aria-hidden="true">campaign</mat-icon>
+                <span class="sidenav-label">Notificador municipal</span>
+              </span>
+            }
+          </a>
+        </mat-nav-list>
+      </section>
+
+    </div>
   </mat-sidenav>
+
 
   <mat-sidenav-content>
     <mat-toolbar color="primary" class="demo-toolbar">
       <div class="toolbar-identity">
-        <span class="toolbar-site-label">Sitio actual: Dirección de Faltas</span>
-        <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
-      </div>
-      <div class="demo-actions">
-        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('TRANSITO')">
-          Crear demo tránsito
-        </button>
-        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('INSPECCIONES')">
-          Crear demo inspecciones
-        </button>
-        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('FISCALIZACION')">
-          Crear demo fiscalización
-        </button>
-        <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('BROMATOLOGIA')">
-          Crear demo bromatología
-        </button>
+        <span class="toolbar-title">{{ tituloVistaPrincipal() }}</span>
       </div>
     </mat-toolbar>
 
@@ -70,88 +107,66 @@
         }
       </div>
     }
-
+    @if (enCorreoPostal()) {
+      <app-demo-correo-postal-page
+        (operacionCompletada)="refrescarLuegoDeOperacionCorreoPostal()"
+      />
+    } @else {
     <div class="demo-content">
-      <section #actasListContainer class="list-panel" aria-label="Listado de actas">
-        <div class="list-panel__tools">
-          <label class="list-search">
-            <span class="list-search__label">Buscar acta</span>
-            <input
-              type="search"
-              class="list-search__input"
-              placeholder="Número de acta..."
-              [ngModel]="textoBusquedaActa()"
-              (ngModelChange)="actualizarTextoBusquedaActa($event)"
-              autocomplete="off"
-            />
-          </label>
-          <label class="list-preference">
-            <input
-              type="checkbox"
-              [checked]="seguirActaAlCambiarBandeja()"
-              (change)="cambiarSeguirActaAlCambiarBandeja($any($event.target).checked)"
-            />
-            <span>Seguir acta al cambiar de bandeja</span>
-          </label>
-        </div>
-        @if (seguimientoActaMensaje()) {
-          <p class="list-panel__feedback" role="status">{{ seguimientoActaMensaje() }}</p>
-        }
-        @if (listadoEstado() === 'loading') {
-          <div class="state-box">
-            <mat-spinner diameter="36"></mat-spinner>
-            <p>Cargando actas...</p>
-          </div>
-        } @else if (listadoEstado() === 'error') {
-          <div class="state-box">
-            <p>No se pudo cargar el listado.</p>
-            <p>{{ listadoError() }}</p>
-            <button mat-button type="button" (click)="recargarListado()">Reintentar</button>
-          </div>
-        } @else if (actas().length === 0) {
-          <div class="state-box">
-            <p>No hay actas en esta bandeja.</p>
-          </div>
-        } @else if (actasFiltradas().length === 0) {
-          <div class="state-box">
-            <p>No hay actas en esta bandeja que coincidan con la búsqueda.</p>
-          </div>
-        } @else {
-          @for (acta of actasFiltradas(); track acta.id) {
-            <button
-              #actaRow
-              type="button"
-              mat-button
-              class="acta-row"
-              [attr.data-acta-id]="acta.id"
-              [class.selected]="acta.id === actaSeleccionadaId()"
-              (click)="seleccionarActa(acta.id)"
-            >
-              <div class="row-main">
-                <span class="row-numero">{{ acta.numeroActa }}</span>
-                <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>
-              </div>
-              <div class="row-resumen">{{ acta.infractorNombre }}</div>
-              <div class="row-meta">{{ acta.estadoProcesoActual }} Â· {{ acta.situacionAdministrativaActual }}</div>
-              <div class="badges badge-list">
-                @for (badge of badgesDe(acta); track badge.etiqueta) {
-                  <span
-                    [class]="'badge ' + claseBadge(badge)"
-                    [title]="tituloBadge(badge.etiqueta)"
-                  >{{ etiquetaBadgeCompacta(badge.etiqueta) }}</span>
-                }
-              </div>
-            </button>
-          }
-        }
-      </section>
+      <app-demo-acta-list
+        [actas]="actasFiltradas()"
+        [hayActas]="actas().length > 0"
+        [listadoEstado]="listadoEstado()"
+        [listadoError]="listadoError()"
+        [actaSeleccionadaId]="actaSeleccionadaId()"
+        [textoBusquedaActa]="textoBusquedaActa()"
+        [seguirActaAlCambiarBandeja]="seguirActaAlCambiarBandeja()"
+        [seguimientoActaMensaje]="seguimientoActaMensaje()"
+        [subBandejas]="subBandejasActuales()"
+        [subBandejaActiva]="subBandejaSeleccionada()"
+        (textoBusquedaActaChange)="actualizarTextoBusquedaActa($event)"
+        (seguirActaAlCambiarBandejaChange)="cambiarSeguirActaAlCambiarBandeja($event)"
+        (recargarListado)="recargarListado()"
+        (seleccionarActa)="seleccionarActa($event)"
+        (filtroOperativoChange)="cambiarFiltroOperativo($event)"
+        (rowsRenderizadas)="reintentarScrollPendienteAlRenderizarListado()"
+      />
 
-      <aside class="detail-panel" aria-label="Detalle del acta">
+      <aside #actaDetailContainer class="detail-panel" aria-label="Detalle del acta">
         @if (!actaSeleccionadaId()) {
-          <div class="state-box state-box--empty-detail">
-            <mat-icon class="placeholder-icon">description</mat-icon>
-            <p>Seleccioná un acta para ver su detalle operativo.</p>
-          </div>
+          <section class="detail-card bandeja-resumen" aria-labelledby="bandeja-resumen-titulo">
+            <h2 id="bandeja-resumen-titulo" class="bandeja-resumen__title">{{ labelBandejaActiva() }}</h2>
+            <p class="detail-card__text bandeja-resumen__total">
+              {{ formatearCantidadBandeja(cantidadTotalBandejaActiva()) }}
+              {{ cantidadTotalBandejaActiva() === 1 ? 'acta' : 'actas' }} en esta bandeja
+            </p>
+
+            @if (subBandejasActuales().length > 0) {
+              <h3 class="detail-card__title bandeja-resumen__filtros-title">Filtros operativos</h3>
+              <ul class="bandeja-resumen__filtros-list">
+                @for (sub of subBandejasActuales(); track sub.codigo) {
+                  <li>
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      class="bandeja-resumen__filtro"
+                      [class.bandeja-resumen__filtro--active]="subBandejaSeleccionada() === sub.codigo"
+                      (click)="seleccionarFiltroOperativoDesdeResumen(sub.codigo)"
+                    >
+                      <span>{{ sub.label }}</span>
+                      <span class="bandeja-resumen__filtro-count">({{ formatearCantidadBandeja(sub.cantidad) }})</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="detail-card__text">No hay filtros operativos disponibles para esta bandeja.</p>
+            }
+
+            <p class="detail-card__hint bandeja-resumen__hint">
+              Seleccioná un acta para ver su detalle operativo.
+            </p>
+          </section>
         } @else if (detalleEstado() === 'loading') {
           <div class="state-box">
             <mat-spinner diameter="36"></mat-spinner>
@@ -947,6 +962,9 @@
           </section>
           }
 
+
+          <app-demo-acta-notificaciones [notificaciones]="d.notificaciones" />
+
           <section class="detail-card" aria-labelledby="documentos-titulo">
             <h3 id="documentos-titulo" class="detail-card__title">Documentos</h3>
             @if (firmaDocumentoMensaje() || firmaDocumentoError()) {
@@ -1150,5 +1168,7 @@
         }
       </aside>
     </div>
+    }
   </mat-sidenav-content>
 </mat-sidenav-container>
+

@@ -4,6 +4,10 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
+import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
+import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -58,7 +62,6 @@ final class FalloPlazoApelacionSupport {
     private static final String BANDEJA_PENDIENTE_NOTIFICACION = "PENDIENTE_NOTIFICACION";
     private static final String SITUACION_ADMIN_ACTIVA = "ACTIVA";
     private static final String ESTADO_PROCESO_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
-    private static final String CANAL_NOTIFICACION_POSTAL = "POSTAL";
     private static final String ESTADO_NOTIFICACION_ENTREGADA = "ENTREGADA";
 
     private final Map<String, ActaMock> actas;
@@ -278,11 +281,61 @@ final class FalloPlazoApelacionSupport {
         actas.put(actaId, actualizada);
         accionPendientePorActa.remove(actaId);
 
-        agregarNotificacionEntregadaDeFallo(actaId, actual, tipoFallo);
+        String tipoEvento;
+        String descripcionEvento;
+        TipoNotificacion tipoNotificacion;
+        if (TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoFallo)) {
+            cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
+            plazoApelacionAbiertoPorActa.remove(actaId);
+            tipoEvento = "FALLO_ABSOLUTORIO_NOTIFICADO";
+            tipoNotificacion = TipoNotificacion.FALLO_ABSOLUTORIO;
+            descripcionEvento =
+                    "Fallo absolutorio notificado fehacientemente; resultadoFinal ABSUELTO; el acta queda cerrable.";
+        } else {
+            cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENADO);
+            plazoApelacionAbiertoPorActa.put(actaId, Boolean.TRUE);
+            tipoEvento = "FALLO_CONDENATORIO_NOTIFICADO";
+            tipoNotificacion = TipoNotificacion.FALLO_CONDENATORIO;
+            descripcionEvento =
+                    "Fallo condenatorio notificado fehacientemente; resultadoFinal CONDENADO; plazo de apelación abierto.";
+        }
+
+        agregarOActualizarNotificacionEntregadaDeFallo(actaId, actual, tipoNotificacion, tipoEvento);
+
+        registrarEvento(actaId, tipoEvento, BLOQUE_D4, BLOQUE_D5, descripcionEvento);
+
+        return new PrototipoStore.RegistrarNotificacionPositivaResultado(
+                PrototipoStore.RegistrarNotificacionPositivaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual());
+    }
+
+    PrototipoStore.RegistrarNotificacionPositivaResultado registrarNotificacionPositivaDeFalloTipificada(
+            String actaId, TipoNotificacion tipoNotificacion) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.RegistrarNotificacionPositivaResultado(
+                    PrototipoStore.RegistrarNotificacionPositivaEstado.NOT_FOUND, null, null, null);
+        }
+        String bandeja = actual.bandejaActual();
+        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !"EN_NOTIFICACION".equals(bandeja)) {
+            return new PrototipoStore.RegistrarNotificacionPositivaResultado(
+                    PrototipoStore.RegistrarNotificacionPositivaEstado.CONFLICT, null, null, null);
+        }
+        if (tipoNotificacion != TipoNotificacion.FALLO_ABSOLUTORIO
+                && tipoNotificacion != TipoNotificacion.FALLO_CONDENATORIO) {
+            return new PrototipoStore.RegistrarNotificacionPositivaResultado(
+                    PrototipoStore.RegistrarNotificacionPositivaEstado.CONFLICT, null, null, null);
+        }
+
+        ActaMock actualizada = moverAAnalisisPostFallo(actual);
+        actas.put(actaId, actualizada);
+        accionPendientePorActa.remove(actaId);
 
         String tipoEvento;
         String descripcionEvento;
-        if (TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoFallo)) {
+        if (tipoNotificacion == TipoNotificacion.FALLO_ABSOLUTORIO) {
             cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
             plazoApelacionAbiertoPorActa.remove(actaId);
             tipoEvento = "FALLO_ABSOLUTORIO_NOTIFICADO";
@@ -604,23 +657,59 @@ final class FalloPlazoApelacionSupport {
                 BANDEJA_PENDIENTE_ANALISIS);
     }
 
-    private void agregarNotificacionEntregadaDeFallo(
-            String actaId, ActaMock actual, String tipoFallo) {
+    private void agregarOActualizarNotificacionEntregadaDeFallo(
+            String actaId, ActaMock actual, TipoNotificacion tipoNotificacion, String tipoEvento) {
         List<ActaNotificacionMock> notifs =
                 notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String descripcion = descripcionNotificacionFalloEntregada(actual, tipoNotificacion);
+        LocalDateTime fecha = fechaSiguienteEvento(actaId);
+        for (int i = 0; i < notifs.size(); i++) {
+            ActaNotificacionMock n = notifs.get(i);
+            if (n.tipo() == tipoNotificacion && n.resultado() == ResultadoNotificacion.SIN_RESULTADO) {
+                notifs.set(i, n.conResultado(
+                        EstadoNotificacion.ENTREGADA,
+                        ResultadoNotificacion.POSITIVA,
+                        ESTADO_NOTIFICACION_ENTREGADA,
+                        descripcion,
+                        fecha,
+                        tipoEvento));
+                return;
+            }
+        }
         String sufijoActa = sufijoActa(actaId);
         int siguiente = notifs.size() + 1;
         String idNotif = "NOT-" + sufijoActa + "-" + String.format("%02d", siguiente);
-        String etiqueta =
-                TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoFallo)
-                        ? "constancia de entrega postal — notificación de fallo absolutorio (demo)"
-                        : "constancia de entrega postal — notificación de fallo condenatorio (demo)";
         notifs.add(new ActaNotificacionMock(
                 idNotif,
                 actaId,
-                CANAL_NOTIFICACION_POSTAL,
+                "POSTAL",
                 ESTADO_NOTIFICACION_ENTREGADA,
-                actual.infractorNombre() + " — " + etiqueta));
+                descripcion,
+                tipoNotificacion,
+                CanalNotificacion.CORREO_POSTAL,
+                EstadoNotificacion.ENTREGADA,
+                ResultadoNotificacion.POSITIVA,
+                descripcion,
+                tipoEvento,
+                null,
+                null,
+                null,
+                null,
+                fecha,
+                null,
+                actual.infractorNombre(),
+                null,
+                "pendiente constancia de domicilio",
+                null,
+                null));
+    }
+
+    private static String descripcionNotificacionFalloEntregada(ActaMock actual, TipoNotificacion tipoNotificacion) {
+        String etiqueta =
+                tipoNotificacion == TipoNotificacion.FALLO_ABSOLUTORIO
+                        ? "constancia de entrega postal — notificación de fallo absolutorio (demo)"
+                        : "constancia de entrega postal — notificación de fallo condenatorio (demo)";
+        return actual.infractorNombre() + " — " + etiqueta;
     }
 
     private void registrarEvento(
@@ -633,11 +722,7 @@ final class FalloPlazoApelacionSupport {
         String sufijoActa = sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
-        LocalDateTime fechaEvento = eventos.stream()
-                .map(ActaEventoMock::fechaHora)
-                .max(Comparator.naturalOrder())
-                .map(t -> t.plusMinutes(1))
-                .orElse(LocalDateTime.now());
+        LocalDateTime fechaEvento = fechaSiguienteEvento(actaId);
         eventos.add(new ActaEventoMock(
                 idEvento,
                 actaId,
@@ -646,6 +731,15 @@ final class FalloPlazoApelacionSupport {
                 bloqueOrigen,
                 bloqueDestino,
                 descripcion));
+    }
+
+    private LocalDateTime fechaSiguienteEvento(String actaId) {
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        return eventos.stream()
+                .map(ActaEventoMock::fechaHora)
+                .max(Comparator.naturalOrder())
+                .map(t -> t.plusMinutes(1))
+                .orElse(LocalDateTime.now());
     }
 
     private static String sufijoActa(String actaId) {
