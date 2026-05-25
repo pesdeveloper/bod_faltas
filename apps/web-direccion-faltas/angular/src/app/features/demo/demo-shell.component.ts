@@ -601,6 +601,36 @@ export class DemoShellComponent implements OnInit {
     this.cargarListado({ actaIdScrollObjetivo: this.actaSeleccionadaId() });
   }
 
+  mostrarResumenBandeja(): void {
+    if (!this.actaSeleccionadaId()) {
+      return;
+    }
+
+    this.limpiarScrollActaPendiente();
+    this.actaSeleccionadaId.set(null);
+    this.detalle.set(null);
+    this.detalleEstado.set('idle');
+    this.detalleError.set(null);
+    this.limpiarSubRecursosDetalle();
+    this.limpiarFirmaFeedback();
+    this.limpiarCumplimientoMaterialFeedback();
+    this.limpiarResolucionBloqueoCierreFeedback();
+    this.limpiarCierreActaFeedback();
+    this.limpiarNotificacionFeedback();
+    this.limpiarPagoFeedback();
+    this.limpiarPagoCondenaFeedback();
+    this.limpiarApelacionFeedback();
+    this.limpiarResolucionApelacionFeedback();
+    this.limpiarVencimientoPlazoApelacionFeedback();
+    this.limpiarMontoPagoVoluntarioInput();
+    this.limpiarMontoCondenaInput();
+    this.limpiarArchivoFeedback();
+    this.limpiarGestionExternaFeedback();
+    this.limpiarRedaccionFeedback();
+    this.limpiarFalloFeedback();
+    this.limpiarCopiaEstadoFeedback();
+  }
+
   seleccionarActa(id: string): void {
     if (this.actaSeleccionadaId() === id) {
       return;

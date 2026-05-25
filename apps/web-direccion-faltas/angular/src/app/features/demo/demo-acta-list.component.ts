@@ -51,6 +51,7 @@ export class DemoActaListComponent implements AfterViewInit {
   @Output() readonly seguirActaAlCambiarBandejaChange = new EventEmitter<boolean>();
   @Output() readonly recargarListado = new EventEmitter<void>();
   @Output() readonly seleccionarActa = new EventEmitter<string>();
+  @Output() readonly mostrarResumenBandejaChange = new EventEmitter<void>();
   @Output() readonly filtroOperativoChange = new EventEmitter<string | null>();
 
   get valorFiltroOperativo(): string | null {
@@ -71,6 +72,13 @@ export class DemoActaListComponent implements AfterViewInit {
       return;
     }
     this.cambiarFiltroOperativo(null);
+  }
+
+  mostrarResumenBandeja(): void {
+    if (!this.actaSeleccionadaId) {
+      return;
+    }
+    this.mostrarResumenBandejaChange.emit();
   }
   @Output() readonly rowsRenderizadas = new EventEmitter<void>();
 

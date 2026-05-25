@@ -1,111 +1,127 @@
-<section #actasListContainer class="list-panel" aria-label="Listado de actas">
-  <div class="list-panel__tools">
-    @if (subBandejas.length > 0) {
-      <div class="list-filter">
-        <span class="list-filter__label">Filtro operativo</span>
-        <div class="list-filter__row">
-          <select
-            class="list-filter__select"
-            [ngModel]="valorFiltroOperativo"
-            (ngModelChange)="cambiarFiltroOperativo($event)"
-            [attr.aria-label]="'Filtro operativo de sub-bandejas'"
-          >
-            <option [ngValue]="null">Todos</option>
-            @for (sub of subBandejas; track sub.codigo) {
-              <option [ngValue]="sub.codigo">{{ sub.label }} ({{ sub.cantidad }})</option>
-            }
-          </select>
-          <button
-            mat-icon-button
-            type="button"
-            class="list-filter__clear"
-            title="Limpiar filtro operativo"
-            aria-label="Limpiar filtro operativo"
-            [disabled]="filtroOperativoEsTodos"
-            (click)="limpiarFiltroOperativo()"
-          >
-            <mat-icon aria-hidden="true">close</mat-icon>
-          </button>
+﻿<section class="list-panel" aria-label="Listado de actas">
+  <header class="list-panel__header">
+    <div class="list-panel__tools">
+      @if (subBandejas.length > 0) {
+        <div class="list-filter">
+          <span class="list-filter__label">Filtro operativo</span>
+          <div class="list-filter__row">
+            <select
+              class="list-filter__select"
+              [ngModel]="valorFiltroOperativo"
+              (ngModelChange)="cambiarFiltroOperativo($event)"
+              [attr.aria-label]="'Filtro operativo de sub-bandejas'"
+            >
+              <option [ngValue]="null">Todos</option>
+              @for (sub of subBandejas; track sub.codigo) {
+                <option [ngValue]="sub.codigo">{{ sub.label }} ({{ sub.cantidad }})</option>
+              }
+            </select>
+            <button
+              mat-icon-button
+              type="button"
+              class="list-filter__info"
+              title="Ver resumen de bandeja"
+              aria-label="Ver resumen de bandeja"
+              [disabled]="!actaSeleccionadaId"
+              (click)="mostrarResumenBandeja()"
+            >
+              <mat-icon aria-hidden="true">info</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              type="button"
+              class="list-filter__clear"
+              title="Limpiar filtro operativo"
+              aria-label="Limpiar filtro operativo"
+              [disabled]="filtroOperativoEsTodos"
+              (click)="limpiarFiltroOperativo()"
+            >
+              <mat-icon aria-hidden="true">close</mat-icon>
+            </button>
+          </div>
         </div>
+      }
+      <label class="list-search">
+        <span class="list-search__label">Buscar acta</span>
+        <input
+          type="search"
+          class="list-search__input"
+          placeholder="Número de acta..."
+          [ngModel]="textoBusquedaActa"
+          (ngModelChange)="textoBusquedaActaChange.emit($event)"
+          autocomplete="off"
+        />
+      </label>
+      <label class="list-preference">
+        <input
+          type="checkbox"
+          [checked]="seguirActaAlCambiarBandeja"
+          (change)="seguirActaAlCambiarBandejaChange.emit($any($event.target).checked)"
+        />
+        <span>Seguir acta al cambiar de bandeja</span>
+      </label>
+    </div>
+    @if (seguimientoActaMensaje) {
+      <p class="list-panel__feedback" role="status">{{ seguimientoActaMensaje }}</p>
+    }
+  </header>
+
+  <div #actasListContainer class="list-panel__scroll" aria-label="Actas de la bandeja">
+    @if (listadoEstado === 'loading') {
+      <div class="state-box">
+        <mat-spinner diameter="36"></mat-spinner>
+        <p>Cargando actas...</p>
       </div>
+    } @else if (listadoEstado === 'error') {
+      <div class="state-box">
+        <p>No se pudo cargar el listado.</p>
+        <p>{{ listadoError }}</p>
+        <button mat-button type="button" (click)="recargarListado.emit()">Reintentar</button>
+      </div>
+    } @else if (!hayActas) {
+      <div class="state-box">
+        <p>No hay actas en esta bandeja.</p>
+      </div>
+    } @else if (actas.length === 0) {
+      <div class="state-box">
+        <p>No hay actas en esta bandeja que coincidan con la búsqueda.</p>
+      </div>
+    } @else {
+      @for (acta of actas; track acta.id) {
+        <button
+          #actaRow
+          type="button"
+          mat-button
+          class="acta-row"
+          [attr.data-acta-id]="acta.id"
+          [class.selected]="acta.id === actaSeleccionadaId"
+          (click)="seleccionarActa.emit(acta.id)"
+        >
+          <div class="row-main">
+            <span class="row-numero">{{ acta.numeroActa }}</span>
+            <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>
+          </div>
+          <div class="row-resumen">{{ acta.infractorNombre }}</div>
+          <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>
+          @if (acta.accionPrincipal) {
+            <p class="row-accion-principal">{{ acta.accionPrincipal }}</p>
+          }
+          <div class="badges badge-list">
+            @if (acta.chip) {
+              <span class="badge badge-info chip-principal" [title]="acta.chip">{{ acta.chip }}</span>
+            }
+            @for (chip of acta.chipsSecundarios; track chip) {
+              <span class="badge chip-secundario" [title]="chip">{{ etiquetaBadgeCompacta(chip) }}</span>
+            }
+            @for (badge of badgesDe(acta); track badge.etiqueta) {
+              <span
+                [class]="'badge ' + claseBadge(badge)"
+                [title]="tituloBadge(badge.etiqueta)"
+              >{{ etiquetaBadgeCompacta(badge.etiqueta) }}</span>
+            }
+          </div>
+        </button>
+      }
     }
-    <label class="list-search">
-      <span class="list-search__label">Buscar acta</span>
-      <input
-        type="search"
-        class="list-search__input"
-        placeholder="Número de acta..."
-        [ngModel]="textoBusquedaActa"
-        (ngModelChange)="textoBusquedaActaChange.emit($event)"
-        autocomplete="off"
-      />
-    </label>
-    <label class="list-preference">
-      <input
-        type="checkbox"
-        [checked]="seguirActaAlCambiarBandeja"
-        (change)="seguirActaAlCambiarBandejaChange.emit($any($event.target).checked)"
-      />
-      <span>Seguir acta al cambiar de bandeja</span>
-    </label>
   </div>
-  @if (seguimientoActaMensaje) {
-    <p class="list-panel__feedback" role="status">{{ seguimientoActaMensaje }}</p>
-  }
-  @if (listadoEstado === 'loading') {
-    <div class="state-box">
-      <mat-spinner diameter="36"></mat-spinner>
-      <p>Cargando actas...</p>
-    </div>
-  } @else if (listadoEstado === 'error') {
-    <div class="state-box">
-      <p>No se pudo cargar el listado.</p>
-      <p>{{ listadoError }}</p>
-      <button mat-button type="button" (click)="recargarListado.emit()">Reintentar</button>
-    </div>
-  } @else if (!hayActas) {
-    <div class="state-box">
-      <p>No hay actas en esta bandeja.</p>
-    </div>
-  } @else if (actas.length === 0) {
-    <div class="state-box">
-      <p>No hay actas en esta bandeja que coincidan con la búsqueda.</p>
-    </div>
-  } @else {
-    @for (acta of actas; track acta.id) {
-      <button
-        #actaRow
-        type="button"
-        mat-button
-        class="acta-row"
-        [attr.data-acta-id]="acta.id"
-        [class.selected]="acta.id === actaSeleccionadaId"
-        (click)="seleccionarActa.emit(acta.id)"
-      >
-        <div class="row-main">
-          <span class="row-numero">{{ acta.numeroActa }}</span>
-          <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>
-        </div>
-        <div class="row-resumen">{{ acta.infractorNombre }}</div>
-        <div class="row-meta">{{ acta.estadoProcesoActual }} › {{ acta.situacionAdministrativaActual }}</div>
-        @if (acta.accionPrincipal) {
-          <p class="row-accion-principal">{{ acta.accionPrincipal }}</p>
-        }
-        <div class="badges badge-list">
-          @if (acta.chip) {
-            <span class="badge badge-info chip-principal" [title]="acta.chip">{{ acta.chip }}</span>
-          }
-          @for (chip of acta.chipsSecundarios; track chip) {
-            <span class="badge chip-secundario" [title]="chip">{{ etiquetaBadgeCompacta(chip) }}</span>
-          }
-          @for (badge of badgesDe(acta); track badge.etiqueta) {
-            <span
-              [class]="'badge ' + claseBadge(badge)"
-              [title]="tituloBadge(badge.etiqueta)"
-            >{{ etiquetaBadgeCompacta(badge.etiqueta) }}</span>
-          }
-        </div>
-      </button>
-    }
-  }
 </section>
