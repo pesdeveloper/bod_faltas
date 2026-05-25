@@ -37,7 +37,10 @@
 
   <mat-sidenav-content>
     <mat-toolbar color="primary" class="demo-toolbar">
-      <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
+      <div class="toolbar-identity">
+        <span class="toolbar-site-label">Sitio actual: Dirección de Faltas</span>
+        <span class="toolbar-title">{{ tituloBandejaActual() }}</span>
+      </div>
       <div class="demo-actions">
         <button mat-stroked-button type="button" [disabled]="creandoDemo() !== null" (click)="crearDemo('TRANSITO')">
           Crear demo tránsito
@@ -69,7 +72,7 @@
     }
 
     <div class="demo-content">
-      <section class="list-panel" aria-label="Listado de actas">
+      <section #actasListContainer class="list-panel" aria-label="Listado de actas">
         <div class="list-panel__tools">
           <label class="list-search">
             <span class="list-search__label">Buscar acta</span>
@@ -116,9 +119,11 @@
         } @else {
           @for (acta of actasFiltradas(); track acta.id) {
             <button
+              #actaRow
               type="button"
               mat-button
               class="acta-row"
+              [attr.data-acta-id]="acta.id"
               [class.selected]="acta.id === actaSeleccionadaId()"
               (click)="seleccionarActa(acta.id)"
             >
@@ -127,7 +132,7 @@
                 <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>
               </div>
               <div class="row-resumen">{{ acta.infractorNombre }}</div>
-              <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>
+              <div class="row-meta">{{ acta.estadoProcesoActual }} Â· {{ acta.situacionAdministrativaActual }}</div>
               <div class="badges badge-list">
                 @for (badge of badgesDe(acta); track badge.etiqueta) {
                   <span
@@ -166,15 +171,28 @@
                 <h2>{{ d.numeroActa }}</h2>
                 <p class="detail-id">{{ d.id }}</p>
               </div>
-              <button
-                mat-stroked-button
-                type="button"
-                class="detail-copy-state"
-                title="Copia un resumen compacto del acta para validación."
-                (click)="copiarEstadoActaActual()"
-              >
-                Copiar estado
-              </button>
+              <div class="detail-header__actions">
+                @if (codigoQrActaSeleccionada(); as codigoQr) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    class="detail-portal-link"
+                    title="Abre el portal infractor en una nueva pestaña"
+                    (click)="abrirPortalInfractor()"
+                  >
+                    Abrir en portal infractor
+                  </button>
+                }
+                <button
+                  mat-stroked-button
+                  type="button"
+                  class="detail-copy-state"
+                  title="Copia un resumen compacto del acta para validación."
+                  (click)="copiarEstadoActaActual()"
+                >
+                  Copiar estado
+                </button>
+              </div>
             </div>
             @if (copiaEstadoMensaje() || copiaEstadoError()) {
               <div class="detail-copy-state-feedback" role="status" aria-live="polite">
@@ -188,14 +206,14 @@
             }
             <dl class="detail-dl detail-dl--compact">
               <dt>Dependencia</dt>
-              <dd>{{ d.dependenciaDemo ?? '—' }}</dd>
+              <dd>{{ etiquetaDependenciaDemo(d.dependenciaDemo) }}</dd>
               <dt>Bandeja</dt>
               <dd>{{ etiquetaBandeja(d.bandejaActual) }}</dd>
               <dt>Estado proceso</dt>
               <dd>{{ d.estadoProcesoActual }}</dd>
               <dt>Situación administrativa</dt>
               <dd>{{ d.situacionAdministrativaActual }}</dd>
-              @if (d.cerrabilidad?.resultadoFinal) {
+              @if (d.cerrabilidad.resultadoFinal) {
                 <dt>Resultado final</dt>
                 <dd>{{ d.cerrabilidad.resultadoFinal }}</dd>
               }
@@ -248,12 +266,67 @@
               </div>
             } @else {
               <p class="detail-card__hint">
-                @if (d.cerrabilidad?.motivoNoCerrable) {
+                @if (d.cerrabilidad.motivoNoCerrable) {
                   El acta no es cerrable: {{ d.cerrabilidad.motivoNoCerrable }}
                 } @else {
                   El acta no es cerrable.
                 }
               </p>
+            }
+          </section>
+          }
+
+
+          @if (puedeMostrarBloqueCondenaFirme()) {
+          <section class="detail-card" aria-labelledby="condena-firme-titulo">
+            <h3 id="condena-firme-titulo" class="detail-card__title">Condena firme</h3>
+            <p class="detail-card__hint">
+              Pago de condena es un circuito operativo separado del pago voluntario. No genera comprobantes reales.
+            </p>
+            <dl class="detail-dl detail-dl--compact">
+              <dt>Monto de condena</dt>
+              <dd>
+                @if (d.montoCondena !== null && d.montoCondena !== undefined) {
+                  $ {{ d.montoCondena }}
+                } @else {
+                  -
+                }
+              </dd>
+              <dt>Situacion pago condena</dt>
+              <dd>{{ etiquetaSituacionPagoCondena(d.situacionPagoCondena) }}</dd>
+            </dl>
+            @if (pagoCondenaMensaje() || pagoCondenaError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (pagoCondenaMensaje()) {
+                  <p class="demo-feedback-ok">{{ pagoCondenaMensaje() }}</p>
+                }
+                @if (pagoCondenaError()) {
+                  <p class="demo-feedback-error">{{ pagoCondenaError() }}</p>
+                }
+              </div>
+            }
+            @if (hayAccionesPagoCondenaDisponibles()) {
+              <div class="pago-actions">
+                @for (accion of accionesPagoCondenaDisponiblesDesdeBackend(); track accion) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    [color]="accion === 'CONFIRMAR' ? 'primary' : undefined"
+                    [disabled]="!puedeEjecutarAccionPagoCondena(accion)"
+                    (click)="ejecutarAccionPagoCondena(accion)"
+                  >
+                    @if (ejecutandoPagoCondenaAccion() === accion) {
+                      {{ etiquetaAccionPagoCondenaEnCurso(accion) }}
+                    } @else {
+                      {{ etiquetaAccionPagoCondena(accion) }}
+                    }
+                  </button>
+                }
+              </div>
+            } @else if (d.situacionPagoCondena === 'CONFIRMADO') {
+              <p class="detail-card__text">Pago de condena confirmado. El cierre queda disponible si no hay bloqueantes.</p>
+            } @else {
+              <p class="detail-empty">No hay acciones de pago de condena disponibles.</p>
             }
           </section>
           }
@@ -431,7 +504,7 @@
                   mat-stroked-button
                   type="button"
                   color="primary"
-                  [disabled]="notificandoResultado() !== null"
+                  [disabled]="accionNotificacionEnCurso()"
                   (click)="registrarResultadoNotificacion('POSITIVA')"
                 >
                   @if (notificandoResultado() === 'POSITIVA') {
@@ -443,7 +516,7 @@
                 <button
                   mat-stroked-button
                   type="button"
-                  [disabled]="notificandoResultado() !== null"
+                  [disabled]="accionNotificacionEnCurso()"
                   (click)="registrarResultadoNotificacion('NEGATIVA')"
                 >
                   @if (notificandoResultado() === 'NEGATIVA') {
@@ -455,7 +528,7 @@
                 <button
                   mat-stroked-button
                   type="button"
-                  [disabled]="notificandoResultado() !== null"
+                  [disabled]="accionNotificacionEnCurso()"
                   (click)="registrarResultadoNotificacion('VENCIDA')"
                 >
                   @if (notificandoResultado() === 'VENCIDA') {
@@ -465,7 +538,27 @@
                   }
                 </button>
               </div>
+            } @else if (actaPuedeReintentarNotificacionDesdeBackend()) {
+              <p class="detail-card__text">
+                El acta retornó a análisis por una notificación no entregada. Puede reintentarse la notificación para volver al circuito.
+              </p>
+              <div class="notificacion-actions">
+                <button
+                  mat-flat-button
+                  type="button"
+                  color="primary"
+                  [disabled]="accionNotificacionEnCurso()"
+                  (click)="reintentarNotificacion()"
+                >
+                  @if (reintentandoNotificacion()) {
+                    Reintentando...
+                  } @else {
+                    Reintentar notificación
+                  }
+                </button>
+              </div>
             }
+
           </section>
           }
 
@@ -479,7 +572,7 @@
             <dl class="detail-dl detail-dl--compact">
               <dt>Situación de pago</dt>
               <dd>{{ d.situacionPago }}</dd>
-              @if (d.cerrabilidad?.resultadoFinal) {
+              @if (d.cerrabilidad.resultadoFinal) {
                 <dt>Resultado final</dt>
                 <dd>{{ d.cerrabilidad.resultadoFinal }}</dd>
               }
@@ -492,6 +585,10 @@
                   <dt>Comprobante (mock)</dt>
                   <dd>{{ d.pagoInformado.comprobante.nombreArchivo }} ({{ d.pagoInformado.comprobante.id }})</dd>
                 }
+              }
+              @if (d.montoPagoVoluntario !== null && d.montoPagoVoluntario !== undefined) {
+                <dt>Monto fijado</dt>
+                <dd>$ {{ d.montoPagoVoluntario }}</dd>
               }
             </dl>
             @if (pagoMensaje() || pagoError()) {
@@ -519,11 +616,33 @@
             } @else {
               <div class="pago-actions">
                 @for (accion of accionesPagoDisponiblesDesdeBackend(); track accion) {
+                  @if (accionPagoRequiereMonto(accion)) {
+                    <div class="pago-monto-fijar">
+                      <label for="pago-monto-input" class="detail-card__hint">
+                        Monto del acta
+                      </label>
+                      <input
+                        id="pago-monto-input"
+                        class="pago-monto-input"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        inputmode="decimal"
+                        placeholder="Ej: 12345.67"
+                        [value]="montoPagoVoluntarioInput()"
+                        (input)="actualizarMontoPagoVoluntarioInput($any($event.target).value)"
+                        [disabled]="ejecutandoPagoAccion() !== null"
+                      />
+                      <p class="detail-card__hint">
+                        Fija el monto para dejar disponible el pago voluntario.
+                      </p>
+                    </div>
+                  }
                   <button
                     mat-stroked-button
                     type="button"
                     [color]="accion === 'SOLICITAR' || accion === 'CONFIRMAR' ? 'primary' : undefined"
-                    [disabled]="ejecutandoPagoAccion() !== null"
+                    [disabled]="!puedeEjecutarAccionPago(accion)"
                     (click)="ejecutarAccionPago(accion)"
                   >
                     @if (ejecutandoPagoAccion() === accion) {
@@ -537,6 +656,188 @@
             }
           </section>
           }
+
+
+          @if (puedeMostrarFalloResolucionFondo() || falloMensaje() || falloError() || (detalle()?.cerrabilidad?.resultadoFinal !== 'CONDENA_FIRME' && detalle()?.montoCondena !== null && detalle()?.montoCondena !== undefined)) {
+          <section class="detail-card" aria-labelledby="fallo-fondo-titulo">
+            <h3 id="fallo-fondo-titulo" class="detail-card__title">Fallo / resolución de fondo</h3>
+            <p class="detail-card__hint">
+              Dicta el fallo en análisis jurídico. La validación final la realiza el backend;
+              luego la firma y notificación usan las acciones existentes.
+            </p>
+            @if (falloMensaje() || falloError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (falloMensaje()) {
+                  <p class="demo-feedback-ok">{{ falloMensaje() }}</p>
+                }
+                @if (falloError()) {
+                  <p class="demo-feedback-error">{{ falloError() }}</p>
+                }
+              </div>
+            }
+            @if (detalle()?.montoCondena !== null && detalle()?.montoCondena !== undefined) {
+              <p class="detail-card__hint">Monto de condena: $ {{ detalle()?.montoCondena }}</p>
+            }
+            @if (puedeMostrarFalloResolucionFondo()) {
+              <div class="apelacion-actions">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="primary"
+                  [disabled]="dictandoFallo() !== null"
+                  (click)="dictarFalloAbsolutorio()"
+                >
+                  @if (dictandoFallo() === 'ABSOLUTORIO') {
+                    Dictando fallo absolutorio...
+                  } @else {
+                    Dictar fallo absolutorio
+                  }
+                </button>
+                <div class="pago-monto-fijar">
+                  <label for="fallo-monto-condena-input" class="detail-card__hint">
+                    Monto de condena
+                  </label>
+                  <input
+                    id="fallo-monto-condena-input"
+                    class="pago-monto-input"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="Ej: 12345.67"
+                    [value]="montoCondenaInput()"
+                    (input)="actualizarMontoCondenaInput($any($event.target).value)"
+                    [disabled]="dictandoFallo() !== null"
+                  />
+                </div>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="primary"
+                  [disabled]="dictandoFallo() !== null || !montoCondenaInputEsValido()"
+                  (click)="dictarFalloCondenatorio()"
+                >
+                  @if (dictandoFallo() === 'CONDENATORIO') {
+                    Dictando fallo condenatorio...
+                  } @else {
+                    Dictar fallo condenatorio
+                  }
+                </button>
+              </div>
+            }
+          </section>
+          }
+
+          @if (puedeMostrarRegistrarApelacionPresencial() || puedeMostrarRegistrarVencimientoPlazoApelacion() || apelacionMensaje() || apelacionError() || vencimientoPlazoApelacionMensaje() || vencimientoPlazoApelacionError()) {
+          <section class="detail-card" aria-labelledby="apelacion-titulo">
+            <h3 id="apelacion-titulo" class="detail-card__title">Apelación</h3>
+            <p class="detail-card__hint">
+              Registra la presentación presencial de apelación sobre fallo condenatorio.
+              La validacion final la realiza el backend.
+            </p>
+            @if (apelacionMensaje() || apelacionError() || vencimientoPlazoApelacionMensaje() || vencimientoPlazoApelacionError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (apelacionMensaje()) {
+                  <p class="demo-feedback-ok">{{ apelacionMensaje() }}</p>
+                }
+                @if (apelacionError()) {
+                  <p class="demo-feedback-error">{{ apelacionError() }}</p>
+                }
+                @if (vencimientoPlazoApelacionMensaje()) {
+                  <p class="demo-feedback-ok">{{ vencimientoPlazoApelacionMensaje() }}</p>
+                }
+                @if (vencimientoPlazoApelacionError()) {
+                  <p class="demo-feedback-error">{{ vencimientoPlazoApelacionError() }}</p>
+                }
+              </div>
+            }
+            @if (puedeMostrarRegistrarApelacionPresencial() || puedeMostrarRegistrarVencimientoPlazoApelacion()) {
+              <div class="apelacion-actions">
+                @if (puedeMostrarRegistrarApelacionPresencial()) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    [disabled]="registrandoApelacion() || registrandoVencimientoPlazoApelacion()"
+                    (click)="registrarApelacionPresencial()"
+                  >
+                    @if (registrandoApelacion()) {
+                      Registrando apelación...
+                    } @else {
+                      Registrar apelación presencial
+                    }
+                  </button>
+                }
+                @if (puedeMostrarRegistrarVencimientoPlazoApelacion()) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    [disabled]="registrandoVencimientoPlazoApelacion() || registrandoApelacion()"
+                    (click)="registrarVencimientoPlazoApelacion()"
+                  >
+                    @if (registrandoVencimientoPlazoApelacion()) {
+                      Registrando vencimiento...
+                    } @else {
+                      Registrar vencimiento de plazo
+                    }
+                  </button>
+                }
+              </div>
+            }
+          </section>
+          }
+
+          @if (puedeMostrarResolucionApelacion() || resolucionApelacionMensaje() || resolucionApelacionError()) {
+          <section class="detail-card" aria-labelledby="resolucion-apelacion-titulo">
+            <h3 id="resolucion-apelacion-titulo" class="detail-card__title">Resolución de apelación</h3>
+            <p class="detail-card__hint">
+              Resuelve una apelación ya presentada sobre fallo condenatorio.
+              La validacion final la realiza el backend.
+            </p>
+            @if (resolucionApelacionMensaje() || resolucionApelacionError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (resolucionApelacionMensaje()) {
+                  <p class="demo-feedback-ok">{{ resolucionApelacionMensaje() }}</p>
+                }
+                @if (resolucionApelacionError()) {
+                  <p class="demo-feedback-error">{{ resolucionApelacionError() }}</p>
+                }
+              </div>
+            }
+            @if (puedeMostrarResolucionApelacion()) {
+              <div class="apelacion-actions">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="warn"
+                  [disabled]="resolviendoApelacion()"
+                  (click)="rechazarApelacion()"
+                >
+                  @if (resolviendoApelacion()) {
+                    Resolviendo apelación...
+                  } @else {
+                    Rechazar apelación
+                  }
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="primary"
+                  [disabled]="resolviendoApelacion()"
+                  (click)="aceptarApelacionYAbsolver()"
+                >
+                  @if (resolviendoApelacion()) {
+                    Resolviendo apelación...
+                  } @else {
+                    Aceptar apelación y absolver
+                  }
+                </button>
+              </div>
+            }
+          </section>
+          }
+
 
           <section class="detail-card" aria-labelledby="lectura-operativa-titulo">
             <h3 id="lectura-operativa-titulo" class="detail-card__title">Lectura operativa</h3>
@@ -572,7 +873,7 @@
                 }
               </div>
             }
-            @if (d.piezasRequeridas?.length) {
+            @if (d.piezasRequeridas.length) {
               <p class="detail-subtitle detail-subtitle--minor">Piezas requeridas</p>
               <ul class="detail-list">
                 @for (pieza of d.piezasRequeridas; track pieza) {
@@ -582,7 +883,7 @@
             } @else {
               <p class="detail-empty detail-empty--inline">Sin piezas requeridas declaradas.</p>
             }
-            @if (d.piezasGeneradas?.length) {
+            @if (d.piezasGeneradas.length) {
               <p class="detail-subtitle detail-subtitle--minor">Piezas generadas</p>
               <ul class="detail-list">
                 @for (pieza of d.piezasGeneradas; track pieza) {
@@ -800,7 +1101,7 @@
                   </li>
                 }
               </ul>
-              @if (d.cerrabilidad?.motivoNoCerrable) {
+              @if (d.cerrabilidad.motivoNoCerrable) {
                 <p class="detail-card__hint">{{ d.cerrabilidad.motivoNoCerrable }}</p>
               }
             } @else {

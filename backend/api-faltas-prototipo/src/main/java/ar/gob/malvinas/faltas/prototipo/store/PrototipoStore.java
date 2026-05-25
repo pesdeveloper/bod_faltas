@@ -10,6 +10,7 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CrearActaMockDemoRequest;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -233,6 +234,27 @@ public class PrototipoStore {
             String estadoProcesoActual) {
     }
 
+    public enum PagoCondenaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record PagoCondenaResultado(
+            PagoCondenaEstado estado,
+            String actaId,
+            SituacionPagoCondena situacionPagoCondena) {
+    }
+
+    record PagoCondenaPrecondicion(
+            PagoCondenaEstado estado,
+            SituacionPagoCondena situacion) {
+
+        PagoCondenaResultado resultado() {
+            return new PagoCondenaResultado(estado, null, situacion);
+        }
+    }
+
     public enum CrearActaMockDemoEstado {
         OK,
         BAD_REQUEST
@@ -443,7 +465,8 @@ public class PrototipoStore {
             String actaId,
             String bandejaActual,
             String estadoProcesoActual,
-            String accionPendiente) {
+            String accionPendiente,
+            BigDecimal montoPagoVoluntario) {
     }
 
     /**
@@ -461,13 +484,36 @@ public class PrototipoStore {
     }
 
     /**
+     * Situación de pago de condena firme. Es independiente de
+     * {@link SituacionPagoMock}: no usa montoPagoVoluntario ni acciones del
+     * pago voluntario.
+     */
+    public enum SituacionPagoCondena {
+        NO_APLICA,
+        PENDIENTE,
+        INFORMADO,
+        CONFIRMADO,
+        OBSERVADO
+    }
+
+    /**
      * Resultado final relevante para evaluar si el expediente puede quedar en
      * condición de cierre (independiente de la bandeja y de los pendientes).
+     *
+     * <p>Valores que habilitan cerrabilidad operativa: {@link #ABSUELTO} y
+     * {@link #PAGO_CONFIRMADO}. {@link #CONDENADO} marca el caso post fallo
+     * condenatorio notificado mientras el plazo de apelación esté abierto;
+     * {@link #CONDENA_FIRME} marca el caso una vez vencido ese plazo sin
+     * apelación. Ninguno de los dos últimos cierra automáticamente: dejan
+     * el expediente listo para slices futuros (pago post condena firme o
+     * gestión externa).
      */
     public enum ResultadoFinalCierreMock {
         SIN_RESULTADO_FINAL,
         ABSUELTO,
-        PAGO_CONFIRMADO
+        PAGO_CONFIRMADO,
+        CONDENADO,
+        CONDENA_FIRME
     }
 
     /**
@@ -731,6 +777,91 @@ public class PrototipoStore {
         CONFLICT
     }
 
+    /**
+     * Acciones de dictado de fallo (absolutorio o condenatorio) en análisis
+     * jurídico. Comparten estructura de resultado: producen el documento
+     * resolutorio mock en {@link PrototipoConstantes#ESTADO_DOC_PENDIENTE_FIRMA}
+     * y mueven el acta a {@code PENDIENTE_FIRMA}, sin cambiar
+     * {@code resultadoFinal} todavía (el resultado se materializa al
+     * notificarse positivamente el fallo).
+     */
+    public enum DictarFalloEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record DictarFalloResultado(
+            DictarFalloEstado estado,
+            String actaId,
+            String documentoId,
+            String tipoDocumento,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum RegistrarVencimientoPlazoApelacionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarVencimientoPlazoApelacionResultado(
+            RegistrarVencimientoPlazoApelacionEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String resultadoFinal) {
+    }
+
+    /**
+     * Canales válidos para registrar la presentación de apelación/recurso
+     * mientras el plazo está abierto.
+     */
+    public enum CanalPresentacionApelacionMock {
+        PORTAL_INFRACTOR,
+        PRESENCIAL_DIRECCION
+    }
+
+    public enum RegistrarApelacionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarApelacionResultado(
+            RegistrarApelacionEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String resultadoFinal,
+            String canal) {
+    }
+
+    /**
+     * Resultados válidos para resolver mock de apelación/recurso ya
+     * presentado.
+     */
+    public enum ResultadoResolucionApelacionMock {
+        RECHAZADA,
+        ACEPTADA_ABSUELVE
+    }
+
+    public enum ResolverApelacionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ResolverApelacionResultado(
+            ResolverApelacionEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String resultadoFinal,
+            String resultadoResolucion) {
+    }
+
     public record FirmarDocumentoResultado(
             FirmarDocumentoEstado estado,
             String actaId,
@@ -767,6 +898,29 @@ public class PrototipoStore {
      * {@link #situacionPagoPorActa}.
      */
     private final Map<String, PagoInformadoMock> pagoInformadoPorActa = new LinkedHashMap<>();
+    /**
+     * Monto del acta fijado por Dirección de Faltas al habilitar el pago
+     * voluntario (acción administrativa "Pago voluntario"). Si una acta no
+     * está en el mapa, no hay monto fijado: el futuro portal del infractor
+     * deberá mostrar "Solicitar pago voluntario"; con monto fijado y pago
+     * voluntario habilitado deberá mostrar "Pagar".
+     *
+     * <p>Este monto NO genera comprobantes (sin EM, sin RC, sin Cmte/Pref/Nro):
+     * los comprobantes sólo se materializan en el proceso externo de pago,
+     * que se modelará en un slice posterior.
+     */
+    private final Map<String, BigDecimal> montoPagoVoluntarioPorActa = new LinkedHashMap<>();
+    /**
+     * Monto de condena fijado al dictar fallo condenatorio. Distinto de
+     * {@link #montoPagoVoluntarioPorActa}: no genera comprobantes ni
+     * habilita pago post condena en este slice.
+     */
+    private final Map<String, BigDecimal> montoCondenaPorActa = new LinkedHashMap<>();
+    /**
+     * Situación operativa del pago de condena. Solo aplica cuando el
+     * resultado final es CONDENA_FIRME; fuera de ese caso se expone NO_APLICA.
+     */
+    private final Map<String, SituacionPagoCondena> situacionPagoCondenaPorActa = new LinkedHashMap<>();
     /**
      * Mock de datos de tránsito por acta. Solo se puebla donde el escenario
      * demo asigna flags explícitos (p. ej. nacimiento de condiciones
@@ -807,7 +961,7 @@ public class PrototipoStore {
      * tras {@code generarMedidaPreventiva}.
      */
     private final CerrabilidadSupport cerrabilidad =
-            new CerrabilidadSupport(actas, eventosPorActa, documentosPorActa);
+            new CerrabilidadSupport(actas, eventosPorActa, documentosPorActa, situacionPagoCondenaPorActa);
 
     /**
      * Soporte funcional del área piezas/firma: consulta de piezas,
@@ -842,7 +996,12 @@ public class PrototipoStore {
      * pública que delega aquí.
      */
     private final GestionExternaSupport gestionExterna =
-            new GestionExternaSupport(actas, eventosPorActa, accionPendientePorActa);
+            new GestionExternaSupport(
+                    actas,
+                    eventosPorActa,
+                    accionPendientePorActa,
+                    cerrabilidad,
+                    situacionPagoCondenaPorActa);
 
     /**
      * Soporte funcional del área presentaciones / pagos (alcance mínimo):
@@ -856,7 +1015,12 @@ public class PrototipoStore {
      * Extraído del store para mantener la descompresión por área funcional.
      */
     private final PagoVoluntarioSupport pagoVoluntario =
-            new PagoVoluntarioSupport(actas, eventosPorActa, accionPendientePorActa, situacionPagoPorActa);
+            new PagoVoluntarioSupport(
+                    actas,
+                    eventosPorActa,
+                    accionPendientePorActa,
+                    situacionPagoPorActa,
+                    montoPagoVoluntarioPorActa);
 
     /**
      * Soporte funcional del circuito mínimo de pago informado + comprobante +
@@ -865,8 +1029,44 @@ public class PrototipoStore {
     private final PagoInformadoSupport pagoInformado =
             new PagoInformadoSupport(actas, eventosPorActa, accionPendientePorActa, situacionPagoPorActa, pagoInformadoPorActa);
 
+    private final PagoCondenaSupport pagoCondena =
+            new PagoCondenaSupport(
+                    actas,
+                    eventosPorActa,
+                    situacionPagoCondenaPorActa,
+                    montoCondenaPorActa,
+                    cerrabilidad);
+
     private final CierreSupport cierre =
             new CierreSupport(actas, eventosPorActa, accionPendientePorActa, cerrabilidad);
+
+    /**
+     * Circuito jurídico mínimo de fallo y plazo de apelación. Encapsula:
+     * <ul>
+     *   <li>dictado de fallo absolutorio / condenatorio en análisis (genera
+     *       documento {@code FALLO_*} en {@code PENDIENTE_FIRMA} y mueve la
+     *       acta a la bandeja {@code PENDIENTE_FIRMA}; no cambia
+     *       {@code resultadoFinal});</li>
+     *   <li>detección de "fallo pendiente de notificación" para que el
+     *       endpoint genérico {@code registrar-notificacion-positiva} se
+     *       interprete como notificación de fallo cuando corresponda;</li>
+     *   <li>materialización de la notificación de fallo (fija
+     *       {@code resultadoFinal} {@code ABSUELTO} o {@code CONDENADO},
+     *       abre plazo de apelación en el caso condenatorio);</li>
+     *   <li>registro mock del vencimiento del plazo de apelación
+     *       ({@link ResultadoFinalCierreMock#CONDENA_FIRME}).</li>
+     * </ul>
+     * Reglas funcionales explícitas en {@link FalloPlazoApelacionSupport}.
+     */
+    private final FalloPlazoApelacionSupport falloPlazoApelacion =
+            new FalloPlazoApelacionSupport(
+                    actas,
+                    eventosPorActa,
+                    documentosPorActa,
+                    notificacionesPorActa,
+                    accionPendientePorActa,
+                    cerrabilidad,
+                    montoCondenaPorActa);
 
     public Map<String, ActaMock> getActas() {
         return actas;
@@ -907,6 +1107,12 @@ public class PrototipoStore {
         }
     }
 
+
+    /** Bootstrap {@link MockDataFactory}: dependencia visible en detalle demo. */
+    void registrarDependenciaDemo(String actaId, DependenciaActaDemo dependencia) {
+        dependenciaDemoPorActa.put(actaId, dependencia.name());
+    }
+
     public Optional<String> getDependenciaDemo(String actaId) {
         return Optional.ofNullable(dependenciaDemoPorActa.get(actaId));
     }
@@ -940,6 +1146,9 @@ public class PrototipoStore {
         accionPendientePorActa.clear();
         situacionPagoPorActa.clear();
         pagoInformadoPorActa.clear();
+        montoPagoVoluntarioPorActa.clear();
+        montoCondenaPorActa.clear();
+        situacionPagoCondenaPorActa.clear();
         actaTransitoMockPorActa.clear();
         actaBromatologiaMockPorActa.clear();
         dependenciaDemoPorActa.clear();
@@ -948,6 +1157,7 @@ public class PrototipoStore {
         cerrabilidad.clear();
         archivoReingreso.clear();
         gestionExterna.clear();
+        falloPlazoApelacion.clear();
     }
 
     /**
@@ -985,6 +1195,13 @@ public class PrototipoStore {
     public SituacionPagoMock getSituacionPago(String actaId) {
         SituacionPagoMock v = situacionPagoPorActa.get(actaId);
         return v != null ? v : SituacionPagoMock.SIN_PAGO;
+    }
+
+    public SituacionPagoCondena getSituacionPagoCondena(String actaId) {
+        if (cerrabilidad.getResultadoFinal(actaId) != ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return SituacionPagoCondena.NO_APLICA;
+        }
+        return situacionPagoCondenaPorActa.getOrDefault(actaId, SituacionPagoCondena.PENDIENTE);
     }
 
     /**
@@ -1033,6 +1250,10 @@ public class PrototipoStore {
         if (!bandejaPermitePagoVoluntario(acta.estaCerrada(), acta.bandejaActual())) {
             return List.of();
         }
+        ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
+        if (rf != ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
+            return List.of();
+        }
         SituacionPagoMock situacion = getSituacionPago(actaId);
         List<String> acciones = new ArrayList<>();
         switch (situacion) {
@@ -1048,6 +1269,43 @@ public class PrototipoStore {
             }
         }
         return acciones;
+    }
+
+    public List<String> getAccionesPagoCondenaDisponibles(String actaId) {
+        ActaMock acta = actas.get(actaId);
+        if (acta == null || acta.estaCerrada() || !"PENDIENTE_ANALISIS".equals(acta.bandejaActual())) {
+            return List.of();
+        }
+        if (cerrabilidad.getResultadoFinal(actaId) != ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return List.of();
+        }
+        SituacionPagoCondena situacion = getSituacionPagoCondena(actaId);
+        return switch (situacion) {
+            case PENDIENTE, OBSERVADO -> List.of("INFORMAR");
+            case INFORMADO -> List.of("CONFIRMAR", "OBSERVAR");
+            case CONFIRMADO, NO_APLICA -> List.of();
+        };
+    }
+
+    public List<String> getAccionesGestionExternaDisponibles(String actaId) {
+        ActaMock acta = actas.get(actaId);
+        if (acta == null || acta.estaCerrada() || !"PENDIENTE_ANALISIS".equals(acta.bandejaActual())) {
+            return List.of();
+        }
+        SituacionPagoCondena situacion = getSituacionPagoCondena(actaId);
+        boolean condenaFirmeDerivable =
+                cerrabilidad.getResultadoFinal(actaId) == ResultadoFinalCierreMock.CONDENA_FIRME
+                        && (situacion == SituacionPagoCondena.PENDIENTE
+                                || situacion == SituacionPagoCondena.OBSERVADO);
+        boolean marcaDerivable = ACCION_DERIVAR_GESTION_EXTERNA.equals(getAccionPendiente(actaId))
+                || ACCION_REVISION_POST_GESTION_EXTERNA.equals(getAccionPendiente(actaId));
+        if (!condenaFirmeDerivable && !marcaDerivable) {
+            return List.of();
+        }
+        if (getTipoGestionExterna(actaId) != null) {
+            return List.of();
+        }
+        return List.of(TIPO_GESTION_EXTERNA_APREMIO, TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ);
     }
 
     public CerrabilidadActaVista getCerrabilidadActa(String actaId) {
@@ -1311,6 +1569,41 @@ public class PrototipoStore {
     }
 
     /**
+     * Código ciudadano/QR estable derivado del identificador interno del acta.
+     *
+     * <p>Es determinístico para demo, pero se expone con un formato opaco
+     * ({@code QR-<actaId>-DEMO}) que el futuro portal del infractor podrá
+     * usar como dato a imprimir en el QR o entregar al infractor, sin
+     * exponer el {@code actaId} interno como input público. Devuelve
+     * {@code null} si {@code actaId} es nulo o vacío.
+     */
+    public String codigoQrDeActa(String actaId) {
+        if (actaId == null || actaId.isBlank()) {
+            return null;
+        }
+        return "QR-" + actaId + "-DEMO";
+    }
+
+    /**
+     * Búsqueda inversa por código ciudadano/QR: dado el código opaco emitido
+     * por {@link #codigoQrDeActa(String)}, recupera el acta asociada si
+     * existe. El portal del infractor consulta acá usando el código, sin
+     * conocer el {@code actaId} interno. Si el código no coincide con
+     * ningún acta cargada, devuelve {@link Optional#empty()}.
+     */
+    public Optional<ActaMock> findActaPorCodigoQr(String codigoQr) {
+        if (codigoQr == null || codigoQr.isBlank()) {
+            return Optional.empty();
+        }
+        for (ActaMock a : actas.values()) {
+            if (codigoQr.equals(codigoQrDeActa(a.id()))) {
+                return Optional.of(a);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Historial cronológico. Si la acta no tiene eventos cargados, lista vacía.
      */
     public List<ActaEventoMock> listarEventosActaOrdenados(String actaId) {
@@ -1389,10 +1682,20 @@ public class PrototipoStore {
 
     /**
      * Demo: notificación entregada positivamente → bandeja análisis (solo
-     * desde PENDIENTE_NOTIFICACION o EN_NOTIFICACION). Fachada pública; la
-     * lógica vive en {@link NotificacionSupport}.
+     * desde PENDIENTE_NOTIFICACION o EN_NOTIFICACION). Fachada pública.
+     *
+     * <p>Si la acta tiene un documento de fallo firmado pendiente de
+     * notificación (caso post {@code dictar-fallo-*} + firma), la
+     * notificación positiva se interpreta como notificación de fallo y se
+     * delega a {@link FalloPlazoApelacionSupport}. En ese caso se ajusta
+     * {@code resultadoFinal} ({@code ABSUELTO} o {@code CONDENADO}) y, para
+     * fallo condenatorio, se abre el plazo de apelación. En el resto de los
+     * casos delega en {@link NotificacionSupport} (notificación del acta).
      */
     public RegistrarNotificacionPositivaResultado registrarNotificacionPositiva(String actaId) {
+        if (falloPlazoApelacion.hayFalloPendienteDeNotificacion(actaId)) {
+            return falloPlazoApelacion.registrarNotificacionPositivaDeFallo(actaId);
+        }
         return notificacion.registrarNotificacionPositiva(actaId);
     }
 
@@ -1447,7 +1750,10 @@ public class PrototipoStore {
      * {@link ResultadoFinalCierreMock#PAGO_CONFIRMADO} (no cierra el expediente).
      */
     public ConfirmarPagoInformadoResultado confirmarPagoInformado(String actaId) {
-        if (cerrabilidad.getResultadoFinal(actaId) == ResultadoFinalCierreMock.ABSUELTO) {
+        ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
+        if (rf == ResultadoFinalCierreMock.ABSUELTO
+                || rf == ResultadoFinalCierreMock.CONDENADO
+                || rf == ResultadoFinalCierreMock.CONDENA_FIRME) {
             return new ConfirmarPagoInformadoResultado(
                     ConfirmarPagoInformadoEstado.CONFLICT, actaId, getSituacionPago(actaId));
         }
@@ -1463,6 +1769,18 @@ public class PrototipoStore {
      */
     public ObservarPagoInformadoResultado observarPagoInformado(String actaId) {
         return pagoInformado.observarPagoInformado(actaId);
+    }
+
+    public PagoCondenaResultado informarPagoCondena(String actaId) {
+        return pagoCondena.informarPagoCondena(actaId);
+    }
+
+    public PagoCondenaResultado confirmarPagoCondena(String actaId) {
+        return pagoCondena.confirmarPagoCondena(actaId);
+    }
+
+    public PagoCondenaResultado observarPagoCondena(String actaId) {
+        return pagoCondena.observarPagoCondena(actaId);
     }
 
     /**
@@ -1535,8 +1853,25 @@ public class PrototipoStore {
     /**
      * Demo: archivo directo desde análisis → macro-bandeja ARCHIVO. Fachada
      * pública; la lógica vive en {@link ArchivoReingresoSupport}.
+     *
+     * <p>Regla de coexistencia con cierre: si la acta ya cumple condición de
+     * cierre operativo desde análisis (resultado final compatible y sin
+     * pendientes bloqueantes), no debe poder archivarse. Archivo es la salida
+     * para casos que no pueden o no deben cerrarse todavía; si el expediente
+     * está listo para cierre, corresponde cerrar explícitamente y no
+     * archivar. Se rechaza con {@link ArchivarActaEstado#CONFLICT} para que
+     * el controller responda 409 (no se delega al soporte).
      */
     public ArchivarActaResultado archivarActaDesdeAnalisis(String actaId) {
+        if (cerrabilidad.puedeCerrarDesdeAnalisis(actaId)) {
+            return new ArchivarActaResultado(
+                    ArchivarActaEstado.CONFLICT, null, null, null, null);
+        }
+        ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
+        if (rf == ResultadoFinalCierreMock.CONDENADO || rf == ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return new ArchivarActaResultado(
+                    ArchivarActaEstado.CONFLICT, null, null, null, null);
+        }
         return archivoReingreso.archivarActaDesdeAnalisis(actaId);
     }
 
@@ -1593,6 +1928,84 @@ public class PrototipoStore {
     }
 
     /**
+     * Demo: dictar fallo absolutorio desde {@code PENDIENTE_ANALISIS}.
+     * Genera documento mock {@code FALLO_ABSOLUTORIO} en
+     * {@code PENDIENTE_FIRMA} y mueve la acta a la bandeja
+     * {@code PENDIENTE_FIRMA}; no cambia {@code resultadoFinal} todavía. La
+     * firma reutiliza el endpoint existente
+     * {@code firmar-documento/{documentoId}}. Fachada pública; la lógica
+     * vive en {@link FalloPlazoApelacionSupport}.
+     */
+    public DictarFalloResultado dictarFalloAbsolutorio(String actaId) {
+        return falloPlazoApelacion.dictarFalloAbsolutorio(actaId);
+    }
+
+    /**
+     * Demo: dictar fallo condenatorio desde {@code PENDIENTE_ANALISIS}.
+     * Genera documento mock {@code FALLO_CONDENATORIO} en
+     * {@code PENDIENTE_FIRMA} y mueve la acta a la bandeja
+     * {@code PENDIENTE_FIRMA}; no cambia {@code resultadoFinal} todavía. La
+     * apertura del plazo de apelación se materializa recién al notificarse
+     * positivamente el fallo. Fachada pública; la lógica vive en
+     * {@link FalloPlazoApelacionSupport}.
+     */
+    public DictarFalloResultado dictarFalloCondenatorio(String actaId, BigDecimal montoCondena) {
+        return falloPlazoApelacion.dictarFalloCondenatorio(actaId, montoCondena);
+    }
+
+    /**
+     * Demo: registra el vencimiento mock del plazo de apelación (sin
+     * cálculo real de días). Solo aplica si {@code resultadoFinal} es
+     * {@link ResultadoFinalCierreMock#CONDENADO} y el plazo está abierto.
+     * Si vence sin apelación presentada, el resultado pasa a
+     * {@link ResultadoFinalCierreMock#CONDENA_FIRME} y el portal/infractor
+     * deja de habilitar la presentación de apelación. Fachada pública; la
+     * lógica vive en {@link FalloPlazoApelacionSupport}.
+     */
+    public RegistrarVencimientoPlazoApelacionResultado registrarVencimientoPlazoApelacion(String actaId) {
+        return falloPlazoApelacion.registrarVencimientoPlazoApelacion(actaId);
+    }
+
+    /**
+     * Demo: registra la presentación de apelación/recurso mientras el plazo
+     * está abierto. Cierra el plazo, conserva {@code resultadoFinal}
+     * {@link ResultadoFinalCierreMock#CONDENADO} y no resuelve ni eleva el
+     * recurso. Fachada pública; la lógica vive en
+     * {@link FalloPlazoApelacionSupport}.
+     */
+    public RegistrarApelacionResultado registrarApelacion(
+            String actaId, CanalPresentacionApelacionMock canal) {
+        return falloPlazoApelacion.registrarApelacion(actaId, canal);
+    }
+
+    /**
+     * Demo: resuelve mock de apelación/recurso ya presentado con plazo
+     * cerrado y {@code resultadoFinal} {@link ResultadoFinalCierreMock#CONDENADO}.
+     * {@link ResultadoResolucionApelacionMock#RECHAZADA} confirma la condena
+     * ({@link ResultadoFinalCierreMock#CONDENA_FIRME});
+     * {@link ResultadoResolucionApelacionMock#ACEPTADA_ABSUELVE} absuelve
+     * ({@link ResultadoFinalCierreMock#ABSUELTO}). No cierra el acta ni
+     * deriva a gestión externa. Fachada pública; la lógica vive en
+     * {@link FalloPlazoApelacionSupport}.
+     */
+    public ResolverApelacionResultado resolverApelacion(
+            String actaId, ResultadoResolucionApelacionMock resultado) {
+        return falloPlazoApelacion.resolverApelacion(actaId, resultado);
+    }
+
+    /**
+     * Regla de portal/infractor para
+     * {@code GET /api/prototipo/infractor/actas/{codigoQr}}:
+     * la acción de presentar apelación queda habilitada solo si el fallo
+     * condenatorio fue notificado, el plazo está abierto, no hay apelación
+     * presentada y la acta no está en bandeja terminal/externa ni cerrada.
+     * Fachada pública; la lógica vive en {@link FalloPlazoApelacionSupport}.
+     */
+    public boolean puedePresentarApelacion(String actaId) {
+        return falloPlazoApelacion.puedePresentarApelacion(actaId);
+    }
+
+    /**
      * Demo: firma individual de un documento puntual de la acta. La acta
      * sólo abandona la bandeja PENDIENTE_FIRMA cuando todos los documentos
      * firmables pasan a estado FIRMADO; al firmarse el último, pasa a
@@ -1609,14 +2022,35 @@ public class PrototipoStore {
     }
 
     /**
-     * Demo: registra solicitud de pago voluntario en etapa temprana del
-     * expediente (antes de análisis formal) y mueve el caso a
+     * Acción administrativa "Pago voluntario": Dirección de Faltas fija
+     * {@code monto} y deja habilitado el pago voluntario. El acta pasa a
      * {@code PENDIENTE_ANALISIS} con marca operativa
-     * {@link #ACCION_EVALUAR_PAGO_VOLUNTARIO}. Fachada pública; la lógica
+     * {@link #ACCION_EVALUAR_PAGO_VOLUNTARIO}. No genera comprobantes
+     * (sin EM, sin RC, sin Cmte/Pref/Nro). Fachada pública; la lógica
      * vive en {@link PagoVoluntarioSupport}.
      */
-    public RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(String actaId) {
-        return pagoVoluntario.registrarSolicitudPagoVoluntario(actaId);
+    public RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(
+            String actaId, BigDecimal monto) {
+        return pagoVoluntario.registrarSolicitudPagoVoluntario(actaId, monto);
+    }
+
+    /**
+     * Monto fijado por Dirección de Faltas al habilitar el pago voluntario,
+     * o {@code null} si todavía no se fijó. Visible por API en el snapshot
+     * {@code ActaDetalleResponse.montoPagoVoluntario}.
+     */
+    public BigDecimal getMontoPagoVoluntario(String actaId) {
+        return montoPagoVoluntarioPorActa.get(actaId);
+    }
+
+    /**
+     * Monto de condena fijado al dictar fallo condenatorio, o {@code null}
+     * si todavía no se dictó. Visible por API en
+     * {@code ActaDetalleResponse.montoCondena} y
+     * {@code ActaInfractorResponse.montoCondena}.
+     */
+    public BigDecimal getMontoCondena(String actaId) {
+        return montoCondenaPorActa.get(actaId);
     }
 
     /**

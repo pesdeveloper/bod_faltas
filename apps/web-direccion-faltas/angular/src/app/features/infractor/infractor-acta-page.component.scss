@@ -1,0 +1,127 @@
+:host {
+  display: block;
+  min-height: 100%;
+}
+
+.infractor-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f6f8;
+}
+
+.infractor-toolbar {
+  flex: 0 0 auto;
+  min-height: 72px;
+  padding: 0.75rem 1.25rem;
+}
+
+.infractor-toolbar__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.infractor-site-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+.infractor-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.infractor-content {
+  flex: 1 1 auto;
+  padding: 1.25rem;
+  max-width: 720px;
+}
+
+.infractor-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.infractor-dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, 40%) 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.infractor-dl dt {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.infractor-dl dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.infractor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.infractor-info-message {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.78);
+  background: rgba(25, 118, 210, 0.08);
+  border: 1px solid rgba(25, 118, 210, 0.22);
+  border-radius: 8px;
+}
+
+.infractor-info-message--success {
+  color: rgba(27, 94, 32, 0.92);
+  background: rgba(46, 125, 50, 0.08);
+  border-color: rgba(46, 125, 50, 0.24);
+}
+
+.infractor-info-message--error {
+  color: rgba(183, 28, 28, 0.92);
+  background: rgba(211, 47, 47, 0.08);
+  border-color: rgba(211, 47, 47, 0.24);
+}
+
+.infractor-actions-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.58);
+}
+
+.state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 12rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.state-box--error p {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.72);
+}

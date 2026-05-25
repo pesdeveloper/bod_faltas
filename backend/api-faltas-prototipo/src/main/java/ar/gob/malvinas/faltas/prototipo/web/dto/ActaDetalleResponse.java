@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.prototipo.web.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,9 +29,14 @@ public record ActaDetalleResponse(
         String tipoGestionExterna,
         CerrabilidadResponse cerrabilidad,
         List<String> accionesPagoVoluntarioDisponibles,
+        String situacionPagoCondena,
+        List<String> accionesPagoCondenaDisponibles,
+        List<String> accionesGestionExternaDisponibles,
         HechosMaterialesActaResponse hechosMateriales,
         String dependenciaDemo,
         String tipoActaDemo,
         TransitoDatoResponse datosTransito,
-        BromatologiaDatoResponse datosBromatologia) {
+        BromatologiaDatoResponse datosBromatologia,
+        BigDecimal montoPagoVoluntario,
+        BigDecimal montoCondena) {
 }

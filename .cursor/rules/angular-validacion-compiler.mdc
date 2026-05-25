@@ -1,0 +1,66 @@
+---
+description: Validación obligatoria del Angular compiler antes de cerrar slices frontend
+globs:
+  - apps/web-direccion-faltas/angular/**
+alwaysApply: false
+---
+
+# Validación Angular compiler — cierre de slices frontend
+
+## Objetivo
+
+En slices que modifiquen Angular, no alcanza con que compile visualmente o que `ng serve` levante. El slice no está terminado si quedan warnings del Angular compiler en archivos tocados por el slice.
+
+## Validación obligatoria antes de cerrar
+
+Antes de dar por terminado un slice Angular, Cursor debe ejecutar desde la raíz del frontend:
+
+```powershell
+cd S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular
+npm run build
+npm test -- --no-watch --browsers=ChromeHeadless
+```
+
+Si durante `npm start`, `npm run build` o la salida del Angular compiler aparece un warning, Cursor debe corregirlo antes de cerrar el slice cuando el warning pertenece a archivos modificados en ese slice.
+
+## NG8107 — optional chaining innecesario
+
+Mencionar y tratar explícitamente el warning:
+
+**NG8107:** The left side of this optional chain operation does not include 'null' or 'undefined' in its type, therefore the '?.' operator can be replaced with the '.' operator.
+
+### Regla práctica
+
+Si Angular informa que el lado izquierdo de `?.` no incluye `null` ni `undefined`, reemplazar `?.` por `.` en ese acceso.
+
+Ejemplos concretos (casos reales del proyecto):
+
+- `d.cerrabilidad?.resultadoFinal` → `d.cerrabilidad.resultadoFinal`
+- `d.cerrabilidad?.motivoNoCerrable` → `d.cerrabilidad.motivoNoCerrable`
+- `d.piezasRequeridas?.length` → `d.piezasRequeridas.length`
+- `d.piezasGeneradas?.length` → `d.piezasGeneradas.length`
+
+Referencia histórica: `apps/web-direccion-faltas/angular/src/app/features/demo/demo-shell.component.html`.
+
+## Prohibiciones
+
+- No cambiar modelos TypeScript para silenciar NG8107 salvo que haya una razón funcional real.
+- No usar `?.` "por las dudas" en templates si el tipo ya es no-nullable.
+- No dejar warnings conocidos para "más adelante" cuando pertenecen al archivo tocado por el slice.
+
+## Warnings preexistentes no relacionados
+
+Si hay warnings preexistentes no relacionados al slice, Cursor debe informarlos explícitamente en la entrega, pero no mezclarlos con el objetivo del slice salvo autorización explícita del usuario.
+
+## Entrega final obligatoria en slices Angular
+
+Al cerrar cada slice Angular, informar:
+
+1. Resultado de `npm run build`.
+2. Resultado de `npm test -- --no-watch --browsers=ChromeHeadless`.
+3. Si quedaron warnings del Angular compiler.
+4. Si quedaron warnings, justificar si son preexistentes y no relacionados con los archivos tocados.
+
+## Criterio de cierre
+
+No cerrar el slice si quedan warnings del Angular compiler relacionados con archivos modificados en ese slice.

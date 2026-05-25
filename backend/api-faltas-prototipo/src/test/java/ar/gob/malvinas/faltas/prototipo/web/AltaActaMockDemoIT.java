@@ -20,6 +20,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Creación de acta mock mínima en vivo (POST {@code /actas/mock}): tránsito,
  * inspecciones con medida, bromatología con decomiso, numeración ACTA-DEMO.
  */
+// El null-analysis de JDT marca falsos positivos sobre APIs externas de test como MockMvc, MediaType y Hamcrest.
+// Se mantiene la validación funcional intacta.
+@SuppressWarnings("null")
 @SpringBootTest(classes = ApiFaltasPrototipoApplication.class)
 @AutoConfigureMockMvc
 class AltaActaMockDemoIT {

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -62,7 +63,9 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
                         .param("tipo", "SECUESTRO_RODADO"))
                 .andExpect(status().isConflict());
 
-        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\":12345.67}"))
                 .andExpect(status().isOk());
 
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-pago-informado"))

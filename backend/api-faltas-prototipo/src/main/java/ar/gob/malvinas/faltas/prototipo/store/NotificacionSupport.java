@@ -157,10 +157,21 @@ final class NotificacionSupport {
     }
 
     /**
-     * Demo: reintento de notificación desde análisis. Solo aplica si la acta
-     * está en PENDIENTE_ANALISIS y tiene
-     * {@code accionPendiente = REINTENTAR_NOTIFICACION}. Devuelve el caso al
-     * circuito operativo reutilizando la notificación existente.
+     * Demo: reintento de notificación desde análisis. Aplica si la acta
+     * está en PENDIENTE_ANALISIS y tiene como {@code accionPendiente}
+     * cualquiera de estas dos marcas operativas:
+     * <ul>
+     *   <li>{@link PrototipoStore#ACCION_REINTENTAR_NOTIFICACION} —
+     *       caso producido por una notificación no entregada;</li>
+     *   <li>{@link PrototipoStore#ACCION_EVALUAR_NOTIFICACION_VENCIDA} —
+     *       caso producido por vencimiento del plazo de notificación.</li>
+     * </ul>
+     * En ambos casos devuelve el caso al circuito operativo reutilizando la
+     * notificación existente, con transición idéntica
+     * ({@code D5/PENDIENTE_REVISION → D4/PENDIENTE_ENVIO}). El evento
+     * registrado distingue el origen:
+     * {@code NOTIFICACION_REINTENTADA} para no entrega y
+     * {@code NOTIFICACION_REINTENTADA_POST_VENCIMIENTO} para vencimiento.
      */
     PrototipoStore.ReintentarNotificacionResultado reintentarNotificacion(String actaId) {
         ActaMock actual = actas.get(actaId);
@@ -168,11 +179,14 @@ final class NotificacionSupport {
             return new PrototipoStore.ReintentarNotificacionResultado(
                     PrototipoStore.ReintentarNotificacionEstado.NOT_FOUND, null, null, null);
         }
-        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())
-                || !PrototipoStore.ACCION_REINTENTAR_NOTIFICACION.equals(accionPendientePorActa.get(actaId))) {
+        String marcaActual = accionPendientePorActa.get(actaId);
+        boolean marcaHabilita = PrototipoStore.ACCION_REINTENTAR_NOTIFICACION.equals(marcaActual)
+                || PrototipoStore.ACCION_EVALUAR_NOTIFICACION_VENCIDA.equals(marcaActual);
+        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual()) || !marcaHabilita) {
             return new PrototipoStore.ReintentarNotificacionResultado(
                     PrototipoStore.ReintentarNotificacionEstado.CONFLICT, null, null, null);
         }
+        boolean desdeVencimiento = PrototipoStore.ACCION_EVALUAR_NOTIFICACION_VENCIDA.equals(marcaActual);
 
         ActaMock actualizada = moverAPendienteNotificacion(actual);
         actas.put(actaId, actualizada);
@@ -185,13 +199,23 @@ final class NotificacionSupport {
 
         accionPendientePorActa.remove(actaId);
 
-        registrarEvento(
-                actaId,
-                "NOTIFICACION_REINTENTADA",
-                BLOQUE_D5,
-                BLOQUE_D4,
-                "Reintento de notificación solicitado desde análisis; acta vuelve a "
-                        + BANDEJA_PENDIENTE_NOTIFICACION + ".");
+        if (desdeVencimiento) {
+            registrarEvento(
+                    actaId,
+                    "NOTIFICACION_REINTENTADA_POST_VENCIMIENTO",
+                    BLOQUE_D5,
+                    BLOQUE_D4,
+                    "Decisión posterior al vencimiento: se reintenta la notificación; acta vuelve a "
+                            + BANDEJA_PENDIENTE_NOTIFICACION + ".");
+        } else {
+            registrarEvento(
+                    actaId,
+                    "NOTIFICACION_REINTENTADA",
+                    BLOQUE_D5,
+                    BLOQUE_D4,
+                    "Reintento de notificación solicitado desde análisis; acta vuelve a "
+                            + BANDEJA_PENDIENTE_NOTIFICACION + ".");
+        }
 
         return new PrototipoStore.ReintentarNotificacionResultado(
                 PrototipoStore.ReintentarNotificacionEstado.OK,

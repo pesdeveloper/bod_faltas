@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -91,7 +92,9 @@ class ResolucionBloqueoCierreOperativaIT {
     void resolutorioBloqueoCierre_conActaPendienteAnalisis_200() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
         String id = "ACTA-0024";
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\":12345.67}"))
                 .andExpect(status().isOk());
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));

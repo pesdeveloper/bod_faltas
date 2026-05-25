@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, NgZone, OnInit, QueryList, ViewChild, ViewChildren, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,9 +7,10 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { Observable, catchError, finalize, of } from 'rxjs';
+import { Observable, catchError, finalize, of, take } from 'rxjs';
 import { BANDEJAS_DEMO, etiquetaBandeja } from '../../core/constants/bandejas-demo.constants';
 import {
+  AccionPagoCondenaDemo,
   AccionPagoVoluntarioDemo,
   ActaDetalleDemo,
   ActaResumenDemo,
@@ -21,10 +22,12 @@ import {
   EventoActaDemo,
   HechosMaterialesEjeDemo,
   ResultadoNotificacionDemo,
+  SituacionPagoCondenaDemo,
   SituacionPagoDemo,
   TipoCumplimientoMaterialBloqueante,
   TipoGestionExternaDemo,
   TipoResolucionBloqueoCierre,
+  codigoQrDemoParaActa,
 } from '../../core/models/prototipo-faltas.models';
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
 import { PrototipoFaltasApiService } from '../../core/services/prototipo-faltas-api.service';
@@ -37,6 +40,26 @@ const BANDEJA_PENDIENTE_FIRMA = 'PENDIENTE_FIRMA';
 const PIEZA_NULIDAD = 'NULIDAD';
 const PIEZA_MEDIDA_PREVENTIVA = 'MEDIDA_PREVENTIVA';
 const PIEZA_NOTIFICACION_ACTA = 'NOTIFICACION_ACTA';
+const BANDEJA_PENDIENTE_ANALISIS = 'PENDIENTE_ANALISIS';
+const TIPOS_DOCUMENTO_FALLO: ReadonlyArray<string> = ['FALLO_ABSOLUTORIO', 'FALLO_CONDENATORIO'];
+const EVENTOS_FALLO_DICTADO: ReadonlyArray<string> = [
+  'FALLO_ABSOLUTORIO_DICTADO',
+  'FALLO_CONDENATORIO_DICTADO',
+];
+const RESULTADOS_FINAL_SIN_PAGO_VOLUNTARIO: ReadonlyArray<string> = [
+  'ABSUELTO',
+  'CONDENADO',
+  'CONDENA_FIRME',
+  'PAGO_CONFIRMADO',
+];
+
+const ETIQUETA_DEPENDENCIA_DEMO: Record<string, string> = {
+  TRANSITO: 'Tránsito',
+  INSPECCIONES: 'Inspecciones',
+  FISCALIZACION: 'Fiscalización',
+  BROMATOLOGIA: 'Bromatología',
+};
+type TipoFalloDemo = 'ABSOLUTORIO' | 'CONDENATORIO';
 
 const TIPOS_CUMPLIMIENTO_MATERIAL: ReadonlyArray<TipoCumplimientoMaterialBloqueante> = [
   'LEVANTAMIENTO_MEDIDA_PREVENTIVA',
@@ -89,7 +112,7 @@ const ETIQUETA_RESULTADO_NOTIFICACION: Record<ResultadoNotificacionDemo, string>
 };
 
 const ETIQUETA_ACCION_PAGO: Record<AccionPagoVoluntarioDemo, string> = {
-  SOLICITAR: 'Solicitar pago voluntario',
+  SOLICITAR: 'Pago voluntario',
   INFORMAR: 'Informar pago',
   ADJUNTAR_COMPROBANTE: 'Adjuntar comprobante mock',
   CONFIRMAR: 'Confirmar pago',
@@ -97,9 +120,29 @@ const ETIQUETA_ACCION_PAGO: Record<AccionPagoVoluntarioDemo, string> = {
 };
 
 const ETIQUETA_ACCION_PAGO_EN_CURSO: Record<AccionPagoVoluntarioDemo, string> = {
-  SOLICITAR: 'Solicitando...',
+  SOLICITAR: 'Registrando...',
   INFORMAR: 'Informando...',
   ADJUNTAR_COMPROBANTE: 'Adjuntando...',
+  CONFIRMAR: 'Confirmando...',
+  OBSERVAR: 'Observando...',
+};
+
+const ETIQUETA_SITUACION_PAGO_CONDENA: Record<SituacionPagoCondenaDemo, string> = {
+  NO_APLICA: 'No aplica',
+  PENDIENTE: 'Pendiente',
+  INFORMADO: 'Informado',
+  CONFIRMADO: 'Confirmado',
+  OBSERVADO: 'Observado',
+};
+
+const ETIQUETA_ACCION_PAGO_CONDENA: Record<AccionPagoCondenaDemo, string> = {
+  INFORMAR: 'Informar pago de condena',
+  CONFIRMAR: 'Confirmar pago de condena',
+  OBSERVAR: 'Observar pago de condena',
+};
+
+const ETIQUETA_ACCION_PAGO_CONDENA_EN_CURSO: Record<AccionPagoCondenaDemo, string> = {
+  INFORMAR: 'Informando...',
   CONFIRMAR: 'Confirmando...',
   OBSERVAR: 'Observando...',
 };
@@ -113,6 +156,14 @@ const SITUACIONES_PAGO_CONOCIDAS: ReadonlyArray<SituacionPagoDemo> = [
   'OBSERVADO',
 ];
 
+const SITUACIONES_PAGO_CONDENA_CONOCIDAS: ReadonlyArray<SituacionPagoCondenaDemo> = [
+  'NO_APLICA',
+  'PENDIENTE',
+  'INFORMADO',
+  'CONFIRMADO',
+  'OBSERVADO',
+];
+
 // Conjunto de acciones de pago voluntario que conoce la UI. Sirve solo
 // como filtro defensivo sobre la lista enviada por el backend; la
 // disponibilidad real (precondiciones de bandeja + situacionPago) la
@@ -121,6 +172,12 @@ const ACCIONES_PAGO_CONOCIDAS: ReadonlyArray<AccionPagoVoluntarioDemo> = [
   'SOLICITAR',
   'INFORMAR',
   'ADJUNTAR_COMPROBANTE',
+  'CONFIRMAR',
+  'OBSERVAR',
+];
+
+const ACCIONES_PAGO_CONDENA_CONOCIDAS: ReadonlyArray<AccionPagoCondenaDemo> = [
+  'INFORMAR',
   'CONFIRMAR',
   'OBSERVAR',
 ];
@@ -148,7 +205,7 @@ interface AccionConBandejaResponseLike {
 
 const ETIQUETA_BADGE_COMPACTA: Record<string, string> = {
   SIN_PAGO: 'Sin pago',
-  SOLICITADO: 'Pago solicitado',
+  SOLICITADO: 'Pago voluntario habilitado',
   PAGO_INFORMADO: 'Pago informado',
   PENDIENTE_CONFIRMACION: 'Pendiente confirmación',
   CONFIRMADO: 'Pago confirmado',
@@ -191,9 +248,12 @@ const ETIQUETA_DERIVACION_GESTION_EXTERNA_EN_CURSO: Record<TipoGestionExternaDem
   templateUrl: './demo-shell.component.html',
   styleUrl: './demo-shell.component.scss',
 })
-export class DemoShellComponent implements OnInit {
+export class DemoShellComponent implements OnInit, AfterViewInit {
   private readonly api = inject(PrototipoFaltasApiService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly ngZone = inject(NgZone);
+  @ViewChild('actasListContainer') private readonly actasListContainer?: ElementRef<HTMLElement>;
+  @ViewChildren('actaRow') private readonly actaRows?: QueryList<ElementRef<HTMLElement>>;
 
   readonly bandejas = BANDEJAS_DEMO;
   readonly etiquetaBandeja = etiquetaBandeja;
@@ -238,12 +298,37 @@ export class DemoShellComponent implements OnInit {
   readonly cierreActaMensaje = signal<string | null>(null);
 
   readonly notificandoResultado = signal<ResultadoNotificacionDemo | null>(null);
+  readonly reintentandoNotificacion = signal<boolean>(false);
   readonly notificacionError = signal<string | null>(null);
   readonly notificacionMensaje = signal<string | null>(null);
+
+  readonly registrandoApelacion = signal<boolean>(false);
+  readonly apelacionError = signal<string | null>(null);
+  readonly apelacionMensaje = signal<string | null>(null);
+
+  readonly registrandoVencimientoPlazoApelacion = signal<boolean>(false);
+  readonly vencimientoPlazoApelacionError = signal<string | null>(null);
+  readonly vencimientoPlazoApelacionMensaje = signal<string | null>(null);
+
+  readonly resolviendoApelacion = signal<boolean>(false);
+  readonly resolucionApelacionError = signal<string | null>(null);
+  readonly resolucionApelacionMensaje = signal<string | null>(null);
 
   readonly ejecutandoPagoAccion = signal<AccionPagoVoluntarioDemo | null>(null);
   readonly pagoError = signal<string | null>(null);
   readonly pagoMensaje = signal<string | null>(null);
+
+  readonly ejecutandoPagoCondenaAccion = signal<AccionPagoCondenaDemo | null>(null);
+  readonly pagoCondenaError = signal<string | null>(null);
+  readonly pagoCondenaMensaje = signal<string | null>(null);
+
+  // Monto del acta a fijar al ejecutar la accion administrativa
+  // "Pago voluntario" (SOLICITAR). Se mantiene como string en la UI
+  // para no perder precision al renderizar; se parsea a number en el
+  // momento de invocar el backend.
+  readonly montoPagoVoluntarioInput = signal<string>('');
+
+  readonly montoCondenaInput = signal<string>('');
 
   readonly ejecutandoArchivoAccion = signal<'ARCHIVAR' | 'REINGRESAR' | null>(null);
   readonly archivoError = signal<string | null>(null);
@@ -269,16 +354,32 @@ export class DemoShellComponent implements OnInit {
   readonly notificacionActaError = signal<string | null>(null);
   readonly notificacionActaMensaje = signal<string | null>(null);
 
+  readonly dictandoFallo = signal<TipoFalloDemo | null>(null);
+  readonly falloError = signal<string | null>(null);
+  readonly falloMensaje = signal<string | null>(null);
+
   readonly textoBusquedaActa = signal('');
   readonly seguirActaAlCambiarBandeja = signal(false);
   readonly seguimientoActaMensaje = signal<string | null>(null);
 
   readonly copiaEstadoMensaje = signal<string | null>(null);
   readonly copiaEstadoError = signal<string | null>(null);
+  private static readonly SCROLL_VISIBILITY_MARGIN_PX = 8;
+  private static readonly SCROLL_VERIFY_DELAY_MS = 150;
+
+  private pendingScrollToActaId: string | null = null;
+  private pendingScrollRetryDisponible = false;
+  private scrollVerifyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.restaurarPreferenciaSeguirActa();
     this.cargarListado();
+  }
+
+  ngAfterViewInit(): void {
+    this.actaRows?.changes.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.reintentarScrollPendienteAlRenderizarListado();
+    });
   }
 
   actasFiltradas(): ActaResumenDemo[] {
@@ -318,6 +419,7 @@ export class DemoShellComponent implements OnInit {
     if (this.bandejaSeleccionada() === bandeja) {
       return;
     }
+    this.limpiarScrollActaPendiente();
     this.bandejaSeleccionada.set(bandeja);
     this.actaSeleccionadaId.set(null);
     this.detalle.set(null);
@@ -329,9 +431,16 @@ export class DemoShellComponent implements OnInit {
     this.limpiarCierreActaFeedback();
     this.limpiarNotificacionFeedback();
     this.limpiarPagoFeedback();
+    this.limpiarPagoCondenaFeedback();
+    this.limpiarApelacionFeedback();
+    this.limpiarResolucionApelacionFeedback();
+    this.limpiarVencimientoPlazoApelacionFeedback();
+    this.limpiarMontoPagoVoluntarioInput();
+    this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
     this.limpiarRedaccionFeedback();
+    this.limpiarFalloFeedback();
     this.limpiarSeguimientoActaFeedback();
     this.limpiarCopiaEstadoFeedback();
     this.cargarListado();
@@ -341,6 +450,7 @@ export class DemoShellComponent implements OnInit {
     if (this.actaSeleccionadaId() === id) {
       return;
     }
+    this.limpiarScrollActaPendiente();
     this.actaSeleccionadaId.set(id);
     this.limpiarFirmaFeedback();
     this.limpiarCumplimientoMaterialFeedback();
@@ -348,9 +458,16 @@ export class DemoShellComponent implements OnInit {
     this.limpiarCierreActaFeedback();
     this.limpiarNotificacionFeedback();
     this.limpiarPagoFeedback();
+    this.limpiarPagoCondenaFeedback();
+    this.limpiarApelacionFeedback();
+    this.limpiarResolucionApelacionFeedback();
+    this.limpiarVencimientoPlazoApelacionFeedback();
+    this.limpiarMontoPagoVoluntarioInput();
+    this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
     this.limpiarRedaccionFeedback();
+    this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();
     this.cargarDetalle();
   }
@@ -514,10 +631,365 @@ export class DemoShellComponent implements OnInit {
   }
 
   puedeMostrarPagoVoluntario(): boolean {
-    if (!this.detalle()) {
+    const det = this.detalle();
+    if (!det) {
       return false;
     }
-    return !this.bandejaActaSinAccionesInternasOperativas();
+    if (this.bandejaActaSinAccionesInternasOperativas()) {
+      return false;
+    }
+    if (this.actaTieneDocumentoFallo()) {
+      return false;
+    }
+    if (this.actaTieneEventoFalloDictado()) {
+      return false;
+    }
+    const resultado = det.cerrabilidad?.resultadoFinal;
+    if (
+      resultado != null &&
+      resultado.trim() !== '' &&
+      (RESULTADOS_FINAL_SIN_PAGO_VOLUNTARIO as readonly string[]).includes(resultado)
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  etiquetaDependenciaDemo(codigo: string | null | undefined): string {
+    if (codigo == null || codigo.trim() === '') {
+      return '-';
+    }
+    return ETIQUETA_DEPENDENCIA_DEMO[codigo] ?? codigo;
+  }
+
+  actaSinResultadoFinal(): boolean {
+    const resultado = this.detalle()?.cerrabilidad?.resultadoFinal;
+    if (resultado == null || resultado.trim() === '') {
+      return true;
+    }
+    return resultado === 'SIN_RESULTADO_FINAL';
+  }
+
+  actaTieneDocumentoFallo(): boolean {
+    return this.documentos().some((doc) => TIPOS_DOCUMENTO_FALLO.includes(doc.tipoDocumento));
+  }
+
+  actaTieneEventoFalloDictado(): boolean {
+    return this.eventos().some((evento) => EVENTOS_FALLO_DICTADO.includes(evento.tipoEvento));
+  }
+
+  puedeMostrarFalloResolucionFondo(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    if (det.estaCerrada || det.bandejaActual === 'CERRADAS') {
+      return false;
+    }
+    if (this.bandejaActaSinAccionesInternasOperativas()) {
+      return false;
+    }
+    if (det.bandejaActual !== BANDEJA_PENDIENTE_ANALISIS) {
+      return false;
+    }
+    if (!this.actaSinResultadoFinal()) {
+      return false;
+    }
+    if (this.pendientesBloqueantes(det).length > 0) {
+      return false;
+    }
+    if (this.actaTieneDocumentoFallo()) {
+      return false;
+    }
+    if (this.actaTieneEventoFalloDictado()) {
+      return false;
+    }
+    return true;
+  }
+
+  dictarFalloAbsolutorio(): void {
+    this.ejecutarDictarFallo('ABSOLUTORIO');
+  }
+
+  dictarFalloCondenatorio(): void {
+    this.ejecutarDictarFallo('CONDENATORIO');
+  }
+
+  actualizarMontoCondenaInput(valor: string): void {
+    this.montoCondenaInput.set(valor ?? '');
+  }
+
+  montoCondenaParseado(): number | null {
+    const raw = this.montoCondenaInput().trim();
+    if (raw.length === 0) {
+      return null;
+    }
+    const normalizado = raw.replace(',', '.');
+    const valor = Number(normalizado);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      return null;
+    }
+    return valor;
+  }
+
+  montoCondenaInputEsValido(): boolean {
+    return this.montoCondenaParseado() !== null;
+  }
+
+  private ejecutarDictarFallo(tipo: TipoFalloDemo): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || !this.puedeMostrarFalloResolucionFondo() || this.dictandoFallo()) {
+      return;
+    }
+    if (tipo === 'CONDENATORIO' && !this.montoCondenaInputEsValido()) {
+      return;
+    }
+
+    this.limpiarFalloFeedback();
+    this.dictandoFallo.set(tipo);
+
+    const request =
+      tipo === 'ABSOLUTORIO'
+        ? this.api.dictarFalloAbsolutorio(actaId)
+        : this.api.dictarFalloCondenatorio(actaId, {
+            montoCondena: this.montoCondenaParseado() ?? 0,
+          });
+
+    request
+      .pipe(
+        catchError((err) => {
+          this.falloError.set(mensajeErrorDictarFalloHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.dictandoFallo.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        const mensajeOk =
+          tipo === 'ABSOLUTORIO'
+            ? 'Fallo absolutorio dictado correctamente.'
+            : 'Fallo condenatorio dictado correctamente.';
+        this.falloMensaje.set(mensajeOk);
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
+
+  puedeMostrarRegistrarApelacionPresencial(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    if (det.estaCerrada || det.bandejaActual === 'CERRADAS') {
+      return false;
+    }
+    if (this.bandejaActaSinAccionesInternasOperativas()) {
+      return false;
+    }
+    if (det.cerrabilidad?.resultadoFinal !== 'CONDENADO') {
+      return false;
+    }
+    if (this.actaTieneApelacionPresentada()) {
+      return false;
+    }
+    return true;
+  }
+
+  actaTieneApelacionPresentada(): boolean {
+    return this.eventos().some((evento) => evento.tipoEvento === 'APELACION_PRESENTADA');
+  }
+
+  actaTieneFalloCondenatorioNotificado(): boolean {
+    return this.eventos().some((evento) => evento.tipoEvento === 'FALLO_CONDENATORIO_NOTIFICADO');
+  }
+
+  actaTienePlazoApelacionVencido(): boolean {
+    return this.eventos().some((evento) => evento.tipoEvento === 'PLAZO_APELACION_VENCIDO');
+  }
+
+  puedeMostrarRegistrarVencimientoPlazoApelacion(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    if (det.estaCerrada || det.bandejaActual === 'CERRADAS') {
+      return false;
+    }
+    if (this.bandejaActaSinAccionesInternasOperativas()) {
+      return false;
+    }
+    if (det.cerrabilidad?.resultadoFinal !== 'CONDENADO') {
+      return false;
+    }
+    if (!this.actaTieneFalloCondenatorioNotificado()) {
+      return false;
+    }
+    if (this.actaTieneApelacionPresentada()) {
+      return false;
+    }
+    if (this.actaTieneApelacionRechazada()) {
+      return false;
+    }
+    if (this.actaTieneApelacionAceptadaAbsuelve()) {
+      return false;
+    }
+    if (this.actaTienePlazoApelacionVencido()) {
+      return false;
+    }
+    return true;
+  }
+
+  registrarApelacionPresencial(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (!this.puedeMostrarRegistrarApelacionPresencial()) {
+      return;
+    }
+    if (this.registrandoApelacion()) {
+      return;
+    }
+
+    this.limpiarApelacionFeedback();
+    this.limpiarResolucionApelacionFeedback();
+    this.registrandoApelacion.set(true);
+
+    this.api
+      .registrarApelacion(actaId, { canal: 'PRESENCIAL_DIRECCION' })
+      .pipe(
+        catchError((err) => {
+          this.apelacionError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.registrandoApelacion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.apelacionMensaje.set(
+          'Apelacion presencial registrada (' +
+            (respuesta.mensaje ?? 'sin mensaje del backend') +
+            ').',
+        );
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
+  registrarVencimientoPlazoApelacion(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (!this.puedeMostrarRegistrarVencimientoPlazoApelacion()) {
+      return;
+    }
+    if (this.registrandoVencimientoPlazoApelacion() || this.registrandoApelacion()) {
+      return;
+    }
+
+    this.limpiarVencimientoPlazoApelacionFeedback();
+    this.limpiarApelacionFeedback();
+    this.limpiarResolucionApelacionFeedback();
+    this.registrandoVencimientoPlazoApelacion.set(true);
+
+    this.api
+      .registrarVencimientoPlazoApelacion(actaId)
+      .pipe(
+        catchError((err) => {
+          this.vencimientoPlazoApelacionError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.registrandoVencimientoPlazoApelacion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.vencimientoPlazoApelacionMensaje.set(
+          respuesta.mensaje?.trim() || 'Vencimiento de plazo registrado correctamente.',
+        );
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
+  actaTieneApelacionRechazada(): boolean {
+    return this.eventos().some((evento) => evento.tipoEvento === 'APELACION_RECHAZADA');
+  }
+
+  actaTieneApelacionAceptadaAbsuelve(): boolean {
+    return this.eventos().some((evento) => evento.tipoEvento === 'APELACION_ACEPTADA_ABSUELVE');
+  }
+
+  puedeMostrarResolucionApelacion(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    if (det.estaCerrada || det.bandejaActual === 'CERRADAS') {
+      return false;
+    }
+    if (this.bandejaActaSinAccionesInternasOperativas()) {
+      return false;
+    }
+    if (det.cerrabilidad?.resultadoFinal !== 'CONDENADO') {
+      return false;
+    }
+    if (!this.actaTieneApelacionPresentada()) {
+      return false;
+    }
+    if (this.actaTieneApelacionRechazada() || this.actaTieneApelacionAceptadaAbsuelve()) {
+      return false;
+    }
+    return true;
+  }
+
+  rechazarApelacion(): void {
+    this.ejecutarResolucionApelacion('RECHAZADA', 'Apelación rechazada correctamente.');
+  }
+
+  aceptarApelacionYAbsolver(): void {
+    this.ejecutarResolucionApelacion(
+      'ACEPTADA_ABSUELVE',
+      'Apelación aceptada: el acta quedó absuelta.',
+    );
+  }
+
+  private ejecutarResolucionApelacion(
+    resultado: 'RECHAZADA' | 'ACEPTADA_ABSUELVE',
+    mensajeOk: string,
+  ): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || !this.puedeMostrarResolucionApelacion() || this.resolviendoApelacion()) {
+      return;
+    }
+
+    this.limpiarResolucionApelacionFeedback();
+    this.resolviendoApelacion.set(true);
+
+    this.api
+      .resolverApelacion(actaId, { resultado })
+      .pipe(
+        catchError((err) => {
+          this.resolucionApelacionError.set(mensajeErrorResolverApelacionHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.resolviendoApelacion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.resolucionApelacionMensaje.set(mensajeOk);
+        this.refrescarLuegoDeAccion(respuesta);
+      });
   }
 
   puedeMostrarCierreActa(): boolean {
@@ -541,15 +1013,41 @@ export class DemoShellComponent implements OnInit {
     return this.puedeMostrarCierreActa();
   }
 
+  resultadoFinalOcultaArchivoReingresoDemo(): boolean {
+    const resultadoFinal = this.detalle()?.cerrabilidad?.resultadoFinal;
+    return resultadoFinal === 'CONDENADO' || resultadoFinal === 'CONDENA_FIRME';
+  }
+
   puedeMostrarBloqueArchivoReingreso(): boolean {
     const det = this.detalle();
     if (!det) {
       return false;
     }
+    if (this.resultadoFinalOcultaArchivoReingresoDemo()) {
+      return !!(this.archivoMensaje() || this.archivoError());
+    }
     if (this.archivoMensaje() || this.archivoError()) {
       return true;
     }
-    return det.bandejaActual === 'PENDIENTE_ANALISIS' || det.bandejaActual === 'ARCHIVO';
+    if (det.bandejaActual === 'ARCHIVO') {
+      return true;
+    }
+    // PENDIENTE_ANALISIS: solo mostramos el bloque si efectivamente se
+    // puede archivar. Si la acta ya es cerrable, la accion operativa
+    // correcta es cerrar el acta, no archivarla.
+    return this.actaPuedeArchivarseDesdeBackend();
+  }
+
+  puedeMostrarBloqueCondenaFirme(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    return (
+      det.cerrabilidad?.resultadoFinal === 'CONDENA_FIRME' ||
+      this.pagoCondenaMensaje() !== null ||
+      this.pagoCondenaError() !== null
+    );
   }
 
   puedeMostrarBloqueGestionExterna(): boolean {
@@ -572,6 +1070,9 @@ export class DemoShellComponent implements OnInit {
       return false;
     }
     if (this.notificacionMensaje() || this.notificacionError()) {
+      return true;
+    }
+    if (this.actaPuedeReintentarNotificacionDesdeBackend()) {
       return true;
     }
     return this.actaEsNotificableDesdeBackend();
@@ -780,6 +1281,71 @@ export class DemoShellComponent implements OnInit {
     }
   }
 
+  // Disponibilidad del reintento de notificacion. El backend acepta
+  // POST /acciones/reintentar-notificacion cuando el acta esta en
+  // PENDIENTE_ANALISIS y la marca operativa accionPendiente es una de:
+  //   - REINTENTAR_NOTIFICACION (caso producido por notificacion negativa);
+  //   - EVALUAR_NOTIFICACION_VENCIDA (caso producido por vencimiento de plazo).
+  // Angular refleja esa precondicion sin inventar tipos.
+  actaPuedeReintentarNotificacionDesdeBackend(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    if (det.bandejaActual !== 'PENDIENTE_ANALISIS') {
+      return false;
+    }
+    return (
+      det.accionPendiente === 'REINTENTAR_NOTIFICACION' ||
+      det.accionPendiente === 'EVALUAR_NOTIFICACION_VENCIDA'
+    );
+  }
+
+  // Hay alguna accion del area notificacion en curso (registrar resultado
+  // o reintentar). Sirve como disabled compartido para evitar disparar
+  // dos POST simultaneos sobre el mismo bloque.
+  accionNotificacionEnCurso(): boolean {
+    return this.notificandoResultado() !== null || this.reintentandoNotificacion();
+  }
+
+  reintentarNotificacion(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (this.accionNotificacionEnCurso()) {
+      return;
+    }
+    if (!this.actaPuedeReintentarNotificacionDesdeBackend()) {
+      return;
+    }
+
+    this.limpiarNotificacionFeedback();
+    this.reintentandoNotificacion.set(true);
+
+    this.api
+      .reintentarNotificacion(actaId)
+      .pipe(
+        catchError((err) => {
+          this.notificacionError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.reintentandoNotificacion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.notificacionMensaje.set(
+          'Reintento de notificacion solicitado; acta vuelve a ' +
+            respuesta.bandejaActual +
+            '.',
+        );
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
   etiquetaAccionPago(accion: AccionPagoVoluntarioDemo): string {
     return ETIQUETA_ACCION_PAGO[accion];
   }
@@ -828,6 +1394,95 @@ export class DemoShellComponent implements OnInit {
     return (ACCIONES_PAGO_CONOCIDAS as readonly string[]).includes(valor);
   }
 
+  etiquetaSituacionPagoCondena(valor: SituacionPagoCondenaDemo | string | null | undefined): string {
+    if (this.esSituacionPagoCondenaConocida(valor)) {
+      return ETIQUETA_SITUACION_PAGO_CONDENA[valor];
+    }
+    return valor ?? '-';
+  }
+
+  etiquetaAccionPagoCondena(accion: AccionPagoCondenaDemo): string {
+    return ETIQUETA_ACCION_PAGO_CONDENA[accion];
+  }
+
+  etiquetaAccionPagoCondenaEnCurso(accion: AccionPagoCondenaDemo): string {
+    return ETIQUETA_ACCION_PAGO_CONDENA_EN_CURSO[accion];
+  }
+
+  accionesPagoCondenaDisponiblesDesdeBackend(): AccionPagoCondenaDemo[] {
+    const lista = this.detalle()?.accionesPagoCondenaDisponibles ?? [];
+    return lista.filter((accion): accion is AccionPagoCondenaDemo =>
+      this.esAccionPagoCondenaConocida(accion),
+    );
+  }
+
+  accionesGestionExternaDisponiblesDesdeBackend(): TipoGestionExternaDemo[] {
+    const lista = this.detalle()?.accionesGestionExternaDisponibles ?? [];
+    return lista.filter((accion): accion is TipoGestionExternaDemo =>
+      accion === 'APREMIO' || accion === 'JUZGADO_DE_PAZ',
+    );
+  }
+
+  hayAccionesPagoCondenaDisponibles(): boolean {
+    return this.accionesPagoCondenaDisponiblesDesdeBackend().length > 0;
+  }
+
+  puedeEjecutarAccionPagoCondena(accion: AccionPagoCondenaDemo): boolean {
+    return this.ejecutandoPagoCondenaAccion() === null &&
+      this.accionesPagoCondenaDisponiblesDesdeBackend().includes(accion);
+  }
+
+  ejecutarAccionPagoCondena(accion: AccionPagoCondenaDemo): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || !this.puedeEjecutarAccionPagoCondena(accion)) {
+      return;
+    }
+
+    this.limpiarPagoCondenaFeedback();
+    this.ejecutandoPagoCondenaAccion.set(accion);
+
+    this.peticionPagoCondena(actaId, accion)
+      .pipe(
+        catchError((err) => {
+          this.pagoCondenaError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.ejecutandoPagoCondenaAccion.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.pagoCondenaMensaje.set(
+          this.etiquetaAccionPagoCondena(accion) + ' OK (' + respuesta.mensaje + ').',
+        );
+        this.refrescarLuegoDeAccion({ actaId: respuesta.actaId });
+      });
+  }
+
+  private esSituacionPagoCondenaConocida(
+    valor: string | null | undefined,
+  ): valor is SituacionPagoCondenaDemo {
+    return valor != null &&
+      (SITUACIONES_PAGO_CONDENA_CONOCIDAS as readonly string[]).includes(valor);
+  }
+
+  private esAccionPagoCondenaConocida(valor: string): valor is AccionPagoCondenaDemo {
+    return (ACCIONES_PAGO_CONDENA_CONOCIDAS as readonly string[]).includes(valor);
+  }
+
+  private peticionPagoCondena(actaId: string, accion: AccionPagoCondenaDemo) {
+    switch (accion) {
+      case 'INFORMAR':
+        return this.api.informarPagoCondena(actaId);
+      case 'CONFIRMAR':
+        return this.api.confirmarPagoCondena(actaId);
+      case 'OBSERVAR':
+        return this.api.observarPagoCondena(actaId);
+    }
+  }
+
   ejecutarAccionPago(accion: AccionPagoVoluntarioDemo): void {
     const actaId = this.actaSeleccionadaId();
     if (!actaId) {
@@ -837,6 +1492,10 @@ export class DemoShellComponent implements OnInit {
       return;
     }
     if (this.ejecutandoPagoAccion() !== null) {
+      return;
+    }
+    if (this.accionPagoRequiereMonto(accion) && !this.montoPagoVoluntarioInputEsValido()) {
+      // Boton no debe llegar aca: gating extra defensivo.
       return;
     }
 
@@ -864,8 +1523,56 @@ export class DemoShellComponent implements OnInit {
             (respuesta.mensaje ?? 'sin mensaje del backend') +
             ').',
         );
+        if (this.accionPagoRequiereMonto(accion)) {
+          this.limpiarMontoPagoVoluntarioInput();
+        }
         this.refrescarLuegoDeAccion(respuesta);
       });
+  }
+
+  actualizarMontoPagoVoluntarioInput(valor: string): void {
+    this.montoPagoVoluntarioInput.set(valor ?? '');
+  }
+
+  /**
+   * Parsea el input de monto del acta. Devuelve null si esta vacio o no
+   * representa un numero valido y estrictamente mayor a cero. El backend
+   * vuelve a validar; este parseo solo habilita el boton "Pago voluntario".
+   */
+  montoPagoVoluntarioParseado(): number | null {
+    const raw = this.montoPagoVoluntarioInput().trim();
+    if (raw.length === 0) {
+      return null;
+    }
+    const normalizado = raw.replace(',', '.');
+    const valor = Number(normalizado);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      return null;
+    }
+    return valor;
+  }
+
+  montoPagoVoluntarioInputEsValido(): boolean {
+    return this.montoPagoVoluntarioParseado() !== null;
+  }
+
+  /** True cuando hay que pedir monto al ejecutar la accion. */
+  accionPagoRequiereMonto(accion: AccionPagoVoluntarioDemo): boolean {
+    return accion === 'SOLICITAR';
+  }
+
+  /**
+   * Habilitacion del boton por accion: SOLICITAR exige monto valido. Las
+   * demas acciones solo dependen de que no haya otra accion en curso.
+   */
+  puedeEjecutarAccionPago(accion: AccionPagoVoluntarioDemo): boolean {
+    if (this.ejecutandoPagoAccion() !== null) {
+      return false;
+    }
+    if (this.accionPagoRequiereMonto(accion)) {
+      return this.montoPagoVoluntarioInputEsValido();
+    }
+    return true;
   }
 
   private peticionPago(
@@ -873,8 +1580,11 @@ export class DemoShellComponent implements OnInit {
     accion: AccionPagoVoluntarioDemo,
   ): Observable<AccionConBandejaResponseLike & { mensaje?: string } | null> {
     switch (accion) {
-      case 'SOLICITAR':
-        return this.api.registrarSolicitudPagoVoluntario(actaId);
+      case 'SOLICITAR': {
+        // Direccion fija el monto del acta; el backend valida > 0.
+        const monto = this.montoPagoVoluntarioParseado();
+        return this.api.registrarSolicitudPagoVoluntario(actaId, { monto: monto ?? 0 });
+      }
       case 'INFORMAR':
         return this.api.registrarPagoInformado(actaId);
       case 'ADJUNTAR_COMPROBANTE':
@@ -890,10 +1600,16 @@ export class DemoShellComponent implements OnInit {
   }
 
   // Disponibilidad de archivo segun bandeja real informada por el backend.
-  // El backend solo acepta archivar desde PENDIENTE_ANALISIS; reflejamos
-  // exactamente esa precondicion sin inferencias adicionales.
+  // El backend acepta archivar solo desde PENDIENTE_ANALISIS y rechaza con
+  // 409 si la acta ya cumple condicion de cierre operativo. Reflejamos
+  // esa precondicion: si cerrabilidad.cerrable === true, la accion
+  // operativa correcta es cerrar el acta, no archivarla.
   actaPuedeArchivarseDesdeBackend(): boolean {
-    return this.detalle()?.bandejaActual === 'PENDIENTE_ANALISIS';
+    const det = this.detalle();
+    if (det?.bandejaActual !== 'PENDIENTE_ANALISIS') {
+      return false;
+    }
+    return det.cerrabilidad?.cerrable !== true;
   }
 
   // Disponibilidad de reingreso desde archivo. Backend exige bandeja
@@ -989,10 +1705,7 @@ export class DemoShellComponent implements OnInit {
     if (det.bandejaActual !== 'PENDIENTE_ANALISIS') {
       return false;
     }
-    return (
-      det.accionPendiente === 'DERIVAR_GESTION_EXTERNA' ||
-      det.accionPendiente === 'REVISION_POST_GESTION_EXTERNA'
-    );
+    return this.accionesGestionExternaDisponiblesDesdeBackend().length > 0;
   }
 
   // Disponibilidad de retorno desde gestion externa. Backend exige bandeja
@@ -1314,6 +2027,23 @@ export class DemoShellComponent implements OnInit {
   }
 
 
+
+  codigoQrActaSeleccionada(): string | null {
+    const actaId = this.actaSeleccionadaId()?.trim();
+    if (!actaId) {
+      return null;
+    }
+    return codigoQrDemoParaActa(actaId);
+  }
+
+  abrirPortalInfractor(): void {
+    const codigoQr = this.codigoQrActaSeleccionada();
+    if (!codigoQr) {
+      return;
+    }
+    const url = `/infractor/actas/${encodeURIComponent(codigoQr)}`;
+    window.open(url, '_blank', 'noopener');
+  }
   async copiarEstadoActaActual(): Promise<void> {
     if (!this.detalle()) {
       return;
@@ -1348,6 +2078,9 @@ export class DemoShellComponent implements OnInit {
       estadoProceso: det.estadoProcesoActual,
       situacionAdministrativa: det.situacionAdministrativaActual,
       situacionPago: det.situacionPago ?? null,
+      montoPagoVoluntario: det.montoPagoVoluntario ?? null,
+      montoCondena: det.montoCondena ?? null,
+      situacionPagoCondena: det.situacionPagoCondena ?? null,
       resultadoFinal: cerrabilidad?.resultadoFinal ?? null,
       cerrable: cerrabilidad?.cerrable ?? false,
       motivoCerrabilidad: cerrabilidad?.motivoNoCerrable ?? null,
@@ -1383,17 +2116,26 @@ export class DemoShellComponent implements OnInit {
 
     return {
       pagoVoluntario: this.hayAccionesPagoDisponibles(),
+      pagoCondena: this.accionesPagoCondenaDisponiblesDesdeBackend().includes('INFORMAR'),
+      confirmarPagoCondena: this.accionesPagoCondenaDisponiblesDesdeBackend().includes('CONFIRMAR'),
+      observarPagoCondena: this.accionesPagoCondenaDisponiblesDesdeBackend().includes('OBSERVAR'),
       cierre: this.puedeMostrarCierreActa(),
       archivoReingreso:
-        this.actaPuedeArchivarseDesdeBackend() || this.actaPuedeReingresarDesdeBackend(),
+        !this.resultadoFinalOcultaArchivoReingresoDemo() &&
+        (this.actaPuedeArchivarseDesdeBackend() || this.actaPuedeReingresarDesdeBackend()),
       gestionExterna:
         this.actaPuedeDerivarseAGestionExternaDesdeBackend() ||
         this.actaPuedeRetornarDesdeGestionExternaDesdeBackend(),
       notificacion: this.actaEsNotificableDesdeBackend(),
+      apelacionPresencial: this.puedeMostrarRegistrarApelacionPresencial(),
+      vencimientoPlazoApelacion: this.puedeMostrarRegistrarVencimientoPlazoApelacion(),
+      resolucionApelacion: this.puedeMostrarResolucionApelacion(),
+      reintentarNotificacion: this.actaPuedeReintentarNotificacionDesdeBackend(),
       cumplimientoMaterial: tieneCumplimientoMaterialAccionable,
       resolucionBloqueante: tieneResolucionBloqueoCierreAccionable,
       redaccion: this.hayAccionesRedaccionDisponiblesDesdeBackend(),
       firmaPendiente: this.documentos().some((doc) => this.documentoEsFirmable(doc)),
+      falloFondo: this.puedeMostrarFalloResolucionFondo(),
     };
   }
 
@@ -1435,12 +2177,16 @@ export class DemoShellComponent implements OnInit {
       this.resolucionBloqueoCierreMensaje(),
       this.cierreActaMensaje(),
       this.notificacionMensaje(),
+      this.apelacionMensaje(),
+      this.vencimientoPlazoApelacionMensaje(),
+      this.resolucionApelacionMensaje(),
       this.pagoMensaje(),
       this.archivoMensaje(),
       this.gestionExternaMensaje(),
       this.nulidadMensaje(),
       this.medidaPreventivaMensaje(),
       this.notificacionActaMensaje(),
+      this.falloMensaje(),
     ].filter((valor): valor is string => !!valor?.trim());
 
     const errores = [
@@ -1449,12 +2195,16 @@ export class DemoShellComponent implements OnInit {
       this.resolucionBloqueoCierreError(),
       this.cierreActaError(),
       this.notificacionError(),
+      this.apelacionError(),
+      this.vencimientoPlazoApelacionError(),
+      this.resolucionApelacionError(),
       this.pagoError(),
       this.archivoError(),
       this.gestionExternaError(),
       this.nulidadError(),
       this.medidaPreventivaError(),
       this.notificacionActaError(),
+      this.falloError(),
     ].filter((valor): valor is string => !!valor?.trim());
 
     return {
@@ -1502,9 +2252,37 @@ export class DemoShellComponent implements OnInit {
     this.notificacionMensaje.set(null);
   }
 
+  private limpiarApelacionFeedback(): void {
+    this.apelacionError.set(null);
+    this.apelacionMensaje.set(null);
+  }
+
+  private limpiarVencimientoPlazoApelacionFeedback(): void {
+    this.vencimientoPlazoApelacionError.set(null);
+    this.vencimientoPlazoApelacionMensaje.set(null);
+  }
+
+  private limpiarResolucionApelacionFeedback(): void {
+    this.resolucionApelacionError.set(null);
+    this.resolucionApelacionMensaje.set(null);
+  }
+
   private limpiarPagoFeedback(): void {
     this.pagoError.set(null);
     this.pagoMensaje.set(null);
+  }
+
+  private limpiarPagoCondenaFeedback(): void {
+    this.pagoCondenaError.set(null);
+    this.pagoCondenaMensaje.set(null);
+  }
+
+  private limpiarMontoPagoVoluntarioInput(): void {
+    this.montoPagoVoluntarioInput.set('');
+  }
+
+  private limpiarMontoCondenaInput(): void {
+    this.montoCondenaInput.set('');
   }
 
   private limpiarArchivoFeedback(): void {
@@ -1530,6 +2308,11 @@ export class DemoShellComponent implements OnInit {
   private limpiarNotificacionActaRedaccionFeedback(): void {
     this.notificacionActaError.set(null);
     this.notificacionActaMensaje.set(null);
+  }
+
+  private limpiarFalloFeedback(): void {
+    this.falloError.set(null);
+    this.falloMensaje.set(null);
   }
 
   private limpiarRedaccionFeedback(): void {
@@ -1581,7 +2364,7 @@ export class DemoShellComponent implements OnInit {
       return;
     }
 
-    this.refrescarActaSeleccionadaDesdeBackend();
+    this.refrescarActaSeleccionadaDesdeBackend(actaId ?? null);
   }
 
   private cambiarBandejaYSeguirActa(bandeja: BandejaCodigo, actaId: string | null): void {
@@ -1593,15 +2376,22 @@ export class DemoShellComponent implements OnInit {
     this.limpiarCierreActaFeedback();
     this.limpiarNotificacionFeedback();
     this.limpiarPagoFeedback();
+    this.limpiarPagoCondenaFeedback();
+    this.limpiarApelacionFeedback();
+    this.limpiarVencimientoPlazoApelacionFeedback();
+    this.limpiarResolucionApelacionFeedback();
+    this.limpiarMontoPagoVoluntarioInput();
+    this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
     this.limpiarRedaccionFeedback();
+    this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();
 
     if (actaId) {
       this.actaSeleccionadaId.set(actaId);
       this.cargarDetalle();
-      this.cargarListadoConSeguimientoActa(actaId);
+      this.cargarListado({ actaIdScrollObjetivo: actaId, evaluarSeguimientoBandeja: true });
       return;
     }
 
@@ -1612,44 +2402,167 @@ export class DemoShellComponent implements OnInit {
     this.cargarListado();
   }
 
-  private cargarListadoConSeguimientoActa(actaIdEsperado: string): void {
-    this.listadoEstado.set('loading');
-    this.listadoError.set(null);
-    this.api
-      .listarActasPorBandeja(this.bandejaSeleccionada())
-      .pipe(
-        catchError((err) => {
-          this.listadoError.set(mensajeErrorHttp(err));
-          this.listadoEstado.set('error');
-          return of([] as ActaResumenDemo[]);
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((items) => {
-        this.actas.set(items);
-        if (this.listadoEstado() !== 'error') {
-          this.listadoEstado.set('ready');
-        }
-        const encontrada = items.some((acta) => acta.id === actaIdEsperado);
-        if (!encontrada) {
-          this.seguimientoActaMensaje.set(
-            'El acta sigue seleccionada, pero no aparece en el listado de la bandeja ' +
-              etiquetaBandeja(this.bandejaSeleccionada()) +
-              '.',
-          );
+  private programarScrollActaSeleccionada(actaId: string): void {
+    this.pendingScrollToActaId = actaId;
+    this.pendingScrollRetryDisponible = true;
+    this.programarIntentoScrollActaPendiente();
+  }
+
+  private programarIntentoScrollActaPendiente(): void {
+    this.ngZone.onStable
+      .pipe(take(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const actaId = this.pendingScrollToActaId;
+        if (actaId) {
+          this.scrollSelectedActaIntoView(actaId, 0);
         }
       });
   }
-  private refrescarActaSeleccionadaDesdeBackend(): void {
+
+  private reintentarScrollPendienteAlRenderizarListado(): void {
+    if (!this.pendingScrollToActaId) {
+      return;
+    }
+    // Mantener retry activo: el listado puede re-renderizarse dos veces
+    // (spinner loading y filas finales) durante un refresh automático.
+    this.pendingScrollRetryDisponible = true;
+    this.programarIntentoScrollActaPendiente();
+  }
+
+  private scrollSelectedActaIntoView(actaId: string, attempt: number): void {
+    if (this.pendingScrollToActaId !== actaId) {
+      return;
+    }
+
+    const container = this.actasListContainer?.nativeElement;
+    if (!container) {
+      if (attempt === 0) {
+        setTimeout(() => this.scrollSelectedActaIntoView(actaId, 0));
+      }
+      return;
+    }
+
+    const row =
+      container.querySelector<HTMLElement>(`[data-acta-id="${CSS.escape(actaId)}"]`) ??
+      this.actaRows?.find((item) => item.nativeElement.dataset['actaId'] === actaId)?.nativeElement ??
+      null;
+
+    if (!row) {
+      if (this.pendingScrollRetryDisponible && attempt === 0) {
+        return;
+      }
+      if (attempt === 0) {
+        setTimeout(() => this.scrollSelectedActaIntoView(actaId, 0));
+        return;
+      }
+      this.limpiarScrollActaPendiente();
+      return;
+    }
+
+    if (this.esFilaVisibleEnContenedor(row, container)) {
+      this.limpiarScrollActaPendiente();
+      return;
+    }
+
+    this.desplazarFilaEnContenedor(row, container, attempt === 0 ? 'smooth' : 'auto');
+    this.programarVerificacionScrollActa(actaId, attempt);
+  }
+
+  private esFilaVisibleEnContenedor(
+    row: HTMLElement,
+    container: HTMLElement,
+    margin = DemoShellComponent.SCROLL_VISIBILITY_MARGIN_PX,
+  ): boolean {
+    const containerRect = container.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    return (
+      rowRect.top >= containerRect.top + margin &&
+      rowRect.bottom <= containerRect.bottom - margin
+    );
+  }
+
+  private desplazarFilaEnContenedor(
+    row: HTMLElement,
+    container: HTMLElement,
+    behavior: ScrollBehavior,
+  ): void {
+    const containerRect = container.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const offsetObjetivo = Math.max(24, container.clientHeight / 4);
+    const delta = rowRect.top - containerRect.top;
+    const top = container.scrollTop + delta - offsetObjetivo;
+    container.scrollTo({ top: Math.max(0, top), behavior });
+  }
+
+  private programarVerificacionScrollActa(actaId: string, attempt: number): void {
+    this.cancelarVerificacionScrollActa();
+    this.scrollVerifyTimeoutId = setTimeout(() => {
+      this.scrollVerifyTimeoutId = null;
+      if (this.pendingScrollToActaId !== actaId) {
+        return;
+      }
+
+      const container = this.actasListContainer?.nativeElement;
+      const row = container?.querySelector<HTMLElement>(`[data-acta-id="${CSS.escape(actaId)}"]`) ?? null;
+      if (!container || !row) {
+        if (this.listadoEstado() === 'loading') {
+          this.pendingScrollRetryDisponible = true;
+          this.programarIntentoScrollActaPendiente();
+          return;
+        }
+        this.limpiarScrollActaPendiente();
+        return;
+      }
+
+      if (this.esFilaVisibleEnContenedor(row, container)) {
+        this.limpiarScrollActaPendiente();
+        return;
+      }
+
+      if (attempt === 0) {
+        this.scrollSelectedActaIntoView(actaId, 1);
+        return;
+      }
+
+      this.limpiarScrollActaPendiente();
+    }, DemoShellComponent.SCROLL_VERIFY_DELAY_MS);
+  }
+
+  private cancelarVerificacionScrollActa(): void {
+    if (this.scrollVerifyTimeoutId !== null) {
+      clearTimeout(this.scrollVerifyTimeoutId);
+      this.scrollVerifyTimeoutId = null;
+    }
+  }
+
+  private limpiarScrollActaPendiente(): void {
+    this.cancelarVerificacionScrollActa();
+    this.pendingScrollToActaId = null;
+    this.pendingScrollRetryDisponible = false;
+  }
+  private refrescarActaSeleccionadaDesdeBackend(actaIdObjetivo: string | null): void {
     this.cargarDetalle();
-    this.cargarListado();
+    this.cargarListado({ actaIdScrollObjetivo: actaIdObjetivo });
   }
 
   private cargarListadoTrasAlta(actaId: string): void {
+    this.actaSeleccionadaId.set(actaId);
+    this.cargarListado({ bandeja: 'ACTAS_EN_ENRIQUECIMIENTO', actaIdScrollObjetivo: actaId });
+  }
+
+  private cargarListado(opciones?: {
+    actaIdScrollObjetivo?: string | null;
+    evaluarSeguimientoBandeja?: boolean;
+    bandeja?: BandejaCodigo;
+  }): void {
+    const actaIdScrollObjetivo = opciones?.actaIdScrollObjetivo ?? null;
+    const evaluarSeguimientoBandeja = opciones?.evaluarSeguimientoBandeja ?? false;
+    const bandeja = opciones?.bandeja ?? this.bandejaSeleccionada();
+
     this.listadoEstado.set('loading');
     this.listadoError.set(null);
     this.api
-      .listarActasPorBandeja('ACTAS_EN_ENRIQUECIMIENTO')
+      .listarActasPorBandeja(bandeja)
       .pipe(
         catchError((err) => {
           this.listadoError.set(mensajeErrorHttp(err));
@@ -1663,27 +2576,25 @@ export class DemoShellComponent implements OnInit {
         if (this.listadoEstado() !== 'error') {
           this.listadoEstado.set('ready');
         }
-        this.actaSeleccionadaId.set(actaId);
-      });
-  }
 
-  private cargarListado(): void {
-    this.listadoEstado.set('loading');
-    this.listadoError.set(null);
-    this.api
-      .listarActasPorBandeja(this.bandejaSeleccionada())
-      .pipe(
-        catchError((err) => {
-          this.listadoError.set(mensajeErrorHttp(err));
-          this.listadoEstado.set('error');
-          return of([] as ActaResumenDemo[]);
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((items) => {
-        this.actas.set(items);
-        if (this.listadoEstado() !== 'error') {
-          this.listadoEstado.set('ready');
+        if (!actaIdScrollObjetivo) {
+          return;
+        }
+
+        if (evaluarSeguimientoBandeja) {
+          const encontrada = items.some((acta) => acta.id === actaIdScrollObjetivo);
+          if (!encontrada) {
+            this.seguimientoActaMensaje.set(
+              'El acta sigue seleccionada, pero no aparece en el listado de la bandeja ' +
+                etiquetaBandeja(bandeja) +
+                '.',
+            );
+            return;
+          }
+        }
+
+        if (this.actaSeleccionadaId() === actaIdScrollObjetivo) {
+          this.programarScrollActaSeleccionada(actaIdScrollObjetivo);
         }
       });
   }
@@ -1799,6 +2710,37 @@ function payloadCrearActaMockDemo(dependencia: DependenciaActaDemo): CrearActaMo
 function mensajeErrorHttp(err: unknown): string {
   if (err && typeof err === 'object' && 'status' in err) {
     const status = (err as { status?: number }).status;
+    if (status === 0) {
+      return 'Sin conexion con el backend prototipo.';
+    }
+    return 'Error HTTP ' + String(status);
+  }
+  return 'Error inesperado al consultar el backend.';
+}
+
+function mensajeErrorDictarFalloHttp(err: unknown): string {
+  if (err && typeof err === 'object' && 'status' in err) {
+    const status = (err as { status?: number }).status;
+    if (status === 409) {
+      return 'No es posible dictar fallo en este momento.';
+    }
+    if (status === 0) {
+      return 'Sin conexion con el backend prototipo.';
+    }
+    return 'Error HTTP ' + String(status);
+  }
+  return 'Error inesperado al consultar el backend.';
+}
+
+function mensajeErrorResolverApelacionHttp(err: unknown): string {
+  if (err && typeof err === 'object' && 'status' in err) {
+    const status = (err as { status?: number }).status;
+    if (status === 409) {
+      return 'No es posible resolver la apelación en este momento.';
+    }
+    if (status === 400) {
+      return 'Resultado de apelación inválido.';
+    }
     if (status === 0) {
       return 'Sin conexion con el backend prototipo.';
     }

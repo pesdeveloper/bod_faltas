@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.prototipo.store;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,55 +54,66 @@ final class PagoVoluntarioSupport {
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, String> accionPendientePorActa;
     private final Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa;
+    private final Map<String, BigDecimal> montoPagoVoluntarioPorActa;
 
     PagoVoluntarioSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
             Map<String, String> accionPendientePorActa,
-            Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa) {
+            Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa,
+            Map<String, BigDecimal> montoPagoVoluntarioPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
         this.situacionPagoPorActa = situacionPagoPorActa;
+        this.montoPagoVoluntarioPorActa = montoPagoVoluntarioPorActa;
     }
 
     /**
-     * Demo: solicitud de pago voluntario originada por el infractor en
-     * cualquier bandeja interna operable (helper
-     * {@link PrototipoConstantes#bandejaPermitePagoVoluntario}). Lleva al
-     * acta a {@code PENDIENTE_ANALISIS} con marca operativa
+     * Acción administrativa "Pago voluntario": Dirección de Faltas fija el
+     * monto del acta y deja el pago voluntario habilitado. El portal del
+     * infractor todavía no existe en este prototipo; cuando exista, deberá
+     * mostrar "Pagar" en lugar de "Solicitar pago voluntario" en cuanto
+     * detecte que hay monto fijado.
+     *
+     * <p>Lleva al acta a {@code PENDIENTE_ANALISIS} con marca operativa
      * {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}, dentro del
      * bloque {@code D5_ANALISIS} y estado {@code PENDIENTE_REVISION}.
-     * Genera evento {@code PAGO_VOLUNTARIO_SOLICITADO} con bloque origen
-     * el bloque actual del acta y destino {@code D5_ANALISIS}.
+     * Persiste {@code montoPagoVoluntario} y genera evento
+     * {@code PAGO_VOLUNTARIO_SOLICITADO} (se reutiliza el tipo existente
+     * para no impactar otros consumidores; la descripción aclara que
+     * Dirección habilitó el pago con el monto fijado).
+     *
+     * <p>Reglas fuertes del prototipo: la acción NO genera referencias
+     * de comprobantes (sin EM, sin RC, sin Cmte/Pref/Nro). La
+     * materialización de comprobantes vive en el proceso externo de
+     * pago, que se modelará en un slice posterior.
      *
      * <p>Devuelve {@code CONFLICT} si el acta está cerrada, en bandeja
      * terminal/externa ({@code ARCHIVO}, {@code CERRADAS},
      * {@code GESTION_EXTERNA}) o si la situación de pago no es
-     * {@code SIN_PAGO}: estos casos quedan también fuera de la lista
-     * expuesta por {@link PrototipoStore#getAccionesPagoVoluntarioDisponibles}
-     * para mantener simetría entre lista y handler. No cierra el
-     * expediente: el cierre depende del análisis material posterior
-     * (ver spec/03-bandejas/03-bandeja-analisis-presentaciones-pagos.md).
+     * {@code SIN_PAGO}. La validación del monto (no nulo y &gt; 0) la
+     * aplica el controller antes de invocar este handler.
      */
-    PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(String actaId) {
+    PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(
+            String actaId, BigDecimal monto) {
         ActaMock actual = actas.get(actaId);
         if (actual == null) {
             return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
                     PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.NOT_FOUND,
-                    null, null, null, null);
+                    null, null, null, null, null);
         }
         if (!bandejaPermitePagoVoluntario(actual.estaCerrada(), actual.bandejaActual())) {
             return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
                     PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT,
-                    null, null, null, null);
+                    null, null, null, null, null);
         }
         PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
                 actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
         if (situacionActual != PrototipoStore.SituacionPagoMock.SIN_PAGO) {
             return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
                     PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT,
-                    null, null, null, null);
+                    null, null, null, null, null);
         }
 
         String bloqueOrigen = actual.bloqueActual();
@@ -125,23 +137,28 @@ final class PagoVoluntarioSupport {
         actas.put(actaId, actualizada);
 
         accionPendientePorActa.put(actaId, PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO);
-        // Hecho informado: existe solicitud. No implica pago informado ni confirmación.
+        // Habilitación administrativa: situacionPago queda SOLICITADO; visualmente
+        // se interpreta como "Pago voluntario habilitado" (ver badge en la UI).
         situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.SOLICITADO);
+        montoPagoVoluntarioPorActa.put(actaId, monto);
 
         registrarEvento(
                 actaId,
                 "PAGO_VOLUNTARIO_SOLICITADO",
                 bloqueOrigen,
                 BLOQUE_D5,
-                "Solicitud de pago voluntario registrada por el infractor; "
-                        + "expediente pasa a análisis para evaluación.");
+                "Dirección de Faltas habilitó el pago voluntario con monto fijado "
+                        + monto.toPlainString()
+                        + "; expediente pasa a análisis. Sin generación de "
+                        + "comprobantes (sin EM, sin RC, sin Cmte/Pref/Nro).");
 
         return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
                 PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.OK,
                 actualizada.id(),
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual(),
-                PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO);
+                PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO,
+                monto);
     }
 
     private void registrarEvento(

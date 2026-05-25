@@ -96,11 +96,25 @@ export interface ActaDetalleDemo extends ActaResumenDemo {
   piezasGeneradas: string[];
   pagoInformado: PagoInformadoDemo | null;
   accionesPagoVoluntarioDisponibles: string[];
+  situacionPagoCondena: SituacionPagoCondenaDemo;
+  accionesPagoCondenaDisponibles: string[];
+  accionesGestionExternaDisponibles: string[];
   hechosMateriales: HechosMaterialesActaDemo | null;
   dependenciaDemo: string | null;
   tipoActaDemo: string | null;
   datosTransito: TransitoDatoDemo | null;
   datosBromatologia: BromatologiaDatoDemo | null;
+  /**
+   * Monto del acta fijado por Direccion de Faltas al habilitar el pago
+   * voluntario. Null si la accion administrativa aun no se ejecuto. No
+   * implica generacion de comprobantes (sin EM, sin RC, sin Cmte/Pref/Nro).
+   */
+  montoPagoVoluntario: number | null;
+  /**
+   * Monto de condena fijado al dictar fallo condenatorio. Distinto de
+   * montoPagoVoluntario. Null si aun no se dicto fallo condenatorio.
+   */
+  montoCondena: number | null;
 }
 
 export interface BadgeDemo {
@@ -291,6 +305,24 @@ export interface RegistrarNotificacionVencidaAccionResponseDemo {
 }
 
 /**
+ * Contrato POST /actas/{id}/acciones/reintentar-notificacion
+ * - ReintentarNotificacionAccionResponse.
+ *
+ * Precondicion backend: acta en PENDIENTE_ANALISIS con
+ * accionPendiente = REINTENTAR_NOTIFICACION (caso producido por
+ * notificacion negativa). Efecto: vuelve a PENDIENTE_NOTIFICACION
+ * reutilizando la notificacion existente y limpia la marca operativa
+ * de reintento; el evento se registra como NOTIFICACION_REINTENTADA.
+ */
+export interface ReintentarNotificacionAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+}
+
+/**
  * Situacion de pago mock expuesta por el backend (SituacionPagoMock).
  * Refleja el enum del prototipo sin que Angular agregue reglas adicionales.
  */
@@ -313,6 +345,25 @@ export type AccionPagoVoluntarioDemo =
   | 'CONFIRMAR'
   | 'OBSERVAR';
 
+export type SituacionPagoCondenaDemo =
+  | 'NO_APLICA'
+  | 'PENDIENTE'
+  | 'INFORMADO'
+  | 'CONFIRMADO'
+  | 'OBSERVADO';
+
+export type AccionPagoCondenaDemo = 'INFORMAR' | 'CONFIRMAR' | 'OBSERVAR';
+
+/**
+ * Body de POST /actas/{id}/acciones/registrar-solicitud-pago-voluntario.
+ * Monto fijado por Direccion de Faltas al habilitar el pago voluntario.
+ * El backend valida que sea estrictamente mayor a cero; no genera
+ * comprobantes (sin EM, sin RC, sin Cmte/Pref/Nro).
+ */
+export interface RegistrarSolicitudPagoVoluntarioAccionRequest {
+  monto: number;
+}
+
 /**
  * Contrato POST /actas/{id}/acciones/registrar-solicitud-pago-voluntario
  * - RegistrarSolicitudPagoVoluntarioAccionResponse.
@@ -324,6 +375,7 @@ export interface RegistrarSolicitudPagoVoluntarioAccionResponseDemo {
   bandejaActual: string;
   estadoProcesoActual: string;
   accionPendiente: string;
+  montoPagoVoluntario: number | null;
 }
 
 /**
@@ -370,6 +422,13 @@ export interface ObservarPagoInformadoAccionResponseDemo {
   mensaje: string;
   actaId: string;
   situacionPago: string;
+}
+
+export interface PagoCondenaAccionResponseDemo {
+  status: string;
+  mensaje: string;
+  actaId: string;
+  situacionPagoCondena: SituacionPagoCondenaDemo;
 }
 
 /**
@@ -460,4 +519,123 @@ export interface ReingresarDesdeGestionExternaAccionResponseDemo {
   estadoProcesoActual: string;
   accionPendiente: string;
   tipoGestionExternaPrevia: string | null;
+}
+
+/**
+ * Contrato GET /infractor/actas/{codigoQr} - ActaInfractorResponse.
+ * Vista ciudadana minima del acta para el portal del infractor.
+ */
+
+/**
+ * Canales validos para registrar la presentacion de apelacion/recurso.
+ * Coinciden con CanalPresentacionApelacionMock del backend prototipo.
+ */
+export type CanalPresentacionApelacionDemo = 'PORTAL_INFRACTOR' | 'PRESENCIAL_DIRECCION';
+
+/**
+ * Body de POST /actas/{id}/acciones/registrar-apelacion.
+ */
+export interface RegistrarApelacionAccionRequestDemo {
+  canal: CanalPresentacionApelacionDemo;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/registrar-apelacion
+ * - RegistrarApelacionAccionResponse.
+ */
+export interface RegistrarApelacionAccionResponseDemo {
+  estado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  resultadoFinal: string;
+  canal: string;
+}
+
+/**
+ * Resultados validos para POST /actas/{id}/acciones/resolver-apelacion.
+ */
+export type ResultadoResolucionApelacionDemo = 'RECHAZADA' | 'ACEPTADA_ABSUELVE';
+
+/**
+ * Body de POST /actas/{id}/acciones/resolver-apelacion.
+ */
+export interface ResolverApelacionAccionRequestDemo {
+  resultado: ResultadoResolucionApelacionDemo;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/resolver-apelacion
+ * - ResolverApelacionAccionResponse.
+ */
+export interface ResolverApelacionAccionResponseDemo {
+  estado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  resultadoFinal: string;
+  resultadoResolucion: string;
+}
+
+
+/**
+ * Contrato POST /actas/{id}/acciones/registrar-vencimiento-plazo-apelacion
+ * - RegistrarVencimientoPlazoApelacionAccionResponse.
+ */
+export interface RegistrarVencimientoPlazoApelacionAccionResponseDemo {
+  estado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  resultadoFinal: string;
+}
+
+export interface DictarFalloCondenatorioAccionRequestDemo {
+  montoCondena: number;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/dictar-fallo-absolutorio
+ * y POST /actas/{id}/acciones/dictar-fallo-condenatorio
+ * - DictarFalloAccionResponse.
+ *
+ * El acta queda en PENDIENTE_FIRMA con el documento del fallo en
+ * PENDIENTE_FIRMA; el resultadoFinal se materializa al notificar
+ * positivamente el fallo.
+ */
+export interface DictarFalloAccionResponseDemo {
+  estado: string;
+  mensaje: string;
+  actaId: string;
+  documentoId: string;
+  tipoDocumento: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  montoCondena?: number | null;
+}
+export interface ActaInfractorResponseDemo {
+  acta: string;
+  codigoQr: string;
+  estadoVisible: string;
+  situacionPago: string;
+  resultadoFinal: string;
+  montoPagoVoluntario: number | null;
+  montoCondena: number | null;
+  puedeConsultarEstado: boolean;
+  puedeSolicitarPagoVoluntario: boolean;
+  puedePagar: boolean;
+  puedePresentarApelacion: boolean;
+  mensajeVisible: string | null;
+}
+
+/**
+ * Construye el codigo QR/codigo ciudadano demo a partir del actaId interno.
+ * Formato: QR-{actaId}-DEMO. Reemplazar cuando el backend administrativo
+ * exponga codigoQr directamente en ActaDetalleResponse.
+ */
+export function codigoQrDemoParaActa(actaId: string): string {
+  return `QR-${actaId}-DEMO`;
 }

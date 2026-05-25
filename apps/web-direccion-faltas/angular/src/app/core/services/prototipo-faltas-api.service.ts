@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
 import {
   ActaDetalleDemo,
+  ActaInfractorResponseDemo,
   ActaResumenDemo,
   AdjuntarComprobantePagoInformadoAccionResponseDemo,
   ArchivarActaAccionResponseDemo,
@@ -12,6 +13,8 @@ import {
   ConfirmarPagoInformadoAccionResponseDemo,
   CrearActaMockDemoRequest,
   DerivarAGestionExternaAccionResponseDemo,
+  DictarFalloAccionResponseDemo,
+  DictarFalloCondenatorioAccionRequestDemo,
   DocumentoActaDemo,
   EventoActaDemo,
   FirmarDocumentoAccionResponseDemo,
@@ -19,17 +22,25 @@ import {
   GenerarNotificacionActaAccionResponseDemo,
   GenerarNulidadAccionResponseDemo,
   ObservarPagoInformadoAccionResponseDemo,
+  PagoCondenaAccionResponseDemo,
   PrototipoHealthResponse,
   PrototipoResetResponse,
   RegistrarCumplimientoMaterialBloqueoCierreAccionResponseDemo,
   RegistrarNotificacionNegativaAccionResponseDemo,
   RegistrarNotificacionPositivaAccionResponseDemo,
   RegistrarNotificacionVencidaAccionResponseDemo,
+  ReintentarNotificacionAccionResponseDemo,
   RegistrarPagoInformadoAccionResponseDemo,
   RegistrarResolucionBloqueoCierreAccionResponseDemo,
+  RegistrarSolicitudPagoVoluntarioAccionRequest,
   RegistrarSolicitudPagoVoluntarioAccionResponseDemo,
   ReingresarActaAccionResponseDemo,
   ReingresarDesdeGestionExternaAccionResponseDemo,
+  RegistrarApelacionAccionRequestDemo,
+  ResolverApelacionAccionRequestDemo,
+  ResolverApelacionAccionResponseDemo,
+  RegistrarApelacionAccionResponseDemo,
+  RegistrarVencimientoPlazoApelacionAccionResponseDemo,
   TipoCumplimientoMaterialBloqueante,
   TipoResolucionBloqueoCierre,
 } from '../models/prototipo-faltas.models';
@@ -55,6 +66,20 @@ export class PrototipoFaltasApiService {
 
   obtenerActa(id: string): Observable<ActaDetalleDemo> {
     return this.http.get<ActaDetalleDemo>(`${this.api.baseUrl}/actas/${id}`);
+  }
+
+  getActaInfractorPorCodigoQr(codigoQr: string): Observable<ActaInfractorResponseDemo> {
+    return this.http.get<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}`,
+    );
+  }
+
+
+  registrarApelacionInfractorPorCodigoQr(codigoQr: string): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/registrar-apelacion`,
+      null,
+    );
   }
 
   listarDocumentosActa(actaId: string): Observable<DocumentoActaDemo[]> {
@@ -162,12 +187,22 @@ export class PrototipoFaltasApiService {
     );
   }
 
+  reintentarNotificacion(
+    actaId: string,
+  ): Observable<ReintentarNotificacionAccionResponseDemo> {
+    return this.http.post<ReintentarNotificacionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/reintentar-notificacion`,
+      null,
+    );
+  }
+
   registrarSolicitudPagoVoluntario(
     actaId: string,
+    body: RegistrarSolicitudPagoVoluntarioAccionRequest,
   ): Observable<RegistrarSolicitudPagoVoluntarioAccionResponseDemo> {
     return this.http.post<RegistrarSolicitudPagoVoluntarioAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-solicitud-pago-voluntario`,
-      null,
+      body,
     );
   }
 
@@ -213,6 +248,27 @@ export class PrototipoFaltasApiService {
     );
   }
 
+  informarPagoCondena(actaId: string): Observable<PagoCondenaAccionResponseDemo> {
+    return this.http.post<PagoCondenaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/informar-pago-condena`,
+      null,
+    );
+  }
+
+  confirmarPagoCondena(actaId: string): Observable<PagoCondenaAccionResponseDemo> {
+    return this.http.post<PagoCondenaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/confirmar-pago-condena`,
+      null,
+    );
+  }
+
+  observarPagoCondena(actaId: string): Observable<PagoCondenaAccionResponseDemo> {
+    return this.http.post<PagoCondenaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/observar-pago-condena`,
+      null,
+    );
+  }
+
   archivarActa(actaId: string): Observable<ArchivarActaAccionResponseDemo> {
     return this.http.post<ArchivarActaAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/archivar-acta`,
@@ -251,6 +307,52 @@ export class PrototipoFaltasApiService {
     return this.http.post<ReingresarDesdeGestionExternaAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/reingresar-desde-gestion-externa`,
       null,
+    );
+  }
+  registrarApelacion(
+    actaId: string,
+    body: RegistrarApelacionAccionRequestDemo,
+  ): Observable<RegistrarApelacionAccionResponseDemo> {
+    return this.http.post<RegistrarApelacionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-apelacion`,
+      body,
+    );
+  }
+
+
+  registrarVencimientoPlazoApelacion(
+    actaId: string,
+  ): Observable<RegistrarVencimientoPlazoApelacionAccionResponseDemo> {
+    return this.http.post<RegistrarVencimientoPlazoApelacionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-vencimiento-plazo-apelacion`,
+      null,
+    );
+  }
+
+    resolverApelacion(
+    actaId: string,
+    body: ResolverApelacionAccionRequestDemo,
+  ): Observable<ResolverApelacionAccionResponseDemo> {
+    return this.http.post<ResolverApelacionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/resolver-apelacion`,
+      body,
+    );
+  }
+
+  dictarFalloAbsolutorio(actaId: string): Observable<DictarFalloAccionResponseDemo> {
+    return this.http.post<DictarFalloAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/dictar-fallo-absolutorio`,
+      null,
+    );
+  }
+
+  dictarFalloCondenatorio(
+    actaId: string,
+    body: DictarFalloCondenatorioAccionRequestDemo,
+  ): Observable<DictarFalloAccionResponseDemo> {
+    return this.http.post<DictarFalloAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/dictar-fallo-condenatorio`,
+      body,
     );
   }
 }

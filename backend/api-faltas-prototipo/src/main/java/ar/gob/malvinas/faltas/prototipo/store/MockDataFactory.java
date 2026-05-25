@@ -58,6 +58,10 @@ public class MockDataFactory {
         cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(store);
         cargarActa0025SoloD1TrazasSinAnclasMaterialesDemo(store);
         cargarActa0026MedidaPreventivaPosteriorContravencionDemo(store);
+        cargarActa0027FalloApelacionPortalDemo(store);
+        cargarActa0028FalloApelacionPresencialDemo(store);
+        cargarActa0029FalloVencimientoPlazoDemo(store);
+        cargarActa0030ApelacionAceptadaAbsuelveDemo(store);
     }
 
     private void cargarActa0001(PrototipoStore store) {
@@ -81,6 +85,7 @@ public class MockDataFactory {
                 "Estacionamiento prohibido en zona escolar.",
                 bandeja);
         store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
 
         List<ActaEventoMock> eventos = new ArrayList<>();
         eventos.add(new ActaEventoMock(
@@ -1963,5 +1968,141 @@ public class MockDataFactory {
                 "DOC-0026-01", id, "ACTA_FIRMADA", "FIRMADO", "acta_contravencion_0026.pdf"));
         store.getDocumentosPorActa().put(id, docs);
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO);
+    }
+
+    /**
+     * Actas en {@code PENDIENTE_ANALISIS} listas para recorridos demo de
+     * fallo/apelación sin estado mezclado (mismo patrón que {@code ACTA-0006}).
+     * {@code ACTA-0006} cubre fallo absolutorio; estas cuatro cubren escenarios
+     * condenatorio separados para demo manual en paralelo.
+     */
+    private void cargarActaFalloApelacionAnalisisLimpioDemo(
+            PrototipoStore store,
+            String id,
+            String numeroActa,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            LocalDateTime fechaCreacion) {
+        String n = id.substring(5);
+        String bandeja = BANDEJA_PENDIENTE_ANALISIS;
+        ActaMock acta = new ActaMock(
+                id,
+                numeroActa,
+                "SEGURIDAD_VIAL",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Oficial Demo",
+                resumenHecho,
+                bandeja);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + n + "-01",
+                id,
+                fechaCreacion.plusMinutes(15),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada; expediente en análisis jurídico (demo fallo/apelación)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + n + "-02",
+                id,
+                fechaCreacion.plusDays(5),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificación fehaciente del acta; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + n + "-03",
+                id,
+                fechaCreacion.plusDays(12),
+                "ASIGNACION_ANALISTA",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Asignada a analista para dictamen preliminar."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + n + "-01",
+                id,
+                "INFORME_ALCOHOTEST",
+                "ADJUNTO",
+                "informe_alcotest_" + n + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + n + "-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                infractorNombre + " — constancia AR demo " + n));
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + n + "-02",
+                id,
+                "EMAIL",
+                "NO_APLICA",
+                "Reserva — solo postal por normativa interna"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    /** Demo: fallo condenatorio + apelación portal ({@code PORTAL_INFRACTOR}). */
+    private void cargarActa0027FalloApelacionPortalDemo(PrototipoStore store) {
+        cargarActaFalloApelacionAnalisisLimpioDemo(
+                store,
+                "ACTA-0027",
+                "A-2026-0027",
+                "Demo Apelación Portal",
+                "DNI 40.001.027",
+                "Caso demo ACTA-0027: fallo condenatorio y apelación desde portal infractor.",
+                LocalDateTime.of(2026, 3, 10, 9, 0));
+    }
+
+    /** Demo: fallo condenatorio + apelación presencial ({@code PRESENCIAL_DIRECCION}). */
+    private void cargarActa0028FalloApelacionPresencialDemo(PrototipoStore store) {
+        cargarActaFalloApelacionAnalisisLimpioDemo(
+                store,
+                "ACTA-0028",
+                "A-2026-0028",
+                "Demo Apelación Presencial",
+                "DNI 40.001.028",
+                "Caso demo ACTA-0028: fallo condenatorio y apelación presencial en Dirección.",
+                LocalDateTime.of(2026, 3, 11, 9, 0));
+    }
+
+    /** Demo: fallo condenatorio + vencimiento de plazo → {@code CONDENA_FIRME}. */
+    private void cargarActa0029FalloVencimientoPlazoDemo(PrototipoStore store) {
+        cargarActaFalloApelacionAnalisisLimpioDemo(
+                store,
+                "ACTA-0029",
+                "A-2026-0029",
+                "Demo Vencimiento Plazo",
+                "DNI 40.001.029",
+                "Caso demo ACTA-0029: fallo condenatorio y vencimiento mock del plazo de apelación.",
+                LocalDateTime.of(2026, 3, 12, 9, 0));
+    }
+
+    /** Demo: fallo condenatorio + apelación → resolver {@code ACEPTADA_ABSUELVE}. */
+    private void cargarActa0030ApelacionAceptadaAbsuelveDemo(PrototipoStore store) {
+        cargarActaFalloApelacionAnalisisLimpioDemo(
+                store,
+                "ACTA-0030",
+                "A-2026-0030",
+                "Demo Apelación Absuelve",
+                "DNI 40.001.030",
+                "Caso demo ACTA-0030: fallo condenatorio, apelación y resolución ACEPTADA_ABSUELVE.",
+                LocalDateTime.of(2026, 3, 13, 9, 0));
     }
 }

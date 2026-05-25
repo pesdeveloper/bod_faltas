@@ -33,11 +33,27 @@ mat-sidenav-content {
 }
 
 
+.toolbar-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.toolbar-site-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
 .toolbar-title {
   min-width: 0;
   font-size: 1.05rem;
   font-weight: 600;
-  margin-right: auto;
+  margin-right: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -394,6 +410,13 @@ mat-sidenav-content {
 .badge-ok {
   background: #e8f5e9;
   color: #2e7d32;
+}
+
+.detail-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 .detail-header__top {
@@ -762,6 +785,13 @@ mat-sidenav-content {
 }
 
 .pago-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.apelacion-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;

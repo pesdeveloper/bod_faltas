@@ -50,6 +50,8 @@ final class GestionExternaSupport {
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, String> accionPendientePorActa;
+    private final CerrabilidadSupport cerrabilidad;
+    private final Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa;
 
     /**
      * Tipo de gestión externa vigente para la acta dentro de la macro-bandeja
@@ -61,10 +63,14 @@ final class GestionExternaSupport {
     GestionExternaSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
-            Map<String, String> accionPendientePorActa) {
+            Map<String, String> accionPendientePorActa,
+            CerrabilidadSupport cerrabilidad,
+            Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
+        this.cerrabilidad = cerrabilidad;
+        this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
     }
 
     String getTipoGestionExterna(String actaId) {
@@ -142,7 +148,10 @@ final class GestionExternaSupport {
         boolean marcaHabilitaDerivacion =
                 PrototipoStore.ACCION_DERIVAR_GESTION_EXTERNA.equals(marcaActual)
                         || PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA.equals(marcaActual);
-        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual()) || !marcaHabilitaDerivacion) {
+        boolean condenaFirmeDerivable = condenaFirmeDerivable(actaId);
+        if (!BANDEJA_PENDIENTE_ANALISIS.equals(actual.bandejaActual())
+                || (!marcaHabilitaDerivacion && !condenaFirmeDerivable)
+                || tipoGestionExternaPorActa.containsKey(actaId)) {
             return new PrototipoStore.DerivarAGestionExternaResultado(
                     PrototipoStore.DerivarAGestionExternaEstado.CONFLICT, null, null, null, null);
         }
@@ -196,6 +205,16 @@ final class GestionExternaSupport {
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual(),
                 tipo);
+    }
+
+    private boolean condenaFirmeDerivable(String actaId) {
+        if (cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return false;
+        }
+        PrototipoStore.SituacionPagoCondena situacion = situacionPagoCondenaPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoCondena.PENDIENTE);
+        return situacion == PrototipoStore.SituacionPagoCondena.PENDIENTE
+                || situacion == PrototipoStore.SituacionPagoCondena.OBSERVADO;
     }
 
     /**

@@ -157,6 +157,37 @@ final class PrototipoConstantes {
     static final String ESTADO_DOC_ADJUNTO = "ADJUNTO";
 
     /**
+     * Documento mock del fallo absolutorio dictado por la autoridad competente
+     * en la etapa de análisis jurídico. Comparte el circuito documental
+     * existente: se incorpora en {@link #ESTADO_DOC_PENDIENTE_FIRMA} al
+     * dictarse, pasa a {@link #ESTADO_DOC_FIRMADO} al firmarse y luego se
+     * notifica vía {@code registrar-notificacion-positiva} reutilizando el
+     * endpoint existente.
+     */
+    static final String TIPO_DOC_FALLO_ABSOLUTORIO = "FALLO_ABSOLUTORIO";
+
+    /**
+     * Documento mock del fallo condenatorio dictado por la autoridad
+     * competente en la etapa de análisis jurídico. Mismo circuito que el
+     * fallo absolutorio: PENDIENTE_FIRMA → FIRMADO → notificación positiva.
+     * La notificación positiva del fallo condenatorio abre el plazo de
+     * apelación, que se modela en este slice solo como flag operativo (sin
+     * cálculo real de días).
+     */
+    static final String TIPO_DOC_FALLO_CONDENATORIO = "FALLO_CONDENATORIO";
+
+    /**
+     * @return {@code true} si {@code tipoDocumento} corresponde a uno de los
+     *     dos tipos de fallo dictados en análisis (absolutorio o
+     *     condenatorio). Usado por el circuito jurídico para distinguir
+     *     notificación de acta de notificación de fallo.
+     */
+    static boolean esFallo(String tipoDocumento) {
+        return TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumento)
+                || TIPO_DOC_FALLO_CONDENATORIO.equals(tipoDocumento);
+    }
+
+    /**
      * @return {@code true} salvo cierre, derivación a gestión externa, archivo
      *     o bandeja terminal; dictar resolutorio o registrar cumplimiento
      *     material no se limita a {@link #BANDEJA_PENDIENTE_ANALISIS}.

@@ -76,6 +76,7 @@ final class CerrabilidadSupport {
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, List<ActaDocumentoMock>> documentosPorActa;
+    private final Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa;
     private final Map<String, PrototipoStore.ResultadoFinalCierreMock> resultadoFinalPorActa = new HashMap<>();
     /**
      * Hechos operativos que exigen cierre de circuito (medida activa, rodado
@@ -94,10 +95,12 @@ final class CerrabilidadSupport {
     CerrabilidadSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
-            Map<String, List<ActaDocumentoMock>> documentosPorActa) {
+            Map<String, List<ActaDocumentoMock>> documentosPorActa,
+            Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.documentosPorActa = documentosPorActa;
+        this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
     }
 
     void clear() {
@@ -779,7 +782,7 @@ final class CerrabilidadSupport {
         }
         PrototipoStore.ResultadoFinalCierreMock rf = getResultadoFinal(acta.id());
         List<PrototipoStore.PendienteBloqueanteCierreMock> pend = listarPendientesBloqueantesOrdenados(acta.id());
-        boolean condicionCierre = condicionCierreSinCerrarExpediente(rf, pend);
+        boolean condicionCierre = condicionCierreSinCerrarExpediente(acta.id(), rf, pend);
         boolean cerrableApi = !acta.estaCerrada() && condicionCierre;
         String motivo = motivoNoCerrable(acta, rf, pend, condicionCierre);
         return new PrototipoStore.CerrabilidadActaVista(
@@ -805,7 +808,7 @@ final class CerrabilidadSupport {
         ensureOrigenesSincronizados(actaId);
         PrototipoStore.ResultadoFinalCierreMock rf = getResultadoFinal(actaId);
         List<PrototipoStore.PendienteBloqueanteCierreMock> pend = listarPendientesBloqueantesOrdenados(actaId);
-        return condicionCierreSinCerrarExpediente(rf, pend);
+        return condicionCierreSinCerrarExpediente(actaId, rf, pend);
     }
 
     PrototipoStore.MarcarResultadoAbsueltoResultado marcarResultadoAbsuelto(String actaId) {
@@ -822,7 +825,10 @@ final class CerrabilidadSupport {
             return new PrototipoStore.MarcarResultadoAbsueltoResultado(
                     PrototipoStore.MarcarResultadoAbsueltoEstado.CONFLICT, null, null);
         }
-        if (getResultadoFinal(actaId) == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO) {
+        PrototipoStore.ResultadoFinalCierreMock rf = getResultadoFinal(actaId);
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO
+                || rf == PrototipoStore.ResultadoFinalCierreMock.CONDENADO
+                || rf == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
             return new PrototipoStore.MarcarResultadoAbsueltoResultado(
                     PrototipoStore.MarcarResultadoAbsueltoEstado.CONFLICT, null, null);
         }
@@ -895,15 +901,18 @@ final class CerrabilidadSupport {
         return listarPendientesBloqueantesOrdenados(a.id()).contains(filtro);
     }
 
-    private static boolean condicionCierreSinCerrarExpediente(
+    private boolean condicionCierreSinCerrarExpediente(
+            String actaId,
             PrototipoStore.ResultadoFinalCierreMock rf,
             List<PrototipoStore.PendienteBloqueanteCierreMock> pend) {
         boolean resultadoOk = rf == PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
-                || rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO;
+                || rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO
+                || (rf == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME
+                        && getSituacionPagoCondena(actaId) == PrototipoStore.SituacionPagoCondena.CONFIRMADO);
         return resultadoOk && (pend == null || pend.isEmpty());
     }
 
-    private static String motivoNoCerrable(
+    private String motivoNoCerrable(
             ActaMock acta,
             PrototipoStore.ResultadoFinalCierreMock rf,
             List<PrototipoStore.PendienteBloqueanteCierreMock> pend,
@@ -917,6 +926,13 @@ final class CerrabilidadSupport {
         if (rf == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
             return "Falta resultado final compatible con cierre (ABSUELTO o PAGO_CONFIRMADO).";
         }
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            PrototipoStore.SituacionPagoCondena situacion = getSituacionPagoCondena(acta.id());
+            if (situacion == PrototipoStore.SituacionPagoCondena.INFORMADO) {
+                return "Pago de condena informado pendiente de confirmación.";
+            }
+            return "Condena firme pendiente de pago o derivación externa.";
+        }
         if (rf != PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
                 && rf != PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO) {
             return "Resultado final no habilita cierre en este slice.";
@@ -928,6 +944,14 @@ final class CerrabilidadSupport {
                     + "documento no sustituye al hecho).";
         }
         return "No cumple condición de cierre (ver resultado final y pendientes).";
+    }
+
+    private PrototipoStore.SituacionPagoCondena getSituacionPagoCondena(String actaId) {
+        if (getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return PrototipoStore.SituacionPagoCondena.NO_APLICA;
+        }
+        return situacionPagoCondenaPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoCondena.PENDIENTE);
     }
 
     private static String resumenPendientes(List<PrototipoStore.PendienteBloqueanteCierreMock> pend) {

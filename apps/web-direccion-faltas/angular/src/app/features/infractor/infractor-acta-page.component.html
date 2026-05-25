@@ -1,0 +1,100 @@
+<div class="infractor-layout">
+  <mat-toolbar color="primary" class="infractor-toolbar">
+    <div class="infractor-toolbar__identity">
+      <span class="infractor-site-label">Sitio actual: Portal infractor</span>
+      <h1 class="infractor-title">Portal de infracciones</h1>
+    </div>
+  </mat-toolbar>
+
+  <main class="infractor-content">
+    @if (estado() === 'loading') {
+      <div class="state-box" role="status" aria-live="polite">
+        <mat-spinner diameter="36"></mat-spinner>
+        <p>Consultando infracción...</p>
+      </div>
+    } @else if (estado() === 'not-found') {
+      <div class="state-box state-box--error" role="alert">
+        <p>No encontramos una infraccion asociada a este código.</p>
+      </div>
+    } @else if (estado() === 'error') {
+      <div class="state-box state-box--error" role="alert">
+        <p>No pudimos consultar la infraccion en este momento.</p>
+      </div>
+    } @else if (acta()) {
+      @if (acta(); as a) {
+      <section class="infractor-card" aria-label="Detalle de infraccion">
+        <dl class="infractor-dl">
+          <dt>Acta</dt>
+          <dd>{{ a.acta }}</dd>
+          <dt>Estado visible</dt>
+          <dd>{{ a.estadoVisible }}</dd>
+          <dt>Situación de pago</dt>
+          <dd>{{ a.situacionPago }}</dd>
+          <dt>Resultado final</dt>
+          <dd>{{ a.resultadoFinal }}</dd>
+          @if (a.montoPagoVoluntario !== null && a.montoPagoVoluntario !== undefined) {
+            <dt>Monto pago voluntario</dt>
+            <dd>$ {{ a.montoPagoVoluntario }}</dd>
+          }
+          @if (a.mensajeVisible) {
+            <dt>Mensaje</dt>
+            <dd>{{ a.mensajeVisible }}</dd>
+          }
+        </dl>
+
+        <div class="infractor-actions">
+          @if (a.puedeSolicitarPagoVoluntario) {
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="solicitarPagoVoluntarioInformativo()"
+            >
+              Solicitar pago voluntario
+            </button>
+          }
+          @if (a.puedePagar) {
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="pagarInformativo()"
+            >
+              Pagar
+            </button>
+          }
+          @if (a.puedePresentarApelacion) {
+            <button
+              mat-stroked-button
+              type="button"
+              color="primary"
+              [disabled]="registrandoApelacion()"
+              (click)="presentarApelacion()"
+            >
+              @if (registrandoApelacion()) {
+                Registrando apelación...
+              } @else {
+                Presentar apelación
+              }
+            </button>
+          }
+        </div>
+        @if (pagoVoluntarioPortalMensaje()) {
+          <p class="infractor-info-message" role="status" aria-live="polite">
+            {{ pagoVoluntarioPortalMensaje() }}
+          </p>
+        }
+        @if (apelacionPortalMensaje()) {
+          <p
+            class="infractor-info-message"
+            [class.infractor-info-message--success]="apelacionPortalMensajeTipo() === 'success'"
+            [class.infractor-info-message--error]="apelacionPortalMensajeTipo() === 'error'"
+            role="status"
+            aria-live="polite"
+          >
+            {{ apelacionPortalMensaje() }}
+          </p>
+        }
+      </section>
+      }
+    }
+  </main>
+</div>

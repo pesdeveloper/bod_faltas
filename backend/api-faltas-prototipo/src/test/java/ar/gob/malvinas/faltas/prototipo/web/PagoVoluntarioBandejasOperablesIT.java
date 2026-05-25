@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PagoVoluntarioBandejasOperablesIT {
 
     private static final String B = "/api/prototipo";
+    private static final String BODY_MONTO_VALIDO = "{\"monto\":12345.67}";
 
     @Autowired
     private MockMvc mvc;
@@ -46,7 +48,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles.length()").value(1))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles[0]").value("SOLICITAR"));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isOk());
 
         mvc.perform(get(B + "/actas/" + id))
@@ -71,7 +75,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles.length()").value(1))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles[0]").value("SOLICITAR"));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isOk());
 
         mvc.perform(get(B + "/actas/" + id))
@@ -92,7 +98,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles.length()").value(1))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles[0]").value("SOLICITAR"));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isOk());
     }
 
@@ -107,7 +115,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.bandejaActual").value("ARCHIVO"))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles.length()").value(0));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isConflict());
     }
 
@@ -123,7 +133,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.estaCerrada").value(true))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles.length()").value(0));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isConflict());
     }
 
@@ -138,7 +150,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.bandejaActual").value("GESTION_EXTERNA"))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles.length()").value(0));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isConflict());
     }
 
@@ -148,7 +162,9 @@ class PagoVoluntarioBandejasOperablesIT {
 
         String id = "ACTA-0024";
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isOk());
 
         mvc.perform(get(B + "/actas/" + id))
@@ -156,7 +172,9 @@ class PagoVoluntarioBandejasOperablesIT {
                 .andExpect(jsonPath("$.situacionPago").value("SOLICITADO"))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles[0]").value("INFORMAR"));
 
-        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario"))
+        mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(BODY_MONTO_VALIDO))
                 .andExpect(status().isConflict());
     }
 }
