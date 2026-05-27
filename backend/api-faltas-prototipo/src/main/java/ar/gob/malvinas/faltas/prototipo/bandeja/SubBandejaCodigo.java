@@ -14,8 +14,8 @@ public enum SubBandejaCodigo {
             "ACTAS_EN_ENRIQUECIMIENTO",
             10,
             "Captura inicial",
-            "D1",
-            "Completar acta",
+            "Captura inicial",
+            "Completar datos",
             "Completar datos de labrado"),
     PAGO_VOLUNTARIO_ORIGINADO(
             "ACTAS_EN_ENRIQUECIMIENTO",
@@ -303,6 +303,72 @@ public enum SubBandejaCodigo {
             "Redacción",
             "Generar pieza",
             "Redacción general"),
+
+    FALLO_TRAS_PAGO_INFORMADO(
+            "PENDIENTES_FALLO",
+            10,
+            "Fallo tras pago informado",
+            "Pago informado",
+            "Dictar fallo",
+            "Pago informado — expediente derivado a fallo"),
+    FALLO_LISTO_ABSOLUTORIO(
+            "PENDIENTES_FALLO",
+            15,
+            "Fallo absolutorio pendiente",
+            "Absolutorio",
+            "Dictar fallo",
+            "Lista para fallo absolutorio"),
+    FALLO_LISTO_CONDENATORIO(
+            "PENDIENTES_FALLO",
+            90,
+            "Fallo condenatorio pendiente",
+            "Condenatorio",
+            "Dictar fallo",
+            "Lista para fallo condenatorio"),
+
+    APELACION_EN_ANALISIS(
+            "CON_APELACION",
+            10,
+            "Apelación en análisis",
+            "En análisis",
+            "Resolver apelación",
+            "Apelación presentada — revisión jurídica"),
+    APELACION_RESUELTA(
+            "CON_APELACION",
+            15,
+            "Apelación resuelta",
+            "Resuelta",
+            "Definir siguiente paso",
+            "Apelación resuelta — acción posterior pendiente"),
+    APELACION_PENDIENTE_RESOLUCION(
+            "CON_APELACION",
+            30,
+            "Apelación pendiente de resolución",
+            "Pendiente",
+            "Resolver apelación",
+            "Apelación presentada — pendiente de resolución"),
+
+    PARALIZ_ESPERA_DOCUMENTAL(
+            "PARALIZADAS",
+            10,
+            "Espera documental",
+            "Documental",
+            "Levantar paralización",
+            "Paralizada por espera de documentación"),
+    PARALIZ_TRAMITE_EXTERNO(
+            "PARALIZADAS",
+            15,
+            "Trámite externo / informe",
+            "Trámite externo",
+            "Levantar paralización",
+            "Paralizada por trámite externo o informe"),
+    PARALIZ_CAUSA_ADMINISTRATIVA(
+            "PARALIZADAS",
+            20,
+            "Causa administrativa",
+            "Administrativa",
+            "Levantar paralización",
+            "Paralizada por causa administrativa fundada"),
 
     EXT_APREMIO("GESTION_EXTERNA", 10, "Apremio", "Apremio", "Seguir gestión", "Gestión externa — apremio"),
     EXT_JUZGADO_PAZ(

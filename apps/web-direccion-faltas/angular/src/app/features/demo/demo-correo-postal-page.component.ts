@@ -1,20 +1,22 @@
-﻿import { Component, DestroyRef, EventEmitter, OnInit, Output, computed, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 import {
   CorreoLoteResumenDemo,
   CorreoPostalNotificacionListaDemo,
   CorreoPostalTrazabilidadDemo,
+  EnviarIndividualCorreoResultadoDemo,
   GenerarLoteCorreoResultadoDemo,
   ProcesarRespuestaCorreoResultadoDemo,
 } from '../../core/models/prototipo-faltas.models';
 import { PrototipoFaltasApiService } from '../../core/services/prototipo-faltas-api.service';
 
-type CorreoPostalAccion = 'GENERAR_LOTE' | 'PROCESAR_RESPUESTA' | 'ANULAR_LOTE';
+type VistaCorreoPostal = 'actas' | 'lotes';
+type CorreoPostalAccion = 'GENERAR_LOTE' | 'PROCESAR_RESPUESTA' | 'ANULAR_LOTE' | 'ENVIAR_INDIVIDUAL';
 type FiltroTipoCorreo = 'TODOS' | 'ACTA_INFRACCION' | 'FALLO_CONDENATORIO' | 'FALLO_ABSOLUTORIO';
 type FiltroEstadoLoteCorreo = 'EN_TRABAJO' | 'PROCESADO' | 'ANULADO' | 'TODOS';
 type CorreoPostalQueryKey = 'tipo' | 'estado' | 'acta' | 'lote';
@@ -33,6 +35,8 @@ const FILTROS_ESTADO_LOTE: readonly FiltroEstadoLoteCorreo[] = [
   'TODOS',
 ];
 
+const PAGE_SIZE_CANDIDATAS_CORREO = 25;
+
 @Component({
   selector: 'app-demo-correo-postal-page',
   standalone: true,
@@ -40,11 +44,13 @@ const FILTROS_ESTADO_LOTE: readonly FiltroEstadoLoteCorreo[] = [
   templateUrl: './demo-correo-postal-page.component.html',
   styleUrl: './demo-correo-postal-page.component.scss',
 })
-export class DemoCorreoPostalPageComponent implements OnInit {
+export class DemoCorreoPostalPageComponent implements OnInit, OnChanges {
   private readonly api = inject(PrototipoFaltasApiService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  @Input({ required: true }) vista: VistaCorreoPostal = 'actas';
 
   @Output() readonly operacionCompletada = new EventEmitter<void>();
 
@@ -53,6 +59,7 @@ export class DemoCorreoPostalPageComponent implements OnInit {
 
   readonly cargando = signal<boolean>(false);
   readonly accionEnCurso = signal<CorreoPostalAccion | null>(null);
+  readonly notificacionEnCursoId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly advertencia = signal<string | null>(null);
   readonly mensaje = signal<string | null>(null);
@@ -66,6 +73,7 @@ export class DemoCorreoPostalPageComponent implements OnInit {
 
   readonly filtroTipo = signal<FiltroTipoCorreo>('TODOS');
   readonly filtroEstadoLote = signal<FiltroEstadoLoteCorreo>('EN_TRABAJO');
+  readonly paginaActual = signal(1);
   consultaActa = '';
   private ultimoActaParamUrl = '';
   private seleccionCandidatasTocada = false;
@@ -98,6 +106,18 @@ export class DemoCorreoPostalPageComponent implements OnInit {
 
   readonly cantidadCandidatas = computed(() => this.listasFiltradas().length);
 
+  readonly totalPaginasCandidatas = computed(() => {
+    const total = this.cantidadCandidatas();
+    return Math.max(1, Math.ceil(total / PAGE_SIZE_CANDIDATAS_CORREO));
+  });
+
+  readonly listasFiltradasPagina = computed(() => {
+    const items = this.listasFiltradas();
+    const pagina = this.paginaActual();
+    const inicio = (pagina - 1) * PAGE_SIZE_CANDIDATAS_CORREO;
+    return items.slice(inicio, inicio + PAGE_SIZE_CANDIDATAS_CORREO);
+  });
+
   readonly hayBusquedaActaActiva = computed(
     () => this.consultaActa.trim().length > 0 || this.ultimoActaParamUrl.trim().length > 0,
   );
@@ -108,7 +128,7 @@ export class DemoCorreoPostalPageComponent implements OnInit {
   });
 
   readonly todasCandidatasVisiblesSeleccionadas = computed(() => {
-    const visibles = this.listasFiltradas();
+    const visibles = this.listasFiltradasPagina();
     if (visibles.length === 0) {
       return false;
     }
@@ -132,6 +152,13 @@ export class DemoCorreoPostalPageComponent implements OnInit {
     return this.lotesGenerados().find((lote) => lote.loteId === loteId) ?? null;
   });
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['vista'] && !changes['vista'].firstChange) {
+      this.limpiarFeedback();
+      this.cargarDatos();
+    }
+  }
+
   ngOnInit(): void {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -144,30 +171,43 @@ export class DemoCorreoPostalPageComponent implements OnInit {
     this.cargando.set(true);
     this.error.set(null);
 
-    forkJoin({
-      listas: this.api.listarNotificacionesCorreoListasParaLote(),
-      lotes: this.api.listarLotesCorreoGenerados(),
-    })
+    if (this.vista === 'actas') {
+      this.api
+        .listarNotificacionesCorreoListasParaLote()
+        .pipe(
+          catchError((err) => {
+            this.error.set(mensajeErrorHttp(err));
+            return of([] as CorreoPostalNotificacionListaDemo[]);
+          }),
+          finalize(() => this.cargando.set(false)),
+          takeUntilDestroyed(this.destroyRef),
+        )
+        .subscribe((listas) => {
+          this.notificacionesListas.set(listas);
+          this.resetPaginaCandidatas();
+          this.sincronizarSeleccionCandidatasTrasRecarga();
+        });
+      return;
+    }
+
+    this.api
+      .listarLotesCorreoGenerados()
       .pipe(
         catchError((err) => {
           this.error.set(mensajeErrorHttp(err));
-          return of(null);
+          return of([] as CorreoLoteResumenDemo[]);
         }),
         finalize(() => this.cargando.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((respuesta) => {
-        if (!respuesta) {
-          return;
-        }
-        this.notificacionesListas.set(respuesta.listas);
-        this.lotesGenerados.set(respuesta.lotes);
-        this.sincronizarSeleccionCandidatasTrasRecarga();
-        this.syncSeleccionLote(respuesta.lotes);
+      .subscribe((lotes) => {
+        this.lotesGenerados.set(lotes);
+        this.syncSeleccionLote(lotes);
       });
   }
 
   seleccionarFiltroTipo(tipo: FiltroTipoCorreo): void {
+    this.resetPaginaCandidatas();
     this.filtroTipo.set(tipo);
     this.loteSeleccionadoId.set(null);
     this.seleccionCandidatasTocada = false;
@@ -320,7 +360,7 @@ export class DemoCorreoPostalPageComponent implements OnInit {
 
   toggleTodasCandidatasVisibles(seleccionar: boolean): void {
     this.seleccionCandidatasTocada = true;
-    const visibles = this.listasFiltradas().map((item) => item.notificacionId);
+    const visibles = this.listasFiltradasPagina().map((item) => item.notificacionId);
     this.candidatasExcluidas.update((actual) => {
       const next = new Set(actual);
       for (const id of visibles) {
@@ -345,6 +385,63 @@ export class DemoCorreoPostalPageComponent implements OnInit {
     });
   }
 
+  paginaAnterior(): void {
+    if (this.paginaActual() <= 1) {
+      return;
+    }
+    this.paginaActual.update((pagina) => pagina - 1);
+  }
+
+  paginaSiguiente(): void {
+    if (this.paginaActual() >= this.totalPaginasCandidatas()) {
+      return;
+    }
+    this.paginaActual.update((pagina) => pagina + 1);
+  }
+
+
+  enviarIndividual(item: CorreoPostalNotificacionListaDemo): void {
+    if (this.accionEnCurso() !== null || this.cargando()) {
+      return;
+    }
+    const confirmacion = window.confirm(
+      `Enviar de forma individual la notificacion ${item.notificacionId} del acta ${item.acta}?`,
+    );
+    if (!confirmacion) {
+      return;
+    }
+
+    this.limpiarFeedback();
+    this.accionEnCurso.set('ENVIAR_INDIVIDUAL');
+    this.notificacionEnCursoId.set(item.notificacionId);
+
+    this.api
+      .enviarIndividualCorreoPostalDemo(item.notificacionId)
+      .pipe(
+        catchError((err) => {
+          this.error.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => {
+          this.accionEnCurso.set(null);
+          this.notificacionEnCursoId.set(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.mensaje.set(respuesta.mensaje);
+        this.operacionCompletada.emit();
+        this.cargarDatos();
+      });
+  }
+
+  enviandoIndividual(notificacionId: string): boolean {
+    return this.accionEnCurso() === 'ENVIAR_INDIVIDUAL'
+      && this.notificacionEnCursoId() === notificacionId;
+  }
   generarLote(): void {
     if (!this.puedeGenerarLote() || this.accionEnCurso() !== null) {
       return;
@@ -372,13 +469,11 @@ export class DemoCorreoPostalPageComponent implements OnInit {
         if (!respuesta) {
           return;
         }
-        this.integrarLoteGenerado(respuesta);
-        this.actualizarQueryParams({ lote: respuesta.loteId, estado: 'EN_TRABAJO' });
         if (respuesta.cantidad === 0) {
           this.advertencia.set('No hay notificaciones de correo postal listas para enviar.');
         } else {
           this.mensaje.set(
-            `Lote correo ${respuesta.loteId} generado con ${respuesta.cantidad} notificaciones seleccionadas.`,
+            `Lote correo ${respuesta.loteId} generado con ${respuesta.cantidad} notificaciones seleccionadas. Consultelo en Lotes de correo postal.`,
           );
         }
         this.seleccionCandidatasTocada = false;
@@ -514,7 +609,12 @@ export class DemoCorreoPostalPageComponent implements OnInit {
   private consumirQueryParams(params: ParamMap): void {
     this.aplicandoParamsUrl = true;
     try {
-      this.filtroTipo.set(parseTipoParam(params.get('tipo')));
+      if (this.vista === 'actas') {
+        this.resetPaginaCandidatas();
+        this.filtroTipo.set(parseTipoParam(params.get('tipo')));
+        return;
+      }
+
       this.filtroEstadoLote.set(parseEstadoParam(params.get('estado')));
       const actaParam = params.get('acta') ?? '';
       if (actaParam !== this.ultimoActaParamUrl) {
@@ -554,9 +654,12 @@ export class DemoCorreoPostalPageComponent implements OnInit {
   ): Partial<Record<CorreoPostalQueryKey, string>> {
     const queryParams: Partial<Record<CorreoPostalQueryKey, string>> = {};
 
-    const tipo = cambios.tipo ?? this.filtroTipo();
-    if (tipo) {
-      queryParams.tipo = tipo;
+    if (this.vista === 'actas') {
+      const tipo = cambios.tipo ?? this.filtroTipo();
+      if (tipo) {
+        queryParams.tipo = tipo;
+      }
+      return queryParams;
     }
 
     const estado = cambios.estado ?? this.filtroEstadoLote();
@@ -594,6 +697,10 @@ export class DemoCorreoPostalPageComponent implements OnInit {
     this.trazabilidadCargada.set(false);
     this.trazabilidad.set([]);
     this.trazabilidadError.set(null);
+  }
+
+  private resetPaginaCandidatas(): void {
+    this.paginaActual.set(1);
   }
 
   private resetSeleccionCandidatas(): void {

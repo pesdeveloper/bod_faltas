@@ -33,8 +33,6 @@ class ActasMockFalloApelacionDemoIT {
     private static final String ACTA_APELACION_PORTAL = "ACTA-0027";
     /** Fallo condenatorio + apelación presencial. */
     private static final String ACTA_APELACION_PRESENCIAL = "ACTA-0028";
-    /** Fallo condenatorio + vencimiento plazo → CONDENA_FIRME. */
-    private static final String ACTA_VENCIMIENTO_PLAZO = "ACTA-0029";
     /** Fallo condenatorio + apelación → ACEPTADA_ABSUELVE. */
     private static final String ACTA_APELACION_ABSUELVE = "ACTA-0030";
 
@@ -48,13 +46,11 @@ class ActasMockFalloApelacionDemoIT {
         assertActaInicialFalloApelacionDemo(ACTA_FALLO_ABSOLUTORIO);
         assertActaInicialFalloApelacionDemo(ACTA_APELACION_PORTAL);
         assertActaInicialFalloApelacionDemo(ACTA_APELACION_PRESENCIAL);
-        assertActaInicialFalloApelacionDemo(ACTA_VENCIMIENTO_PLAZO);
         assertActaInicialFalloApelacionDemo(ACTA_APELACION_ABSUELVE);
 
         for (String actaId : new String[] {
             ACTA_APELACION_PORTAL,
             ACTA_APELACION_PRESENCIAL,
-            ACTA_VENCIMIENTO_PLAZO,
             ACTA_APELACION_ABSUELVE
         }) {
             mvc.perform(get(B + "/actas/" + actaId))

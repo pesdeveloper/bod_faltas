@@ -334,6 +334,20 @@ public class PrototipoApiController {
         return resultado;
     }
 
+    @PostMapping("/notificaciones/correo/{notificacionId}/enviar-individual")
+    public PrototipoStore.EnviarIndividualCorreoResultado enviarIndividualCorreoPostalDemo(
+            @PathVariable("notificacionId") String notificacionId) {
+        PrototipoStore.EnviarIndividualCorreoResultado resultado =
+                store.enviarIndividualCorreoPostalDemo(notificacionId);
+        if ("NOT_FOUND".equals(resultado.estado())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, resultado.mensaje());
+        }
+        if ("CONFLICT".equals(resultado.estado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, resultado.mensaje());
+        }
+        return resultado;
+    }
+
     @PostMapping("/notificaciones/correo/lotes/generar")
     public PrototipoStore.GenerarLoteCorreoResultado generarLoteCorreoPostalDemo(
             @RequestParam(name = "tipo", required = false) String tipo,
@@ -1310,7 +1324,8 @@ public class PrototipoApiController {
                 clasificacion.chip(),
                 clasificacion.accionPrincipal(),
                 clasificacion.prioridadSubBandeja(),
-                clasificacion.chipsSecundarios());
+                clasificacion.chipsSecundarios(),
+                store.getDependenciaDemo(a.id()).orElse(null));
     }
 
     private BandejaResponse mapBandejaResponse(PrototipoStore.BandejaResumenOperativo resumen) {

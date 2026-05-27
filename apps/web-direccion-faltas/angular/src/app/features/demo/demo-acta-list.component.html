@@ -1,10 +1,24 @@
 ﻿<section class="list-panel" aria-label="Listado de actas">
   <header class="list-panel__header">
     <div class="list-panel__tools">
-      @if (subBandejas.length > 0) {
-        <div class="list-filter">
-          <span class="list-filter__label">Filtro operativo</span>
-          <div class="list-filter__row">
+      <div class="list-panel__filters-primary">
+        <div class="list-filter list-filter--inline list-filter--dependencia">
+          <span class="list-filter__label">Dependencia</span>
+          <select
+            class="list-filter__select"
+            [ngModel]="valorDependencia"
+            (ngModelChange)="cambiarDependencia($event)"
+            [attr.aria-label]="'Filtro por dependencia'"
+          >
+            <option [ngValue]="null">Todas</option>
+            @for (dep of dependenciasFiltro; track dep.codigo) {
+              <option [ngValue]="dep.codigo">{{ dep.label }}</option>
+            }
+          </select>
+        </div>
+        @if (subBandejas.length > 0) {
+          <div class="list-filter list-filter--inline list-filter--operativo">
+            <span class="list-filter__label">Filtro operativo</span>
             <select
               class="list-filter__select"
               [ngModel]="valorFiltroOperativo"
@@ -16,13 +30,16 @@
                 <option [ngValue]="sub.codigo">{{ sub.label }} ({{ sub.cantidad }})</option>
               }
             </select>
+          </div>
+        }
+        <div class="list-panel__filters-actions" aria-label="Acciones de filtros">
             <button
               mat-icon-button
               type="button"
               class="list-filter__info"
               title="Ver resumen de bandeja"
               aria-label="Ver resumen de bandeja"
-              [disabled]="!actaSeleccionadaId"
+              [disabled]="resumenBandejaInfoDeshabilitado"
               (click)="mostrarResumenBandeja()"
             >
               <mat-icon aria-hidden="true">info</mat-icon>
@@ -39,8 +56,7 @@
               <mat-icon aria-hidden="true">close</mat-icon>
             </button>
           </div>
-        </div>
-      }
+      </div>
       <label class="list-search">
         <span class="list-search__label">Buscar acta</span>
         <input
@@ -67,6 +83,16 @@
   </header>
 
   <div #actasListContainer class="list-panel__scroll" aria-label="Actas de la bandeja">
+    @if (actaEnSeguimiento) {
+      <section class="list-panel__seccion" aria-label="Acta en seguimiento">
+        <h3 class="list-panel__seccion-titulo">Acta en seguimiento</h3>
+        <ng-container *ngTemplateOutlet="actaRowTpl; context: { $implicit: actaEnSeguimiento }"></ng-container>
+      </section>
+      <div class="list-panel__divisor" aria-hidden="true">
+        <span class="list-panel__divisor-texto">Listado de la bandeja</span>
+      </div>
+    }
+
     @if (listadoEstado === 'loading') {
       <div class="state-box">
         <mat-spinner diameter="36"></mat-spinner>
@@ -82,46 +108,70 @@
       <div class="state-box">
         <p>No hay actas en esta bandeja.</p>
       </div>
-    } @else if (actas.length === 0) {
-      <div class="state-box">
-        <p>No hay actas en esta bandeja que coincidan con la búsqueda.</p>
+    } @else if (actasListadoBandeja.length === 0) {
+      <div class="state-box state-box--filtros">
+        <p>No hay actas que coincidan con los filtros aplicados.</p>
+        <dl class="state-box__filtros-resumen">
+          <div>
+            <dt>Filtro operativo</dt>
+            <dd>{{ etiquetaFiltroOperativo }}</dd>
+          </div>
+          <div>
+            <dt>Dependencia</dt>
+            <dd>{{ etiquetaDependencia }}</dd>
+          </div>
+          @if (textoBusquedaActa.trim()) {
+            <div>
+              <dt>Búsqueda</dt>
+              <dd>{{ textoBusquedaActa.trim() }}</dd>
+            </div>
+          }
+        </dl>
       </div>
     } @else {
-      @for (acta of actas; track acta.id) {
-        <button
-          #actaRow
-          type="button"
-          mat-button
-          class="acta-row"
-          [attr.data-acta-id]="acta.id"
-          [class.selected]="acta.id === actaSeleccionadaId"
-          (click)="seleccionarActa.emit(acta.id)"
-        >
-          <div class="row-main">
-            <span class="row-numero">{{ acta.numeroActa }}</span>
-            <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>
-          </div>
-          <div class="row-resumen">{{ acta.infractorNombre }}</div>
-          <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>
-          @if (acta.accionPrincipal) {
-            <p class="row-accion-principal">{{ acta.accionPrincipal }}</p>
-          }
-          <div class="badges badge-list">
-            @if (acta.chip) {
-              <span class="badge badge-info chip-principal" [title]="acta.chip">{{ acta.chip }}</span>
-            }
-            @for (chip of acta.chipsSecundarios; track chip) {
-              <span class="badge chip-secundario" [title]="chip">{{ etiquetaBadgeCompacta(chip) }}</span>
-            }
-            @for (badge of badgesDe(acta); track badge.etiqueta) {
-              <span
-                [class]="'badge ' + claseBadge(badge)"
-                [title]="tituloBadge(badge.etiqueta)"
-              >{{ etiquetaBadgeCompacta(badge.etiqueta) }}</span>
-            }
-          </div>
-        </button>
+      @for (acta of actasListadoBandeja; track acta.id) {
+        <ng-container *ngTemplateOutlet="actaRowTpl; context: { $implicit: acta }"></ng-container>
       }
     }
   </div>
+
+  <ng-template #actaRowTpl let-acta>
+    <button
+      #actaRow
+      type="button"
+      mat-button
+      class="acta-row"
+      [attr.data-acta-id]="acta.id"
+      [class.selected]="acta.id === actaSeleccionadaId"
+      (click)="seleccionarActa.emit(acta.id)"
+    >
+      <div class="row-main">
+        <span class="row-numero">{{ acta.numeroActa }}</span>
+        <span class="row-status">{{ acta.situacionAdministrativaActual }}</span>
+      </div>
+      <div class="row-secondary">
+        <div class="row-secondary__body">
+          <div class="row-resumen">{{ acta.infractorNombre }}</div>
+          <div class="row-meta">{{ acta.estadoProcesoActual }} · {{ acta.situacionAdministrativaActual }}</div>
+        </div>
+        @if (acta.accionPrincipal) {
+          <span class="row-accion-principal">{{ acta.accionPrincipal }}</span>
+        }
+      </div>
+<div class="badges badge-list">
+        @if (acta.chip) {
+          <span class="badge badge-info chip-principal" [title]="acta.chip">{{ acta.chip }}</span>
+        }
+        @for (chip of acta.chipsSecundarios; track chip) {
+          <span class="badge chip-secundario" [title]="chip">{{ etiquetaBadgeCompacta(chip) }}</span>
+        }
+        @for (badge of badgesDe(acta); track badge.etiqueta) {
+          <span
+            [class]="'badge ' + claseBadge(badge)"
+            [title]="tituloBadge(badge.etiqueta)"
+          >{{ etiquetaBadgeCompacta(badge.etiqueta) }}</span>
+        }
+      </div>
+    </button>
+  </ng-template>
 </section>

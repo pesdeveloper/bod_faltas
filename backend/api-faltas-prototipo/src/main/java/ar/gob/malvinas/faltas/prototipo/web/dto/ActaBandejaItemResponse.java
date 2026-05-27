@@ -20,5 +20,6 @@ public record ActaBandejaItemResponse(
         String chip,
         String accionPrincipal,
         int prioridadSubBandeja,
-        List<String> chipsSecundarios) {
+        List<String> chipsSecundarios,
+        String dependenciaDemo) {
 }

@@ -391,3 +391,16 @@
   font-size: 1rem;
   font-weight: 600;
 }
+
+.correo-postal-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.correo-postal-pagination__info {
+  font-size: 0.8125rem;
+  color: rgba(0, 0, 0, 0.62);
+}

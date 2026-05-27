@@ -167,6 +167,50 @@ final class CorreoPostalNotificacionSupport {
                 .toList();
     }
 
+    PrototipoStore.EnviarIndividualCorreoResultado enviarIndividual(String notificacionId) {
+        if (notificacionId == null || notificacionId.isBlank()) {
+            return PrototipoStore.EnviarIndividualCorreoResultado.conflict(
+                    notificacionId, "Debe indicar la notificacion a enviar.");
+        }
+        String id = notificacionId.trim();
+        Optional<ActaNotificacionMock> encontrada = buscarNotificacion(id, null);
+        if (encontrada.isEmpty()) {
+            return PrototipoStore.EnviarIndividualCorreoResultado.notFound(id);
+        }
+        ActaNotificacionMock notificacion = encontrada.get();
+        if (notificacion.canalTipificado() != CanalNotificacion.CORREO_POSTAL) {
+            return PrototipoStore.EnviarIndividualCorreoResultado.conflict(
+                    id, "La notificacion " + id + " no es CORREO_POSTAL.");
+        }
+        if (notificacion.estado() != EstadoNotificacion.LISTA_PARA_ENVIO) {
+            return PrototipoStore.EnviarIndividualCorreoResultado.conflict(
+                    id, "La notificacion " + id + " no esta LISTA_PARA_ENVIO.");
+        }
+        if (notificacion.resultado() != ResultadoNotificacion.SIN_RESULTADO) {
+            return PrototipoStore.EnviarIndividualCorreoResultado.conflict(
+                    id, "La notificacion " + id + " no tiene SIN_RESULTADO.");
+        }
+
+        LocalDateTime ahora = LocalDateTime.now();
+        ActaNotificacionMock enviada = notificacion.conEnvioIndividualCorreo(ahora);
+        reemplazarNotificacion(enviada);
+        ActaMock acta = actas.get(notificacion.actaId());
+        if (acta != null && BANDEJA_PENDIENTE_NOTIFICACION.equals(acta.bandejaActual())) {
+            actas.put(acta.id(), moverAEnNotificacion(acta));
+        }
+        registrarEvento(
+                notificacion.actaId(),
+                "CORREO_ENVIO_INDIVIDUAL",
+                BLOQUE_D4,
+                BLOQUE_D4,
+                "Notificacion postal enviada de forma individual demo sin lote.");
+        String actaNumero = acta != null ? acta.numeroActa() : notificacion.actaId();
+        return PrototipoStore.EnviarIndividualCorreoResultado.ok(
+                id,
+                "Notificacion " + id + " enviada individualmente sin lote.",
+                itemDetalle(enviada, actaNumero));
+    }
+
     List<PrototipoStore.CorreoPostalTrazabilidadItem> buscarTrazabilidadPorActa(String consultaActa) {
         if (consultaActa == null || consultaActa.isBlank()) {
             return List.of();

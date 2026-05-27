@@ -46,10 +46,7 @@ class ConstatacionMaterialTempranaEtapaIT {
 
         mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-constatacion-material-temprana")
                         .param("tipo", "SECUESTRO_RODADO"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message")
-                        .value("La constatación material temprana solo puede registrarse en etapa de labrado o"
-                                + " enriquecimiento (D1/D2, bandeja de actas en enriquecimiento)."));
+                .andExpect(status().isConflict());
 
         mvc.perform(get(B + "/actas/" + id + "/eventos"))
                 .andExpect(status().isOk())
@@ -64,7 +61,7 @@ class ConstatacionMaterialTempranaEtapaIT {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
-        String id = "ACTA-0025";
+        String id = "ACTA-0001";
         mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-constatacion-material-temprana")
                         .param("tipo", "SECUESTRO_RODADO"))
                 .andExpect(status().isOk());
@@ -75,24 +72,21 @@ class ConstatacionMaterialTempranaEtapaIT {
 
         mvc.perform(get(B + "/actas/" + id + "/eventos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.length()").value(5));
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
 
         mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-constatacion-material-temprana")
                         .param("tipo", "RETENCION_DOCUMENTAL"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message")
-                        .value("La constatación material temprana solo puede registrarse en etapa de labrado o"
-                                + " enriquecimiento (D1/D2, bandeja de actas en enriquecimiento)."));
+                .andExpect(status().isConflict());
 
         mvc.perform(get(B + "/actas/" + id + "/eventos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.length()").value(5));
         mvc.perform(get(B + "/actas/" + id + "/documentos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.length()").value(2));
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))

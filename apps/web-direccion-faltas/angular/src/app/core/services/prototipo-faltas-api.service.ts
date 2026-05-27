@@ -1,4 +1,4 @@
-﻿import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
@@ -24,6 +24,7 @@ import {
   CorreoLoteResumenDemo,
   CorreoPostalNotificacionListaDemo,
   CorreoPostalTrazabilidadDemo,
+  EnviarIndividualCorreoResultadoDemo,
   GenerarLoteCorreoResultadoDemo,
   GenerarMedidaPreventivaAccionResponseDemo,
   GenerarNotificacionActaAccionResponseDemo,
@@ -214,6 +215,15 @@ export class PrototipoFaltasApiService {
   anularLoteCorreoPostalDemo(loteId: string): Observable<AnularLoteCorreoResultadoDemo> {
     return this.http.post<AnularLoteCorreoResultadoDemo>(
       `${this.api.baseUrl}/notificaciones/correo/lotes/${encodeURIComponent(loteId)}/anular`,
+      null,
+    );
+  }
+
+  enviarIndividualCorreoPostalDemo(
+    notificacionId: string,
+  ): Observable<EnviarIndividualCorreoResultadoDemo> {
+    return this.http.post<EnviarIndividualCorreoResultadoDemo>(
+      `${this.api.baseUrl}/notificaciones/correo/${encodeURIComponent(notificacionId)}/enviar-individual`,
       null,
     );
   }

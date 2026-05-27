@@ -152,6 +152,32 @@ public record ActaNotificacionMock(
                 diasPlazoNotificacionElectronica);
     }
 
+    public ActaNotificacionMock conEnvioIndividualCorreo(LocalDateTime fecha) {
+        return new ActaNotificacionMock(
+                id,
+                actaId,
+                canal,
+                "EN_TRAMITE",
+                destinatarioResumen,
+                tipo,
+                canalTipificado,
+                EstadoNotificacion.ENVIADA,
+                ResultadoNotificacion.SIN_RESULTADO,
+                referencia,
+                eventoRelacionado,
+                null,
+                referenciaExterna,
+                fechaPreparacion,
+                fecha,
+                fechaResultado,
+                observacion,
+                destinatarioNombre,
+                destinatarioEmail,
+                domicilioTexto,
+                domicilioElectronicoVerificado,
+                diasPlazoNotificacionElectronica);
+    }
+
     public ActaNotificacionMock conResultadoCorreo(
             EstadoNotificacion nuevoEstado,
             ResultadoNotificacion nuevoResultado,

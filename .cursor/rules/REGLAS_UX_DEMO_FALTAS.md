@@ -24,6 +24,40 @@ No modificar esta UX salvo pedido explícito.
 - El lateral debe conservar buena legibilidad en modo expandido.
 - En modo colapsado deben verse solo íconos, sin textos cortados.
 
+### Bandejas laterales UX vigentes
+
+El lateral NO debe reflejar 1 a 1 las bandejas backend.
+
+El lateral debe mostrar únicamente estas bandejas UX:
+
+1. Actas en enriquecimiento
+2. Análisis / presentaciones / pagos
+3. Pendientes de resolución / redacción
+4. Pendientes de fallo
+5. Pendientes de firma
+6. Notificaciones
+7. Con apelación
+8. Gestión externa
+9. Paralizadas
+10. Archivo
+11. Cerradas
+
+Estos códigos backend NO deben mostrarse como entradas laterales independientes:
+
+- LABRADAS
+- PENDIENTE_PREPARACION_DOCUMENTAL
+- PENDIENTE_NOTIFICACION
+- EN_NOTIFICACION
+
+Mapping visual obligatorio:
+
+- LABRADAS -> Actas en enriquecimiento
+- PENDIENTE_PREPARACION_DOCUMENTAL -> Actas en enriquecimiento
+- PENDIENTE_NOTIFICACION -> Notificaciones
+- EN_NOTIFICACION -> Notificaciones
+
+La granularidad interna debe ir por Filtro operativo, no por más entradas laterales.
+
 ## Filtro operativo
 
 - Las sub-bandejas/filtros operativos se muestran en el área principal mediante select.

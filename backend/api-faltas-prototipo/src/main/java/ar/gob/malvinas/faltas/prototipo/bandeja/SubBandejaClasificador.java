@@ -52,6 +52,9 @@ public final class SubBandejaClasificador {
             case "EN_NOTIFICACION" -> evaluarEnNotificacion(ctx, candidatos);
             case "PENDIENTE_ANALISIS" -> evaluarPendienteAnalisis(ctx, candidatos);
             case "PENDIENTES_RESOLUCION_REDACCION" -> evaluarRedaccion(ctx, candidatos);
+            case "PENDIENTES_FALLO" -> evaluarPendientesFallo(ctx, candidatos);
+            case "CON_APELACION" -> evaluarConApelacion(ctx, candidatos);
+            case "PARALIZADAS" -> evaluarParalizadas(ctx, candidatos);
             case "GESTION_EXTERNA" -> evaluarGestionExterna(ctx, candidatos);
             case "ARCHIVO" -> evaluarArchivo(ctx, candidatos);
             case "CERRADAS" -> evaluarCerradas(ctx, candidatos);
@@ -60,12 +63,20 @@ public final class SubBandejaClasificador {
         SubBandejaCodigo elegido = candidatos.stream()
                 .min(Comparator.comparingInt(SubBandejaCodigo::prioridad))
                 .orElse(fallbackDeBandeja(bandeja));
-        return SubBandejaAsignacion.de(elegido, chipsSecundarios(ctx, elegido));
+        List<String> secundarios = chipsSecundarios(ctx, elegido);
+        return new SubBandejaAsignacion(
+                elegido.codigo(),
+                elegido.label(),
+                ActaBandejaUxPresenter.chipVisible(elegido, ctx),
+                ActaBandejaUxPresenter.accionPrincipalVisible(elegido, ctx),
+                elegido.prioridad(),
+                secundarios);
     }
 
     private static SubBandejaCodigo fallbackDeBandeja(String bandeja) {
         return SubBandejaCodigo.deBandeja(bandeja).stream()
-                .max(Comparator.comparingInt(SubBandejaCodigo::prioridad))
+                .filter(s -> s != SubBandejaCodigo.NOTIF_EN_OTRO_CANAL)
+                .min(Comparator.comparingInt(SubBandejaCodigo::prioridad))
                 .orElse(SubBandejaCodigo.ANALISIS_REVISION_GENERAL);
     }
 
@@ -117,27 +128,36 @@ public final class SubBandejaClasificador {
     }
 
     private static void evaluarEnNotificacion(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
-        Optional<ActaNotificacionMock> activa = notificacionEnCurso(ctx);
-        if (activa.isPresent()) {
-            ActaNotificacionMock n = activa.get();
-            if (n.resultado() == ResultadoNotificacion.NEGATIVA) {
-                out.add(SubBandejaCodigo.NOTIF_NEGATIVA_PENDIENTE_DECISION);
-            }
-            if (n.resultado() == ResultadoNotificacion.VENCIDA) {
-                out.add(SubBandejaCodigo.NOTIF_VENCIDA_PENDIENTE_DECISION);
-            }
-            CanalNotificacion canal = n.canalTipificado();
-            if (canal == CanalNotificacion.CORREO_POSTAL || "POSTAL".equals(n.canal())) {
-                out.add(SubBandejaCodigo.NOTIF_EN_CORREO_POSTAL);
-            } else if (canal == CanalNotificacion.NOTIFICADOR_MUNICIPAL) {
-                out.add(SubBandejaCodigo.NOTIF_EN_NOTIFICADOR_MUNICIPAL);
-            } else if (canal == CanalNotificacion.DOMICILIO_ELECTRONICO) {
-                out.add(SubBandejaCodigo.NOTIF_EN_DOMICILIO_ELECTRONICO);
-            } else {
-                out.add(SubBandejaCodigo.NOTIF_EN_OTRO_CANAL);
-            }
+        Optional<ActaNotificacionMock> relevante = notificacionRelevanteEnNotificacion(ctx);
+        if (relevante.isEmpty()) {
+            relevante = notificacionMasReciente(ctx);
         }
-        out.add(SubBandejaCodigo.NOTIF_EN_OTRO_CANAL);
+        if (relevante.isEmpty()) {
+            return;
+        }
+        ActaNotificacionMock n = relevante.get();
+        if (n.resultado() == ResultadoNotificacion.NEGATIVA) {
+            out.add(SubBandejaCodigo.NOTIF_NEGATIVA_PENDIENTE_DECISION);
+            return;
+        }
+        if (n.resultado() == ResultadoNotificacion.VENCIDA) {
+            out.add(SubBandejaCodigo.NOTIF_VENCIDA_PENDIENTE_DECISION);
+            return;
+        }
+        clasificarCanalEnNotificacion(n, out);
+    }
+
+    private static void clasificarCanalEnNotificacion(ActaNotificacionMock n, List<SubBandejaCodigo> out) {
+        CanalNotificacion canal = n.canalTipificado();
+        if (canal == CanalNotificacion.CORREO_POSTAL || "POSTAL".equals(n.canal())) {
+            out.add(SubBandejaCodigo.NOTIF_EN_CORREO_POSTAL);
+        } else if (canal == CanalNotificacion.NOTIFICADOR_MUNICIPAL) {
+            out.add(SubBandejaCodigo.NOTIF_EN_NOTIFICADOR_MUNICIPAL);
+        } else if (canal == CanalNotificacion.DOMICILIO_ELECTRONICO) {
+            out.add(SubBandejaCodigo.NOTIF_EN_DOMICILIO_ELECTRONICO);
+        } else {
+            out.add(SubBandejaCodigo.NOTIF_EN_OTRO_CANAL);
+        }
     }
 
     private static void evaluarPendienteAnalisis(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
@@ -187,6 +207,38 @@ public final class SubBandejaClasificador {
             out.add(SubBandejaCodigo.ANALISIS_NOTIF_POSITIVA);
         }
         out.add(SubBandejaCodigo.ANALISIS_REVISION_GENERAL);
+    }
+
+    private static void evaluarPendientesFallo(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
+        if (ctx.situacionPago() == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
+                || ACCION_VERIFICAR_PAGO_INFORMADO.equals(ctx.accionPendiente())) {
+            out.add(SubBandejaCodigo.FALLO_TRAS_PAGO_INFORMADO);
+        }
+        if (ctx.documentos().stream().anyMatch(d -> "INFORME_ALCOHOTEST".equals(d.tipoDocumento()))) {
+            out.add(SubBandejaCodigo.FALLO_LISTO_ABSOLUTORIO);
+        }
+        out.add(SubBandejaCodigo.FALLO_LISTO_CONDENATORIO);
+    }
+
+    private static void evaluarConApelacion(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
+        if ("REVISION_APELACION".equals(ctx.accionPendiente())) {
+            out.add(SubBandejaCodigo.APELACION_EN_ANALISIS);
+        }
+        if (ctx.resultadoFinal() == PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
+                || ctx.resultadoFinal() == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            out.add(SubBandejaCodigo.APELACION_RESUELTA);
+        }
+        out.add(SubBandejaCodigo.APELACION_PENDIENTE_RESOLUCION);
+    }
+
+    private static void evaluarParalizadas(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
+        if ("PARALIZACION_ESPERA_DOCUMENTAL".equals(ctx.accionPendiente())) {
+            out.add(SubBandejaCodigo.PARALIZ_ESPERA_DOCUMENTAL);
+        } else if ("PARALIZACION_TRAMITE_EXTERNO".equals(ctx.accionPendiente())) {
+            out.add(SubBandejaCodigo.PARALIZ_TRAMITE_EXTERNO);
+        } else if ("PARALIZACION_CAUSA_ADMINISTRATIVA".equals(ctx.accionPendiente())) {
+            out.add(SubBandejaCodigo.PARALIZ_CAUSA_ADMINISTRATIVA);
+        }
     }
 
     private static void evaluarRedaccion(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
@@ -279,7 +331,8 @@ public final class SubBandejaClasificador {
         }
         if (primaria != SubBandejaCodigo.ANALISIS_BLOQUEO_OPERATIVO
                 && ctx.pendientesBloqueantes() != null
-                && !ctx.pendientesBloqueantes().isEmpty()) {
+                && !ctx.pendientesBloqueantes().isEmpty()
+                && !ActaBandejaUxPresenter.chipPrimarioCubreBloqueoMaterial(primaria, ctx)) {
             secundarios.add("Bloqueo material");
         }
         return secundarios;
@@ -355,6 +408,35 @@ public final class SubBandejaClasificador {
                 .max(Comparator.comparing(
                         ActaNotificacionMock::fechaEnvio,
                         Comparator.nullsLast(Comparator.naturalOrder())));
+    }
+
+    /**
+     * Notificación operativa dentro de {@code EN_NOTIFICACION}: en trámite o con
+     * resultado negativo/vencido pendiente de decisión (p. ej. correo postal
+     * devuelto).
+     */
+    private static Optional<ActaNotificacionMock> notificacionRelevanteEnNotificacion(SubBandejaContexto ctx) {
+        Optional<ActaNotificacionMock> enCurso = notificacionEnCurso(ctx);
+        if (enCurso.isPresent()) {
+            return enCurso;
+        }
+        return ctx.notificaciones().stream()
+                .filter(SubBandejaClasificador::esNotificacionPendienteDecision)
+                .max(Comparator.comparing(
+                        ActaNotificacionMock::fechaEnvio,
+                        Comparator.nullsLast(Comparator.naturalOrder())));
+    }
+
+    private static Optional<ActaNotificacionMock> notificacionMasReciente(SubBandejaContexto ctx) {
+        return ctx.notificaciones().stream()
+                .max(Comparator.comparing(
+                        ActaNotificacionMock::fechaEnvio,
+                        Comparator.nullsLast(Comparator.naturalOrder())));
+    }
+
+    private static boolean esNotificacionPendienteDecision(ActaNotificacionMock n) {
+        ResultadoNotificacion resultado = n.resultado();
+        return resultado == ResultadoNotificacion.NEGATIVA || resultado == ResultadoNotificacion.VENCIDA;
     }
 
     private static boolean esNotificacionListaParaEnvio(ActaNotificacionMock n) {

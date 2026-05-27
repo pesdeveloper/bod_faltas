@@ -33,10 +33,19 @@ public class MockDataFactory {
     private static final String BANDEJA_GESTION_EXTERNA = "GESTION_EXTERNA";
     private static final String BANDEJA_ARCHIVO = "ARCHIVO";
     private static final String BANDEJA_CERRADAS = "CERRADAS";
+    private static final String BANDEJA_PENDIENTES_FALLO = "PENDIENTES_FALLO";
+    private static final String BANDEJA_CON_APELACION = "CON_APELACION";
+    private static final String BANDEJA_PARALIZADAS = "PARALIZADAS";
+
+    private static final String ACCION_PARALIZACION_ESPERA_DOCUMENTAL = "PARALIZACION_ESPERA_DOCUMENTAL";
+    private static final String ACCION_PARALIZACION_TRAMITE_EXTERNO = "PARALIZACION_TRAMITE_EXTERNO";
+    private static final String ACCION_PARALIZACION_CAUSA_ADMINISTRATIVA = "PARALIZACION_CAUSA_ADMINISTRATIVA";
+    private static final String ACCION_REVISION_APELACION = "REVISION_APELACION";
 
     public void loadInitialData(PrototipoStore store) {
         store.clearAll();
 
+        // --- Flujo Tránsito: hitos 1–7 + cerrada ---
         cargarActa0001(store);
         cargarActa0002(store);
         cargarActa0003(store);
@@ -45,31 +54,37 @@ public class MockDataFactory {
         cargarActa0006(store);
         cargarActa0007(store);
         cargarActa0008(store);
-        cargarActa0009(store);
-        cargarActa0010(store);
-        cargarActa0011(store);
-        cargarActa0012(store);
+
+        // --- Mocks con dependencias de tests ---
         cargarActa0013(store);
-        cargarActa0014(store);
         cargarActa0015(store);
         cargarActa0016(store);
         cargarActa0017(store);
-        cargarActa0018PagoVoluntarioDemo(store);
-        cargarActa0019CerrabilidadMaterialesDemo(store);
         cargarActa0020OrigenMedidaDesdeGenerarMedidaDemo(store);
         cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(store);
-        cargarActa0022PagoRealYCerrabilidadMaterialDemo(store);
-        cargarActa0023HechoMaterialVsDocumentoResolutorioDemo(store);
         cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(store);
-        cargarActa0025SoloD1TrazasSinAnclasMaterialesDemo(store);
         cargarActa0026MedidaPreventivaPosteriorContravencionDemo(store);
+
+        // --- Fallo, apelación, correo postal ---
         cargarActa0027FalloApelacionPortalDemo(store);
         cargarActa0028FalloApelacionPresencialDemo(store);
-        cargarActa0029FalloVencimientoPlazoDemo(store);
         cargarActa0030ApelacionAceptadaAbsuelveDemo(store);
         cargarActasNotificadorMunicipalDemo(store);
         cargarActasPortalDomicilioElectronicoDemo(store);
         cargarActasCorreoPostalDemo(store);
+
+        // --- Bandejas UX: fallo, apelación, paralizadas ---
+        cargarActasBandejasUxDemo(store);
+
+        // --- Nuevos mocks canónicos para hitos faltantes ---
+        cargarActa0120PagoVoluntarioInformadoDemo(store);
+        cargarActa0121FalloPendienteFirmaDemo(store);
+        cargarActa0122CondenaFirmePagoCondenaDemo(store);
+        cargarActa0123InspeccionesInicialDemo(store);
+        cargarActa0124FiscalizacionInicialDemo(store);
+        cargarActa0125BromatologiaInicialDemo(store);
+
+        completarDependenciasDemo(store);
     }
 
     private void cargarActa0001(PrototipoStore store) {
@@ -372,6 +387,15 @@ public class MockDataFactory {
                 "Primer intento de entrega programado para el 08/01."));
         store.getEventosPorActa().put(id, eventos);
 
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0005-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_0005.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
         List<ActaNotificacionMock> notifs = new ArrayList<>();
         notifs.add(new ActaNotificacionMock(
                 "NOT-0005-01",
@@ -586,6 +610,8 @@ public class MockDataFactory {
                 "ENTREGADA",
                 "Carlos Benítez — AR 778899"));
         store.getNotificacionesPorActa().put(id, notifs);
+
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO);
     }
 
     private void cargarActa0009(PrototipoStore store) {
@@ -1290,9 +1316,9 @@ public class MockDataFactory {
         docs.add(new ActaDocumentoMock(
                 "DOC-0017-02",
                 id,
-                "FALLO",
+                "FALLO_CONDENATORIO",
                 "FIRMADO",
-                "fallo_0017.pdf"));
+                "fallo_condenatorio_0017.pdf"));
         store.getDocumentosPorActa().put(id, docs);
 
         List<ActaNotificacionMock> notifs = new ArrayList<>();
@@ -2137,17 +2163,6 @@ public class MockDataFactory {
                 "FALLO_ABSOLUTORIO",
                 "fallo_absolutorio_0032.pdf",
                 LocalDateTime.of(2026, 3, 19, 9, 0));
-        cargarActaNotificadorMunicipalDemo(
-                store,
-                "ACTA-0033",
-                "A-2026-0033",
-                "Demo Notificador Acta",
-                "DNI 41.001.033",
-                "Caso demo ACTA-0033: notificación inicial del acta por notificador municipal.",
-                TipoNotificacion.ACTA_INFRACCION,
-                "ACTA_FIRMADA",
-                "acta_firmada_0033.pdf",
-                LocalDateTime.of(2026, 3, 20, 9, 0));
     }
 
     private void cargarActaNotificadorMunicipalDemo(
@@ -2379,39 +2394,6 @@ public class MockDataFactory {
                 "Caso demo ACTA-0040: fallo absolutorio listo para lote de correo postal.",
                 TipoNotificacion.FALLO_ABSOLUTORIO,
                 LocalDateTime.of(2026, 3, 27, 9, 0));
-        cargarActaCorreoPostalCandidataDemo(
-                store,
-                "ACTA-0041",
-                "A-2026-0041",
-                "Demo Correo Acta Inicial 2",
-                "DNI 43.001.041",
-                "Caso demo ACTA-0041: segunda acta de infracción lista para lote de correo postal.",
-                TipoNotificacion.ACTA_INFRACCION,
-                LocalDateTime.of(2026, 3, 28, 9, 0));
-        cargarActaCorreoPostalNoCandidataDemo(
-                store,
-                "ACTA-0042",
-                "A-2026-0042",
-                "Demo Correo Enviada Pendiente",
-                "DNI 43.001.042",
-                "Caso demo ACTA-0042: notificación postal enviada pendiente de respuesta.",
-                TipoNotificacion.ACTA_INFRACCION,
-                EstadoNotificacion.ENVIADA,
-                ResultadoNotificacion.SIN_RESULTADO,
-                "EN_TRAMITE",
-                LocalDateTime.of(2026, 3, 29, 9, 0));
-        cargarActaCorreoPostalNoCandidataDemo(
-                store,
-                "ACTA-0043",
-                "A-2026-0043",
-                "Demo Correo Entregada Positiva",
-                "DNI 43.001.043",
-                "Caso demo ACTA-0043: notificación postal entregada con resultado positivo.",
-                TipoNotificacion.ACTA_INFRACCION,
-                EstadoNotificacion.ENTREGADA,
-                ResultadoNotificacion.POSITIVA,
-                "ENTREGADA",
-                LocalDateTime.of(2026, 3, 30, 9, 0));
         cargarActaCorreoPostalNoCandidataDemo(
                 store,
                 "ACTA-0044",
@@ -2597,5 +2579,1757 @@ public class MockDataFactory {
                 null,
                 null));
         store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    /**
+     * Segunda tanda de actas demo para probar volumen en bandejas (~10 por macro-bandeja).
+     * Usa ids libres desde {@code ACTA-0046}; no altera casos funcionales existentes.
+     */
+    private void cargarActasVolumenDemo(PrototipoStore store) {
+        cargarActasVolumenEnriquecimientoDemo(store);
+        cargarActasVolumenPreparacionDocumentalDemo(store);
+        cargarActasVolumenFirmaDemo(store);
+        cargarActasVolumenCorreoPostalDemo(store);
+        cargarActasVolumenEnNotificacionDemo(store);
+        cargarActasVolumenRedaccionDemo(store);
+        cargarActasVolumenGestionExternaDemo(store);
+        cargarActasVolumenArchivoDemo(store);
+        cargarActasVolumenCerradasDemo(store);
+    }
+
+    private void cargarActasVolumenEnriquecimientoDemo(PrototipoStore store) {
+        cargarActaVolumenEnriquecimiento(
+                store,
+                "ACTA-0046",
+                "A-2026-0046",
+                "D1_CAPTURA",
+                "EN_CURSO",
+                "TRANSITO_URBANO",
+                "Rossi, Camila",
+                "DNI 44.001.046",
+                "Oficial Bracco",
+                "Volumen demo: captura inicial pendiente de datos de labrado.",
+                LocalDateTime.of(2026, 4, 2, 8, 30));
+        cargarActaVolumenEnriquecimiento(
+                store,
+                "ACTA-0047",
+                "A-2026-0047",
+                "D1_CAPTURA",
+                "EN_CURSO",
+                "SEGURIDAD_VIAL",
+                "Ponce, Esteban",
+                "DNI 44.001.047",
+                "Oficial Bracco",
+                "Volumen demo: captura inicial con lectura parcial de dominio.",
+                LocalDateTime.of(2026, 4, 3, 9, 15));
+        cargarActaVolumenEnriquecimiento(
+                store,
+                "ACTA-0048",
+                "A-2026-0048",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "ESTACIONAMIENTO",
+                "Salinas, Nora",
+                "DNI 44.001.048",
+                "Oficial Bracco",
+                "Volumen demo: enriquecimiento general por domicilio pendiente.",
+                LocalDateTime.of(2026, 4, 4, 10, 0));
+        cargarActaVolumenEnriquecimiento(
+                store,
+                "ACTA-0049",
+                "A-2026-0049",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "TRANSITO_URBANO",
+                "Vega, Tomas",
+                "DNI 44.001.049",
+                "Oficial Bracco",
+                "Volumen demo: enriquecimiento con pago voluntario solicitado.",
+                LocalDateTime.of(2026, 4, 5, 11, 20));
+        store.setSituacionPago("ACTA-0049", PrototipoStore.SituacionPagoMock.SOLICITADO);
+    }
+
+    private void cargarActaVolumenEnriquecimiento(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String bloque,
+            String estado,
+            String dominio,
+            String infractorNombre,
+            String infractorDocumento,
+            String inspector,
+            String resumenHecho,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                dominio,
+                bloque,
+                estado,
+                "ACTIVA",
+                false,
+                true,
+                "D1_CAPTURA".equals(bloque),
+                false,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                inspector,
+                resumenHecho,
+                BANDEJA_ACTAS_EN_ENRIQUECIMIENTO);
+        store.getActas().put(id, acta);
+        if ("TRANSITO_URBANO".equals(dominio) || "SEGURIDAD_VIAL".equals(dominio)) {
+            store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+        }
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                bloque,
+                "Acta volumen demo ingresada a enriquecimiento."));
+        store.getEventosPorActa().put(id, eventos);
+    }
+
+    private void cargarActasVolumenPreparacionDocumentalDemo(PrototipoStore store) {
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0050",
+                "A-2026-0050",
+                "PENDIENTE_GENERACION",
+                "SEGURIDAD_VIAL",
+                "Cabrera, Luis",
+                "DNI 44.001.050",
+                "Generacion acta pendiente tras enriquecimiento completo.",
+                null,
+                LocalDateTime.of(2026, 4, 6, 9, 0));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0051",
+                "A-2026-0051",
+                "PENDIENTE_GENERACION",
+                "TRANSITO_URBANO",
+                "Dominguez, Paula",
+                "DNI 44.001.051",
+                "Generacion acta pendiente con constancia radar adjunta.",
+                null,
+                LocalDateTime.of(2026, 4, 7, 10, 30));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0052",
+                "A-2026-0052",
+                "PENDIENTE_GENERACION",
+                "ESTACIONAMIENTO",
+                "Franco, Mario",
+                "DNI 44.001.052",
+                "Generacion acta pendiente por estacionamiento en doble fila.",
+                null,
+                LocalDateTime.of(2026, 4, 8, 11, 45));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0053",
+                "A-2026-0053",
+                "PENDIENTE_PIEZAS",
+                "SEGURIDAD_VIAL",
+                "Gimenez, Clara",
+                "DNI 44.001.053",
+                "Piezas documentales pendientes: notificacion de acta.",
+                List.of("NOTIFICACION_ACTA"),
+                LocalDateTime.of(2026, 4, 9, 8, 15));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0054",
+                "A-2026-0054",
+                "PENDIENTE_PIEZAS",
+                "TRANSITO_URBANO",
+                "Herrera, Diego",
+                "DNI 44.001.054",
+                "Piezas documentales pendientes: medida preventiva.",
+                List.of("MEDIDA_PREVENTIVA"),
+                LocalDateTime.of(2026, 4, 10, 9, 30));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0055",
+                "A-2026-0055",
+                "PENDIENTE_PIEZAS",
+                "SEGURIDAD_VIAL",
+                "Ibarra, Sofia",
+                "DNI 44.001.055",
+                "Piezas documentales pendientes: notificacion y medida.",
+                List.of("NOTIFICACION_ACTA", "MEDIDA_PREVENTIVA"),
+                LocalDateTime.of(2026, 4, 11, 10, 0));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0056",
+                "A-2026-0056",
+                "REVISION_DOCUMENTAL",
+                "ESTACIONAMIENTO",
+                "Juarez, Ana",
+                "DNI 44.001.056",
+                "Revision documental general antes de pasar a firma.",
+                null,
+                LocalDateTime.of(2026, 4, 12, 14, 0));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0057",
+                "A-2026-0057",
+                "REVISION_DOCUMENTAL",
+                "TRANSITO_URBANO",
+                "Klein, Bruno",
+                "DNI 44.001.057",
+                "Revision documental con borrador generado y observaciones menores.",
+                null,
+                LocalDateTime.of(2026, 4, 13, 15, 20));
+        cargarActaVolumenPreparacionDocumental(
+                store,
+                "ACTA-0058",
+                "A-2026-0058",
+                "REVISION_DOCUMENTAL",
+                "SEGURIDAD_VIAL",
+                "Luna, Carla",
+                "DNI 44.001.058",
+                "Revision documental con adjuntos probatorios completos.",
+                null,
+                LocalDateTime.of(2026, 4, 14, 16, 40));
+    }
+
+    private void cargarActaVolumenPreparacionDocumental(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String estado,
+            String dominio,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            List<String> piezasPendientes,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        boolean tieneDocs = piezasPendientes != null || "REVISION_DOCUMENTAL".equals(estado);
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                dominio,
+                "D3_DOCUMENTAL",
+                estado,
+                "ACTIVA",
+                false,
+                true,
+                tieneDocs,
+                false,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Oficial Volumen Demo",
+                resumenHecho,
+                BANDEJA_PENDIENTE_PREPARACION_DOCUMENTAL);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(5),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta volumen demo en preparacion documental."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(1),
+                "PASE_BANDEJA",
+                "D2_ENRIQUECIMIENTO",
+                "D3_DOCUMENTAL",
+                "Enriquecimiento cerrado; pasa a preparacion documental."));
+        store.getEventosPorActa().put(id, eventos);
+
+        if ("REVISION_DOCUMENTAL".equals(estado)) {
+            List<ActaDocumentoMock> docs = new ArrayList<>();
+            docs.add(new ActaDocumentoMock(
+                    "DOC-" + sufijo + "-01",
+                    id,
+                    "BORRADOR_ACTA",
+                    "BORRADOR",
+                    "borrador_acta_" + sufijo + ".pdf"));
+            store.getDocumentosPorActa().put(id, docs);
+        }
+
+        if (piezasPendientes != null && !piezasPendientes.isEmpty()) {
+            store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                    id,
+                    new ArrayList<>(piezasPendientes),
+                    new ArrayList<>()));
+        }
+    }
+
+    private void cargarActasVolumenFirmaDemo(PrototipoStore store) {
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0059",
+                "A-2026-0059",
+                "BORRADOR_ACTA",
+                "PENDIENTE_FIRMA",
+                "Acta inicial pendiente de firma del inspector.",
+                LocalDateTime.of(2026, 4, 15, 9, 0));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0060",
+                "A-2026-0060",
+                "BORRADOR_ACTA",
+                "PENDIENTE_FIRMA",
+                "Segunda acta inicial en cola de firma.",
+                LocalDateTime.of(2026, 4, 16, 10, 15));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0061",
+                "A-2026-0061",
+                "BORRADOR_ACTA",
+                "PENDIENTE_FIRMA",
+                "Acta inicial con constancia probatoria adjunta.",
+                LocalDateTime.of(2026, 4, 17, 11, 30));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0062",
+                "A-2026-0062",
+                "FALLO_CONDENATORIO",
+                "PENDIENTE_FIRMA",
+                "Fallo condenatorio pendiente de firma.",
+                LocalDateTime.of(2026, 4, 18, 12, 0));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0063",
+                "A-2026-0063",
+                "FALLO_CONDENATORIO",
+                "PENDIENTE_FIRMA",
+                "Fallo condenatorio con monto de condena cargado.",
+                LocalDateTime.of(2026, 4, 19, 13, 45));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0064",
+                "A-2026-0064",
+                "FALLO_ABSOLUTORIO",
+                "PENDIENTE_FIRMA",
+                "Fallo absolutorio pendiente de firma.",
+                LocalDateTime.of(2026, 4, 20, 14, 30));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0065",
+                "A-2026-0065",
+                "FALLO_ABSOLUTORIO",
+                "PENDIENTE_FIRMA",
+                "Fallo absolutorio con informe juridico adjunto.",
+                LocalDateTime.of(2026, 4, 21, 15, 0));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0066",
+                "A-2026-0066",
+                "RESOLUCION",
+                "PENDIENTE_FIRMA",
+                "Resolucion administrativa pendiente de firma.",
+                LocalDateTime.of(2026, 4, 22, 16, 10));
+        cargarActaVolumenFirma(
+                store,
+                "ACTA-0067",
+                "A-2026-0067",
+                "NULIDAD",
+                "PENDIENTE_FIRMA",
+                "Pieza de nulidad pendiente de firma.",
+                LocalDateTime.of(2026, 4, 23, 17, 20));
+    }
+
+    private void cargarActaVolumenFirma(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String tipoDocumento,
+            String estadoDocumento,
+            String resumenHecho,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "SEGURIDAD_VIAL",
+                "D3_DOCUMENTAL",
+                "PENDIENTE_FIRMA",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                fechaCreacion,
+                "Infractor Volumen " + sufijo,
+                "DNI 44.001." + sufijo,
+                "Oficial Volumen Demo",
+                resumenHecho,
+                BANDEJA_PENDIENTE_FIRMA);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "DOCUMENTO_GENERADO",
+                "D3_DOCUMENTAL",
+                "D3_DOCUMENTAL",
+                "Documento generado y en cola de firma (volumen demo)."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                tipoDocumento,
+                estadoDocumento,
+                tipoDocumento.toLowerCase(Locale.ROOT) + "_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+    }
+
+    private void cargarActasVolumenCorreoPostalDemo(PrototipoStore store) {
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0068",
+                "A-2026-0068",
+                "Volumen Correo Acta 3",
+                "DNI 44.001.068",
+                "Volumen demo ACTA-0068: acta de infraccion lista para correo postal.",
+                TipoNotificacion.ACTA_INFRACCION,
+                LocalDateTime.of(2026, 4, 24, 9, 0));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0069",
+                "A-2026-0069",
+                "Volumen Correo Acta 4",
+                "DNI 44.001.069",
+                "Volumen demo ACTA-0069: segunda acta de infraccion para lote postal.",
+                TipoNotificacion.ACTA_INFRACCION,
+                LocalDateTime.of(2026, 4, 25, 9, 30));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0070",
+                "A-2026-0070",
+                "Volumen Correo Absolutorio 2",
+                "DNI 44.001.070",
+                "Volumen demo ACTA-0070: fallo absolutorio listo para correo postal.",
+                TipoNotificacion.FALLO_ABSOLUTORIO,
+                LocalDateTime.of(2026, 4, 26, 10, 0));
+        cargarActaCorreoPostalCandidataDemo(
+                store,
+                "ACTA-0071",
+                "A-2026-0071",
+                "Volumen Correo Acta 5",
+                "DNI 44.001.071",
+                "Volumen demo ACTA-0071: acta de infraccion con domicilio verificado.",
+                TipoNotificacion.ACTA_INFRACCION,
+                LocalDateTime.of(2026, 4, 27, 10, 30));
+    }
+
+    private void cargarActasVolumenEnNotificacionDemo(PrototipoStore store) {
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0072",
+                "A-2026-0072",
+                "Volumen Correo Enviada 2",
+                "DNI 44.001.072",
+                "Volumen demo ACTA-0072: correo postal enviado pendiente de respuesta.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.ENVIADA,
+                ResultadoNotificacion.SIN_RESULTADO,
+                "EN_TRAMITE",
+                LocalDateTime.of(2026, 4, 28, 9, 0));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0073",
+                "A-2026-0073",
+                "Volumen Correo Enviada 3",
+                "DNI 44.001.073",
+                "Volumen demo ACTA-0073: fallo condenatorio en trámite postal.",
+                TipoNotificacion.FALLO_CONDENATORIO,
+                EstadoNotificacion.ENVIADA,
+                ResultadoNotificacion.SIN_RESULTADO,
+                "EN_TRAMITE",
+                LocalDateTime.of(2026, 4, 29, 9, 30));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0074",
+                "A-2026-0074",
+                "Volumen Correo Positiva 2",
+                "DNI 44.001.074",
+                "Volumen demo ACTA-0074: notificacion postal entregada con resultado positivo.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.ENTREGADA,
+                ResultadoNotificacion.POSITIVA,
+                "ENTREGADA",
+                LocalDateTime.of(2026, 4, 30, 10, 0));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0075",
+                "A-2026-0075",
+                "Volumen Correo Negativa 2",
+                "DNI 44.001.075",
+                "Volumen demo ACTA-0075: notificacion postal con resultado negativo.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.NEGATIVA,
+                ResultadoNotificacion.NEGATIVA,
+                "NO_ENTREGADA",
+                LocalDateTime.of(2026, 5, 1, 10, 30));
+        cargarActaCorreoPostalNoCandidataDemo(
+                store,
+                "ACTA-0076",
+                "A-2026-0076",
+                "Volumen Correo Vencida 2",
+                "DNI 44.001.076",
+                "Volumen demo ACTA-0076: notificacion postal vencida sin respuesta.",
+                TipoNotificacion.ACTA_INFRACCION,
+                EstadoNotificacion.VENCIDA,
+                ResultadoNotificacion.VENCIDA,
+                "VENCIDA",
+                LocalDateTime.of(2026, 5, 2, 11, 0));
+    }
+
+    private void cargarActasVolumenRedaccionDemo(PrototipoStore store) {
+        cargarActaVolumenRedaccion(
+                store,
+                "ACTA-0077",
+                "A-2026-0077",
+                "PENDIENTE_RESOLUCION",
+                "Resolucion administrativa pendiente de redaccion.",
+                "RESOLUCION",
+                LocalDateTime.of(2026, 5, 3, 9, 0));
+        cargarActaVolumenRedaccion(
+                store,
+                "ACTA-0078",
+                "A-2026-0078",
+                "PENDIENTE_RESOLUCION",
+                "Segunda resolucion en bandeja de redaccion.",
+                "RESOLUCION",
+                LocalDateTime.of(2026, 5, 4, 10, 0));
+        cargarActaVolumenRedaccion(
+                store,
+                "ACTA-0079",
+                "A-2026-0079",
+                "PENDIENTE_NULIDAD",
+                "Vicio formal detectado; redaccion de nulidad.",
+                "NULIDAD",
+                LocalDateTime.of(2026, 5, 5, 11, 0));
+        cargarActaVolumenRedaccion(
+                store,
+                "ACTA-0080",
+                "A-2026-0080",
+                "PENDIENTE_MEDIDA_PREVENTIVA",
+                "Retencion preventiva; redaccion de medida.",
+                "MEDIDA_PREVENTIVA",
+                LocalDateTime.of(2026, 5, 6, 12, 0));
+        cargarActaVolumenRedaccion(
+                store,
+                "ACTA-0081",
+                "A-2026-0081",
+                "PENDIENTE_RECTIFICACION",
+                "Error material en datos; redaccion de rectificacion.",
+                "RECTIFICACION",
+                LocalDateTime.of(2026, 5, 7, 13, 0));
+    }
+
+    private void cargarActaVolumenRedaccion(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String estado,
+            String resumenHecho,
+            String pieza,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                estado,
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                "Infractor Redaccion " + sufijo,
+                "DNI 44.001." + sufijo,
+                "Oficial Volumen Demo",
+                resumenHecho,
+                BANDEJA_PENDIENTES_RESOLUCION_REDACCION);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "DERIVACION_REDACCION",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Derivado a redaccion de pieza " + pieza + " (volumen demo)."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + sufijo + "-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                "Infractor Redaccion " + sufijo + " — notificacion positiva demo"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of(pieza)),
+                new ArrayList<>()));
+    }
+
+    private void cargarActasVolumenGestionExternaDemo(PrototipoStore store) {
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0082",
+                "A-2026-0082",
+                "Volumen Apremio 1",
+                "DNI 44.001.082",
+                "Gestion externa en apremio por deuda firme.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO,
+                true,
+                LocalDateTime.of(2026, 5, 8, 9, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0083",
+                "A-2026-0083",
+                "Volumen Apremio 2",
+                "DNI 44.001.083",
+                "Seguimiento de apremio con reingreso habilitado.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO,
+                true,
+                LocalDateTime.of(2026, 5, 9, 10, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0084",
+                "A-2026-0084",
+                "Volumen Apremio 3",
+                "DNI 44.001.084",
+                "Apremio iniciado tras condena firme.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO,
+                false,
+                LocalDateTime.of(2026, 5, 10, 11, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0085",
+                "A-2026-0085",
+                "Volumen Apremio 4",
+                "DNI 44.001.085",
+                "Apremio con gestion en curso.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO,
+                true,
+                LocalDateTime.of(2026, 5, 11, 12, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0086",
+                "A-2026-0086",
+                "Volumen Juzgado 1",
+                "DNI 44.001.086",
+                "Derivado a Juzgado de Paz por fallo firme.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ,
+                true,
+                LocalDateTime.of(2026, 5, 12, 13, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0087",
+                "A-2026-0087",
+                "Volumen Juzgado 2",
+                "DNI 44.001.087",
+                "Seguimiento en Juzgado de Paz.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ,
+                true,
+                LocalDateTime.of(2026, 5, 13, 14, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0088",
+                "A-2026-0088",
+                "Volumen Juzgado 3",
+                "DNI 44.001.088",
+                "Juzgado de Paz con reingreso pendiente.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ,
+                true,
+                LocalDateTime.of(2026, 5, 14, 15, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0089",
+                "A-2026-0089",
+                "Volumen Juzgado 4",
+                "DNI 44.001.089",
+                "Expediente en Juzgado de Paz sin novedad.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ,
+                false,
+                LocalDateTime.of(2026, 5, 15, 16, 0));
+        cargarActaVolumenGestionExterna(
+                store,
+                "ACTA-0090",
+                "A-2026-0090",
+                "Volumen Externa Seguimiento",
+                "DNI 44.001.090",
+                "Seguimiento externo generico en gestion.",
+                PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO,
+                true,
+                LocalDateTime.of(2026, 5, 16, 17, 0));
+    }
+
+    private void cargarActaVolumenGestionExterna(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            String tipoGestion,
+            boolean permiteReingreso,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "TRANSITO_URBANO",
+                "GESTION_EXTERNA",
+                "EN_GESTION_EXTERNA",
+                "GESTION_EXTERNA",
+                false,
+                permiteReingreso,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Direccion de Faltas",
+                resumenHecho,
+                BANDEJA_GESTION_EXTERNA);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "DERIVACION_GESTION_EXTERNA",
+                "D5_ANALISIS",
+                "GESTION_EXTERNA",
+                "Derivado a gestion externa tipo " + tipoGestion + " (volumen demo)."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                "FALLO",
+                "FIRMADO",
+                "fallo_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setTipoGestionExterna(id, tipoGestion);
+    }
+
+    private void cargarActasVolumenArchivoDemo(PrototipoStore store) {
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0091",
+                "A-2026-0091",
+                "ARCHIVADA_OPERATIVA",
+                "Archivo operativo por duplicidad.",
+                PrototipoStore.MOTIVO_ARCHIVO_DESDE_ANALISIS_DIRECTO,
+                true,
+                LocalDateTime.of(2026, 5, 17, 9, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0092",
+                "A-2026-0092",
+                "ARCHIVADA_OPERATIVA",
+                "Archivo operativo con reingreso permitido.",
+                PrototipoStore.MOTIVO_ARCHIVO_DESDE_ANALISIS_DIRECTO,
+                true,
+                LocalDateTime.of(2026, 5, 18, 10, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0093",
+                "A-2026-0093",
+                "ARCHIVADA_OPERATIVA",
+                "Archivo definitivo sin reingreso.",
+                PrototipoStore.MOTIVO_ARCHIVO_DESDE_ANALISIS_DIRECTO,
+                false,
+                LocalDateTime.of(2026, 5, 19, 11, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0094",
+                "A-2026-0094",
+                "ARCHIVADA_JURIDICA",
+                "Archivo juridico por decision administrativa.",
+                null,
+                true,
+                LocalDateTime.of(2026, 5, 20, 12, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0095",
+                "A-2026-0095",
+                "ARCHIVADA_JURIDICA",
+                "Archivo juridico con resolucion firmada.",
+                null,
+                false,
+                LocalDateTime.of(2026, 5, 21, 13, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0096",
+                "A-2026-0096",
+                "ARCHIVADA_OPERATIVA",
+                "Archivo post evaluacion de vencimiento.",
+                PrototipoStore.MOTIVO_ARCHIVO_POST_EVALUACION_VENCIMIENTO,
+                true,
+                LocalDateTime.of(2026, 5, 22, 14, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0097",
+                "A-2026-0097",
+                "ARCHIVADA_OPERATIVA",
+                "Archivo post vencimiento sin reingreso.",
+                PrototipoStore.MOTIVO_ARCHIVO_POST_EVALUACION_VENCIMIENTO,
+                false,
+                LocalDateTime.of(2026, 5, 23, 15, 0));
+        cargarActaVolumenArchivo(
+                store,
+                "ACTA-0098",
+                "A-2026-0098",
+                "ARCHIVADA_OPERATIVA",
+                "Archivo operativo general.",
+                null,
+                true,
+                LocalDateTime.of(2026, 5, 24, 16, 0));
+    }
+
+    private void cargarActaVolumenArchivo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String estadoProceso,
+            String resumenHecho,
+            String motivoArchivo,
+            boolean permiteReingreso,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "SEGURIDAD_VIAL",
+                "ARCHIVO",
+                estadoProceso,
+                "ARCHIVO",
+                false,
+                permiteReingreso,
+                true,
+                false,
+                fechaCreacion,
+                "Infractor Archivo " + sufijo,
+                "DNI 44.001." + sufijo,
+                "Oficial Volumen Demo",
+                resumenHecho,
+                BANDEJA_ARCHIVO);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ARCHIVO_OPERATIVO",
+                "D5_ANALISIS",
+                "ARCHIVO",
+                "Archivo volumen demo."));
+        store.getEventosPorActa().put(id, eventos);
+
+        if (motivoArchivo != null) {
+            store.setMotivoArchivo(id, motivoArchivo);
+        }
+    }
+
+    private void cargarActasVolumenCerradasDemo(PrototipoStore store) {
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0099",
+                "A-2026-0099",
+                "Cerrada por pago voluntario confirmado.",
+                PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO,
+                false,
+                false,
+                LocalDateTime.of(2026, 5, 25, 9, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0100",
+                "A-2026-0100",
+                "Cerrada por pago de condena firme.",
+                PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME,
+                false,
+                true,
+                LocalDateTime.of(2026, 5, 26, 10, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0101",
+                "A-2026-0101",
+                "Cerrada por absolucion.",
+                PrototipoStore.ResultadoFinalCierreMock.ABSUELTO,
+                false,
+                true,
+                LocalDateTime.of(2026, 5, 27, 11, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0102",
+                "A-2026-0102",
+                "Cerrada por nulidad.",
+                PrototipoStore.ResultadoFinalCierreMock.ABSUELTO,
+                false,
+                true,
+                LocalDateTime.of(2026, 5, 28, 12, 0));
+        store.getDocumentosPorActa().put("ACTA-0102", new ArrayList<>(List.of(
+                new ActaDocumentoMock(
+                        "DOC-0102-01",
+                        "ACTA-0102",
+                        "NULIDAD",
+                        "FIRMADO",
+                        "nulidad_0102.pdf"))));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0103",
+                "A-2026-0103",
+                "Cerrada tras archivo definitivo.",
+                PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL,
+                false,
+                false,
+                LocalDateTime.of(2026, 5, 29, 13, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0104",
+                "A-2026-0104",
+                "Cerrada por otra causa administrativa.",
+                PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL,
+                false,
+                true,
+                LocalDateTime.of(2026, 5, 30, 14, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0105",
+                "A-2026-0105",
+                "Cerrada por pago voluntario temprano.",
+                PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO,
+                true,
+                false,
+                LocalDateTime.of(2026, 5, 31, 15, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0106",
+                "A-2026-0106",
+                "Cerrada por condena con comprobante.",
+                PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME,
+                true,
+                true,
+                LocalDateTime.of(2026, 6, 1, 16, 0));
+        cargarActaVolumenCerrada(
+                store,
+                "ACTA-0107",
+                "A-2026-0107",
+                "Cerrada por absolucion en segunda instancia.",
+                PrototipoStore.ResultadoFinalCierreMock.ABSUELTO,
+                true,
+                true,
+                LocalDateTime.of(2026, 6, 2, 17, 0));
+    }
+
+    private void cargarActaVolumenCerrada(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String resumenHecho,
+            PrototipoStore.ResultadoFinalCierreMock resultadoFinal,
+            boolean estaCerradaFlag,
+            boolean permiteReingreso,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "ESTACIONAMIENTO",
+                "CERRADA",
+                "CERRADA",
+                "CERRADA",
+                estaCerradaFlag,
+                permiteReingreso,
+                "ACTA-0102".equals(id),
+                false,
+                fechaCreacion,
+                "Infractor Cerrada " + sufijo,
+                "DNI 44.001." + sufijo,
+                "Oficial Volumen Demo",
+                resumenHecho,
+                BANDEJA_CERRADAS);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "CIERRE",
+                "D5_ANALISIS",
+                "CERRADA",
+                "Cierre volumen demo."));
+        store.getEventosPorActa().put(id, eventos);
+
+        if (resultadoFinal != PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
+            store.setResultadoFinalCierreDemo(id, resultadoFinal);
+        }
+    }
+
+    /**
+     * Actas demo para bandejas laterales UX que arrancaban vacías
+     * ({@code PENDIENTES_FALLO}, {@code CON_APELACION}, {@code PARALIZADAS}).
+     * Ids libres desde {@code ACTA-0108}; no altera casos funcionales previos.
+     */
+    private void cargarActasBandejasUxDemo(PrototipoStore store) {
+        cargarActasParalizadasUxDemo(store);
+    }
+
+    private void cargarActasPendientesFalloUxDemo(PrototipoStore store) {
+        cargarActaPendienteFalloUxDemo(
+                store,
+                "ACTA-0108",
+                "A-2026-0108",
+                "Demo Fallo Condenatorio Pendiente",
+                "DNI 45.001.108",
+                "Caso demo ACTA-0108: notificacion positiva; lista para fallo condenatorio.",
+                false,
+                LocalDateTime.of(2026, 6, 10, 9, 0));
+        cargarActaPendienteFalloUxDemo(
+                store,
+                "ACTA-0109",
+                "A-2026-0109",
+                "Demo Fallo Absolutorio Pendiente",
+                "DNI 45.001.109",
+                "Caso demo ACTA-0109: notificacion positiva; lista para fallo absolutorio.",
+                true,
+                LocalDateTime.of(2026, 6, 11, 10, 0));
+        cargarActaPendienteFalloUxDemo(
+                store,
+                "ACTA-0110",
+                "A-2026-0110",
+                "Demo Fallo Tras Pago",
+                "DNI 45.001.110",
+                "Caso demo ACTA-0110: pago informado; expediente derivado a fallo.",
+                false,
+                LocalDateTime.of(2026, 6, 12, 11, 0));
+        store.setSituacionPago("ACTA-0110", PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+        store.setPagoInformadoDemo(
+                "ACTA-0110",
+                new PrototipoStore.PagoInformadoMock(
+                        LocalDateTime.of(2026, 6, 12, 11, 30),
+                        "COMP-0110",
+                        "comprobante_pago_0110.pdf"));
+        store.setAccionPendiente("ACTA-0110", PrototipoStore.ACCION_VERIFICAR_PAGO_INFORMADO);
+    }
+
+    private void cargarActaPendienteFalloUxDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            boolean perfilAbsolutorio,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "SEGURIDAD_VIAL",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Oficial Demo",
+                resumenHecho,
+                BANDEJA_PENDIENTES_FALLO);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(15),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta ingresada; expediente en condicion de fallo (demo UX)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(5),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificacion fehaciente del acta; pasa a pendientes de fallo."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-03",
+                id,
+                fechaCreacion.plusDays(8),
+                "DERIVACION_PENDIENTE_FALLO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                perfilAbsolutorio
+                        ? "Expediente habilitado para fallo absolutorio."
+                        : "Expediente habilitado para fallo condenatorio."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_" + sufijo + ".pdf"));
+        if (perfilAbsolutorio) {
+            docs.add(new ActaDocumentoMock(
+                    "DOC-" + sufijo + "-02",
+                    id,
+                    "INFORME_ALCOHOTEST",
+                    "ADJUNTO",
+                    "informe_alcotest_" + sufijo + ".pdf"));
+        }
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + sufijo + "-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                infractorNombre + " — notificacion positiva demo " + sufijo));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    private void cargarActasConApelacionUxDemo(PrototipoStore store) {
+        cargarActaConApelacionUxDemo(
+                store,
+                "ACTA-0111",
+                "A-2026-0111",
+                "Demo Apelacion Pendiente Resolucion",
+                "DNI 45.001.111",
+                "Caso demo ACTA-0111: apelacion presentada; pendiente de resolucion.",
+                false,
+                null,
+                null,
+                LocalDateTime.of(2026, 6, 13, 9, 0));
+        cargarActaConApelacionUxDemo(
+                store,
+                "ACTA-0112",
+                "A-2026-0112",
+                "Demo Apelacion En Analisis",
+                "DNI 45.001.112",
+                "Caso demo ACTA-0112: apelacion presentada; en revision juridica.",
+                false,
+                null,
+                ACCION_REVISION_APELACION,
+                LocalDateTime.of(2026, 6, 14, 10, 0));
+        cargarActaConApelacionUxDemo(
+                store,
+                "ACTA-0113",
+                "A-2026-0113",
+                "Demo Apelacion Resuelta Absuelve",
+                "DNI 45.001.113",
+                "Caso demo ACTA-0113: apelacion resuelta ACEPTADA_ABSUELVE; lista para cierre o archivo.",
+                true,
+                PrototipoStore.ResultadoResolucionApelacionMock.ACEPTADA_ABSUELVE,
+                null,
+                LocalDateTime.of(2026, 6, 15, 11, 0));
+    }
+
+    private void cargarActaConApelacionUxDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            boolean apelacionResuelta,
+            PrototipoStore.ResultadoResolucionApelacionMock resultadoResolucion,
+            String accionPendiente,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "SEGURIDAD_VIAL",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Oficial Demo",
+                resumenHecho,
+                BANDEJA_CON_APELACION);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(85000));
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo con fallo condenatorio notificado."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(3),
+                "FALLO_CONDENATORIO_DICTADO",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Fallo condenatorio dictado (precarga demo)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-03",
+                id,
+                fechaCreacion.plusDays(10),
+                "NOTIFICACION_FALLO_POSITIVA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificacion positiva del fallo condenatorio."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-04",
+                id,
+                fechaCreacion.plusDays(15),
+                "APELACION_PRESENTADA",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Apelacion presentada por portal infractor (precarga demo)."));
+        if (apelacionResuelta && resultadoResolucion != null) {
+            eventos.add(new ActaEventoMock(
+                    "EVT-" + sufijo + "-05",
+                    id,
+                    fechaCreacion.plusDays(25),
+                    "APELACION_ACEPTADA_ABSUELVE",
+                    "D5_ANALISIS",
+                    "D5_ANALISIS",
+                    "Resolucion de apelacion: ACEPTADA_ABSUELVE (precarga demo)."));
+        }
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_" + sufijo + ".pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-02",
+                id,
+                "FALLO_CONDENATORIO",
+                "FIRMADO",
+                "fallo_condenatorio_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + sufijo + "-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                infractorNombre + " — notificacion de fallo condenatorio demo"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.precargarApelacionDemo(
+                id,
+                PrototipoStore.CanalPresentacionApelacionMock.PORTAL_INFRACTOR,
+                apelacionResuelta,
+                resultadoResolucion);
+        if (accionPendiente != null) {
+            store.setAccionPendiente(id, accionPendiente);
+        }
+    }
+
+    private void cargarActasParalizadasUxDemo(PrototipoStore store) {
+        cargarActaParalizadaUxDemo(
+                store,
+                "ACTA-0114",
+                "A-2026-0114",
+                "Demo Paralizada Espera Documental",
+                "DNI 45.001.114",
+                "Paralizada por espera de documentacion probatoria del infractor.",
+                ACCION_PARALIZACION_ESPERA_DOCUMENTAL,
+                "Espera de documentacion probatoria",
+                LocalDateTime.of(2026, 6, 16, 9, 0));
+    }
+
+    private void cargarActaParalizadaUxDemo(
+            PrototipoStore store,
+            String id,
+            String numero,
+            String infractorNombre,
+            String infractorDocumento,
+            String resumenHecho,
+            String accionParalizacion,
+            String motivoParalizacion,
+            LocalDateTime fechaCreacion) {
+        String sufijo = id.substring("ACTA-".length());
+        ActaMock acta = new ActaMock(
+                id,
+                numero,
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PARALIZADA",
+                "PARALIZADA",
+                false,
+                true,
+                true,
+                true,
+                fechaCreacion,
+                infractorNombre,
+                infractorDocumento,
+                "Oficial Demo",
+                resumenHecho,
+                BANDEJA_PARALIZADAS);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+        store.setAccionPendiente(id, accionParalizacion);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-01",
+                id,
+                fechaCreacion.plusMinutes(10),
+                "ALTA",
+                "D1_CAPTURA",
+                "D2_ENRIQUECIMIENTO",
+                "Acta demo ingresada."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-02",
+                id,
+                fechaCreacion.plusDays(2),
+                "NOTIFICACION_ENTREGADA",
+                "D4_NOTIFICACION",
+                "D5_ANALISIS",
+                "Notificacion del acta cumplida."));
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijo + "-03",
+                id,
+                fechaCreacion.plusDays(5),
+                "PARALIZACION",
+                "D5_ANALISIS",
+                "D5_ANALISIS",
+                "Paralizacion vigente: " + motivoParalizacion + "."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-" + sufijo + "-01",
+                id,
+                "ACTA_FIRMADA",
+                "FIRMADO",
+                "acta_firmada_" + sufijo + ".pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-" + sufijo + "-01",
+                id,
+                "POSTAL",
+                "ENTREGADA",
+                infractorNombre + " — notificacion positiva previa a paralizacion"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    /**
+     * Asigna dependencia demo coherente a actas precargadas que aun no la tienen.
+     * No sobrescribe registros explicitos (p. ej. fallo/apelacion, UX 0108+).
+     */
+    private void completarDependenciasDemo(PrototipoStore store) {
+        for (var entry : store.getActas().entrySet()) {
+            String id = entry.getKey();
+            if (store.getDependenciaDemo(id).isPresent()) {
+                continue;
+            }
+            ActaMock acta = entry.getValue();
+            PrototipoStore.DependenciaActaDemo dep =
+                    inferirDependenciaDemo(id, acta.dominioReferencia());
+            store.registrarDependenciaDemo(id, dep);
+        }
+    }
+
+    private static PrototipoStore.DependenciaActaDemo inferirDependenciaDemo(
+            String actaId, String dominioReferencia) {
+        if ("ESTABLECIMIENTO".equals(dominioReferencia)) {
+            return PrototipoStore.DependenciaActaDemo.BROMATOLOGIA;
+        }
+        PrototipoStore.DependenciaActaDemo base = dependenciaBaseDesdeDominio(dominioReferencia);
+        int n = numeroSecuencialActa(actaId);
+        if (n < 0) {
+            return base;
+        }
+        if (n >= 31 && n <= 45) {
+            return base;
+        }
+        if (n >= 1 && n <= 17) {
+            return switch (n) {
+                case 7 -> PrototipoStore.DependenciaActaDemo.INSPECCIONES;
+                case 14 -> PrototipoStore.DependenciaActaDemo.FISCALIZACION;
+                default -> base;
+            };
+        }
+        if (n >= 46) {
+            return switch (n % 8) {
+                case 0 -> PrototipoStore.DependenciaActaDemo.INSPECCIONES;
+                case 1 -> PrototipoStore.DependenciaActaDemo.FISCALIZACION;
+                case 2 -> PrototipoStore.DependenciaActaDemo.BROMATOLOGIA;
+                default -> base;
+            };
+        }
+        return base;
+    }
+
+    private static PrototipoStore.DependenciaActaDemo dependenciaBaseDesdeDominio(String dominioReferencia) {
+        return switch (dominioReferencia) {
+            case "ESTABLECIMIENTO" -> PrototipoStore.DependenciaActaDemo.BROMATOLOGIA;
+            default -> PrototipoStore.DependenciaActaDemo.TRANSITO;
+        };
+    }
+
+    private static int numeroSecuencialActa(String actaId) {
+        if (actaId == null || !actaId.startsWith("ACTA-")) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(actaId.substring(5));
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    /** Hito 8: pago voluntario informado, pendiente de confirmación. */
+    private void cargarActa0120PagoVoluntarioInformadoDemo(PrototipoStore store) {
+        String id = "ACTA-0120";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0120",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2026, 7, 1, 9, 0),
+                "Herrera, Julián",
+                "DNI 41.001.120",
+                "Oficial Demo",
+                "Caso demo ACTA-0120: pago voluntario informado pendiente de confirmación.",
+                BANDEJA_PENDIENTE_ANALISIS);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0120-01", id,
+                LocalDateTime.of(2026, 7, 1, 9, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta ingresada; datos completos."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0120-02", id,
+                LocalDateTime.of(2026, 7, 6, 10, 0),
+                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "Notificación fehaciente del acta; pasa a análisis."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0120-03", id,
+                LocalDateTime.of(2026, 7, 10, 11, 0),
+                "PAGO_INFORMADO", "D5_ANALISIS", "D5_ANALISIS",
+                "Infractor informa pago voluntario; comprobante adjunto pendiente de verificación."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0120-01", id, "ACTA_FIRMADA", "FIRMADO", "acta_firmada_0120.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0120-02", id, "COMPROBANTE_PAGO", "ADJUNTO", "comprobante_pago_0120.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0120-01", id, "POSTAL", "ENTREGADA",
+                "Julián Herrera — notificación positiva del acta"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+        store.setPagoInformadoDemo(
+                id,
+                new PrototipoStore.PagoInformadoMock(
+                        LocalDateTime.of(2026, 7, 10, 11, 30),
+                        "COMP-0120",
+                        "comprobante_pago_0120.pdf"));
+        store.setAccionPendiente(id, PrototipoStore.ACCION_VERIFICAR_PAGO_INFORMADO);
+    }
+
+    /** Hito 10: fallo condenatorio dictado pendiente de firma. */
+    private void cargarActa0121FalloPendienteFirmaDemo(PrototipoStore store) {
+        String id = "ACTA-0121";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0121",
+                "SEGURIDAD_VIAL",
+                "D3_DOCUMENTAL",
+                "PENDIENTE_FIRMA",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2026, 7, 2, 10, 0),
+                "Medina, Sofía",
+                "DNI 42.001.121",
+                "Oficial Demo",
+                "Caso demo ACTA-0121: fallo condenatorio dictado pendiente de firma.",
+                BANDEJA_PENDIENTE_FIRMA);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0121-01", id,
+                LocalDateTime.of(2026, 7, 2, 10, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta ingresada; datos completos."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0121-02", id,
+                LocalDateTime.of(2026, 7, 7, 14, 0),
+                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "Notificación fehaciente del acta."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0121-03", id,
+                LocalDateTime.of(2026, 7, 15, 9, 0),
+                "FALLO_CONDENATORIO_DICTADO", "D5_ANALISIS", "D5_ANALISIS",
+                "Fallo condenatorio dictado; pendiente firma de autoridad competente."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0121-04", id,
+                LocalDateTime.of(2026, 7, 15, 9, 30),
+                "DERIVACION_FIRMA", "D5_ANALISIS", "D3_DOCUMENTAL",
+                "Fallo derivado a firma; queda en bandeja PENDIENTE_FIRMA."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0121-01", id, "ACTA_FIRMADA", "FIRMADO", "acta_firmada_0121.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0121-02", id, "FALLO_CONDENATORIO", "PENDIENTE_FIRMA",
+                "fallo_condenatorio_0121.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0121-01", id, "POSTAL", "ENTREGADA",
+                "Sofía Medina — notificación positiva del acta"));
+        store.getNotificacionesPorActa().put(id, notifs);
+    }
+
+    /** Hito 13: condena firme establecida; pago de condena pendiente de informar. */
+    private void cargarActa0122CondenaFirmePagoCondenaDemo(PrototipoStore store) {
+        String id = "ACTA-0122";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0122",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                true,
+                LocalDateTime.of(2026, 7, 3, 8, 0),
+                "Varela, Diego",
+                "DNI 43.001.122",
+                "Oficial Demo",
+                "Caso demo ACTA-0122: condena firme; pago de condena pendiente de informar.",
+                BANDEJA_PENDIENTE_ANALISIS);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(95000));
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0122-01", id,
+                LocalDateTime.of(2026, 7, 3, 8, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta ingresada."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0122-02", id,
+                LocalDateTime.of(2026, 7, 8, 11, 0),
+                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "Notificación fehaciente del acta."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0122-03", id,
+                LocalDateTime.of(2026, 7, 16, 10, 0),
+                "FALLO_CONDENATORIO_DICTADO", "D5_ANALISIS", "D5_ANALISIS",
+                "Fallo condenatorio dictado."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0122-04", id,
+                LocalDateTime.of(2026, 7, 20, 14, 0),
+                "NOTIFICACION_FALLO_POSITIVA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "Fallo notificado positivamente; inicia plazo de apelación."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0122-05", id,
+                LocalDateTime.of(2026, 7, 30, 9, 0),
+                "CONDENA_FIRME", "D5_ANALISIS", "D5_ANALISIS",
+                "Plazo de apelación vencido sin presentación; condena firme establecida."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0122-01", id, "ACTA_FIRMADA", "FIRMADO", "acta_firmada_0122.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0122-02", id, "FALLO_CONDENATORIO", "FIRMADO",
+                "fallo_condenatorio_0122.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0122-01", id, "POSTAL", "ENTREGADA",
+                "Diego Varela — notificación del acta"));
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0122-02", id, "POSTAL", "ENTREGADA",
+                "Diego Varela — notificación del fallo"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+    }
+
+    /** Hito 18: caso inicial dependencia INSPECCIONES, sin documentos avanzados. */
+    private void cargarActa0123InspeccionesInicialDemo(PrototipoStore store) {
+        String id = "ACTA-0123";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0123",
+                "TRANSITO_URBANO",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "ACTIVA",
+                false,
+                true,
+                false,
+                false,
+                LocalDateTime.of(2026, 7, 4, 10, 0),
+                "Rojas, Carmen",
+                "DNI 44.001.123",
+                "Inspector Demo",
+                "Caso demo ACTA-0123: captura inicial del circuito de Inspecciones.",
+                BANDEJA_ACTAS_EN_ENRIQUECIMIENTO);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.INSPECCIONES);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0123-01", id,
+                LocalDateTime.of(2026, 7, 4, 10, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta de inspección ingresada; pendiente completar datos del establecimiento."));
+        store.getEventosPorActa().put(id, eventos);
+    }
+
+    /** Hito 19: caso inicial dependencia FISCALIZACION, sin documentos avanzados. */
+    private void cargarActa0124FiscalizacionInicialDemo(PrototipoStore store) {
+        String id = "ACTA-0124";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0124",
+                "TRANSITO_URBANO",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "ACTIVA",
+                false,
+                true,
+                false,
+                false,
+                LocalDateTime.of(2026, 7, 5, 9, 0),
+                "Mendoza, Pablo",
+                "DNI 45.001.124",
+                "Fiscalizador Demo",
+                "Caso demo ACTA-0124: captura inicial del circuito de Fiscalización.",
+                BANDEJA_ACTAS_EN_ENRIQUECIMIENTO);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.FISCALIZACION);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0124-01", id,
+                LocalDateTime.of(2026, 7, 5, 9, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta de fiscalización ingresada; pendiente datos del local."));
+        store.getEventosPorActa().put(id, eventos);
+    }
+
+    /** Hito 20: caso inicial dependencia BROMATOLOGIA, sin documentos avanzados. */
+    private void cargarActa0125BromatologiaInicialDemo(PrototipoStore store) {
+        String id = "ACTA-0125";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0125",
+                "ESTABLECIMIENTO",
+                "D2_ENRIQUECIMIENTO",
+                "EN_CURSO",
+                "ACTIVA",
+                false,
+                true,
+                false,
+                false,
+                LocalDateTime.of(2026, 7, 6, 8, 30),
+                "Distribuidora El Progreso",
+                "CUIT 30-00001125-7",
+                "Inspector Bromatología Demo",
+                "Caso demo ACTA-0125: captura inicial del circuito de Bromatología.",
+                BANDEJA_ACTAS_EN_ENRIQUECIMIENTO);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.BROMATOLOGIA);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0125-01", id,
+                LocalDateTime.of(2026, 7, 6, 8, 40),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta de bromatología ingresada; pendiente identificación del establecimiento."));
+        store.getEventosPorActa().put(id, eventos);
     }
 }

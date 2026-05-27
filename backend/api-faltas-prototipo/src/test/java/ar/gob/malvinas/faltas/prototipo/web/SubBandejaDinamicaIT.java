@@ -140,6 +140,18 @@ class SubBandejaDinamicaIT {
     }
 
     @Test
+    void acta0024_enriquecimientoConBloqueosMateriales_chipYAccionOperativos() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(get(B + "/bandejas/ACTAS_EN_ENRIQUECIMIENTO/actas"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == 'ACTA-0024')].chip").value(hasItem("Pendientes materiales")))
+                .andExpect(jsonPath("$[?(@.id == 'ACTA-0024')].accionPrincipal").value(hasItem("Gestionar bloqueos")))
+                .andExpect(jsonPath("$[?(@.id == 'ACTA-0024')].chip").value(not(hasItem("D1"))))
+                .andExpect(jsonPath("$[?(@.id == 'ACTA-0024')].accionPrincipal").value(not(hasItem("Completar acta"))));
+    }
+
+    @Test
     void acta0004TrasNotificacionPositiva_clasificaAnalisisNotifPositiva() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 

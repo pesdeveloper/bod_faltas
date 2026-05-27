@@ -32,10 +32,9 @@ class CorreoPostalNotificacionIT {
 
     private static final String B = "/api/prototipo";
     private static final String MONTO_CONDENA_VALIDO_JSON = "{\"montoCondena\":12345.67}";
-    private static final int CANDIDATAS_CORREO_BASE = 6;
+    private static final int CANDIDATAS_CORREO_BASE = 5;
     private static final List<String> RESPUESTA_DEMO_BASE = List.of(
             "loteId,notificacionId,resultado,fechaResultado,observacion",
-            "LOTE-CORREO-DEMO,NOT-0029-03,POSITIVA,2026-05-25T10:00:00,Fallo condenatorio entregado por correo postal demo",
             "LOTE-CORREO-DEMO,NOT-0028-03,POSITIVA,2026-05-25T10:05:00,Fallo absolutorio entregado por correo postal demo",
             "LOTE-CORREO-DEMO,NOT-0004-01,NEGATIVA,2026-05-25T10:10:00,Correo devuelve pieza por domicilio insuficiente",
             "LOTE-CORREO-DEMO,NOT-0030-03,VENCIDA,2026-05-25T10:15:00,Sin constancia de entrega dentro del plazo demo");
@@ -393,6 +392,59 @@ class CorreoPostalNotificacionIT {
                 Files.move(backup, respuesta, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
         }
+    }
+
+    @Test
+    void enviarIndividualCorreo_listaParaEnvio_pasaAEnviadaSinLote() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(post(B + "/notificaciones/correo/NOT-0037-01/enviar-individual"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("OK"))
+                .andExpect(jsonPath("$.notificacionId").value("NOT-0037-01"))
+                .andExpect(jsonPath("$.notificacion.estadoNotificacion").value("ENVIADA"))
+                .andExpect(jsonPath("$.notificacion.resultadoNotificacion").value("SIN_RESULTADO"));
+
+        mvc.perform(get(B + "/notificaciones/correo/listas-para-lote"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.notificacionId == 'NOT-0037-01')]").doesNotExist());
+
+        mvc.perform(get(B + "/notificaciones/correo/trazabilidad").param("acta", "ACTA-0037"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.notificacionId == 'NOT-0037-01')].estadoNotificacion")
+                        .value(hasItem("ENVIADA")))
+                .andExpect(jsonPath("$[?(@.notificacionId == 'NOT-0037-01')].resultadoNotificacion")
+                        .value(hasItem("SIN_RESULTADO")));
+
+        mvc.perform(get(B + "/actas/ACTA-0037/eventos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.tipoEvento == 'CORREO_ENVIO_INDIVIDUAL')]").exists());
+    }
+
+    @Test
+    void enviarIndividualCorreo_noListaParaEnvio_devuelve409() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(post(B + "/notificaciones/correo/NOT-0037-01/enviar-individual"))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(B + "/notificaciones/correo/NOT-0037-01/enviar-individual"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void enviarIndividualCorreo_noRompeGenerarLote() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(post(B + "/notificaciones/correo/NOT-0037-01/enviar-individual"))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(B + "/notificaciones/correo/lotes/generar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"notificacionIds\":[\"NOT-0038-01\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cantidad").value(1))
+                .andExpect(jsonPath("$.notificaciones[0].notificacionId").value("NOT-0038-01"));
     }
 
     private void prepararFalloCondenatorioFirmado(String actaId, String documentoId) throws Exception {

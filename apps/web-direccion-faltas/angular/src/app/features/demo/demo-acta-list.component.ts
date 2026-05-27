@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, DestroyRef, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
+﻿import { AfterViewInit, Component, DestroyRef, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +9,11 @@ import { ActaBandejaItem, BadgeDemo, SubBandejaResumen } from '../../core/models
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
 
 type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
+
+export interface DependenciaFiltroOption {
+  codigo: string;
+  label: string;
+}
 
 const ETIQUETA_BADGE_COMPACTA: Record<string, string> = {
   SIN_PAGO: 'Sin pago',
@@ -29,7 +35,7 @@ const ETIQUETA_BADGE_COMPACTA: Record<string, string> = {
 @Component({
   selector: 'app-demo-acta-list',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [FormsModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, NgTemplateOutlet],
   templateUrl: './demo-acta-list.component.html',
   styleUrl: './demo-acta-list.component.scss',
 })
@@ -44,8 +50,14 @@ export class DemoActaListComponent implements AfterViewInit {
   @Input() textoBusquedaActa = '';
   @Input() seguirActaAlCambiarBandeja = false;
   @Input() seguimientoActaMensaje: string | null = null;
+  @Input() actaEnSeguimiento: ActaBandejaItem | null = null;
   @Input() subBandejas: SubBandejaResumen[] = [];
   @Input() subBandejaActiva: string | null = null;
+  @Input() dependenciasFiltro: DependenciaFiltroOption[] = [];
+  @Input() dependenciaSeleccionada: string | null = null;
+  @Input() etiquetaFiltroOperativo = 'Todos';
+  @Input() etiquetaDependencia = 'Todas';
+  @Input() resumenBandejaInfoDeshabilitado = false;
 
   @Output() readonly textoBusquedaActaChange = new EventEmitter<string>();
   @Output() readonly seguirActaAlCambiarBandejaChange = new EventEmitter<boolean>();
@@ -53,6 +65,7 @@ export class DemoActaListComponent implements AfterViewInit {
   @Output() readonly seleccionarActa = new EventEmitter<string>();
   @Output() readonly mostrarResumenBandejaChange = new EventEmitter<void>();
   @Output() readonly filtroOperativoChange = new EventEmitter<string | null>();
+  @Output() readonly dependenciaSeleccionadaChange = new EventEmitter<string | null>();
 
   get valorFiltroOperativo(): string | null {
     return this.subBandejaActiva;
@@ -74,8 +87,16 @@ export class DemoActaListComponent implements AfterViewInit {
     this.cambiarFiltroOperativo(null);
   }
 
+  get valorDependencia(): string | null {
+    return this.dependenciaSeleccionada;
+  }
+
+  cambiarDependencia(codigo: string | null): void {
+    this.dependenciaSeleccionadaChange.emit(codigo);
+  }
+
   mostrarResumenBandeja(): void {
-    if (!this.actaSeleccionadaId) {
+    if (this.resumenBandejaInfoDeshabilitado) {
       return;
     }
     this.mostrarResumenBandejaChange.emit();
@@ -84,6 +105,15 @@ export class DemoActaListComponent implements AfterViewInit {
 
   @ViewChild('actasListContainer') private readonly actasListContainer?: ElementRef<HTMLElement>;
   @ViewChildren('actaRow') private readonly actaRows?: QueryList<ElementRef<HTMLElement>>;
+
+
+  get actasListadoBandeja(): ActaBandejaItem[] {
+    const excluirId = this.actaEnSeguimiento?.id;
+    if (!excluirId) {
+      return this.actas;
+    }
+    return this.actas.filter((acta) => acta.id !== excluirId);
+  }
 
   get contenedor(): HTMLElement | null {
     return this.actasListContainer?.nativeElement ?? null;

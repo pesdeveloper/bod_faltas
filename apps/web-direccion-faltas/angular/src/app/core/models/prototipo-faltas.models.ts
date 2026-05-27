@@ -1,13 +1,19 @@
-﻿export type BandejaCodigo =
+export type BandejaCodigo =
+  | 'NOTIFICACIONES'
+  | 'LABRADAS'
   | 'ACTAS_EN_ENRIQUECIMIENTO'
   | 'PENDIENTE_ANALISIS'
   | 'PENDIENTES_RESOLUCION_REDACCION'
+  | 'PENDIENTES_FALLO'
   | 'PENDIENTE_FIRMA'
   | 'PENDIENTE_NOTIFICACION'
   | 'EN_NOTIFICACION'
+  | 'CON_APELACION'
   | 'GESTION_EXTERNA'
+  | 'PARALIZADAS'
   | 'ARCHIVO'
-  | 'CERRADAS';
+  | 'CERRADAS'
+  | 'PENDIENTE_PREPARACION_DOCUMENTAL';
 
 export type DependenciaActaDemo =
   | 'TRANSITO'
@@ -107,6 +113,7 @@ export interface ActaBandejaItem extends ActaResumenDemo {
   accionPrincipal: string | null;
   prioridadSubBandeja: number;
   chipsSecundarios: string[];
+  dependenciaDemo: string | null;
 }
 
 /** Contrato ActaNotificacionResponse en GET /actas/{id} (detalle). */
@@ -398,6 +405,13 @@ export interface AnularLoteCorreoResultadoDemo {
   estado: string;
   mensaje: string;
   loteId: string;
+}
+
+export interface EnviarIndividualCorreoResultadoDemo {
+  estado: string;
+  mensaje: string;
+  notificacionId: string;
+  notificacion: NotificacionCorreoLoteItemDemo | null;
 }
 
 export interface ProcesarRespuestaCorreoResultadoDemo {

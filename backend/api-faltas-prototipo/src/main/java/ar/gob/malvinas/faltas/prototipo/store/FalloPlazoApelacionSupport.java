@@ -538,6 +538,36 @@ final class FalloPlazoApelacionSupport {
                 PrototipoStore.ResolverApelacionEstado.CONFLICT, null, null, null, null, null);
     }
 
+    /**
+     * Helper interno de mocks: precarga apelación presentada (y opcionalmente
+     * resuelta) sin recorrer firma, notificación ni registro por API.
+     */
+    void precargarApelacionDemo(
+            String actaId,
+            PrototipoStore.CanalPresentacionApelacionMock canal,
+            boolean resuelta,
+            PrototipoStore.ResultadoResolucionApelacionMock resultadoResolucion) {
+        if (actaId == null) {
+            return;
+        }
+        plazoApelacionAbiertoPorActa.remove(actaId);
+        apelacionPresentadaPorActa.put(actaId, Boolean.TRUE);
+        if (canal != null) {
+            canalApelacionPorActa.put(actaId, canal.name());
+        }
+        cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENADO);
+        if (!resuelta || resultadoResolucion == null) {
+            return;
+        }
+        apelacionResueltaPorActa.put(actaId, Boolean.TRUE);
+        resultadoResolucionApelacionPorActa.put(actaId, resultadoResolucion.name());
+        if (resultadoResolucion == PrototipoStore.ResultadoResolucionApelacionMock.ACEPTADA_ABSUELVE) {
+            cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
+        } else {
+            cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        }
+    }
+
     // ---------------------------------------------------------------
     // Regla de puedePresentarApelacion para portal infractor
     // ---------------------------------------------------------------

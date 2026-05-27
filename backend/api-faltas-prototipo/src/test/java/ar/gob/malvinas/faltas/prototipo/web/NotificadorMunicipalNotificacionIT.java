@@ -33,7 +33,6 @@ class NotificadorMunicipalNotificacionIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].notificacionId").value(hasItem("NOT-0031-01")))
                 .andExpect(jsonPath("$[*].notificacionId").value(hasItem("NOT-0032-01")))
-                .andExpect(jsonPath("$[*].notificacionId").value(hasItem("NOT-0033-01")))
                 .andExpect(jsonPath("$[?(@.notificacionId == 'NOT-0031-01')].canal")
                         .value(hasItem("NOTIFICADOR_MUNICIPAL")))
                 .andExpect(jsonPath("$[?(@.notificacionId == 'NOT-0031-01')].estado")

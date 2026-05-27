@@ -52,13 +52,16 @@ public class PrototipoStore {
             "EN_NOTIFICACION",
             "PENDIENTE_ANALISIS",
             "PENDIENTES_RESOLUCION_REDACCION",
+            "PENDIENTES_FALLO",
+            "CON_APELACION",
             "GESTION_EXTERNA",
+            "PARALIZADAS",
             "ARCHIVO",
             "CERRADAS");
 
     /**
-     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso volvi�� a
-     * anǭlisis por notificaci��n fallida y requiere decisi��n posterior. El
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso volvió a
+     * análisis por notificación fallida y requiere decisión posterior. El
      * campo es filtrable por API y sobrevive en el store aparte del record
      * inmutable {@link ActaMock}.
      */
@@ -973,6 +976,32 @@ public class PrototipoStore {
         }
     }
 
+    public record EnviarIndividualCorreoResultado(
+            String estado,
+            String mensaje,
+            String notificacionId,
+            NotificacionCorreoLoteItem notificacion) {
+
+        public static EnviarIndividualCorreoResultado ok(
+                String notificacionId,
+                String mensaje,
+                NotificacionCorreoLoteItem notificacion) {
+            return new EnviarIndividualCorreoResultado("OK", mensaje, notificacionId, notificacion);
+        }
+
+        public static EnviarIndividualCorreoResultado notFound(String notificacionId) {
+            return new EnviarIndividualCorreoResultado(
+                    "NOT_FOUND",
+                    "Notificacion no encontrada: " + notificacionId,
+                    notificacionId,
+                    null);
+        }
+
+        public static EnviarIndividualCorreoResultado conflict(String notificacionId, String mensaje) {
+            return new EnviarIndividualCorreoResultado("CONFLICT", mensaje, notificacionId, null);
+        }
+    }
+
     public record NotificacionMunicipalVista(
             String notificacionId,
             String actaId,
@@ -1680,6 +1709,27 @@ public class PrototipoStore {
             return;
         }
         accionPendientePorActa.put(actaId, accion);
+    }
+
+    /**
+     * Helper interno de mocks: precarga circuito de apelación sin recorrer API.
+     */
+    public void precargarApelacionDemo(
+            String actaId,
+            CanalPresentacionApelacionMock canal,
+            boolean resuelta,
+            ResultadoResolucionApelacionMock resultadoResolucion) {
+        falloPlazoApelacion.precargarApelacionDemo(actaId, canal, resuelta, resultadoResolucion);
+    }
+
+    /**
+     * Helper interno de mocks: monto de condena asociado a fallo condenatorio.
+     */
+    public void setMontoCondenaDemo(String actaId, java.math.BigDecimal monto) {
+        if (actaId == null || monto == null) {
+            return;
+        }
+        montoCondenaPorActa.put(actaId, monto);
     }
 
     public List<BandejaConteo> listarBandejasConConteoOrdenadas() {
@@ -2475,6 +2525,10 @@ public class PrototipoStore {
 
     public List<CorreoPostalTrazabilidadItem> buscarTrazabilidadCorreoPorActa(String consultaActa) {
         return correoPostal.buscarTrazabilidadPorActa(consultaActa);
+    }
+
+    public EnviarIndividualCorreoResultado enviarIndividualCorreoPostalDemo(String notificacionId) {
+        return correoPostal.enviarIndividual(notificacionId);
     }
 
     /**

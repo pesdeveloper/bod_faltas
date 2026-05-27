@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,8 +9,23 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { Observable, catchError, finalize, of, take } from 'rxjs';
-import { BANDEJAS_DEMO, etiquetaBandeja } from '../../core/constants/bandejas-demo.constants';
+import { Observable, catchError, finalize, forkJoin, map, of, take } from 'rxjs';
+import {
+  BandejaLateralCodigo,
+  BandejaLateralResponse,
+  bandejaBackendALateral,
+  esBandejaCodigoDemo,
+  esBandejaLateralCodigo,
+  etiquetaBandeja,
+} from '../../core/constants/bandejas-demo.constants';
+import {
+  aplicarFiltroOperativoLateral,
+  codigosBandejaEnResumen,
+  filtrosOperativosVisibles,
+  filtrarBandejasLateralVisibles,
+  subBandejaBackendParaConsulta,
+  transformarBandejasParaLateral,
+} from '../../core/services/bandeja-lateral.presenter';
 import {
   AccionPagoCondenaDemo,
   AccionPagoVoluntarioDemo,
@@ -67,6 +82,21 @@ const ETIQUETA_DEPENDENCIA_DEMO: Record<string, string> = {
   FISCALIZACION: 'Fiscalización',
   BROMATOLOGIA: 'Bromatología',
 };
+
+const SIN_DEPENDENCIA_RESUMEN = '__SIN_DEPENDENCIA__';
+
+const CODIGOS_DEPENDENCIA_RESUMEN: readonly DependenciaActaDemo[] = [
+  'TRANSITO',
+  'INSPECCIONES',
+  'FISCALIZACION',
+  'BROMATOLOGIA',
+];
+
+interface DependenciaResumenFila {
+  codigo: string;
+  label: string;
+  cantidad: number;
+}
 type TipoFalloDemo = 'ABSOLUTORIO' | 'CONDENATORIO';
 
 const TIPOS_CUMPLIMIENTO_MATERIAL: ReadonlyArray<TipoCumplimientoMaterialBloqueante> = [
@@ -99,7 +129,8 @@ const ETIQUETA_RESOLUCION_BLOQUEO_CIERRE_EN_CURSO: Record<TipoResolucionBloqueoC
   ENTREGA_DOCUMENTACION: 'Resolviendo entrega...',
 };
 
-const BANDEJAS_NOTIFICABLES: ReadonlyArray<BandejaCodigo> = [
+const BANDEJAS_NOTIFICABLES: ReadonlyArray<string> = [
+  'NOTIFICACIONES',
   'PENDIENTE_NOTIFICACION',
   'EN_NOTIFICACION',
 ];
@@ -193,37 +224,42 @@ const ACCIONES_PAGO_CONDENA_CONOCIDAS: ReadonlyArray<AccionPagoCondenaDemo> = [
 const NOMBRE_ARCHIVO_COMPROBANTE_MOCK = 'comprobante-mock.pdf';
 
 const BANDEJA_ABREVIATURAS: Record<BandejaCodigo, string> = {
+  LABRADAS: 'LAB',
   ACTAS_EN_ENRIQUECIMIENTO: 'ENR',
   PENDIENTE_ANALISIS: 'ANA',
   PENDIENTES_RESOLUCION_REDACCION: 'RED',
+  PENDIENTES_FALLO: 'FAL',
   PENDIENTE_FIRMA: 'FIR',
+  NOTIFICACIONES: 'NOT',
   PENDIENTE_NOTIFICACION: 'NOT',
   EN_NOTIFICACION: 'ENV',
+  CON_APELACION: 'APE',
   GESTION_EXTERNA: 'EXT',
+  PARALIZADAS: 'PAR',
   ARCHIVO: 'ARC',
   CERRADAS: 'CER',
+  PENDIENTE_PREPARACION_DOCUMENTAL: 'DOC',
 };
 
 const BANDEJA_ICONOS: Record<BandejaCodigo, string> = {
+  LABRADAS: 'description',
   ACTAS_EN_ENRIQUECIMIENTO: 'playlist_add_check',
   PENDIENTE_ANALISIS: 'manage_search',
   PENDIENTES_RESOLUCION_REDACCION: 'edit_note',
+  PENDIENTES_FALLO: 'gavel',
   PENDIENTE_FIRMA: 'draw',
+  NOTIFICACIONES: 'outgoing_mail',
   PENDIENTE_NOTIFICACION: 'outgoing_mail',
   EN_NOTIFICACION: 'local_shipping',
+  CON_APELACION: 'balance',
   GESTION_EXTERNA: 'account_balance',
+  PARALIZADAS: 'pause_circle',
   ARCHIVO: 'inventory_2',
   CERRADAS: 'task_alt',
-};
-
-const BANDEJA_ICONOS_EXTRA: Record<string, string> = {
   PENDIENTE_PREPARACION_DOCUMENTAL: 'edit_document',
 };
 
-const BANDEJA_ICONOS_LOOKUP: Record<string, string> = {
-  ...BANDEJA_ICONOS,
-  ...BANDEJA_ICONOS_EXTRA,
-};
+const BANDEJA_ICONOS_LOOKUP: Record<string, string> = BANDEJA_ICONOS;
 
 const STORAGE_SEGUIR_ACTA_AL_CAMBIAR_BANDEJA = 'faltas.demo.seguir-acta-al-cambiar-bandeja';
 
@@ -290,14 +326,23 @@ export class DemoShellComponent implements OnInit {
 
   readonly etiquetaBandeja = etiquetaBandeja;
   readonly bandejasColapsadas = signal<boolean>(false);
-  readonly bandejasResumen = signal<BandejaResponse[]>([]);
+  readonly bandejasResumen = signal<BandejaLateralResponse[]>([]);
+  /** Solo bandejas UX visibles en el menú lateral (nunca códigos backend absorbidos). */
+  readonly bandejasLateral = signal<BandejaLateralResponse[]>([]);
+  private readonly bandejasBackendCodigos = signal<ReadonlySet<string>>(new Set());
   readonly enCorreoPostal = signal(false);
+  readonly enCorreoPostalActas = signal(false);
+  readonly enCorreoPostalLotes = signal(false);
   readonly enNotificadorMunicipal = signal(false);
 
-  readonly bandejaSeleccionada = signal<BandejaCodigo>('ACTAS_EN_ENRIQUECIMIENTO');
+  readonly bandejaSeleccionada = signal<BandejaLateralCodigo>('ACTAS_EN_ENRIQUECIMIENTO');
   readonly subBandejaSeleccionada = signal<string | null>(null);
   readonly actas = signal<ActaBandejaItem[]>([]);
   readonly actaSeleccionadaId = signal<string | null>(null);
+  private static readonly BREAKPOINT_VISTA_ESTRECHA = '(max-width: 959.98px)';
+  readonly vistaEstrecha = signal(false);
+  readonly detalleMovilAbierto = signal(false);
+  readonly overlayResumenBandejaAbierto = signal(false);
   readonly detalle = signal<ActaDetalleDemo | null>(null);
 
   readonly documentos = signal<DocumentoActaDemo[]>([]);
@@ -395,6 +440,7 @@ export class DemoShellComponent implements OnInit {
   readonly falloMensaje = signal<string | null>(null);
 
   readonly textoBusquedaActa = signal('');
+  readonly dependenciaDemoSeleccionada = signal<string | null>(null);
   readonly seguirActaAlCambiarBandeja = signal(false);
   readonly seguimientoActaMensaje = signal<string | null>(null);
 
@@ -408,6 +454,7 @@ export class DemoShellComponent implements OnInit {
   private scrollVerifyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
+    this.inicializarDeteccionVistaEstrecha();
     this.restaurarPreferenciaSeguirActa();
     this.actualizarVistaCorreoPostal(this.router.url);
     this.router.events
@@ -420,19 +467,135 @@ export class DemoShellComponent implements OnInit {
     this.cargarListado();
   }
 
+
   ngAfterViewInit(): void {}
 
+  resumenBandejaInfoDeshabilitado(): boolean {
+    if (this.vistaEstrecha()) {
+      return this.actaSeleccionadaId() !== null;
+    }
+    return this.actaSeleccionadaId() === null;
+  }
+
+  private inicializarDeteccionVistaEstrecha(): void {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const consulta = window.matchMedia(DemoShellComponent.BREAKPOINT_VISTA_ESTRECHA);
+    const actualizar = (): void => {
+      const estrecha = consulta.matches;
+      this.vistaEstrecha.set(estrecha);
+      if (!estrecha) {
+        this.detalleMovilAbierto.set(false);
+        this.overlayResumenBandejaAbierto.set(false);
+      }
+    };
+
+    actualizar();
+    consulta.addEventListener('change', actualizar);
+    this.destroyRef.onDestroy(() => consulta.removeEventListener('change', actualizar));
+  }
+
+  private cerrarOverlaysMoviles(): void {
+    this.detalleMovilAbierto.set(false);
+    this.overlayResumenBandejaAbierto.set(false);
+  }
+
+  cerrarPanelMovil(): void {
+    if (this.overlayResumenBandejaAbierto()) {
+      this.overlayResumenBandejaAbierto.set(false);
+      return;
+    }
+    this.cerrarDetalleMovil();
+  }
+
+  cerrarDetalleMovil(): void {
+    this.detalleMovilAbierto.set(false);
+  }
+
+  actaEnSeguimiento(): ActaBandejaItem | null {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || !this.seguirActaAlCambiarBandeja()) {
+      return null;
+    }
+    if (this.actas().some((acta) => acta.id === actaId)) {
+      return null;
+    }
+    const det = this.detalle();
+    if (!det || det.id !== actaId) {
+      return null;
+    }
+    return this.actaBandejaDesdeDetalle(det);
+  }
+
   actasFiltradas(): ActaBandejaItem[] {
+    const dependencia = this.dependenciaDemoSeleccionada();
     const termino = this.textoBusquedaActa().trim().toLowerCase();
-    const items = this.actas();
+    let items = this.actas();
+    if (dependencia) {
+      if (dependencia === SIN_DEPENDENCIA_RESUMEN) {
+        items = items.filter((acta) => !acta.dependenciaDemo?.trim());
+      } else {
+        items = items.filter((acta) => acta.dependenciaDemo === dependencia);
+      }
+    }
     if (!termino) {
       return items;
     }
     return items.filter((acta) => acta.numeroActa.trim().toLowerCase().includes(termino));
   }
 
+  dependenciasDisponiblesEnListado(): { codigo: string; label: string }[] {
+    const vistos = new Set<string>();
+    const opciones: { codigo: string; label: string }[] = [];
+    for (const acta of this.actas()) {
+      const codigo = acta.dependenciaDemo?.trim();
+      if (!codigo || vistos.has(codigo)) {
+        continue;
+      }
+      vistos.add(codigo);
+      opciones.push({ codigo, label: this.etiquetaDependenciaDemo(codigo) });
+    }
+    return opciones.sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  }
+
   actualizarTextoBusquedaActa(valor: string): void {
     this.textoBusquedaActa.set(valor);
+  }
+
+  actualizarDependenciaDemo(valor: string | null): void {
+    this.dependenciaDemoSeleccionada.set(valor);
+  }
+
+  etiquetaFiltroOperativoActivo(): string {
+    const subCodigo = this.subBandejaSeleccionada();
+    if (!subCodigo) {
+      return 'Todos';
+    }
+    const sub = this.subBandejasActuales().find((item) => item.codigo === subCodigo);
+    return sub?.label ?? subCodigo;
+  }
+
+  etiquetaDependenciaActiva(): string {
+    const dependencia = this.dependenciaDemoSeleccionada();
+    if (!dependencia) {
+      return 'Todas';
+    }
+    if (dependencia === SIN_DEPENDENCIA_RESUMEN) {
+      return 'Sin dependencia';
+    }
+    return this.etiquetaDependenciaDemo(dependencia);
+  }
+
+  dependenciaResumenDeshabilitada(codigo: string): boolean {
+    const fila = this.filasResumenPorDependencia().find((item) => item.codigo === codigo);
+    return !fila || fila.cantidad <= 0;
+  }
+
+  filtroOperativoResumenDeshabilitado(subCodigo: string): boolean {
+    const sub = this.subBandejasActuales().find((item) => item.codigo === subCodigo);
+    return !sub || sub.cantidad <= 0;
   }
 
   cambiarSeguirActaAlCambiarBandeja(activo: boolean): void {
@@ -444,8 +607,11 @@ export class DemoShellComponent implements OnInit {
 
 
   tituloVistaPrincipal(): string {
-    if (this.enCorreoPostal()) {
-      return 'Correo postal';
+    if (this.enCorreoPostalActas()) {
+      return 'Actas para correo postal';
+    }
+    if (this.enCorreoPostalLotes()) {
+      return 'Lotes de correo postal';
     }
     const bandeja = this.bandejasResumen().find((item) => item.codigo === this.bandejaSeleccionada());
     const labelBandeja = bandeja?.label ?? etiquetaBandeja(this.bandejaSeleccionada());
@@ -458,10 +624,8 @@ export class DemoShellComponent implements OnInit {
     return `${labelBandeja} › ${subLabel}`;
   }
 
-  subBandejasVisibles(bandeja: BandejaResponse): SubBandejaResumen[] {
-    return bandeja.subBandejas.filter(
-      (sub) => sub.cantidad > 0 && sub.codigo.toUpperCase() !== 'TODAS',
-    );
+  subBandejasVisibles(bandeja: BandejaLateralResponse): SubBandejaResumen[] {
+    return filtrosOperativosVisibles(bandeja);
   }
 
   subBandejasActuales(): SubBandejaResumen[] {
@@ -472,7 +636,7 @@ export class DemoShellComponent implements OnInit {
     return this.subBandejasVisibles(bandeja);
   }
 
-  bandejaActivaResumen(): BandejaResponse | null {
+  bandejaActivaResumen(): BandejaLateralResponse | null {
     return this.bandejasResumen().find((item) => item.codigo === this.bandejaSeleccionada()) ?? null;
   }
 
@@ -485,12 +649,64 @@ export class DemoShellComponent implements OnInit {
     return this.bandejaActivaResumen()?.cantidad ?? 0;
   }
 
+  conteosDependenciaEnListadoActual(): Map<string, number> {
+    const conteos = new Map<string, number>();
+    for (const acta of this.actas()) {
+      const codigo = acta.dependenciaDemo?.trim();
+      const key = codigo ? codigo : SIN_DEPENDENCIA_RESUMEN;
+      conteos.set(key, (conteos.get(key) ?? 0) + 1);
+    }
+    return conteos;
+  }
+
+  filasResumenPorDependencia(): DependenciaResumenFila[] {
+    const conteos = this.conteosDependenciaEnListadoActual();
+    const filas: DependenciaResumenFila[] = CODIGOS_DEPENDENCIA_RESUMEN.map((codigo) => ({
+      codigo,
+      label: this.etiquetaDependenciaDemo(codigo),
+      cantidad: conteos.get(codigo) ?? 0,
+    }));
+    const sinDependencia = conteos.get(SIN_DEPENDENCIA_RESUMEN) ?? 0;
+    if (sinDependencia > 0) {
+      filas.push({
+        codigo: SIN_DEPENDENCIA_RESUMEN,
+        label: 'Sin dependencia',
+        cantidad: sinDependencia,
+      });
+    }
+    return filas;
+  }
+
+  dependenciaResumenActiva(codigo: string): boolean {
+    return this.dependenciaDemoSeleccionada() === codigo;
+  }
+
+  seleccionarDependenciaDesdeResumen(codigo: string): void {
+    if (this.dependenciaResumenDeshabilitada(codigo)) {
+      return;
+    }
+    this.overlayResumenBandejaAbierto.set(false);
+    if (this.dependenciaDemoSeleccionada() === codigo) {
+      this.actualizarDependenciaDemo(null);
+      return;
+    }
+    this.actualizarDependenciaDemo(codigo);
+  }
+
   seleccionarFiltroOperativoDesdeResumen(subCodigo: string): void {
+    if (this.filtroOperativoResumenDeshabilitado(subCodigo)) {
+      return;
+    }
+    this.overlayResumenBandejaAbierto.set(false);
     this.cambiarFiltroOperativo(subCodigo);
   }
 
-  abrirCorreoPostal(): void {
-    void this.router.navigate(['/correo-postal']);
+  abrirCorreoPostalActas(): void {
+    void this.router.navigate(['/correo-postal/actas']);
+  }
+
+  abrirCorreoPostalLotes(): void {
+    void this.router.navigate(['/correo-postal/lotes']);
   }
 
   abrirNotificadorMunicipal(): void {
@@ -511,15 +727,22 @@ export class DemoShellComponent implements OnInit {
   }
 
   private actualizarVistaCorreoPostal(url: string): void {
-    this.enCorreoPostal.set(url.startsWith('/correo-postal'));
+    const enCorreo = url.startsWith('/correo-postal');
+    this.enCorreoPostal.set(enCorreo);
+    this.enCorreoPostalActas.set(enCorreo && !url.startsWith('/correo-postal/lotes'));
+    this.enCorreoPostalLotes.set(url.startsWith('/correo-postal/lotes'));
     this.enNotificadorMunicipal.set(url.startsWith('/notificador-municipal'));
+  }
+
+  vistaCorreoPostal(): 'actas' | 'lotes' {
+    return this.enCorreoPostalLotes() ? 'lotes' : 'actas';
   }
 
   toggleBandejas(): void {
     this.bandejasColapsadas.update((colapsadas) => !colapsadas);
   }
 
-  abreviaturaBandeja(bandeja: BandejaCodigo): string {
+  abreviaturaBandeja(bandeja: BandejaLateralCodigo): string {
     return BANDEJA_ABREVIATURAS[bandeja];
   }
 
@@ -531,7 +754,7 @@ export class DemoShellComponent implements OnInit {
     return cantidad.toLocaleString('es-AR');
   }
 
-  seleccionarBandeja(bandeja: BandejaCodigo): void {
+  seleccionarBandeja(bandeja: BandejaLateralCodigo): void {
     const volverDesdeCorreoPostal =
       this.enVistaOperativaNotificaciones() && this.bandejaSeleccionada() === bandeja;
     if (this.enVistaOperativaNotificaciones()) {
@@ -544,8 +767,10 @@ export class DemoShellComponent implements OnInit {
     }
 
     this.limpiarScrollActaPendiente();
+    this.cerrarOverlaysMoviles();
     const volverATodasEnMismaBandeja = mismaBandeja && this.subBandejaSeleccionada() !== null;
     this.subBandejaSeleccionada.set(null);
+    this.dependenciaDemoSeleccionada.set(null);
 
     if (volverATodasEnMismaBandeja) {
       this.limpiarSeguimientoActaFeedback();
@@ -559,6 +784,7 @@ export class DemoShellComponent implements OnInit {
     }
 
     this.bandejaSeleccionada.set(bandeja);
+    this.dependenciaDemoSeleccionada.set(null);
     this.actaSeleccionadaId.set(null);
     this.detalle.set(null);
     this.detalleEstado.set('idle');
@@ -595,13 +821,23 @@ export class DemoShellComponent implements OnInit {
     }
 
     this.subBandejaSeleccionada.set(subCodigo);
+    this.dependenciaDemoSeleccionada.set(null);
     this.limpiarScrollActaPendiente();
+    this.cerrarOverlaysMoviles();
     this.limpiarSeguimientoActaFeedback();
     this.limpiarCopiaEstadoFeedback();
     this.cargarListado({ actaIdScrollObjetivo: this.actaSeleccionadaId() });
   }
 
   mostrarResumenBandeja(): void {
+    if (this.vistaEstrecha()) {
+      if (this.actaSeleccionadaId() !== null) {
+        return;
+      }
+      this.overlayResumenBandejaAbierto.set(true);
+      return;
+    }
+
     if (!this.actaSeleccionadaId()) {
       return;
     }
@@ -633,10 +869,18 @@ export class DemoShellComponent implements OnInit {
 
   seleccionarActa(id: string): void {
     if (this.actaSeleccionadaId() === id) {
+      if (this.vistaEstrecha() && !this.detalleMovilAbierto()) {
+        this.detalleMovilAbierto.set(true);
+        this.overlayResumenBandejaAbierto.set(false);
+      }
       return;
     }
     this.limpiarScrollActaPendiente();
     this.actaSeleccionadaId.set(id);
+    if (this.vistaEstrecha()) {
+      this.detalleMovilAbierto.set(true);
+      this.overlayResumenBandejaAbierto.set(false);
+    }
     this.limpiarFirmaFeedback();
     this.limpiarCumplimientoMaterialFeedback();
     this.limpiarResolucionBloqueoCierreFeedback();
@@ -2527,23 +2771,53 @@ export class DemoShellComponent implements OnInit {
     }
   }
 
+
+  private actaBandejaDesdeDetalle(det: ActaDetalleDemo): ActaBandejaItem {
+    return {
+      id: det.id,
+      numeroActa: det.numeroActa,
+      infractorNombre: det.infractorNombre,
+      bloqueActual: det.bloqueActual,
+      estadoProcesoActual: det.estadoProcesoActual,
+      situacionAdministrativaActual: det.situacionAdministrativaActual,
+      bandejaActual: det.bandejaActual,
+      situacionPago: det.situacionPago,
+      accionPendiente: det.accionPendiente,
+      motivoArchivo: det.motivoArchivo,
+      tipoGestionExterna: det.tipoGestionExterna,
+      cerrabilidad: det.cerrabilidad,
+      subBandeja: '',
+      subBandejaLabel: '',
+      chip: null,
+      accionPrincipal: det.accionPendiente,
+      prioridadSubBandeja: 0,
+      chipsSecundarios: [],
+      dependenciaDemo: det.dependenciaDemo,
+    };
+  }
+
   private limpiarSeguimientoActaFeedback(): void {
     this.seguimientoActaMensaje.set(null);
   }
 
-  private esBandejaCodigo(valor: string): valor is BandejaCodigo {
-    return (BANDEJAS_DEMO as readonly string[]).includes(valor);
+  private esBandejaCodigo(valor: string): valor is BandejaLateralCodigo {
+    return esBandejaLateralCodigo(valor);
+  }
+
+  private esBandejaBackendCodigo(valor: string): valor is BandejaCodigo {
+    return esBandejaCodigoDemo(valor);
   }
 
   private refrescarLuegoDeAccion(respuesta: AccionConBandejaResponseLike | null | undefined): void {
+    this.cargarBandejasResumen();
     const actaId = respuesta?.actaId ?? this.actaSeleccionadaId();
     const bandejaNueva = respuesta?.bandejaActual;
 
     if (
       this.seguirActaAlCambiarBandeja() &&
       bandejaNueva &&
-      this.esBandejaCodigo(bandejaNueva) &&
-      bandejaNueva !== this.bandejaSeleccionada()
+      this.esBandejaBackendCodigo(bandejaNueva) &&
+      bandejaBackendALateral(bandejaNueva) !== this.bandejaSeleccionada()
     ) {
       this.cambiarBandejaYSeguirActa(bandejaNueva, actaId);
       return;
@@ -2552,9 +2826,10 @@ export class DemoShellComponent implements OnInit {
     this.refrescarActaSeleccionadaDesdeBackend(actaId ?? null);
   }
 
-  private cambiarBandejaYSeguirActa(bandeja: BandejaCodigo, actaId: string | null): void {
+  private cambiarBandejaYSeguirActa(bandejaBackend: BandejaCodigo, actaId: string | null): void {
     this.limpiarSeguimientoActaFeedback();
-    this.bandejaSeleccionada.set(bandeja);
+    this.subBandejaSeleccionada.set(null);
+    this.bandejaSeleccionada.set(bandejaBackendALateral(bandejaBackend));
     this.limpiarFirmaFeedback();
     this.limpiarCumplimientoMaterialFeedback();
     this.limpiarResolucionBloqueoCierreFeedback();
@@ -2740,13 +3015,18 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
         catchError(() => of([] as BandejaResponse[])),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((bandejas) => this.bandejasResumen.set(bandejas));
+      .subscribe((bandejas) => {
+        this.bandejasBackendCodigos.set(codigosBandejaEnResumen(bandejas));
+        const lateral = transformarBandejasParaLateral(bandejas);
+        this.bandejasResumen.set(lateral);
+        this.bandejasLateral.set(filtrarBandejasLateralVisibles(lateral));
+      });
   }
 
   private cargarListado(opciones?: {
     actaIdScrollObjetivo?: string | null;
     evaluarSeguimientoBandeja?: boolean;
-    bandeja?: BandejaCodigo;
+    bandeja?: BandejaLateralCodigo;
     subBandeja?: string | null;
   }): void {
     const actaIdScrollObjetivo = opciones?.actaIdScrollObjetivo ?? null;
@@ -2757,18 +3037,34 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
     this.cargarBandejasResumen();
     this.listadoEstado.set('loading');
     this.listadoError.set(null);
-    this.api
-      .listarActasPorBandeja(bandeja, subBandeja)
-      .pipe(
+
+    const consultas = subBandejaBackendParaConsulta(bandeja, subBandeja, this.bandejasBackendCodigos());
+    const peticiones = consultas.map((consulta) =>
+      this.api.listarActasPorBandeja(consulta.bandeja, consulta.subBandeja).pipe(
         catchError((err) => {
           this.listadoError.set(mensajeErrorHttp(err));
           this.listadoEstado.set('error');
           return of([] as ActaBandejaItem[]);
         }),
+      ),
+    );
+
+    forkJoin(peticiones.length > 0 ? peticiones : [of([] as ActaBandejaItem[])])
+      .pipe(
+        map((listas) => {
+          const dedupe = new Map<string, ActaBandejaItem>();
+          for (const lista of listas) {
+            for (const acta of lista) {
+              dedupe.set(acta.id, acta);
+            }
+          }
+          return aplicarFiltroOperativoLateral([...dedupe.values()], bandeja, subBandeja);
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((items) => {
         this.actas.set(items);
+        this.limpiarDependenciaSeleccionadaSiInvalida();
         if (this.listadoEstado() !== 'error') {
           this.listadoEstado.set('ready');
         }
@@ -2785,7 +3081,7 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
             const subLabel = subBandeja
               ? bandejaResumen?.subBandejas.find((sub) => sub.codigo === subBandeja)?.label ?? subBandeja
               : null;
-            const destino = subLabel ? `${labelBandeja} › ${subLabel}` : labelBandeja;
+            const destino = subLabel ? labelBandeja + ' › ' + subLabel : labelBandeja;
             this.seguimientoActaMensaje.set(
               'El acta sigue seleccionada, pero no aparece en el listado de ' + destino + '.',
             );
@@ -2797,6 +3093,26 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
           this.programarScrollActaSeleccionada(actaIdScrollObjetivo);
         }
       });
+  }
+
+  private limpiarDependenciaSeleccionadaSiInvalida(): void {
+    const seleccionada = this.dependenciaDemoSeleccionada();
+    if (!seleccionada) {
+      return;
+    }
+    if (seleccionada === SIN_DEPENDENCIA_RESUMEN) {
+      const tieneSinDependencia = this.actas().some((acta) => !acta.dependenciaDemo?.trim());
+      if (!tieneSinDependencia) {
+        this.dependenciaDemoSeleccionada.set(null);
+      }
+      return;
+    }
+    const disponibles = new Set(
+      this.dependenciasDisponiblesEnListado().map((dependencia) => dependencia.codigo),
+    );
+    if (!disponibles.has(seleccionada)) {
+      this.dependenciaDemoSeleccionada.set(null);
+    }
   }
 
   private cargarDetalle(): void {

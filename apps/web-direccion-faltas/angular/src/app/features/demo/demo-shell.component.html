@@ -1,4 +1,4 @@
-<mat-sidenav-container class="demo-layout" [autosize]="true">
+﻿<mat-sidenav-container class="demo-layout" [autosize]="true">
   <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
     <div class="demo-sidenav-body">
       <div class="sidenav-header">
@@ -17,7 +17,7 @@
         </button>
       </div>
       <mat-nav-list class="sidenav-bandejas">
-        @for (b of bandejasResumen(); track b.codigo) {
+        @for (b of bandejasLateral(); track b.codigo) {
           <a
             mat-list-item
             class="sidenav-link"
@@ -47,22 +47,39 @@
           <a
             mat-list-item
             class="sidenav-link sidenav-link--operacion"
-            [class.active]="enCorreoPostal()"
-            title="Correo postal"
-            aria-label="Correo postal"
+            [class.active]="enCorreoPostalActas()"
+            title="Actas para correo postal"
+            aria-label="Actas para correo postal"
             href="#"
-            (click)="$event.preventDefault(); abrirCorreoPostal()"
+            (click)="$event.preventDefault(); abrirCorreoPostalActas()"
           >
             @if (bandejasColapsadas()) {
-              <mat-icon class="sidenav-icon sidenav-icon--solo" aria-hidden="true">local_post_office</mat-icon>
+              <mat-icon class="sidenav-icon sidenav-icon--solo" aria-hidden="true">mark_email_unread</mat-icon>
             } @else {
               <span class="sidenav-link__body sidenav-link__body--no-badge">
-                <mat-icon class="sidenav-icon" aria-hidden="true">local_post_office</mat-icon>
-                <span class="sidenav-label">Correo postal</span>
+                <mat-icon class="sidenav-icon" aria-hidden="true">mark_email_unread</mat-icon>
+                <span class="sidenav-label">Actas para correo postal</span>
               </span>
             }
           </a>
           <a
+            mat-list-item
+            class="sidenav-link sidenav-link--operacion"
+            [class.active]="enCorreoPostalLotes()"
+            title="Lotes de correo postal"
+            aria-label="Lotes de correo postal"
+            href="#"
+            (click)="$event.preventDefault(); abrirCorreoPostalLotes()"
+          >
+            @if (bandejasColapsadas()) {
+              <mat-icon class="sidenav-icon sidenav-icon--solo" aria-hidden="true">inventory_2</mat-icon>
+            } @else {
+              <span class="sidenav-link__body sidenav-link__body--no-badge">
+                <mat-icon class="sidenav-icon" aria-hidden="true">inventory_2</mat-icon>
+                <span class="sidenav-label">Lotes de correo postal</span>
+              </span>
+            }
+          </a><a
             mat-list-item
             class="sidenav-link sidenav-link--operacion sidenav-link--demo"
             [class.active]="enNotificadorMunicipal()"
@@ -108,11 +125,17 @@
       </div>
     }
     @if (enCorreoPostal()) {
-      <app-demo-correo-postal-page
+            <app-demo-correo-postal-page
+        [vista]="vistaCorreoPostal()"
         (operacionCompletada)="refrescarLuegoDeOperacionCorreoPostal()"
       />
     } @else {
-    <div class="demo-content">
+    <div
+      class="demo-content"
+      [class.demo-content--narrow]="vistaEstrecha()"
+      [class.demo-content--detalle-overlay]="vistaEstrecha() && detalleMovilAbierto()"
+      [class.demo-content--resumen-overlay]="vistaEstrecha() && overlayResumenBandejaAbierto()"
+    >
       <app-demo-acta-list
         [actas]="actasFiltradas()"
         [hayActas]="actas().length > 0"
@@ -122,18 +145,49 @@
         [textoBusquedaActa]="textoBusquedaActa()"
         [seguirActaAlCambiarBandeja]="seguirActaAlCambiarBandeja()"
         [seguimientoActaMensaje]="seguimientoActaMensaje()"
+        [actaEnSeguimiento]="actaEnSeguimiento()"
         [subBandejas]="subBandejasActuales()"
         [subBandejaActiva]="subBandejaSeleccionada()"
+        [dependenciasFiltro]="dependenciasDisponiblesEnListado()"
+        [dependenciaSeleccionada]="dependenciaDemoSeleccionada()"
+        [etiquetaFiltroOperativo]="etiquetaFiltroOperativoActivo()"
+        [etiquetaDependencia]="etiquetaDependenciaActiva()"
         (textoBusquedaActaChange)="actualizarTextoBusquedaActa($event)"
+        (dependenciaSeleccionadaChange)="actualizarDependenciaDemo($event)"
         (seguirActaAlCambiarBandejaChange)="cambiarSeguirActaAlCambiarBandeja($event)"
         (recargarListado)="recargarListado()"
         (seleccionarActa)="seleccionarActa($event)"
         (mostrarResumenBandejaChange)="mostrarResumenBandeja()"
         (filtroOperativoChange)="cambiarFiltroOperativo($event)"
+        [resumenBandejaInfoDeshabilitado]="resumenBandejaInfoDeshabilitado()"
         (rowsRenderizadas)="reintentarScrollPendienteAlRenderizarListado()"
       />
 
-      <aside #actaDetailContainer class="detail-panel" aria-label="Detalle del acta">
+      <aside
+        #actaDetailContainer
+        class="detail-panel"
+        [class.detail-panel--overlay]="vistaEstrecha() && (detalleMovilAbierto() || overlayResumenBandejaAbierto())"
+        aria-label="Detalle del acta"
+      >
+        @if (vistaEstrecha() && (detalleMovilAbierto() || overlayResumenBandejaAbierto())) {
+          <header class="detail-panel__overlay-header">
+            <h2 class="detail-panel__overlay-title">
+              @if (overlayResumenBandejaAbierto()) {
+                {{ labelBandejaActiva() }}
+              } @else {
+                Detalle del acta
+              }
+            </h2>
+            <button
+              mat-icon-button
+              type="button"
+              aria-label="Cerrar panel"
+              (click)="cerrarPanelMovil()"
+            >
+              <mat-icon aria-hidden="true">close</mat-icon>
+            </button>
+          </header>
+        }
         @if (!actaSeleccionadaId()) {
           <section class="detail-card bandeja-resumen" aria-labelledby="bandeja-resumen-titulo">
             <h2 id="bandeja-resumen-titulo" class="bandeja-resumen__title">{{ labelBandejaActiva() }}</h2>
@@ -152,6 +206,8 @@
                       type="button"
                       class="bandeja-resumen__filtro"
                       [class.bandeja-resumen__filtro--active]="subBandejaSeleccionada() === sub.codigo"
+                      [class.bandeja-resumen__filtro--disabled]="filtroOperativoResumenDeshabilitado(sub.codigo)"
+                      [disabled]="filtroOperativoResumenDeshabilitado(sub.codigo)"
                       (click)="seleccionarFiltroOperativoDesdeResumen(sub.codigo)"
                     >
                       <span>{{ sub.label }}</span>
@@ -163,6 +219,27 @@
             } @else {
               <p class="detail-card__text">No hay filtros operativos disponibles para esta bandeja.</p>
             }
+
+            <hr class="bandeja-resumen__divider" />
+            <h3 class="detail-card__title bandeja-resumen__filtros-title">Por dependencia</h3>
+            <ul class="bandeja-resumen__filtros-list">
+              @for (dep of filasResumenPorDependencia(); track dep.codigo) {
+                <li>
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    class="bandeja-resumen__filtro"
+                    [class.bandeja-resumen__filtro--active]="dependenciaResumenActiva(dep.codigo)"
+                    [class.bandeja-resumen__filtro--disabled]="dependenciaResumenDeshabilitada(dep.codigo)"
+                    [disabled]="dependenciaResumenDeshabilitada(dep.codigo)"
+                    (click)="seleccionarDependenciaDesdeResumen(dep.codigo)"
+                  >
+                    <span>{{ dep.label }}</span>
+                    <span class="bandeja-resumen__filtro-count">({{ formatearCantidadBandeja(dep.cantidad) }})</span>
+                  </button>
+                </li>
+              }
+            </ul>
 
             <p class="detail-card__hint bandeja-resumen__hint">
               Seleccioná un acta para ver su detalle operativo.
