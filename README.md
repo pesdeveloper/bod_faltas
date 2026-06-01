@@ -1,4 +1,4 @@
-# repo-faltas
+﻿# repo-faltas
 
 ## Qué es
 
@@ -85,5 +85,14 @@ Para recuperar rápidamente el estado actual del trabajo:
 
 - [Estado actual y próximo paso](spec/00-overview/99-estado-actual-y-proximo-paso.md)
 - [Contexto mínimo para agentes](spec/11-prompts-y-skills/prompts/00-contexto-minimo-para-agentes.md)
+
+### Direccion de Faltas - demo funcional completa lista 2026-06-01
+
+Dataset: 42 actas. Incluye Slice 17A (reactivacion de PARALIZADAS), Slice 19A/19B (ACTA-0029 condena firme + pago condena).
+
+- [Índice de documentación de trabajo](docs-trabajo/README.md)
+- [Prompt de continuidad (2026-06-01)](docs-trabajo/prompt-continuidad-faltas-2026-06-01.md)
+- [Cierre de restauración funcional](docs-trabajo/cierre-restauracion-funcional-faltas-2026-06-01.md)
+- [Checklist guiado de validacion integral](docs-trabajo/checklist-guiado-validacion-integral-faltas-2026-06-01.md)
 
 

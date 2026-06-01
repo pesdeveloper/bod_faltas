@@ -268,6 +268,30 @@ export interface GenerarNotificacionActaAccionResponseDemo {
   estadoProcesoActual: string;
 }
 
+/**
+ * Contrato POST /actas/{id}/acciones/generar-resolucion
+ * - GenerarResolucionAccionResponse.
+ */
+export interface GenerarResolucionAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/generar-rectificacion
+ * - GenerarRectificacionAccionResponse.
+ */
+export interface GenerarRectificacionAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+}
+
 
 export type TipoCumplimientoMaterialBloqueante =
   | 'LEVANTAMIENTO_MEDIDA_PREVENTIVA'
@@ -845,4 +869,23 @@ export interface ActaInfractorResponseDemo {
  */
 export function codigoQrDemoParaActa(actaId: string): string {
   return `QR-${actaId}-DEMO`;
+}
+
+
+/**
+ * Contrato POST /actas/{id}/acciones/reactivar-acta
+ * - ReactivarActaAccionResponse.
+ *
+ * Precondicion backend: acta en bandeja PARALIZADAS.
+ * Efecto: vuelve a PENDIENTE_ANALISIS con accionPendiente operativa
+ * REVISION_POST_REACTIVACION. La informacion historica de la paralizacion
+ * queda en el log de eventos como trazabilidad.
+ */
+export interface ReactivarActaAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  accionPendiente: string;
 }

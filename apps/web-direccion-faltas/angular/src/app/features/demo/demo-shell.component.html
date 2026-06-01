@@ -1,4 +1,4 @@
-﻿<mat-sidenav-container class="demo-layout" [autosize]="true">
+<mat-sidenav-container class="demo-layout" [autosize]="true">
   <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
     <div class="demo-sidenav-body">
       <div class="sidenav-header">
@@ -575,6 +575,48 @@
           </section>
           }
 
+          @if (puedeMostrarBloqueParalizadas()) {
+          <section class="detail-card" aria-labelledby="paralizadas-titulo">
+            <h3 id="paralizadas-titulo" class="detail-card__title">Acta paralizada</h3>
+            @if (reactivacionMensaje() || reactivacionError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (reactivacionMensaje()) {
+                  <p class="demo-feedback-ok">{{ reactivacionMensaje() }}</p>
+                }
+                @if (reactivacionError()) {
+                  <p class="demo-feedback-error">{{ reactivacionError() }}</p>
+                }
+              </div>
+            }
+            @if (d.bandejaActual === 'PARALIZADAS') {
+              <p class="detail-card__text">
+                El acta esta paralizada. Puede reactivarse para volver al circuito operativo.
+              </p>
+              <dl class="detail-dl detail-dl--compact">
+                @if (d.accionPendiente) {
+                  <dt>Motivo paralizacion</dt>
+                  <dd>{{ d.accionPendiente }}</dd>
+                }
+              </dl>
+              <div class="paralizadas-actions">
+                <button
+                  mat-flat-button
+                  type="button"
+                  color="primary"
+                  [disabled]="ejecutandoReactivacionAccion()"
+                  (click)="reactivarActa()"
+                >
+                  @if (ejecutandoReactivacionAccion()) {
+                    Reactivando...
+                  } @else {
+                    Reactivar acta
+                  }
+                </button>
+              </div>
+            }
+          </section>
+          }
+
           @if (puedeMostrarBloqueNotificacionActa()) {
           <section class="detail-card" aria-labelledby="notificacion-acta-titulo">
             <h3 id="notificacion-acta-titulo" class="detail-card__title">Notificación del acta</h3>
@@ -944,7 +986,7 @@
           @if (actaMuestraSeccionPiezasRedaccion(d)) {
           <section class="detail-card" aria-labelledby="piezas-redaccion-titulo">
             <h3 id="piezas-redaccion-titulo" class="detail-card__title">Piezas de redacción</h3>
-            @if (nulidadMensaje() || nulidadError() || medidaPreventivaMensaje() || medidaPreventivaError() || notificacionActaMensaje() || notificacionActaError()) {
+            @if (nulidadMensaje() || nulidadError() || medidaPreventivaMensaje() || medidaPreventivaError() || notificacionActaMensaje() || notificacionActaError() || resolucionPiezaMensaje() || resolucionPiezaError() || rectificacionPiezaMensaje() || rectificacionPiezaError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
                 @if (nulidadMensaje()) {
                   <p class="demo-feedback-ok">{{ nulidadMensaje() }}</p>
@@ -963,6 +1005,18 @@
                 }
                 @if (notificacionActaError()) {
                   <p class="demo-feedback-error">{{ notificacionActaError() }}</p>
+                }
+                @if (resolucionPiezaMensaje()) {
+                  <p class="demo-feedback-ok">{{ resolucionPiezaMensaje() }}</p>
+                }
+                @if (resolucionPiezaError()) {
+                  <p class="demo-feedback-error">{{ resolucionPiezaError() }}</p>
+                }
+                @if (rectificacionPiezaMensaje()) {
+                  <p class="demo-feedback-ok">{{ rectificacionPiezaMensaje() }}</p>
+                }
+                @if (rectificacionPiezaError()) {
+                  <p class="demo-feedback-error">{{ rectificacionPiezaError() }}</p>
                 }
               </div>
             }
@@ -1030,6 +1084,36 @@
                       Generando notificación del acta...
                     } @else {
                       Generar notificación del acta
+                    }
+                  </button>
+                }
+                @if (actaPuedeGenerarResolucionDesdeBackend()) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    [disabled]="accionRedaccionEnCurso()"
+                    (click)="generarResolucion()"
+                  >
+                    @if (generandoResolucion()) {
+                      Generando resoluci&#xF3;n...
+                    } @else {
+                      Generar resoluci&#xF3;n
+                    }
+                  </button>
+                }
+                @if (actaPuedeGenerarRectificacionDesdeBackend()) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    [disabled]="accionRedaccionEnCurso()"
+                    (click)="generarRectificacion()"
+                  >
+                    @if (generandoRectificacion()) {
+                      Generando rectificaci&#xF3;n...
+                    } @else {
+                      Generar rectificaci&#xF3;n
                     }
                   </button>
                 }

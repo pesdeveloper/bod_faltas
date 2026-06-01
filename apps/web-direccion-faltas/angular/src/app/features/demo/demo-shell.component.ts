@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -63,6 +63,8 @@ const BANDEJA_PENDIENTE_FIRMA = 'PENDIENTE_FIRMA';
 const PIEZA_NULIDAD = 'NULIDAD';
 const PIEZA_MEDIDA_PREVENTIVA = 'MEDIDA_PREVENTIVA';
 const PIEZA_NOTIFICACION_ACTA = 'NOTIFICACION_ACTA';
+const PIEZA_RESOLUCION = 'RESOLUCION';
+const PIEZA_RECTIFICACION = 'RECTIFICACION';
 const BANDEJA_PENDIENTE_ANALISIS = 'PENDIENTE_ANALISIS';
 const TIPOS_DOCUMENTO_FALLO: ReadonlyArray<string> = ['FALLO_ABSOLUTORIO', 'FALLO_CONDENATORIO'];
 const EVENTOS_FALLO_DICTADO: ReadonlyArray<string> = [
@@ -142,6 +144,7 @@ const BANDEJAS_SIN_ACCIONES_INTERNAS_OPERATIVAS: ReadonlyArray<BandejaCodigo> = 
   'CERRADAS',
   'ARCHIVO',
   'GESTION_EXTERNA',
+  'PARALIZADAS',
 ];
 
 const ETIQUETA_RESULTADO_NOTIFICACION: Record<ResultadoNotificacionDemo, string> = {
@@ -423,6 +426,10 @@ export class DemoShellComponent implements OnInit {
   readonly gestionExternaError = signal<string | null>(null);
   readonly gestionExternaMensaje = signal<string | null>(null);
 
+  readonly ejecutandoReactivacionAccion = signal<boolean>(false);
+  readonly reactivacionError = signal<string | null>(null);
+  readonly reactivacionMensaje = signal<string | null>(null);
+
   readonly generandoNulidad = signal<boolean>(false);
   readonly nulidadError = signal<string | null>(null);
   readonly nulidadMensaje = signal<string | null>(null);
@@ -434,6 +441,14 @@ export class DemoShellComponent implements OnInit {
   readonly generandoNotificacionActa = signal<boolean>(false);
   readonly notificacionActaError = signal<string | null>(null);
   readonly notificacionActaMensaje = signal<string | null>(null);
+
+  readonly generandoResolucion = signal<boolean>(false);
+  readonly resolucionPiezaError = signal<string | null>(null);
+  readonly resolucionPiezaMensaje = signal<string | null>(null);
+
+  readonly generandoRectificacion = signal<boolean>(false);
+  readonly rectificacionPiezaError = signal<string | null>(null);
+  readonly rectificacionPiezaMensaje = signal<string | null>(null);
 
   readonly dictandoFallo = signal<TipoFalloDemo | null>(null);
   readonly falloError = signal<string | null>(null);
@@ -803,6 +818,7 @@ export class DemoShellComponent implements OnInit {
     this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
+    this.limpiarReactivacionFeedback();
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarSeguimientoActaFeedback();
@@ -862,6 +878,7 @@ export class DemoShellComponent implements OnInit {
     this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
+    this.limpiarReactivacionFeedback();
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();
@@ -895,6 +912,7 @@ export class DemoShellComponent implements OnInit {
     this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
+    this.limpiarReactivacionFeedback();
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();
@@ -1491,6 +1509,17 @@ export class DemoShellComponent implements OnInit {
       return true;
     }
     return this.actaPuedeDerivarseAGestionExternaDesdeBackend();
+  }
+
+  puedeMostrarBloqueParalizadas(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    if (this.reactivacionMensaje() || this.reactivacionError()) {
+      return true;
+    }
+    return det.bandejaActual === 'PARALIZADAS';
   }
 
   puedeMostrarBloqueNotificacionActa(): boolean {
@@ -2167,6 +2196,7 @@ export class DemoShellComponent implements OnInit {
     }
 
     this.limpiarGestionExternaFeedback();
+    this.limpiarReactivacionFeedback();
     this.ejecutandoGestionExternaAccion.set(tipo);
 
     const peticion$ =
@@ -2211,6 +2241,7 @@ export class DemoShellComponent implements OnInit {
     }
 
     this.limpiarGestionExternaFeedback();
+    this.limpiarReactivacionFeedback();
     this.ejecutandoGestionExternaAccion.set('RETORNAR');
 
     this.api
@@ -2241,6 +2272,39 @@ export class DemoShellComponent implements OnInit {
       });
   }
 
+  reactivarActa(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (this.ejecutandoReactivacionAccion()) {
+      return;
+    }
+
+    this.limpiarReactivacionFeedback();
+    this.ejecutandoReactivacionAccion.set(true);
+
+    this.api
+      .reactivarActa(actaId)
+      .pipe(
+        catchError((err) => {
+          this.reactivacionError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.ejecutandoReactivacionAccion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.reactivacionMensaje.set(
+          'Acta reactivada correctamente (' + respuesta.bandejaActual + ').',
+        );
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
 
   actaPuedeGenerarNulidadDesdeBackend(): boolean {
     return this.piezaRedaccionPendienteDesdeBackend(PIEZA_NULIDAD);
@@ -2254,11 +2318,21 @@ export class DemoShellComponent implements OnInit {
     return this.piezaRedaccionPendienteDesdeBackend(PIEZA_NOTIFICACION_ACTA);
   }
 
+  actaPuedeGenerarResolucionDesdeBackend(): boolean {
+    return this.piezaRedaccionPendienteDesdeBackend(PIEZA_RESOLUCION);
+  }
+
+  actaPuedeGenerarRectificacionDesdeBackend(): boolean {
+    return this.piezaRedaccionPendienteDesdeBackend(PIEZA_RECTIFICACION);
+  }
+
   hayAccionesRedaccionDisponiblesDesdeBackend(): boolean {
     return (
       this.actaPuedeGenerarNulidadDesdeBackend() ||
       this.actaPuedeGenerarMedidaPreventivaDesdeBackend() ||
-      this.actaPuedeGenerarNotificacionActaDesdeBackend()
+      this.actaPuedeGenerarNotificacionActaDesdeBackend() ||
+      this.actaPuedeGenerarResolucionDesdeBackend() ||
+      this.actaPuedeGenerarRectificacionDesdeBackend()
     );
   }
 
@@ -2266,7 +2340,9 @@ export class DemoShellComponent implements OnInit {
     return (
       this.generandoNulidad() ||
       this.generandoMedidaPreventiva() ||
-      this.generandoNotificacionActa()
+      this.generandoNotificacionActa() ||
+      this.generandoResolucion() ||
+      this.generandoRectificacion()
     );
   }
 
@@ -2368,6 +2444,62 @@ export class DemoShellComponent implements OnInit {
           return;
         }
         this.notificacionActaMensaje.set(this.mensajeRedaccionExitosa(respuesta));
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
+  generarResolucion(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.accionRedaccionEnCurso() || !this.actaPuedeGenerarResolucionDesdeBackend()) {
+      return;
+    }
+
+    this.limpiarResolucionPiezaFeedback();
+    this.generandoResolucion.set(true);
+
+    this.api
+      .generarResolucion(actaId)
+      .pipe(
+        catchError((err) => {
+          this.resolucionPiezaError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.generandoResolucion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.resolucionPiezaMensaje.set(this.mensajeRedaccionExitosa(respuesta));
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
+  generarRectificacion(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.accionRedaccionEnCurso() || !this.actaPuedeGenerarRectificacionDesdeBackend()) {
+      return;
+    }
+
+    this.limpiarRectificacionPiezaFeedback();
+    this.generandoRectificacion.set(true);
+
+    this.api
+      .generarRectificacion(actaId)
+      .pipe(
+        catchError((err) => {
+          this.rectificacionPiezaError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.generandoRectificacion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.rectificacionPiezaMensaje.set(this.mensajeRedaccionExitosa(respuesta));
         this.refrescarLuegoDeAccion(respuesta);
       });
   }
@@ -2724,6 +2856,11 @@ export class DemoShellComponent implements OnInit {
     this.gestionExternaMensaje.set(null);
   }
 
+
+  private limpiarReactivacionFeedback(): void {
+    this.reactivacionError.set(null);
+    this.reactivacionMensaje.set(null);
+  }
   private limpiarNulidadFeedback(): void {
     this.nulidadError.set(null);
     this.nulidadMensaje.set(null);
@@ -2739,6 +2876,16 @@ export class DemoShellComponent implements OnInit {
     this.notificacionActaMensaje.set(null);
   }
 
+  private limpiarResolucionPiezaFeedback(): void {
+    this.resolucionPiezaError.set(null);
+    this.resolucionPiezaMensaje.set(null);
+  }
+
+  private limpiarRectificacionPiezaFeedback(): void {
+    this.rectificacionPiezaError.set(null);
+    this.rectificacionPiezaMensaje.set(null);
+  }
+
   private limpiarFalloFeedback(): void {
     this.falloError.set(null);
     this.falloMensaje.set(null);
@@ -2748,6 +2895,8 @@ export class DemoShellComponent implements OnInit {
     this.limpiarNulidadFeedback();
     this.limpiarMedidaPreventivaFeedback();
     this.limpiarNotificacionActaRedaccionFeedback();
+    this.limpiarResolucionPiezaFeedback();
+    this.limpiarRectificacionPiezaFeedback();
   }
 
   private cargarSubRecursosDetalle(actaId: string): void {
@@ -2844,6 +2993,7 @@ export class DemoShellComponent implements OnInit {
     this.limpiarMontoCondenaInput();
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
+    this.limpiarReactivacionFeedback();
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();

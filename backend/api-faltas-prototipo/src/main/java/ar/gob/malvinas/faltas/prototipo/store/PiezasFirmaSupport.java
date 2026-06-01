@@ -198,6 +198,62 @@ final class PiezasFirmaSupport {
     }
 
     /**
+     * Demo: produce la pieza RESOLUCION (solo desde
+     * PENDIENTES_RESOLUCION_REDACCION y solo si la acta declara esa pieza
+     * como requerida). Sigue el mismo patron que NULIDAD/NOTIFICACION_ACTA:
+     * si quedan otras piezas pendientes la acta permanece en la misma
+     * bandeja; si no quedan, pasa a PENDIENTE_FIRMA con estado agregador
+     * PENDIENTE_FIRMA_PIEZAS. Al firmarse, como no es NULIDAD, pasa a
+     * PENDIENTE_NOTIFICACION.
+     */
+    PrototipoStore.GenerarResolucionResultado generarResolucion(String actaId) {
+        ProducirPiezaResultado r = producirPieza(
+                actaId,
+                "RESOLUCION",
+                "resolucion_",
+                "RESOLUCION_GENERADA",
+                "Resolucion producida; piezas completas, queda pendiente su firma.",
+                "Resolucion producida; aun resta producir otras piezas requeridas.");
+        return switch (r.estado()) {
+            case OK -> new PrototipoStore.GenerarResolucionResultado(
+                    PrototipoStore.GenerarResolucionEstado.OK,
+                    r.actaId(), r.bandejaActual(), r.estadoProcesoActual());
+            case NOT_FOUND -> new PrototipoStore.GenerarResolucionResultado(
+                    PrototipoStore.GenerarResolucionEstado.NOT_FOUND, null, null, null);
+            case CONFLICT -> new PrototipoStore.GenerarResolucionResultado(
+                    PrototipoStore.GenerarResolucionEstado.CONFLICT, null, null, null);
+        };
+    }
+
+    /**
+     * Demo: produce la pieza RECTIFICACION (solo desde
+     * PENDIENTES_RESOLUCION_REDACCION y solo si la acta declara esa pieza
+     * como requerida). Sigue el mismo patron que NULIDAD/NOTIFICACION_ACTA:
+     * si quedan otras piezas pendientes la acta permanece en la misma
+     * bandeja; si no quedan, pasa a PENDIENTE_FIRMA con estado agregador
+     * PENDIENTE_FIRMA_PIEZAS. Al firmarse, como no es NULIDAD, pasa a
+     * PENDIENTE_NOTIFICACION.
+     */
+    PrototipoStore.GenerarRectificacionResultado generarRectificacion(String actaId) {
+        ProducirPiezaResultado r = producirPieza(
+                actaId,
+                "RECTIFICACION",
+                "rectificacion_",
+                "RECTIFICACION_GENERADA",
+                "Rectificacion producida; piezas completas, queda pendiente su firma.",
+                "Rectificacion producida; aun resta producir otras piezas requeridas.");
+        return switch (r.estado()) {
+            case OK -> new PrototipoStore.GenerarRectificacionResultado(
+                    PrototipoStore.GenerarRectificacionEstado.OK,
+                    r.actaId(), r.bandejaActual(), r.estadoProcesoActual());
+            case NOT_FOUND -> new PrototipoStore.GenerarRectificacionResultado(
+                    PrototipoStore.GenerarRectificacionEstado.NOT_FOUND, null, null, null);
+            case CONFLICT -> new PrototipoStore.GenerarRectificacionResultado(
+                    PrototipoStore.GenerarRectificacionEstado.CONFLICT, null, null, null);
+        };
+    }
+
+    /**
      * Demo: produce la pieza NULIDAD (solo desde
      * PENDIENTES_RESOLUCION_REDACCION y solo si la acta declara esa pieza
      * como requerida). Nulidad se trata como una pieza no-fallo del

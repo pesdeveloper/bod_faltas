@@ -56,10 +56,14 @@ public class MockDataFactory {
         cargarActa0008(store);
 
         // --- Mocks con dependencias de tests ---
+        cargarActa0011(store);
+        cargarActa0012(store);
         cargarActa0013(store);
+        cargarActa0014(store);
         cargarActa0015(store);
         cargarActa0016(store);
         cargarActa0017(store);
+        cargarActa0019CerrabilidadMaterialesDemo(store);
         cargarActa0020OrigenMedidaDesdeGenerarMedidaDemo(store);
         cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(store);
         cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(store);
@@ -68,6 +72,7 @@ public class MockDataFactory {
         // --- Fallo, apelación, correo postal ---
         cargarActa0027FalloApelacionPortalDemo(store);
         cargarActa0028FalloApelacionPresencialDemo(store);
+        cargarActa0029FalloVencimientoPlazoDemo(store);
         cargarActa0030ApelacionAceptadaAbsuelveDemo(store);
         cargarActasNotificadorMunicipalDemo(store);
         cargarActasPortalDomicilioElectronicoDemo(store);
@@ -89,13 +94,13 @@ public class MockDataFactory {
 
     private void cargarActa0001(PrototipoStore store) {
         String id = "ACTA-0001";
-        String bandeja = BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+        String bandeja = BANDEJA_PENDIENTES_RESOLUCION_REDACCION;
         ActaMock acta = new ActaMock(
                 id,
                 "A-2026-0001",
                 "TRANSITO_URBANO",
-                "D2_ENRIQUECIMIENTO",
-                "EN_CURSO",
+                "D3_DOCUMENTAL",
+                "PENDIENTE_PRODUCCION_PIEZAS",
                 "ACTIVA",
                 false,
                 true,
@@ -135,6 +140,14 @@ public class MockDataFactory {
                 "D2_ENRIQUECIMIENTO",
                 "D2_ENRIQUECIMIENTO",
                 "Verificado domicilio y contacto del infractor."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0001-04",
+                id,
+                LocalDateTime.of(2026, 1, 13, 9, 0),
+                "PASE_BANDEJA",
+                "D2_ENRIQUECIMIENTO",
+                "D3_DOCUMENTAL",
+                "Enriquecimiento completo; pendiente produccion de notificacion del acta."));
         store.getEventosPorActa().put(id, eventos);
 
         List<ActaDocumentoMock> docs = new ArrayList<>();
@@ -145,6 +158,11 @@ public class MockDataFactory {
                 "ADJUNTO",
                 "foto_infraccion_0001.jpg"));
         store.getDocumentosPorActa().put(id, docs);
+
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of("NOTIFICACION_ACTA")),
+                new ArrayList<>()));
     }
 
     private void cargarActa0002(PrototipoStore store) {
@@ -187,6 +205,7 @@ public class MockDataFactory {
                 "D3_DOCUMENTAL",
                 "Enriquecimiento cerrado; pasa a preparación documental."));
         store.getEventosPorActa().put(id, eventos);
+        store.setAccionPendiente(id, "GENERAR_BORRADOR_ACTA");
     }
 
     private void cargarActa0003(PrototipoStore store) {
@@ -1905,6 +1924,7 @@ public class MockDataFactory {
                             "constatacion_medida_preventiva_" + n + ".pdf"));
         }
         store.getDocumentosPorActa().put(id, docs);
+        store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
     }
 
     /**
@@ -4267,6 +4287,7 @@ public class MockDataFactory {
                 "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
                 "Acta de inspección ingresada; pendiente completar datos del establecimiento."));
         store.getEventosPorActa().put(id, eventos);
+        store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
     }
 
     /** Hito 19: caso inicial dependencia FISCALIZACION, sin documentos avanzados. */
@@ -4299,6 +4320,7 @@ public class MockDataFactory {
                 "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
                 "Acta de fiscalización ingresada; pendiente datos del local."));
         store.getEventosPorActa().put(id, eventos);
+        store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
     }
 
     /** Hito 20: caso inicial dependencia BROMATOLOGIA, sin documentos avanzados. */
@@ -4331,5 +4353,6 @@ public class MockDataFactory {
                 "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
                 "Acta de bromatología ingresada; pendiente identificación del establecimiento."));
         store.getEventosPorActa().put(id, eventos);
+        store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
     }
 }

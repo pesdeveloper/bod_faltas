@@ -36,6 +36,8 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarLoteCorreoPostalRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarMedidaPreventivaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNotificacionActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarNulidadAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarRectificacionAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.GenerarResolucionAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.MarcarResultadoAbsueltoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalAcuseRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalAcuseResponse;
@@ -60,6 +62,7 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarMedidaPreventivaPosteri
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarCumplimientoMaterialBloqueoCierreAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReconocerOrigenBloqueanteMaterialAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarResolucionBloqueoCierreAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReactivarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarDesdeGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResponse;
@@ -1054,6 +1057,33 @@ public class PrototipoApiController {
                 r.motivoArchivoPrevio());
     }
 
+    /**
+     * Reactivación desde la macro-bandeja PARALIZADAS. Solo aplica a actas
+     * cuya {@code bandejaActual} sea {@code PARALIZADAS}. Devuelve el caso a
+     * {@code PENDIENTE_ANALISIS} con marca operativa
+     * {@code REVISION_POST_REACTIVACION}; la información histórica de la
+     * paralización queda en el log de eventos.
+     */
+    @PostMapping("/actas/{id}/acciones/reactivar-acta")
+    public ReactivarActaAccionResponse reactivarActa(@PathVariable("id") String id) {
+        PrototipoStore.ReactivarActaResultado r = store.reactivarActa(id);
+        if (r.estado() == PrototipoStore.ReactivarActaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReactivarActaEstado.CONFLICT) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El acta no se encuentra en bandeja PARALIZADAS.");
+        }
+        return new ReactivarActaAccionResponse(
+                "OK",
+                "Acta reactivada correctamente.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente());
+    }
+
     @PostMapping("/actas/{id}/acciones/generar-medida-preventiva")
     public GenerarMedidaPreventivaAccionResponse generarMedidaPreventiva(@PathVariable("id") String id) {
         PrototipoStore.GenerarMedidaPreventivaResultado r = store.generarMedidaPreventiva(id);
@@ -1111,6 +1141,56 @@ public class PrototipoApiController {
         return new GenerarNulidadAccionResponse(
                 "OK",
                 "Nulidad generada.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    /**
+     * Produccion de la pieza RESOLUCION como pieza no-fallo dentro del
+     * circuito documental/resolutivo. Solo aplica a actas en
+     * PENDIENTES_RESOLUCION_REDACCION que declaran RESOLUCION como pieza
+     * requerida (caso demo: ACTA-0011 con estadoProcesoActual =
+     * PENDIENTE_RESOLUCION). Al firmarse el documento generado, la acta
+     * pasa a PENDIENTE_NOTIFICACION.
+     */
+    @PostMapping("/actas/{id}/acciones/generar-resolucion")
+    public GenerarResolucionAccionResponse generarResolucion(@PathVariable("id") String id) {
+        PrototipoStore.GenerarResolucionResultado r = store.generarResolucion(id);
+        if (r.estado() == PrototipoStore.GenerarResolucionEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.GenerarResolucionEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new GenerarResolucionAccionResponse(
+                "OK",
+                "Resolucion generada.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    /**
+     * Produccion de la pieza RECTIFICACION como pieza no-fallo dentro del
+     * circuito documental/resolutivo. Solo aplica a actas en
+     * PENDIENTES_RESOLUCION_REDACCION que declaran RECTIFICACION como pieza
+     * requerida (caso demo: ACTA-0014 con estadoProcesoActual =
+     * PENDIENTE_RECTIFICACION). Al firmarse el documento generado, la acta
+     * pasa a PENDIENTE_NOTIFICACION.
+     */
+    @PostMapping("/actas/{id}/acciones/generar-rectificacion")
+    public GenerarRectificacionAccionResponse generarRectificacion(@PathVariable("id") String id) {
+        PrototipoStore.GenerarRectificacionResultado r = store.generarRectificacion(id);
+        if (r.estado() == PrototipoStore.GenerarRectificacionEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.GenerarRectificacionEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new GenerarRectificacionAccionResponse(
+                "OK",
+                "Rectificacion generada.",
                 r.actaId(),
                 r.bandejaActual(),
                 r.estadoProcesoActual());

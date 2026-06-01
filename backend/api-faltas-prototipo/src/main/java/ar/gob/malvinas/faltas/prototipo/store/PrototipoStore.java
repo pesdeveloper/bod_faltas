@@ -110,6 +110,16 @@ public class PrototipoStore {
      */
     public static final String ACCION_REVISION_POST_GESTION_EXTERNA = "REVISION_POST_GESTION_EXTERNA";
     /**
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso volvió a
+     * análisis por reactivación explícita desde la macro-bandeja
+     * {@code PARALIZADAS}. Permite distinguir y filtrar dentro de análisis
+     * los casos recién reactivados de los que vinieron por el circuito
+     * operativo normal o por reingreso desde archivo/gestión externa. La
+     * información histórica de la paralización queda en los eventos como
+     * trazabilidad; no bloquea acciones luego de reactivar.
+     */
+    public static final String ACCION_REVISION_POST_REACTIVACION = "REVISION_POST_REACTIVACION";
+    /**
      * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso ingresó a
      * análisis porque en una etapa temprana del expediente se registró una
      * solicitud de pago voluntario, y esa solicitud debe ser evaluada
@@ -360,6 +370,20 @@ public class PrototipoStore {
             String tipoGestionExternaPrevia) {
     }
 
+    public enum ReactivarActaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ReactivarActaResultado(
+            ReactivarActaEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String accionPendiente) {
+    }
+
     public enum GenerarMedidaPreventivaEstado {
         OK,
         NOT_FOUND,
@@ -394,6 +418,32 @@ public class PrototipoStore {
 
     public record GenerarNulidadResultado(
             GenerarNulidadEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum GenerarResolucionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record GenerarResolucionResultado(
+            GenerarResolucionEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum GenerarRectificacionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record GenerarRectificacionResultado(
+            GenerarRectificacionEstado estado,
             String actaId,
             String bandejaActual,
             String estadoProcesoActual) {
@@ -2391,6 +2441,81 @@ public class PrototipoStore {
     }
 
     /**
+     * Demo: reactivación explícita desde la macro-bandeja PARALIZADAS →
+     * vuelve a PENDIENTE_ANALISIS con bloque D5_ANALISIS, estado
+     * PENDIENTE_REVISION, situación ACTIVA y marca operativa
+     * {@link #ACCION_REVISION_POST_REACTIVACION}. La información histórica
+     * de la paralización queda en el log de eventos; no bloquea acciones
+     * luego de reactivar. Solo aplica a actas cuya bandejaActual sea
+     * {@code PARALIZADAS}.
+     */
+    public ReactivarActaResultado reactivarActa(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new ReactivarActaResultado(
+                    ReactivarActaEstado.NOT_FOUND, null, null, null, null);
+        }
+        if (!PrototipoConstantes.BANDEJA_PARALIZADAS.equals(actual.bandejaActual())) {
+            return new ReactivarActaResultado(
+                    ReactivarActaEstado.CONFLICT, null, null, null, null);
+        }
+
+        String accionParalizacionPrevia = accionPendientePorActa.get(actaId);
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                PrototipoConstantes.BLOQUE_D5,
+                PrototipoConstantes.ESTADO_PENDIENTE_REVISION,
+                "ACTIVA",
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, ACCION_REVISION_POST_REACTIVACION);
+
+        String descripcion = accionParalizacionPrevia == null
+                ? "Acta reactivada desde PARALIZADAS; vuelve a análisis con acción pendiente "
+                        + ACCION_REVISION_POST_REACTIVACION + "."
+                : "Acta reactivada desde PARALIZADAS (motivo previo " + accionParalizacionPrevia
+                        + "); vuelve a análisis con acción pendiente "
+                        + ACCION_REVISION_POST_REACTIVACION + ".";
+
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new java.util.ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        int siguiente = eventos.size() + 1;
+        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
+        java.time.LocalDateTime fechaEvento = eventos.stream()
+                .max(java.util.Comparator.comparing(ActaEventoMock::fechaHora))
+                .map(e -> e.fechaHora().plusMinutes(1))
+                .orElse(java.time.LocalDateTime.now());
+        eventos.add(new ActaEventoMock(
+                idEvento,
+                actaId,
+                fechaEvento,
+                "ACTA_REACTIVADA_DESDE_PARALIZADAS",
+                PrototipoConstantes.BANDEJA_PARALIZADAS,
+                PrototipoConstantes.BLOQUE_D5,
+                descripcion));
+
+        return new ReactivarActaResultado(
+                ReactivarActaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                ACCION_REVISION_POST_REACTIVACION);
+    }
+
+    /**
      * Demo: produce la pieza MEDIDA_PREVENTIVA (solo desde
      * PENDIENTES_RESOLUCION_REDACCION y solo si la acta declara esa pieza
      * como requerida). Fachada pública; la lógica vive en
@@ -2421,6 +2546,26 @@ public class PrototipoStore {
      */
     public GenerarNulidadResultado generarNulidad(String actaId) {
         return piezasFirma.generarNulidad(actaId);
+    }
+
+    /**
+     * Demo: produce la pieza RESOLUCION (solo desde
+     * PENDIENTES_RESOLUCION_REDACCION y solo si la acta declara esa pieza
+     * como requerida). Fachada publica; la logica vive en
+     * {@link PiezasFirmaSupport}.
+     */
+    public GenerarResolucionResultado generarResolucion(String actaId) {
+        return piezasFirma.generarResolucion(actaId);
+    }
+
+    /**
+     * Demo: produce la pieza RECTIFICACION (solo desde
+     * PENDIENTES_RESOLUCION_REDACCION y solo si la acta declara esa pieza
+     * como requerida). Fachada publica; la logica vive en
+     * {@link PiezasFirmaSupport}.
+     */
+    public GenerarRectificacionResultado generarRectificacion(String actaId) {
+        return piezasFirma.generarRectificacion(actaId);
     }
 
     /**

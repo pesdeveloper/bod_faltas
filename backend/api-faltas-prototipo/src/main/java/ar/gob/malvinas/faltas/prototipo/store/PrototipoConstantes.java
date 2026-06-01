@@ -66,6 +66,13 @@ final class PrototipoConstantes {
     static final String BANDEJA_GESTION_EXTERNA = "GESTION_EXTERNA";
 
     /**
+     * Macro-bandeja de actas cuyo trámite fue suspendido administrativamente.
+     * Mientras el acta permanece aquí no aplican acciones internas operativas;
+     * la única acción disponible es la reactivación explícita.
+     */
+    static final String BANDEJA_PARALIZADAS = "PARALIZADAS";
+
+    /**
      * Macro-bandeja de actas con expediente dado de baja operativa. No aplica
      * dictar resolutorios de cierre mientras el caso no reingresa.
      */

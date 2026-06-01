@@ -29,6 +29,8 @@ import {
   GenerarMedidaPreventivaAccionResponseDemo,
   GenerarNotificacionActaAccionResponseDemo,
   GenerarNulidadAccionResponseDemo,
+  GenerarRectificacionAccionResponseDemo,
+  GenerarResolucionAccionResponseDemo,
   NotificadorMunicipalAcuseRequestDemo,
   NotificadorMunicipalAcuseResponseDemo,
   NotificadorMunicipalNotificacionDemo,
@@ -46,6 +48,7 @@ import {
   RegistrarResolucionBloqueoCierreAccionResponseDemo,
   RegistrarSolicitudPagoVoluntarioAccionRequest,
   RegistrarSolicitudPagoVoluntarioAccionResponseDemo,
+  ReactivarActaAccionResponseDemo,
   ReingresarActaAccionResponseDemo,
   ReingresarDesdeGestionExternaAccionResponseDemo,
   RegistrarApelacionAccionRequestDemo,
@@ -159,6 +162,20 @@ export class PrototipoFaltasApiService {
   ): Observable<GenerarNotificacionActaAccionResponseDemo> {
     return this.http.post<GenerarNotificacionActaAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/generar-notificacion-acta`,
+      null,
+    );
+  }
+
+  generarResolucion(actaId: string): Observable<GenerarResolucionAccionResponseDemo> {
+    return this.http.post<GenerarResolucionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/generar-resolucion`,
+      null,
+    );
+  }
+
+  generarRectificacion(actaId: string): Observable<GenerarRectificacionAccionResponseDemo> {
+    return this.http.post<GenerarRectificacionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/generar-rectificacion`,
       null,
     );
   }
@@ -390,6 +407,13 @@ export class PrototipoFaltasApiService {
   reingresarActa(actaId: string): Observable<ReingresarActaAccionResponseDemo> {
     return this.http.post<ReingresarActaAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/reingresar-acta`,
+      null,
+    );
+  }
+
+  reactivarActa(actaId: string): Observable<ReactivarActaAccionResponseDemo> {
+    return this.http.post<ReactivarActaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/reactivar-acta`,
       null,
     );
   }
