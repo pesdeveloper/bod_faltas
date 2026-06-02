@@ -9,7 +9,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { Observable, catchError, finalize, forkJoin, map, of, take } from 'rxjs';
+import { Observable, Subject, catchError, debounceTime, finalize, forkJoin, map, of, take } from 'rxjs';
 import {
   BandejaLateralCodigo,
   BandejaLateralResponse,
@@ -48,6 +48,7 @@ import {
   TipoGestionExternaDemo,
   TipoResolucionBloqueoCierre,
   codigoQrDemoParaActa,
+  PrototipoActaBusquedaResponse,
 } from '../../core/models/prototipo-faltas.models';
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
 import { PrototipoFaltasApiService } from '../../core/services/prototipo-faltas-api.service';
@@ -461,6 +462,12 @@ export class DemoShellComponent implements OnInit {
   readonly textoBusquedaActa = signal('');
   readonly dependenciaDemoSeleccionada = signal<string | null>(null);
   readonly seguirActaAlCambiarBandeja = signal(false);
+  readonly busquedaGlobal = signal(false);
+  readonly resultadosBusquedaGlobal = signal<PrototipoActaBusquedaResponse[]>([]);
+  readonly cargandoBusquedaGlobal = signal(false);
+  readonly errorBusquedaGlobal = signal<string | null>(null);
+  readonly actaPreviewGlobal = signal<PrototipoActaBusquedaResponse | null>(null);
+  private readonly busquedaGlobalSubject = new Subject<string>();
   readonly seguimientoActaMensaje = signal<string | null>(null);
 
   readonly copiaEstadoMensaje = signal<string | null>(null);
@@ -487,10 +494,18 @@ export class DemoShellComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((event) => this.actualizarVistaCorreoPostal(event.urlAfterRedirects));
+    this.busquedaGlobalSubject.pipe(
+      debounceTime(350),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((q) => this.ejecutarBusquedaGlobal(q));
+
     this.cargarBandejasResumen();
     this.cargarListado({ actaIdScrollObjetivo: this.actaToRestoreFromUrl });
     Promise.resolve().then(() => {
       this.restoringFromUrl = false;
+      if (this.busquedaGlobal() && this.textoBusquedaActa().trim()) {
+        this.ejecutarBusquedaGlobal(this.textoBusquedaActa());
+      }
     });
   }
 
@@ -590,6 +605,101 @@ export class DemoShellComponent implements OnInit {
   actualizarTextoBusquedaActa(valor: string): void {
     this.textoBusquedaActa.set(valor);
     this.actualizarQueryParams({ q: valor || null }, true);
+    if (this.busquedaGlobal()) {
+      this.busquedaGlobalSubject.next(valor);
+    }
+  }
+
+  cambiarBusquedaGlobal(activo: boolean): void {
+    this.busquedaGlobal.set(activo);
+    this.actualizarQueryParams({ busquedaGlobal: activo || null }, true);
+    if (activo) {
+      const q = this.textoBusquedaActa().trim();
+      if (q) {
+        this.ejecutarBusquedaGlobal(q);
+      } else {
+        this.resultadosBusquedaGlobal.set([]);
+      }
+    } else {
+      this.resultadosBusquedaGlobal.set([]);
+      this.errorBusquedaGlobal.set(null);
+      this.actaPreviewGlobal.set(null);
+    }
+  }
+
+  limpiarBusquedaGlobal(): void {
+    this.textoBusquedaActa.set('');
+    this.resultadosBusquedaGlobal.set([]);
+    this.errorBusquedaGlobal.set(null);
+    this.actaPreviewGlobal.set(null);
+    this.actualizarQueryParams({ q: null }, true);
+  }
+
+  private ejecutarBusquedaGlobal(q: string): void {
+    const termino = q.trim();
+    if (!termino) {
+      this.resultadosBusquedaGlobal.set([]);
+      this.errorBusquedaGlobal.set(null);
+      return;
+    }
+    this.cargandoBusquedaGlobal.set(true);
+    this.errorBusquedaGlobal.set(null);
+    this.api.buscarActasGlobal(termino)
+      .pipe(
+        catchError(() => {
+          this.errorBusquedaGlobal.set('No se pudo realizar la búsqueda global.');
+          return of<PrototipoActaBusquedaResponse[]>([]);
+        }),
+        finalize(() => this.cargandoBusquedaGlobal.set(false)),
+        take(1),
+      )
+      .subscribe((resultados) => this.resultadosBusquedaGlobal.set(resultados));
+  }
+
+  seleccionarResultadoGlobal(resultado: PrototipoActaBusquedaResponse): void {
+    const esBandejaActual = resultado.bandeja === this.bandejaSeleccionada();
+    if (esBandejaActual) {
+      this.actaPreviewGlobal.set(null);
+      this.seleccionarActa(resultado.actaId);
+    } else {
+      this.actaPreviewGlobal.set(resultado);
+      this.actaSeleccionadaId.set(resultado.actaId);
+      this.actualizarQueryParams({ acta: resultado.actaId }, false);
+      this.detalle.set(null);
+      this.detalleEstado.set('loading');
+      if (this.vistaEstrecha()) {
+        this.detalleMovilAbierto.set(true);
+        this.overlayResumenBandejaAbierto.set(false);
+      }
+      this.cargarDetalle();
+    }
+  }
+
+  confirmarSeleccionActaGlobal(): void {
+    const resultado = this.actaPreviewGlobal();
+    if (!resultado) {
+      return;
+    }
+    const bandejaDestino = bandejaBackendALateral(resultado.bandeja);
+    this.actaPreviewGlobal.set(null);
+    this.resultadosBusquedaGlobal.set([]);
+    this.errorBusquedaGlobal.set(null);
+    this.cargandoBusquedaGlobal.set(false);
+    this.textoBusquedaActa.set('');
+    this.bandejaSeleccionada.set(bandejaDestino);
+    this.subBandejaSeleccionada.set(null);
+    this.dependenciaDemoSeleccionada.set(null);
+    this.actaSeleccionadaId.set(resultado.actaId);
+    this.actualizarQueryParams({
+      bandeja: bandejaDestino,
+      filtro: null,
+      dependencia: null,
+      acta: resultado.actaId,
+      q: null,
+      busquedaGlobal: true,
+    }, true);
+    this.cargarListado({ actaIdScrollObjetivo: resultado.actaId });
+    this.cargarDetalle();
   }
 
   actualizarDependenciaDemo(valor: string | null): void {
@@ -3072,6 +3182,11 @@ export class DemoShellComponent implements OnInit {
     const acta = params['acta'];
     if (acta) {
       this.actaToRestoreFromUrl = acta;
+    }
+
+    const busquedaGlobal = params['busquedaGlobal'];
+    if (busquedaGlobal === 'true') {
+      this.busquedaGlobal.set(true);
     }
   }
 

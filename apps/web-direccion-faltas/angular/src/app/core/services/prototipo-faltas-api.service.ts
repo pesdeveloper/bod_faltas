@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+﻿import { HttpClient, HttpParams } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
@@ -61,6 +61,7 @@ import {
   RegistrarVencimientoPlazoApelacionAccionResponseDemo,
   TipoCumplimientoMaterialBloqueante,
   TipoResolucionBloqueoCierre,
+  PrototipoActaBusquedaResponse,
 } from '../models/prototipo-faltas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -538,5 +539,9 @@ export class PrototipoFaltasApiService {
       `${this.api.baseUrl}/actas/${actaId}/acciones/dictar-fallo-condenatorio`,
       body,
     );
+  }
+  buscarActasGlobal(q: string): Observable<PrototipoActaBusquedaResponse[]> {
+    const params = new HttpParams().set('q', q.trim());
+    return this.http.get<PrototipoActaBusquedaResponse[]>(`${this.api.baseUrl}/actas/buscar`, { params });
   }
 }

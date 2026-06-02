@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActaBandejaItem, BadgeDemo, SubBandejaResumen } from '../../core/models/prototipo-faltas.models';
+import { ActaBandejaItem, BadgeDemo, PrototipoActaBusquedaResponse, SubBandejaResumen } from '../../core/models/prototipo-faltas.models';
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
 
 type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
@@ -102,6 +102,15 @@ export class DemoActaListComponent implements AfterViewInit {
     this.mostrarResumenBandejaChange.emit();
   }
   @Output() readonly rowsRenderizadas = new EventEmitter<void>();
+
+  @Input() busquedaGlobal = false;
+  @Input() resultadosBusquedaGlobal: PrototipoActaBusquedaResponse[] = [];
+  @Input() cargandoBusquedaGlobal = false;
+  @Input() errorBusquedaGlobal: string | null = null;
+  @Input() bandejaActual: string | null = null;
+  @Output() readonly busquedaGlobalChange = new EventEmitter<boolean>();
+  @Output() readonly seleccionarActaGlobal = new EventEmitter<PrototipoActaBusquedaResponse>();
+  @Output() readonly limpiarBusquedaGlobal = new EventEmitter<void>();
 
   @ViewChild('actasListContainer') private readonly actasListContainer?: ElementRef<HTMLElement>;
   @ViewChildren('actaRow') private readonly actaRows?: QueryList<ElementRef<HTMLElement>>;

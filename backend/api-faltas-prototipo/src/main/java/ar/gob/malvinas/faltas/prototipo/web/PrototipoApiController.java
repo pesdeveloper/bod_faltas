@@ -73,6 +73,7 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResp
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionVencidaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.BromatologiaDatoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CrearActaMockDemoRequest;
+import ar.gob.malvinas.faltas.prototipo.web.dto.PrototipoActaBusquedaResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.TransitoDatoResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -96,10 +97,15 @@ public class PrototipoApiController {
 
     private final PrototipoStore store;
     private final MockDataFactory mockDataFactory;
+    private final ActaBusquedaHelper actaBusquedaHelper;
 
-    public PrototipoApiController(PrototipoStore store, MockDataFactory mockDataFactory) {
+    public PrototipoApiController(
+            PrototipoStore store,
+            MockDataFactory mockDataFactory,
+            ActaBusquedaHelper actaBusquedaHelper) {
         this.store = store;
         this.mockDataFactory = mockDataFactory;
+        this.actaBusquedaHelper = actaBusquedaHelper;
     }
 
     @GetMapping("/health")
@@ -171,6 +177,20 @@ public class PrototipoApiController {
         ActaMock acta = store.findActa(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return mapActaDetalle(acta);
+    }
+
+    /**
+     * Búsqueda global liviana de actas por número, actaId o fragmento numérico.
+     *
+     * <p>Busca en todo el dataset demo sin mutar estado. Devuelve lista vacía
+     * para {@code q} nulo o en blanco. El resultado está limitado a
+     * {@link ActaBusquedaHelper#MAX_RESULTADOS} entradas, ordenadas por
+     * relevancia y luego por {@code numeroActa} ascendente.
+     */
+    @GetMapping("/actas/buscar")
+    public List<PrototipoActaBusquedaResponse> buscarActas(
+            @RequestParam(value = "q", required = false) String q) {
+        return actaBusquedaHelper.buscar(q);
     }
 
     /**

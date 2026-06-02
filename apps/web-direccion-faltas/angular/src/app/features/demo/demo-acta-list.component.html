@@ -68,14 +68,24 @@
           autocomplete="off"
         />
       </label>
-      <label class="list-preference">
-        <input
-          type="checkbox"
-          [checked]="seguirActaAlCambiarBandeja"
-          (change)="seguirActaAlCambiarBandejaChange.emit($any($event.target).checked)"
-        />
-        <span>Seguir acta al cambiar de bandeja</span>
-      </label>
+            <div class="list-preferences-row">
+  <label class="list-preference">
+          <input
+            type="checkbox"
+            [checked]="seguirActaAlCambiarBandeja"
+            (change)="seguirActaAlCambiarBandejaChange.emit($any($event.target).checked)"
+          />
+          <span>Seguir acta al cambiar de bandeja</span>
+        </label>
+        <label class="list-preference list-preference--global">
+          <input
+            type="checkbox"
+            [checked]="busquedaGlobal"
+            (change)="busquedaGlobalChange.emit($any($event.target).checked)"
+          />
+          <span>B&#250;squeda global</span>
+        </label>
+      </div>
     </div>
     @if (seguimientoActaMensaje) {
       <p class="list-panel__feedback" role="status">{{ seguimientoActaMensaje }}</p>
@@ -83,6 +93,66 @@
   </header>
 
   <div #actasListContainer class="list-panel__scroll" aria-label="Actas de la bandeja">
+    @if (busquedaGlobal && textoBusquedaActa.trim()) {
+      <div class="global-search-header">
+        <div class="global-search-header__info">
+          <span class="global-search-header__title">Resultados de b&#250;squeda global</span>
+          @if (cargandoBusquedaGlobal) {
+            <span class="global-search-header__subtitle">Buscando...</span>
+          } @else {
+            <span class="global-search-header__subtitle">{{ resultadosBusquedaGlobal.length }} resultado{{ resultadosBusquedaGlobal.length === 1 ? &quot;&quot; : &quot;s&quot; }} para &quot;{{ textoBusquedaActa.trim() }}&quot;</span>
+          }
+        </div>
+        <button mat-button type="button" class="global-search-header__clear" (click)="limpiarBusquedaGlobal.emit()">
+          <mat-icon aria-hidden="true">close</mat-icon>
+          Limpiar
+        </button>
+      </div>
+      @if (cargandoBusquedaGlobal) {
+        <div class="state-box">
+          <mat-spinner diameter="36"></mat-spinner>
+          <p>Buscando...</p>
+        </div>
+      } @else if (errorBusquedaGlobal) {
+        <div class="state-box">
+          <p>{{ errorBusquedaGlobal }}</p>
+        </div>
+      } @else if (resultadosBusquedaGlobal.length === 0) {
+        <div class="state-box">
+          <p>No se encontraron actas para &quot;{{ textoBusquedaActa.trim() }}&quot;.</p>
+        </div>
+      } @else {
+        @for (r of resultadosBusquedaGlobal; track r.actaId) {
+          <button
+            #actaRow
+            type="button"
+            mat-button
+            class="acta-row acta-row--global"
+            [attr.data-acta-id]="r.actaId"
+            [class.acta-row--global-otra-bandeja]="r.bandeja !== bandejaActual"
+            (click)="seleccionarActaGlobal.emit(r)"
+          >
+            <div class="row-main">
+              <span class="row-numero">{{ r.acta }}</span>
+              <span class="row-status">{{ r.situacionAdministrativa }}</span>
+            </div>
+            <div class="row-secondary">
+              <div class="row-secondary__body">
+                <div class="row-bandeja" [class.row-bandeja--otra]="r.bandeja !== bandejaActual">
+                  <mat-icon class="row-bandeja__icon" aria-hidden="true">{{ r.bandeja !== bandejaActual ? 'swap_horiz' : 'location_on' }}</mat-icon>
+                  {{ r.bandejaLabel }}
+                </div>
+                <div class="row-meta">{{ r.estadoProceso }}</div>
+                @if (r.dependencia) {
+                  <div class="row-meta">{{ r.dependencia }}</div>
+                }
+              </div>
+            </div>
+          </button>
+        }
+      }
+    } @else {
+
     @if (actaEnSeguimiento) {
       <section class="list-panel__seccion" aria-label="Acta en seguimiento">
         <h3 class="list-panel__seccion-titulo">Acta en seguimiento</h3>
@@ -133,6 +203,7 @@
         <ng-container *ngTemplateOutlet="actaRowTpl; context: { $implicit: acta }"></ng-container>
       }
     }
+      }
   </div>
 
   <ng-template #actaRowTpl let-acta>

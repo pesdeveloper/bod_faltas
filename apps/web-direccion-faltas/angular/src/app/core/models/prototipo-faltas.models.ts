@@ -916,3 +916,21 @@ export interface ReactivarActaAccionResponseDemo {
   estadoProcesoActual: string;
   accionPendiente: string;
 }
+
+/** Resultado liviano de busqueda global de actas (GET /api/prototipo/actas/buscar). */
+export interface PrototipoActaBusquedaResponse {
+  actaId: string;
+  acta: string;
+  bandeja: string;
+  bandejaLabel: string;
+  dependencia: string | null;
+  estadoProceso: string;
+  situacionAdministrativa: string;
+  resultadoFinal: string;
+  situacionPago: string;
+  situacionPagoCondena: string;
+  montoCondena: number | null;
+  accionPendiente: string | null;
+  tipoGestionExterna: string | null;
+  cerrable: boolean;
+}
