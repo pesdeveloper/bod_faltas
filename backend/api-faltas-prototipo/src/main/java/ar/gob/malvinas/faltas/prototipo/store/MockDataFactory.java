@@ -67,6 +67,7 @@ public class MockDataFactory {
         cargarActa0020OrigenMedidaDesdeGenerarMedidaDemo(store);
         cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(store);
         cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(store);
+        cargarActa0025SoloD1TrazasSinAnclasMaterialesDemo(store);
         cargarActa0026MedidaPreventivaPosteriorContravencionDemo(store);
 
         // --- Fallo, apelación, correo postal ---
@@ -88,6 +89,7 @@ public class MockDataFactory {
         cargarActa0123InspeccionesInicialDemo(store);
         cargarActa0124FiscalizacionInicialDemo(store);
         cargarActa0125BromatologiaInicialDemo(store);
+        cargarActa0130GestionExternaApremioDemo(store);
 
         completarDependenciasDemo(store);
     }
@@ -1356,6 +1358,88 @@ public class MockDataFactory {
         store.getNotificacionesPorActa().put(id, notifs);
 
         store.setTipoGestionExterna(id, PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ);
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(75000));
+    }
+
+    /**
+     * Caso demo canónico para el slice de gestión externa diferenciada:
+     * acta en {@code GESTION_EXTERNA} con tipo APREMIO, condena firme y monto
+     * informado. Permite probar las acciones diferenciadas de APREMIO
+     * (reingreso sin pago y pago en apremio) sin depender de una derivación
+     * efectiva en el mismo test.
+     */
+    private void cargarActa0130GestionExternaApremioDemo(PrototipoStore store) {
+        String id = "ACTA-0130";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0130",
+                "TRANSITO_URBANO",
+                "GESTION_EXTERNA",
+                "EN_GESTION_EXTERNA",
+                "GESTION_EXTERNA",
+                false,
+                true,
+                true,
+                true,
+                java.time.LocalDateTime.of(2026, 1, 10, 9, 0),
+                "Torres, Marcelo",
+                "DNI 38.001.130",
+                "Oficial Demo",
+                "Caso demo ACTA-0130: condena firme derivada a Apremio; monto 75000.",
+                BANDEJA_GESTION_EXTERNA);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0130-01", id,
+                java.time.LocalDateTime.of(2026, 1, 10, 9, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta ingresada."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0130-02", id,
+                java.time.LocalDateTime.of(2026, 1, 18, 11, 0),
+                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "Notificación fehaciente."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0130-03", id,
+                java.time.LocalDateTime.of(2026, 2, 5, 10, 0),
+                "FALLO_CONDENATORIO_DICTADO", "D5_ANALISIS", "D5_ANALISIS",
+                "Fallo condenatorio dictado."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0130-04", id,
+                java.time.LocalDateTime.of(2026, 2, 10, 14, 0),
+                "CONDENA_FIRME", "D5_ANALISIS", "D5_ANALISIS",
+                "Condena firme establecida; plazo de apelación vencido."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0130-05", id,
+                java.time.LocalDateTime.of(2026, 2, 12, 9, 0),
+                "DERIVACION_GESTION_EXTERNA", "D5_ANALISIS", "GESTION_EXTERNA",
+                "Derivado a gestión externa tipo "
+                        + PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO + "."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0130-01", id, "ACTA_FIRMADA", "FIRMADO", "acta_firmada_0130.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0130-02", id, "FALLO_CONDENATORIO", "FIRMADO",
+                "fallo_condenatorio_0130.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        List<ActaNotificacionMock> notifs = new ArrayList<>();
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0130-01", id, "POSTAL", "ENTREGADA",
+                "Marcelo Torres — notificación del acta"));
+        notifs.add(new ActaNotificacionMock(
+                "NOT-0130-02", id, "POSTAL", "ENTREGADA",
+                "Marcelo Torres — notificación del fallo"));
+        store.getNotificacionesPorActa().put(id, notifs);
+
+        store.setTipoGestionExterna(id, PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO);
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(75000));
     }
 
     /**
@@ -1406,12 +1490,12 @@ public class MockDataFactory {
      * Caso demo principal (cerrabilidad + rama de absolución): {@code ACTA-0019},
      * subtipo/caso {@code TRANSITO_URBANO} con estado
      * {@code PENDIENTE_CIERRE_MATERIAL} en análisis, {@code resultadoFinal} mock
-     * {@code ABSUELTO} y tres orígenes con el mismo patrón: ancla documental en
-     * el expediente + {@link PrototipoStore#reconocerOrigenBloqueanteMedidaPreventiva},
+     * {@code ABSUELTO}. En tránsito, RODADO y DOCUMENTACION son ejes materiales
+     * propios; el secuestro/retiro de rodado y la retención de documentación no
+     * son medidas preventivas. No existe {@code LEVANTAMIENTO_MEDIDA_PREVENTIVA}:
+     * {@code MEDIDA_PREVENTIVA} queda {@code NO_APLICA}. Solo dos orígenes activos:
      * {@link PrototipoStore#reconocerOrigenBloqueanteSecuestroRodado} y
-     * {@link PrototipoStore#reconocerOrigenBloqueanteRetencionDocumental}. Cada
-     * bloqueo requiere documento resolutorio mock y luego cumplimiento material
-     * vía API; la resolución documental no sustituye el hecho material. La rama
+     * {@link PrototipoStore#reconocerOrigenBloqueanteRetencionDocumental}. La rama
      * simétrica con {@code PAGO_CONFIRMADO} precargado es {@code ACTA-0021};
      * el mismo criterio con {@code PAGO_CONFIRMADO} viniendo del flujo de
      * pago informado + confirmación es {@code ACTA-0022}. Ver {@code ACTA-0020}
@@ -1438,7 +1522,7 @@ public class MockDataFactory {
                 "Demo Cerrabilidad",
                 "DNI 22.222.222",
                 "Oficial Demo",
-                "Caso demo ACTA-0019: absolución; medida, rodado y documentación (anclas + reconocimiento; mock).",
+                "Caso demo ACTA-0019: absolución; rodado y documentación (tránsito — ejes materiales propios; sin medida preventiva).",
                 bandeja);
         store.getActas().put(id, acta);
 
@@ -1450,17 +1534,10 @@ public class MockDataFactory {
                 "ALTA_DEMO_CERRABILIDAD",
                 "D5_ANALISIS",
                 "D5_ANALISIS",
-                "Precarga demo: resultado ABSUELTO. Tres orígenes vía reconocimiento sobre anclas de expediente (mock)."));
+                "Precarga demo: resultado ABSUELTO. Dos orígenes vía reconocimiento (rodado + documentación); sin medida preventiva."));
         store.getEventosPorActa().put(id, eventos);
 
         List<ActaDocumentoMock> docs = new ArrayList<>();
-        docs.add(
-                new ActaDocumentoMock(
-                        "DOC-0019-00",
-                        id,
-                        "MEDIDA_PREVENTIVA",
-                        "PENDIENTE_FIRMA",
-                        "medida_preventiva_0019.pdf"));
         docs.add(
                 new ActaDocumentoMock(
                         "DOC-0019-01",
@@ -1479,12 +1556,6 @@ public class MockDataFactory {
 
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
 
-        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rMed =
-                store.reconocerOrigenBloqueanteMedidaPreventiva(id);
-        if (rMed.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
-            throw new IllegalStateException(
-                    "Carga demo ACTA-0019: reconocer medida preventiva, esperado OK, obtuvo: " + rMed.estado());
-        }
         PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rRodado =
                 store.reconocerOrigenBloqueanteSecuestroRodado(id);
         if (rRodado.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
@@ -1965,6 +2036,11 @@ public class MockDataFactory {
                 "D1_CAPTURA",
                 "Alta en sitio: expediente sin anclas de material (mock, regresión API)."));
         store.getEventosPorActa().put(id, eventos);
+
+        store.getPiezasRequeridasPorActa().put(id, new ActaPiezasRequeridasMock(
+                id,
+                new ArrayList<>(List.of("NOTIFICACION_ACTA")),
+                new ArrayList<>()));
     }
 
     /**
@@ -4114,7 +4190,9 @@ public class MockDataFactory {
                 "Julián Herrera — notificación positiva del acta"));
         store.getNotificacionesPorActa().put(id, notifs);
 
-        store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+        // El comprobante ya fue adjuntado: la situación es PENDIENTE_CONFIRMACION
+        // (no PAGO_INFORMADO, que es el estado previo al adjunto del comprobante).
+        store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
         store.setPagoInformadoDemo(
                 id,
                 new PrototipoStore.PagoInformadoMock(

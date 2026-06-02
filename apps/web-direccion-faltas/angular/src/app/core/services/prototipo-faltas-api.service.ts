@@ -51,6 +51,9 @@ import {
   ReactivarActaAccionResponseDemo,
   ReingresarActaAccionResponseDemo,
   ReingresarDesdeGestionExternaAccionResponseDemo,
+  ReingresarDesdeApremioSinPagoAccionResponseDemo,
+  RegistrarPagoEnApremioAccionResponseDemo,
+  RegistrarResolucionJuzgadoAccionResponseDemo,
   RegistrarApelacionAccionRequestDemo,
   ResolverApelacionAccionRequestDemo,
   ResolverApelacionAccionResponseDemo,
@@ -442,6 +445,52 @@ export class PrototipoFaltasApiService {
     return this.http.post<ReingresarDesdeGestionExternaAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/reingresar-desde-gestion-externa`,
       null,
+    );
+  }
+
+  apremioReingresarSinPago(
+    actaId: string,
+  ): Observable<ReingresarDesdeApremioSinPagoAccionResponseDemo> {
+    return this.http.post<ReingresarDesdeApremioSinPagoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/apremio-reingresar-sin-pago`,
+      null,
+    );
+  }
+
+  apremioRegistrarPago(
+    actaId: string,
+  ): Observable<RegistrarPagoEnApremioAccionResponseDemo> {
+    return this.http.post<RegistrarPagoEnApremioAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/apremio-registrar-pago`,
+      null,
+    );
+  }
+
+  juzgadoReingresarAbsuelto(
+    actaId: string,
+  ): Observable<RegistrarResolucionJuzgadoAccionResponseDemo> {
+    return this.http.post<RegistrarResolucionJuzgadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/juzgado-reingresar-absuelto`,
+      null,
+    );
+  }
+
+  juzgadoReingresarCondenaConfirmada(
+    actaId: string,
+  ): Observable<RegistrarResolucionJuzgadoAccionResponseDemo> {
+    return this.http.post<RegistrarResolucionJuzgadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/juzgado-reingresar-condena-confirmada`,
+      null,
+    );
+  }
+
+  juzgadoReingresarMontoModificado(
+    actaId: string,
+    nuevoMonto: number,
+  ): Observable<RegistrarResolucionJuzgadoAccionResponseDemo> {
+    return this.http.post<RegistrarResolucionJuzgadoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/juzgado-reingresar-monto-modificado`,
+      { nuevoMonto },
     );
   }
   registrarApelacion(

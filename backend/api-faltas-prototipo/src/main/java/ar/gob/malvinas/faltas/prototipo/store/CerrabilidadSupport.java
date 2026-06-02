@@ -625,7 +625,7 @@ final class CerrabilidadSupport {
     private static String descripcionCumplimientoMaterial(PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA -> "Cumplimiento material registrado: medida preventiva efectivamente levantada (mock).";
-            case RODADO_SECUESTRADO -> "Cumplimiento material registrado: rodado efectivamente liberado (mock).";
+            case RODADO_SECUESTRADO -> "Retiro de rodado registrado (app). Retiro efectivo desde corralón (mock).";
             case DOCUMENTACION_RETENIDA -> "Cumplimiento material registrado: documentación retenida efectivamente entregada / restituida (mock).";
         };
     }
@@ -737,8 +737,12 @@ final class CerrabilidadSupport {
                     .CONFLICT);
         }
         if (!tieneDocumentoResolutorio(actaId, origen)) {
-            return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
-                    .CONFLICT);
+            if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA) {
+                registrarDocumentoResolutorioDocumentacion(actaId, actual.bloqueActual());
+            } else {
+                return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
+                        .CONFLICT);
+            }
         }
         if (tieneCumplimientoMaterialEfectivo(actaId, origen)) {
             return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
@@ -1280,6 +1284,37 @@ final class CerrabilidadSupport {
                 post != null ? post.bandejaActual() : null,
                 post != null ? post.estadoProcesoActual() : null,
                 null);
+    }
+
+    /**
+     * Crea automáticamente el documento resolutorio de restitución documental
+     * cuando se invoca el cumplimiento material de DOCUMENTACION_RETENIDA sin
+     * haber emitido el resolutorio previamente. Hace la acción atómica desde
+     * el punto de vista del operador: un solo POST registra la constancia y el
+     * cumplimiento material.
+     */
+    private void registrarDocumentoResolutorioDocumentacion(String actaId, String bloqueOrigen) {
+        List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        int siguiente = docs.size() + 1;
+        String sufijo = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String idDoc = "DOC-" + sufijo + "-" + String.format("%02d", siguiente);
+        String nombreArchivo = "restitucion_documentacion_" + sufijo.toLowerCase() + ".pdf";
+        docs.add(new ActaDocumentoMock(idDoc, actaId, TIPO_DOC_RESTITUCION_DOCUMENTACION, ESTADO_DOC_EMITIDO, nombreArchivo));
+        ActaMock a = actas.get(actaId);
+        if (a != null && !a.tieneDocumentos()) {
+            actas.put(actaId, new ActaMock(
+                    a.id(), a.numeroActa(), a.dominioReferencia(), a.bloqueActual(),
+                    a.estadoProcesoActual(), a.situacionAdministrativaActual(),
+                    a.estaCerrada(), a.permiteReingreso(), true, a.tieneNotificaciones(),
+                    a.fechaCreacion(), a.infractorNombre(), a.infractorDocumento(),
+                    a.inspectorNombre(), a.resumenHecho(), a.bandejaActual()));
+        }
+        registrarEvento(
+                actaId,
+                eventoResolucion(PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA, false),
+                bloqueOrigen, bloqueOrigen,
+                descripcionResolucion(
+                        PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA, false));
     }
 
     private void registrarEvento(

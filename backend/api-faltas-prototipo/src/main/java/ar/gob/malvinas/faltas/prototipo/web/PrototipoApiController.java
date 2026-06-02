@@ -63,8 +63,12 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarCumplimientoMaterialBlo
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReconocerOrigenBloqueanteMaterialAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarResolucionBloqueoCierreAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReactivarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.JuzgadoMontoModificadoRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarDesdeApremioSinPagoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReingresarDesdeGestionExternaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarPagoEnApremioAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarResolucionJuzgadoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ReintentarNotificacionVencidaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.BromatologiaDatoResponse;
@@ -981,6 +985,142 @@ public class PrototipoApiController {
                 r.estadoProcesoActual(),
                 r.accionPendiente(),
                 r.tipoGestionExternaPrevia());
+    }
+
+    /**
+     * APREMIO: retorno administrativo sin pago. Solo aplica a actas en
+     * GESTION_EXTERNA con tipoGestionExterna = APREMIO y permiteReingreso.
+     * Deja el acta en PENDIENTE_ANALISIS con condena firme pendiente de pago.
+     * tipoGestionExterna queda null (limpiado).
+     */
+    @PostMapping("/actas/{id}/acciones/apremio-reingresar-sin-pago")
+    public ReingresarDesdeApremioSinPagoAccionResponse apremioReingresarSinPago(
+            @PathVariable("id") String id) {
+        PrototipoStore.ReingresarDesdeApremioSinPagoResultado r =
+                store.reingresarDesdeApremioSinPago(id);
+        if (r.estado() == PrototipoStore.ReingresarDesdeApremioSinPagoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeApremioSinPagoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new ReingresarDesdeApremioSinPagoAccionResponse(
+                "OK",
+                "Retorno desde Apremio sin pago; condena firme pendiente. "
+                        + "Acta vuelve a análisis.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente());
+    }
+
+    /**
+     * APREMIO: registra pago efectuado en el proceso de apremio. Solo aplica
+     * a actas en GESTION_EXTERNA con tipoGestionExterna = APREMIO y
+     * permiteReingreso. Confirma la situación de pago y deja el acta en
+     * condición de cierre. tipoGestionExterna queda null (limpiado).
+     */
+    @PostMapping("/actas/{id}/acciones/apremio-registrar-pago")
+    public RegistrarPagoEnApremioAccionResponse apremioRegistrarPago(
+            @PathVariable("id") String id) {
+        PrototipoStore.RegistrarPagoEnApremioResultado r = store.registrarPagoEnApremio(id);
+        if (r.estado() == PrototipoStore.RegistrarPagoEnApremioEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarPagoEnApremioEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarPagoEnApremioAccionResponse(
+                "OK",
+                "Pago en apremio registrado; el acta queda en condición de cierre.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial absolutoria. Solo aplica a
+     * actas en GESTION_EXTERNA con tipoGestionExterna = JUZGADO_DE_PAZ y
+     * permiteReingreso. Establece resultadoFinal = ABSUELTO y deja el acta
+     * cerrable. tipoGestionExterna queda null (limpiado).
+     */
+    @PostMapping("/actas/{id}/acciones/juzgado-reingresar-absuelto")
+    public RegistrarResolucionJuzgadoAccionResponse juzgadoReingresarAbsuelto(
+            @PathVariable("id") String id) {
+        PrototipoStore.ReingresarDesdeJuzgadoResultado r =
+                store.reingresarDesdeJuzgadoAbsuelto(id);
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarResolucionJuzgadoAccionResponse(
+                "OK",
+                "Resolución de Juzgado de Paz registrada: absuelve.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.resolucion());
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial que confirma la condena
+     * original. Solo aplica a actas en GESTION_EXTERNA con
+     * tipoGestionExterna = JUZGADO_DE_PAZ y permiteReingreso. Mantiene
+     * CONDENA_FIRME y deja el acta con pago de condena pendiente.
+     * tipoGestionExterna queda null (limpiado).
+     */
+    @PostMapping("/actas/{id}/acciones/juzgado-reingresar-condena-confirmada")
+    public RegistrarResolucionJuzgadoAccionResponse juzgadoReingresarCondenaConfirmada(
+            @PathVariable("id") String id) {
+        PrototipoStore.ReingresarDesdeJuzgadoResultado r =
+                store.reingresarDesdeJuzgadoCondenaConfirmada(id);
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarResolucionJuzgadoAccionResponse(
+                "OK",
+                "Resolución de Juzgado de Paz registrada: confirma condena.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.resolucion());
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial que modifica el monto de
+     * condena. Solo aplica a actas en GESTION_EXTERNA con
+     * tipoGestionExterna = JUZGADO_DE_PAZ, permiteReingreso y nuevoMonto > 0.
+     * Actualiza monto, mantiene CONDENA_FIRME, deja el acta con pago pendiente.
+     * tipoGestionExterna queda null (limpiado).
+     */
+    @PostMapping("/actas/{id}/acciones/juzgado-reingresar-monto-modificado")
+    public RegistrarResolucionJuzgadoAccionResponse juzgadoReingresarMontoModificado(
+            @PathVariable("id") String id,
+            @RequestBody JuzgadoMontoModificadoRequest request) {
+        PrototipoStore.ReingresarDesdeJuzgadoResultado r =
+                store.reingresarDesdeJuzgadoMontoModificado(id, request.nuevoMonto());
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarResolucionJuzgadoAccionResponse(
+                "OK",
+                "Resolución de Juzgado de Paz registrada: monto de condena modificado a "
+                        + request.nuevoMonto() + ".",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.resolucion());
     }
 
     @PostMapping("/actas/{id}/acciones/archivar-acta")

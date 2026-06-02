@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.prototipo.store;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -52,6 +53,7 @@ final class GestionExternaSupport {
     private final Map<String, String> accionPendientePorActa;
     private final CerrabilidadSupport cerrabilidad;
     private final Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa;
+    private final Map<String, BigDecimal> montoCondenaPorActa;
 
     /**
      * Tipo de gestión externa vigente para la acta dentro de la macro-bandeja
@@ -65,12 +67,14 @@ final class GestionExternaSupport {
             Map<String, List<ActaEventoMock>> eventosPorActa,
             Map<String, String> accionPendientePorActa,
             CerrabilidadSupport cerrabilidad,
-            Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa) {
+            Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa,
+            Map<String, BigDecimal> montoCondenaPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
         this.cerrabilidad = cerrabilidad;
         this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
+        this.montoCondenaPorActa = montoCondenaPorActa;
     }
 
     String getTipoGestionExterna(String actaId) {
@@ -290,6 +294,316 @@ final class GestionExternaSupport {
                 actualizada.estadoProcesoActual(),
                 PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA,
                 tipoPrevio);
+    }
+
+    /**
+     * APREMIO: retorno administrativo sin pago. Solo aplica si la acta está
+     * en {@code GESTION_EXTERNA} con {@code tipoGestionExterna = APREMIO} y
+     * {@code permiteReingreso = true}. Deja el acta en
+     * {@code PENDIENTE_ANALISIS} con marca operativa
+     * {@link PrototipoStore#ACCION_REVISION_POST_GESTION_EXTERNA}, condena
+     * firme y situación de pago PENDIENTE. Limpia {@code tipoGestionExterna}.
+     */
+    PrototipoStore.ReingresarDesdeApremioSinPagoResultado reingresarDesdeApremioSinPago(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.ReingresarDesdeApremioSinPagoResultado(
+                    PrototipoStore.ReingresarDesdeApremioSinPagoEstado.NOT_FOUND, null, null, null, null);
+        }
+        if (!BANDEJA_GESTION_EXTERNA.equals(actual.bandejaActual())
+                || !actual.permiteReingreso()
+                || !PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO.equals(tipoGestionExternaPorActa.get(actaId))) {
+            return new PrototipoStore.ReingresarDesdeApremioSinPagoResultado(
+                    PrototipoStore.ReingresarDesdeApremioSinPagoEstado.CONFLICT, null, null, null, null);
+        }
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                "ACTIVA",
+                false,
+                true,
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA);
+        tipoGestionExternaPorActa.remove(actaId);
+
+        registrarEvento(
+                actaId,
+                "ACTA_REINGRESADA_DESDE_APREMIO_SIN_PAGO",
+                BLOQUE_GESTION_EXTERNA,
+                BLOQUE_D5,
+                "Retorno administrativo desde Apremio sin pago; condena firme pendiente. "
+                        + "Acta vuelve a análisis con acción pendiente "
+                        + PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA + ".");
+
+        return new PrototipoStore.ReingresarDesdeApremioSinPagoResultado(
+                PrototipoStore.ReingresarDesdeApremioSinPagoEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA);
+    }
+
+    /**
+     * APREMIO: registra pago efectuado en el proceso de apremio. Solo aplica
+     * si la acta está en {@code GESTION_EXTERNA} con
+     * {@code tipoGestionExterna = APREMIO} y {@code permiteReingreso = true}.
+     * Confirma la situación de pago, limpia {@code tipoGestionExterna} y deja
+     * el acta en {@code PENDIENTE_ANALISIS} cerrable (sin acción pendiente).
+     */
+    PrototipoStore.RegistrarPagoEnApremioResultado registrarPagoEnApremio(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.RegistrarPagoEnApremioResultado(
+                    PrototipoStore.RegistrarPagoEnApremioEstado.NOT_FOUND, null, null, null);
+        }
+        if (!BANDEJA_GESTION_EXTERNA.equals(actual.bandejaActual())
+                || !actual.permiteReingreso()
+                || !PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO.equals(tipoGestionExternaPorActa.get(actaId))) {
+            return new PrototipoStore.RegistrarPagoEnApremioResultado(
+                    PrototipoStore.RegistrarPagoEnApremioEstado.CONFLICT, null, null, null);
+        }
+
+        situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.CONFIRMADO);
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                "ACTIVA",
+                false,
+                true,
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.remove(actaId);
+        tipoGestionExternaPorActa.remove(actaId);
+
+        registrarEvento(
+                actaId,
+                "PAGO_EN_APREMIO_REGISTRADO",
+                BLOQUE_GESTION_EXTERNA,
+                BLOQUE_D5,
+                "Pago en apremio registrado; condena confirmada. "
+                        + "Acta vuelve a análisis en condición de cierre.");
+
+        return new PrototipoStore.RegistrarPagoEnApremioResultado(
+                PrototipoStore.RegistrarPagoEnApremioEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual());
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial absolutoria. Solo aplica
+     * si la acta está en {@code GESTION_EXTERNA} con
+     * {@code tipoGestionExterna = JUZGADO_DE_PAZ} y
+     * {@code permiteReingreso = true}. Establece resultado final ABSUELTO,
+     * limpia {@code tipoGestionExterna} y deja el acta cerrable.
+     */
+    PrototipoStore.ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoAbsuelto(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                    PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND, null, null, null, null, null);
+        }
+        if (!BANDEJA_GESTION_EXTERNA.equals(actual.bandejaActual())
+                || !actual.permiteReingreso()
+                || !PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ.equals(
+                        tipoGestionExternaPorActa.get(actaId))) {
+            return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                    PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT, null, null, null, null, null);
+        }
+
+        cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                "ACTIVA",
+                false,
+                true,
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.remove(actaId);
+        tipoGestionExternaPorActa.remove(actaId);
+
+        registrarEvento(
+                actaId,
+                "RESOLUCION_JUZGADO_ABSUELVE",
+                BLOQUE_GESTION_EXTERNA,
+                BLOQUE_D5,
+                "Resolución de Juzgado de Paz: absuelve. "
+                        + "Acta vuelve a análisis con resultado ABSUELTO; en condición de cierre.");
+
+        return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                PrototipoStore.ReingresarDesdeJuzgadoEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                null,
+                "ABSUELVE");
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial que confirma la condena
+     * original. Solo aplica si la acta está en {@code GESTION_EXTERNA} con
+     * {@code tipoGestionExterna = JUZGADO_DE_PAZ} y
+     * {@code permiteReingreso = true}. Mantiene CONDENA_FIRME, limpia
+     * {@code tipoGestionExterna} y deja el acta con pago de condena pendiente.
+     */
+    PrototipoStore.ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoCondenaConfirmada(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                    PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND, null, null, null, null, null);
+        }
+        if (!BANDEJA_GESTION_EXTERNA.equals(actual.bandejaActual())
+                || !actual.permiteReingreso()
+                || !PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ.equals(
+                        tipoGestionExternaPorActa.get(actaId))) {
+            return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                    PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT, null, null, null, null, null);
+        }
+
+        cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                "ACTIVA",
+                false,
+                true,
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA);
+        tipoGestionExternaPorActa.remove(actaId);
+
+        registrarEvento(
+                actaId,
+                "RESOLUCION_JUZGADO_CONFIRMA_CONDENA",
+                BLOQUE_GESTION_EXTERNA,
+                BLOQUE_D5,
+                "Resolución de Juzgado de Paz: confirma condena. "
+                        + "Acta vuelve a análisis con CONDENA_FIRME; pago de condena pendiente.");
+
+        return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                PrototipoStore.ReingresarDesdeJuzgadoEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA,
+                "CONFIRMA_CONDENA");
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial que modifica el monto de
+     * condena. Solo aplica si la acta está en {@code GESTION_EXTERNA} con
+     * {@code tipoGestionExterna = JUZGADO_DE_PAZ}, {@code permiteReingreso = true}
+     * y {@code nuevoMonto > 0}. Actualiza monto, mantiene CONDENA_FIRME,
+     * limpia {@code tipoGestionExterna} y deja el acta con pago de condena
+     * pendiente por el nuevo monto.
+     */
+    PrototipoStore.ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoMontoModificado(
+            String actaId, BigDecimal nuevoMonto) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                    PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND, null, null, null, null, null);
+        }
+        if (!BANDEJA_GESTION_EXTERNA.equals(actual.bandejaActual())
+                || !actual.permiteReingreso()
+                || !PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ.equals(
+                        tipoGestionExternaPorActa.get(actaId))
+                || nuevoMonto == null
+                || nuevoMonto.signum() <= 0) {
+            return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                    PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT, null, null, null, null, null);
+        }
+
+        montoCondenaPorActa.put(actaId, nuevoMonto);
+        cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                "ACTIVA",
+                false,
+                true,
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA);
+        tipoGestionExternaPorActa.remove(actaId);
+
+        registrarEvento(
+                actaId,
+                "RESOLUCION_JUZGADO_MODIFICA_MONTO",
+                BLOQUE_GESTION_EXTERNA,
+                BLOQUE_D5,
+                "Resolución de Juzgado de Paz: modifica monto de condena a " + nuevoMonto + ". "
+                        + "Acta vuelve a análisis con CONDENA_FIRME; pago de condena pendiente por nuevo monto.");
+
+        return new PrototipoStore.ReingresarDesdeJuzgadoResultado(
+                PrototipoStore.ReingresarDesdeJuzgadoEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                PrototipoStore.ACCION_REVISION_POST_GESTION_EXTERNA,
+                "MODIFICA_MONTO");
     }
 
     private void registrarEvento(

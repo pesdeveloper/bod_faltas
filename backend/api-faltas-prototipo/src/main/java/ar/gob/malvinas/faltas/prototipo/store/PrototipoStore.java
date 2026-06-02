@@ -370,6 +370,48 @@ public class PrototipoStore {
             String tipoGestionExternaPrevia) {
     }
 
+    public enum ReingresarDesdeApremioSinPagoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ReingresarDesdeApremioSinPagoResultado(
+            ReingresarDesdeApremioSinPagoEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String accionPendiente) {
+    }
+
+    public enum RegistrarPagoEnApremioEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarPagoEnApremioResultado(
+            RegistrarPagoEnApremioEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum ReingresarDesdeJuzgadoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ReingresarDesdeJuzgadoResultado(
+            ReingresarDesdeJuzgadoEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String accionPendiente,
+            String resolucion) {
+    }
+
     public enum ReactivarActaEstado {
         OK,
         NOT_FOUND,
@@ -1259,7 +1301,8 @@ public class PrototipoStore {
                     eventosPorActa,
                     accionPendientePorActa,
                     cerrabilidad,
-                    situacionPagoCondenaPorActa);
+                    situacionPagoCondenaPorActa,
+                    montoCondenaPorActa);
 
     /**
      * Soporte funcional del área presentaciones / pagos (alcance mínimo):
@@ -2384,6 +2427,58 @@ public class PrototipoStore {
      */
     public ReingresarDesdeGestionExternaResultado reingresarActaDesdeGestionExterna(String actaId) {
         return gestionExterna.reingresarActaDesdeGestionExterna(actaId);
+    }
+
+    /**
+     * APREMIO: retorno administrativo sin pago. El acta vuelve a
+     * {@code PENDIENTE_ANALISIS} con {@link #ACCION_REVISION_POST_GESTION_EXTERNA},
+     * condena firme pendiente de pago, y {@code tipoGestionExterna} limpiado.
+     * Fachada pública; la lógica vive en {@link GestionExternaSupport}.
+     */
+    public ReingresarDesdeApremioSinPagoResultado reingresarDesdeApremioSinPago(String actaId) {
+        return gestionExterna.reingresarDesdeApremioSinPago(actaId);
+    }
+
+    /**
+     * APREMIO: registra pago efectuado en el proceso de apremio. Confirma la
+     * situación de pago de condena, limpia {@code tipoGestionExterna} y deja
+     * el acta en {@code PENDIENTE_ANALISIS} con cerrabilidad habilitada.
+     * Fachada pública; la lógica vive en {@link GestionExternaSupport}.
+     */
+    public RegistrarPagoEnApremioResultado registrarPagoEnApremio(String actaId) {
+        return gestionExterna.registrarPagoEnApremio(actaId);
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial absolutoria. Establece
+     * {@code resultadoFinal = ABSUELTO}, limpia {@code tipoGestionExterna} y
+     * deja el acta cerrable desde análisis. Fachada pública; la lógica vive
+     * en {@link GestionExternaSupport}.
+     */
+    public ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoAbsuelto(String actaId) {
+        return gestionExterna.reingresarDesdeJuzgadoAbsuelto(actaId);
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial que confirma la condena
+     * original. Mantiene {@code resultadoFinal = CONDENA_FIRME}, limpia
+     * {@code tipoGestionExterna} y deja el acta con pago de condena pendiente.
+     * Fachada pública; la lógica vive en {@link GestionExternaSupport}.
+     */
+    public ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoCondenaConfirmada(String actaId) {
+        return gestionExterna.reingresarDesdeJuzgadoCondenaConfirmada(actaId);
+    }
+
+    /**
+     * JUZGADO_DE_PAZ: registra resolución judicial que modifica el monto de
+     * condena. Actualiza {@code montoCondena}, mantiene
+     * {@code resultadoFinal = CONDENA_FIRME}, limpia {@code tipoGestionExterna}
+     * y deja el acta con pago de condena pendiente por el nuevo monto.
+     * Fachada pública; la lógica vive en {@link GestionExternaSupport}.
+     */
+    public ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoMontoModificado(
+            String actaId, java.math.BigDecimal nuevoMonto) {
+        return gestionExterna.reingresarDesdeJuzgadoMontoModificado(actaId, nuevoMonto);
     }
 
     /**

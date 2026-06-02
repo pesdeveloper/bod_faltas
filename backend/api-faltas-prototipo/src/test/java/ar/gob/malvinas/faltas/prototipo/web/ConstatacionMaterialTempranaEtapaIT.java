@@ -61,7 +61,11 @@ class ConstatacionMaterialTempranaEtapaIT {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
-        String id = "ACTA-0001";
+        // ACTA-0025: en ACTAS_EN_ENRIQUECIMIENTO / D1_CAPTURA, 1 evento inicial, sin documentos.
+        // Disenada especificamente para esta regresion: constatacion temprana admitida en D1/D2,
+        // luego pago voluntario mueve el acta a PENDIENTE_ANALISIS donde una segunda constatacion
+        // de tipo distinto es rechazada.
+        String id = "ACTA-0025";
         mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-constatacion-material-temprana")
                         .param("tipo", "SECUESTRO_RODADO"))
                 .andExpect(status().isOk());
@@ -70,9 +74,10 @@ class ConstatacionMaterialTempranaEtapaIT {
                         .content("{\"monto\":12345.67}"))
                 .andExpect(status().isOk());
 
+        // 1 evento inicial + 1 constatacion + 1 solicitud pago voluntario = 3
         mvc.perform(get(B + "/actas/" + id + "/eventos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(5));
+                .andExpect(jsonPath("$.length()").value(3));
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
@@ -81,12 +86,14 @@ class ConstatacionMaterialTempranaEtapaIT {
                         .param("tipo", "RETENCION_DOCUMENTAL"))
                 .andExpect(status().isConflict());
 
+        // Eventos y docs no cambian tras el 409
         mvc.perform(get(B + "/actas/" + id + "/eventos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(5));
+                .andExpect(jsonPath("$.length()").value(3));
+        // 0 documentos iniciales + 1 doc de constatacion SECUESTRO_RODADO = 1
         mvc.perform(get(B + "/actas/" + id + "/documentos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.length()").value(1));
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))

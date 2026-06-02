@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>No ejecuta flujos completos. Detecta actas muertas, inconsistentes o con estado
  * incoherente tras el reset inicial.
  *
- * <p>Resultado esperado post-reset: 42 actas, 0 advertencias, 0 errores.
+ * <p>Resultado esperado post-reset: 44 actas, 0 advertencias, 0 errores.
  *
  * <p>Reglas cubiertas:
  * <ol>

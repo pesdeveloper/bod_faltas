@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,16 +20,16 @@ type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
     <header class="page-header">
       <div>
         <h1>Notificador municipal</h1>
-        <p class="hint">Bandeja operativa para localizar notificaciones fisicas y cargar acuses.</p>
+        <p class="hint">Bandeja operativa para localizar notificaciones físicas y cargar acuses.</p>
       </div>
       <div class="header-actions">
-        <button mat-stroked-button type="button" (click)="volverADireccion()">Direccion de Faltas</button>
+        <button mat-stroked-button type="button" (click)="volverADireccion()">Dirección de Faltas</button>
         <button mat-stroked-button type="button" [disabled]="estado() === 'loading'" (click)="cargar()">Refrescar</button>
       </div>
     </header>
 
     <main class="page">
-      <section class="buscadores" aria-label="Busqueda de notificaciones">
+      <section class="buscadores" aria-label="Búsqueda de notificaciones">
         <label>
           <span>Numero de acta</span>
           <input
@@ -40,7 +40,7 @@ type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
           />
         </label>
         <label>
-          <span>Codigo QR de notificacion</span>
+          <span>Código QR de notificación</span>
           <input
             type="search"
             [(ngModel)]="busquedaQr"
@@ -74,14 +74,14 @@ type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
       } @else if (visibles().length === 0) {
         <section class="state">
           @if (hayFiltrosActivos()) {
-            <p>No hay notificaciones que coincidan con la busqueda.</p>
+            <p>No hay notificaciones que coincidan con la búsqueda.</p>
           } @else {
             <p>No hay notificaciones pendientes para el notificador municipal.</p>
           }
         </section>
       } @else {
         <section class="listado" aria-label="Listado compacto de notificaciones municipales">
-          <p class="resumen">{{ visibles().length }} notificacion(es) visible(s)</p>
+          <p class="resumen">{{ visibles().length }} notificación(es) visible(s)</p>
           @for (n of visibles(); track n.notificacionId) {
             <article class="fila" [class.seleccionada]="seleccionadaId() === n.notificacionId">
               <div class="fila-main" (click)="seleccionar(n.notificacionId)">
@@ -102,7 +102,7 @@ type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
                 </div>
                 @if (n.observacion) {
                   <div class="meta obs-previa">
-                    <span><b>Observacion</b> {{ n.observacion }}</span>
+                    <span><b>Observación</b> {{ n.observacion }}</span>
                   </div>
                 }
                 <div class="meta qr">
@@ -111,7 +111,7 @@ type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
               </div>
 
               <label class="obs" (click)="$event.stopPropagation()">
-                <span>Observacion de acuse</span>
+                <span>Observación de acuse</span>
                 <input
                   type="text"
                   [ngModel]="observacion(n.notificacionId)"
@@ -381,7 +381,7 @@ export class NotificadorMunicipalPageComponent implements OnInit {
     if (resultado === 'NEGATIVA') {
       return 'Acuse negativo informado por notificador municipal';
     }
-    return 'Notificacion vencida informada por notificador municipal';
+    return 'Notificación vencida informada por notificador municipal';
   }
 
   private mensajeErrorHttp(err: unknown): string {
@@ -394,6 +394,6 @@ export class NotificadorMunicipalPageComponent implements OnInit {
         return error.message;
       }
     }
-    return 'No se pudo completar la operacion.';
+    return 'No se pudo completar la operación.';
   }
 }

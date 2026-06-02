@@ -5,7 +5,7 @@
         <h2 id="correo-postal-titulo">Actas para correo postal</h2>
         <p>Selecciona notificaciones listas y genera un lote CSV demo.</p>
         <ol class="correo-postal-flow" aria-label="Flujo operativo">
-          <li>Elegi tipo de notificacion.</li>
+          <li>Elegí tipo de notificación.</li>
           <li>Revisa y selecciona notificaciones listas.</li>
           <li>Genera lote.</li>
         </ol>
@@ -52,7 +52,7 @@
   @if (vista === 'actas') {
     <div class="correo-postal-toolbar" aria-label="Filtros y acciones de actas para correo postal">
       <div class="correo-postal-toolbar__group">
-        <span class="correo-postal-toolbar__label">Tipo de notificacion</span>
+        <span class="correo-postal-toolbar__label">Tipo de notificación</span>
         <div class="correo-postal-chips">
           @for (tipo of filtrosTipo; track tipo) {
             <button
@@ -133,7 +133,7 @@
                       type="checkbox"
                       [checked]="estaCandidataSeleccionada(item.notificacionId)"
                       (change)="toggleCandidata(item.notificacionId, $any($event.target).checked)"
-                      [attr.aria-label]="'Incluir ' + item.notificacionId + ' en el proximo lote'"
+                      [attr.aria-label]="'Incluir ' + item.notificacionId + ' en el próximo lote'"
                     />
                   </td>
                   <td>{{ item.acta }}</td>
@@ -149,7 +149,7 @@
           </table>
         </div>
         @if (totalPaginasCandidatas() > 1) {
-          <nav class="correo-postal-pagination" aria-label="Paginacion de candidatas">
+          <nav class="correo-postal-pagination" aria-label="Paginación de candidatas">
             <button
               mat-stroked-button
               type="button"
@@ -159,7 +159,7 @@
               Anterior
             </button>
             <span class="correo-postal-pagination__info">
-              Pagina {{ paginaActual() }} de {{ totalPaginasCandidatas() }}
+              Página {{ paginaActual() }} de {{ totalPaginasCandidatas() }}
             </span>
             <button
               mat-stroked-button
@@ -204,7 +204,7 @@
         </label>
         <button mat-stroked-button type="button" (click)="buscarActa()">Buscar trazabilidad</button>
         <button mat-stroked-button type="button" [disabled]="!hayBusquedaActaActiva()" (click)="limpiarBusquedaActa()">
-          Limpiar busqueda
+          Limpiar búsqueda
         </button>
       </div>
     </div>
@@ -226,9 +226,9 @@
             <table class="correo-postal-table">
               <thead>
                 <tr>
-                  <th>Notificacion</th>
+                  <th>Notificación</th>
                   <th>Tipo</th>
-                  <th>Situacion</th>
+                  <th>Situación</th>
                   <th>Estado notif.</th>
                   <th>Resultado</th>
                   <th>Lote</th>
@@ -330,7 +330,7 @@
               <dd>{{ lote.tipoDominante ? labelTipoNotificacion(lote.tipoDominante) : '-' }}</dd>
               <dt>Positivas / Negativas / Vencidas</dt>
               <dd>{{ lote.positivas }} / {{ lote.negativas }} / {{ lote.vencidas }}</dd>
-              <dt>Fecha generacion</dt>
+              <dt>Fecha generación</dt>
               <dd>{{ textoOpcional(lote.fechaGeneracion) }}</dd>
               <dt>Ruta archivo</dt>
               <dd>{{ textoOpcional(lote.rutaArchivo) }}</dd>
@@ -393,7 +393,7 @@
                       <th>Resultado</th>
                       <th>Destinatario</th>
                       <th>Domicilio</th>
-                      <th>Observacion</th>
+                      <th>Observación</th>
                     </tr>
                   </thead>
                   <tbody>

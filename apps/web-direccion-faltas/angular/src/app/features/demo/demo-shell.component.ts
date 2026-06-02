@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -109,8 +109,8 @@ const TIPOS_CUMPLIMIENTO_MATERIAL: ReadonlyArray<TipoCumplimientoMaterialBloquea
 
 const ETIQUETA_CUMPLIMIENTO_MATERIAL: Record<TipoCumplimientoMaterialBloqueante, string> = {
   LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Registrar levantamiento material',
-  LIBERACION_RODADO: 'Registrar liberación de rodado',
-  ENTREGA_DOCUMENTACION: 'Registrar entrega de documentación',
+  LIBERACION_RODADO: 'Registrar retiro (app)',
+  ENTREGA_DOCUMENTACION: 'Entregar documentación',
 };
 
 // Fases del eje material reportadas por el backend (HechosMaterialesEje.fase).
@@ -422,7 +422,8 @@ export class DemoShellComponent implements OnInit {
   // a las dos derivaciones tipadas del backend; RETORNAR corresponde al
   // reingreso desde GESTION_EXTERNA. Solo una accion puede estar en curso
   // a la vez para evitar conflictos en el detalle/listado refrescados.
-  readonly ejecutandoGestionExternaAccion = signal<TipoGestionExternaDemo | 'RETORNAR' | null>(null);
+  readonly ejecutandoGestionExternaAccion = signal<TipoGestionExternaDemo | 'RETORNAR' | 'APREMIO_SIN_PAGO' | 'APREMIO_PAGO' | 'JUZGADO_ABSUELTO' | 'JUZGADO_CONDENA' | 'JUZGADO_MONTO' | null>(null);
+  readonly nuevoMontoJuzgado = signal<string>('');
   readonly gestionExternaError = signal<string | null>(null);
   readonly gestionExternaMensaje = signal<string | null>(null);
 
@@ -1059,7 +1060,9 @@ export class DemoShellComponent implements OnInit {
           return;
         }
         this.cumplimientoMaterialMensaje.set(
-          'Cumplimiento material registrado: ' + respuesta.pendienteCumplido + '.',
+          pendiente === 'LIBERACION_RODADO'
+            ? 'Retiro de rodado registrado (app).'
+            : 'Cumplimiento material registrado: ' + respuesta.pendienteCumplido + '.',
         );
         this.refrescarLuegoDeAccion(respuesta);
       });
@@ -1140,6 +1143,9 @@ export class DemoShellComponent implements OnInit {
       return false;
     }
     if (!this.actaSinResultadoFinal()) {
+      return false;
+    }
+    if (det.accionPendiente === 'VERIFICAR_PAGO_INFORMADO') {
       return false;
     }
     if (this.pendientesBloqueantes(det).length > 0) {
@@ -1549,25 +1555,30 @@ export class DemoShellComponent implements OnInit {
     );
   }
 
-  // El cumplimiento material solo aplica si el eje material asociado al
-  // bloqueante ya tiene resolutorio documental incorporado en el expediente
-  // (fase RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL). Antes de esa fase
-  // el backend responde 409: la accion correcta es resolver el bloqueante.
+  // El cumplimiento material aplica cuando el eje material ya tiene resolutorio
+  // (fase RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL). Excepcion: DOCUMENTACION
+  // es atomica desde SITUACION_PENDIENTE_DE_RESOLUTORIO; el backend crea el
+  // resolutorio automaticamente si no existe.
   puedeMostrarAccionCumplimientoMaterial(
     pendiente: string,
   ): pendiente is TipoCumplimientoMaterialBloqueante {
-    return (
-      this.puedeMostrarCumplimientosMateriales() &&
-      this.esTipoCumplimientoMaterialConocido(pendiente) &&
-      this.faseEjeParaPendiente(pendiente) === FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE
-    );
+    if (!this.puedeMostrarCumplimientosMateriales()) {
+      return false;
+    }
+    if (!this.esTipoCumplimientoMaterialConocido(pendiente)) {
+      return false;
+    }
+    const fase = this.faseEjeParaPendiente(pendiente);
+    if (pendiente === 'ENTREGA_DOCUMENTACION') {
+      return fase === FASE_EJE_PENDIENTE_RESOLUTORIO || fase === FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE;
+    }
+    return fase === FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE;
   }
 
-  // Visibilidad de resolucion documental de bloqueante. El backend exige
-  // origen reconocido y resolutorio inexistente: se refleja chequeando la
-  // fase SITUACION_PENDIENTE_DE_RESOLUTORIO en el eje asociado. Las
-  // bandejas terminales/no operables internamente quedan excluidas igual
-  // que el cumplimiento material.
+  // Visibilidad de resolucion documental de bloqueante. ENTREGA_DOCUMENTACION
+  // no muestra este paso porque su accion es atomica: el cumplimiento material
+  // crea el resolutorio automaticamente. Para medida y rodado se muestra cuando
+  // la fase es SITUACION_PENDIENTE_DE_RESOLUTORIO.
   puedeMostrarAccionResolucionBloqueoCierre(
     pendiente: string,
   ): pendiente is TipoResolucionBloqueoCierre {
@@ -1575,6 +1586,9 @@ export class DemoShellComponent implements OnInit {
       return false;
     }
     if (!this.esTipoCumplimientoMaterialConocido(pendiente)) {
+      return false;
+    }
+    if (pendiente === 'ENTREGA_DOCUMENTACION') {
       return false;
     }
     return this.faseEjeParaPendiente(pendiente) === FASE_EJE_PENDIENTE_RESOLUTORIO;
@@ -2270,6 +2284,93 @@ export class DemoShellComponent implements OnInit {
         );
         this.refrescarLuegoDeAccion(respuesta);
       });
+  }
+
+  apremioReingresarSinPago(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.ejecutandoGestionExternaAccion() !== null) return;
+    this.limpiarGestionExternaFeedback();
+    this.ejecutandoGestionExternaAccion.set('APREMIO_SIN_PAGO');
+    this.api.apremioReingresarSinPago(actaId).pipe(
+      catchError((err) => { this.gestionExternaError.set(mensajeErrorHttp(err)); return of(null); }),
+      finalize(() => this.ejecutandoGestionExternaAccion.set(null)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((r) => {
+      if (!r) return;
+      this.gestionExternaMensaje.set(r.mensaje);
+      this.refrescarLuegoDeAccion(r);
+    });
+  }
+
+  apremioRegistrarPago(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.ejecutandoGestionExternaAccion() !== null) return;
+    this.limpiarGestionExternaFeedback();
+    this.ejecutandoGestionExternaAccion.set('APREMIO_PAGO');
+    this.api.apremioRegistrarPago(actaId).pipe(
+      catchError((err) => { this.gestionExternaError.set(mensajeErrorHttp(err)); return of(null); }),
+      finalize(() => this.ejecutandoGestionExternaAccion.set(null)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((r) => {
+      if (!r) return;
+      this.gestionExternaMensaje.set(r.mensaje);
+      this.refrescarLuegoDeAccion(r);
+    });
+  }
+
+  juzgadoReingresarAbsuelto(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.ejecutandoGestionExternaAccion() !== null) return;
+    this.limpiarGestionExternaFeedback();
+    this.ejecutandoGestionExternaAccion.set('JUZGADO_ABSUELTO');
+    this.api.juzgadoReingresarAbsuelto(actaId).pipe(
+      catchError((err) => { this.gestionExternaError.set(mensajeErrorHttp(err)); return of(null); }),
+      finalize(() => this.ejecutandoGestionExternaAccion.set(null)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((r) => {
+      if (!r) return;
+      this.gestionExternaMensaje.set(r.mensaje);
+      this.refrescarLuegoDeAccion(r);
+    });
+  }
+
+  juzgadoReingresarCondenaConfirmada(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.ejecutandoGestionExternaAccion() !== null) return;
+    this.limpiarGestionExternaFeedback();
+    this.ejecutandoGestionExternaAccion.set('JUZGADO_CONDENA');
+    this.api.juzgadoReingresarCondenaConfirmada(actaId).pipe(
+      catchError((err) => { this.gestionExternaError.set(mensajeErrorHttp(err)); return of(null); }),
+      finalize(() => this.ejecutandoGestionExternaAccion.set(null)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((r) => {
+      if (!r) return;
+      this.gestionExternaMensaje.set(r.mensaje);
+      this.refrescarLuegoDeAccion(r);
+    });
+  }
+
+  juzgadoReingresarMontoModificado(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.ejecutandoGestionExternaAccion() !== null) return;
+    const montoStr = this.nuevoMontoJuzgado().trim();
+    const monto = parseFloat(montoStr);
+    if (!montoStr || isNaN(monto) || monto <= 0) {
+      this.gestionExternaError.set('Ingrese un monto de condena válido mayor a 0.');
+      return;
+    }
+    this.limpiarGestionExternaFeedback();
+    this.ejecutandoGestionExternaAccion.set('JUZGADO_MONTO');
+    this.api.juzgadoReingresarMontoModificado(actaId, monto).pipe(
+      catchError((err) => { this.gestionExternaError.set(mensajeErrorHttp(err)); return of(null); }),
+      finalize(() => this.ejecutandoGestionExternaAccion.set(null)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((r) => {
+      if (!r) return;
+      this.gestionExternaMensaje.set(r.mensaje);
+      this.nuevoMontoJuzgado.set('');
+      this.refrescarLuegoDeAccion(r);
+    });
   }
 
   reactivarActa(): void {

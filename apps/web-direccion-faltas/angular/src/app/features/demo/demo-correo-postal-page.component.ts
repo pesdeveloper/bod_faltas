@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -301,7 +301,7 @@ export class DemoCorreoPostalPageComponent implements OnInit, OnChanges {
     const tipo = this.filtroTipo();
     const base =
       total === 1
-        ? '1 notificacion lista para lote con el filtro actual.'
+        ? '1 notificación lista para lote con el filtro actual.'
         : `${total} notificaciones listas para lote con el filtro actual.`;
     const seleccion =
       seleccionadas === 1
@@ -310,7 +310,7 @@ export class DemoCorreoPostalPageComponent implements OnInit, OnChanges {
     if (tipo === 'TODOS') {
       return `${base} ${seleccion}`;
     }
-    return `${total === 1 ? '1 notificacion' : `${total} notificaciones`} de ${this.labelTipoNotificacion(tipo)} visibles. ${seleccion}`;
+    return `${total === 1 ? '1 notificación' : `${total} notificaciones`} de ${this.labelTipoNotificacion(tipo)} visibles. ${seleccion}`;
   }
 
   descripcionTrazabilidad(item: CorreoPostalTrazabilidadDemo): string {
@@ -405,7 +405,7 @@ export class DemoCorreoPostalPageComponent implements OnInit, OnChanges {
       return;
     }
     const confirmacion = window.confirm(
-      `Enviar de forma individual la notificacion ${item.notificacionId} del acta ${item.acta}?`,
+      `Enviar de forma individual la notificación ${item.notificacionId} del acta ${item.acta}?`,
     );
     if (!confirmacion) {
       return;
@@ -473,7 +473,7 @@ export class DemoCorreoPostalPageComponent implements OnInit, OnChanges {
           this.advertencia.set('No hay notificaciones de correo postal listas para enviar.');
         } else {
           this.mensaje.set(
-            `Lote correo ${respuesta.loteId} generado con ${respuesta.cantidad} notificaciones seleccionadas. Consultelo en Lotes de correo postal.`,
+            `Lote correo ${respuesta.loteId} generado con ${respuesta.cantidad} notificaciones seleccionadas. Consúltelo en Lotes de correo postal.`,
           );
         }
         this.seleccionCandidatasTocada = false;

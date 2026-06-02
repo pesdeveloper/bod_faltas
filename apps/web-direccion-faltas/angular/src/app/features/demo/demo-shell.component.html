@@ -385,7 +385,7 @@
                   -
                 }
               </dd>
-              <dt>Situacion pago condena</dt>
+              <dt>Situación pago condena</dt>
               <dd>{{ etiquetaSituacionPagoCondena(d.situacionPagoCondena) }}</dd>
             </dl>
             @if (pagoCondenaMensaje() || pagoCondenaError()) {
@@ -515,29 +515,58 @@
               }
             </dl>
             @if (d.bandejaActual === 'GESTION_EXTERNA') {
-              <p class="detail-card__text">
-                El acta está en gestión externa. Para continuar internamente debe retornar.
-              </p>
               @if (actaPuedeRetornarDesdeGestionExternaDesdeBackend()) {
-                <div class="gestion-externa-actions">
-                  <button
-                    mat-flat-button
-                    type="button"
-                    color="primary"
-                    [disabled]="ejecutandoGestionExternaAccion() !== null"
-                    (click)="retornarGestionExterna()"
-                  >
-                    @if (ejecutandoGestionExternaAccion() === 'RETORNAR') {
-                      Retornando...
-                    } @else {
-                      Retornar de gestión externa
-                    }
-                  </button>
-                </div>
+                @if (d.tipoGestionExterna === 'APREMIO') {
+                  <p class="detail-card__text">Acta en Apremio. Registrar pago o reingresar sin pago.</p>
+                  <div class="gestion-externa-actions">
+                    <button mat-flat-button type="button" color="primary"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null"
+                      (click)="apremioRegistrarPago()">
+                      @if (ejecutandoGestionExternaAccion() === 'APREMIO_PAGO') { Registrando... } @else { Registrar pago en apremio }
+                    </button>
+                    <button mat-stroked-button type="button" color="primary"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null"
+                      (click)="apremioReingresarSinPago()">
+                      @if (ejecutandoGestionExternaAccion() === 'APREMIO_SIN_PAGO') { Reingresando... } @else { Reingresar sin pago }
+                    </button>
+                  </div>
+                } @else if (d.tipoGestionExterna === 'JUZGADO_DE_PAZ') {
+                  <p class="detail-card__text">Acta en Juzgado de Paz. Registrar resolución judicial.</p>
+                  <div class="gestion-externa-actions">
+                    <button mat-flat-button type="button" color="primary"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null"
+                      (click)="juzgadoReingresarAbsuelto()">
+                      @if (ejecutandoGestionExternaAccion() === 'JUZGADO_ABSUELTO') { Registrando... } @else { Reingresar absuelto }
+                    </button>
+                    <button mat-stroked-button type="button" color="primary"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null"
+                      (click)="juzgadoReingresarCondenaConfirmada()">
+                      @if (ejecutandoGestionExternaAccion() === 'JUZGADO_CONDENA') { Registrando... } @else { Confirmar condena }
+                    </button>
+                  </div>
+                  <div class="gestion-externa-monto">
+                    <input type="number" min="0.01" step="0.01" placeholder="Nuevo monto condena"
+                      [value]="nuevoMontoJuzgado()"
+                      (input)="nuevoMontoJuzgado.set($any($event.target).value)"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null" />
+                    <button mat-stroked-button type="button" color="accent"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null || !nuevoMontoJuzgado().trim()"
+                      (click)="juzgadoReingresarMontoModificado()">
+                      @if (ejecutandoGestionExternaAccion() === 'JUZGADO_MONTO') { Registrando... } @else { Modificar monto de condena }
+                    </button>
+                  </div>
+                } @else {
+                  <p class="detail-card__text">Acta en gestión externa. Para continuar internamente debe retornar.</p>
+                  <div class="gestion-externa-actions">
+                    <button mat-flat-button type="button" color="primary"
+                      [disabled]="ejecutandoGestionExternaAccion() !== null"
+                      (click)="retornarGestionExterna()">
+                      @if (ejecutandoGestionExternaAccion() === 'RETORNAR') { Retornando... } @else { Retornar de gestión externa }
+                    </button>
+                  </div>
+                }
               } @else {
-                <p class="detail-card__hint">
-                  El retorno no está habilitado por el backend para esta acta.
-                </p>
+                <p class="detail-card__hint">El retorno no está habilitado por el backend para esta acta.</p>
               }
             } @else if (actaPuedeDerivarseAGestionExternaDesdeBackend()) {
               <p class="detail-card__text">
@@ -590,11 +619,11 @@
             }
             @if (d.bandejaActual === 'PARALIZADAS') {
               <p class="detail-card__text">
-                El acta esta paralizada. Puede reactivarse para volver al circuito operativo.
+                el acta está paralizada. Puede reactivarse para volver al circuito operativo.
               </p>
               <dl class="detail-dl detail-dl--compact">
                 @if (d.accionPendiente) {
-                  <dt>Motivo paralizacion</dt>
+                  <dt>Motivo de paralización</dt>
                   <dd>{{ d.accionPendiente }}</dd>
                 }
               </dl>
@@ -868,7 +897,7 @@
             <h3 id="apelacion-titulo" class="detail-card__title">Apelación</h3>
             <p class="detail-card__hint">
               Registra la presentación presencial de apelación sobre fallo condenatorio.
-              La validacion final la realiza el backend.
+              La validación final la realiza el backend.
             </p>
             @if (apelacionMensaje() || apelacionError() || vencimientoPlazoApelacionMensaje() || vencimientoPlazoApelacionError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
@@ -928,7 +957,7 @@
             <h3 id="resolucion-apelacion-titulo" class="detail-card__title">Resolución de apelación</h3>
             <p class="detail-card__hint">
               Resuelve una apelación ya presentada sobre fallo condenatorio.
-              La validacion final la realiza el backend.
+              La validación final la realiza el backend.
             </p>
             @if (resolucionApelacionMensaje() || resolucionApelacionError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">

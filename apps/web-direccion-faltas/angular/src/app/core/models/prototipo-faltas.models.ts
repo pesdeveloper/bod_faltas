@@ -737,6 +737,33 @@ export interface ReingresarDesdeGestionExternaAccionResponseDemo {
   tipoGestionExternaPrevia: string | null;
 }
 
+export interface ReingresarDesdeApremioSinPagoAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  accionPendiente: string;
+}
+
+export interface RegistrarPagoEnApremioAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+}
+
+export interface RegistrarResolucionJuzgadoAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  accionPendiente: string | null;
+  resolucion: string;
+}
+
 /**
  * Contrato GET /infractor/actas/{codigoQr} - ActaInfractorResponse.
  * Vista ciudadana minima del acta para el portal del infractor.

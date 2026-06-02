@@ -13,23 +13,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Regresion: ACTA-0019 — resultado ABSUELTO con tres bloqueantes materiales activos.
+ * Regresion: ACTA-0019 — resultado ABSUELTO con dos bloqueantes materiales activos.
  *
- * <p>Cubre el caso distinto de {@code ACTA-0021} (que tiene {@code PAGO_CONFIRMADO}):
- * {@code ABSUELTO} con retencion de rodado, documentacion y medida preventiva no
- * permite cierre mientras los bloqueantes esten activos. El resultado final compatible
- * con cierre no es suficiente si quedan pendientes materiales sin resolutorio ni
- * cumplimiento material efectivo.
+ * <p>ACTA-0019 representa un circuito de Tránsito con retención de rodado y documentación.
+ * En tránsito, RODADO y DOCUMENTACION son ejes materiales propios; el secuestro/retiro
+ * de rodado y la retención de documentación no son medidas preventivas.
+ * MEDIDA_PREVENTIVA queda NO_APLICA; no existe LEVANTAMIENTO_MEDIDA_PREVENTIVA.
  *
  * <p>Contratos verificados:
  * <ol>
  *   <li>Estado inicial: {@code PENDIENTE_ANALISIS}, {@code PENDIENTE_CIERRE_MATERIAL},
- *       {@code resultadoFinal=ABSUELTO}, {@code cerrable=false}, tres bloqueantes activos.</li>
- *   <li>Documentos materiales preexistentes: anclas MEDIDA_PREVENTIVA, ACTA_RETENCION,
- *       CONSTATACION_RETENCION_DOCUMENTACION.</li>
+ *       {@code resultadoFinal=ABSUELTO}, {@code cerrable=false}, dos bloqueantes activos.</li>
+ *   <li>Documentos materiales preexistentes: ACTA_RETENCION, CONSTATACION_RETENCION_DOCUMENTACION.
+ *       Sin documento MEDIDA_PREVENTIVA.</li>
+ *   <li>Eje MEDIDA_PREVENTIVA en estado NO_APLICA.</li>
  *   <li>{@code POST cerrar-acta} rechazado con 409 mientras existan bloqueantes activos.</li>
- *   <li>{@code POST archivar-acta} habilitado cuando {@code cerrable=false}
- *       (cierre y archivo son salidas mutuamente excluyentes desde analisis).</li>
+ *   <li>DOCUMENTACION es atómica: un solo paso resuelve el bloqueante.</li>
+ *   <li>RODADO requiere dos pasos: resolutorio documental + cumplimiento material.</li>
+ *   <li>Al resolver ambos bloqueantes: cerrable=true y cierre habilitado.</li>
  * </ol>
  */
 @SpringBootTest(classes = ApiFaltasPrototipoApplication.class)
@@ -53,11 +54,25 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
                 .andExpect(jsonPath("$.estaCerrada").value(false))
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("ABSUELTO"))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(3))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2))
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]").value("ENTREGA_DOCUMENTACION"))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[1]").value("LEVANTAMIENTO_MEDIDA_PREVENTIVA"))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[2]").value("LIBERACION_RODADO"))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[1]").value("LIBERACION_RODADO"))
                 .andExpect(jsonPath("$.cerrabilidad.motivoNoCerrable").isNotEmpty());
+    }
+
+    @Test
+    void acta0019_transitoNoTieneMedidaPreventivaArtificial() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hechosMateriales.ejes[0].clave").value("MEDIDA_PREVENTIVA"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[0].fase").value("NO_APLICA"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[0].bloqueaCierre").value(false))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[1].clave").value("RODADO"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[1].fase").value("SITUACION_PENDIENTE_DE_RESOLUTORIO"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[2].clave").value("DOCUMENTACION"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[2].fase").value("SITUACION_PENDIENTE_DE_RESOLUTORIO"));
     }
 
     @Test
@@ -79,13 +94,11 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
 
         mvc.perform(get(B + "/actas/" + ID + "/documentos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].tipoDocumento").value("MEDIDA_PREVENTIVA"))
-                .andExpect(jsonPath("$[0].estadoDocumento").value("PENDIENTE_FIRMA"))
-                .andExpect(jsonPath("$[1].tipoDocumento").value("ACTA_RETENCION"))
-                .andExpect(jsonPath("$[1].estadoDocumento").value("ADJUNTO"))
-                .andExpect(jsonPath("$[2].tipoDocumento").value("CONSTATACION_RETENCION_DOCUMENTACION"))
-                .andExpect(jsonPath("$[2].estadoDocumento").value("ADJUNTO"));
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].tipoDocumento").value("ACTA_RETENCION"))
+                .andExpect(jsonPath("$[0].estadoDocumento").value("ADJUNTO"))
+                .andExpect(jsonPath("$[1].tipoDocumento").value("CONSTATACION_RETENCION_DOCUMENTACION"))
+                .andExpect(jsonPath("$[1].estadoDocumento").value("ADJUNTO"));
     }
 
     @Test
@@ -98,5 +111,88 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
         mvc.perform(post(B + "/actas/" + ID + "/acciones/archivar-acta"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("ARCHIVO"));
+    }
+
+    /**
+     * Regla Slice 22C: ENTREGA_DOCUMENTACION es atómica.
+     * Una sola llamada a registrar-cumplimiento-material-bloqueo-cierre
+     * resuelve el bloqueante sin requerir registrar-resolucion-bloqueo-cierre previo.
+     */
+    @Test
+    void acta0019_entregaDocumentacion_atomicaSinResolutorioPrevio() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendienteCumplido").value("ENTREGA_DOCUMENTACION"))
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1));
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hechosMateriales.ejes[2].clave").value("DOCUMENTACION"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[2].fase").value("CUMPLIMIENTO_MATERIAL_VERIFICADO"));
+    }
+
+    /**
+     * Regla Slice 22F: resolver los dos bloqueantes de tránsito (RODADO + DOCUMENTACION)
+     * habilita cierre. DOCUMENTACION es atómica; LIBERACION_RODADO requiere
+     * resolutorio documental previo. Sin LEVANTAMIENTO_MEDIDA_PREVENTIVA.
+     */
+    @Test
+    void acta0019_resolverDosBloqueantes_habilitaCierre() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                                .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isOk());
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                                .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isOk());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(0));
+
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/cerrar-acta"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("CERRADAS"));
+    }
+
+    /**
+     * Regla Slice 22C/22F: LIBERACION_RODADO mantiene semántica de retiro y
+     * sigue requiriendo dos pasos (resolutorio + cumplimiento material).
+     * No se confunde con MEDIDA_PREVENTIVA, que queda NO_APLICA en tránsito.
+     */
+    @Test
+    void acta0019_liberacionRodado_dosPasosDistintoDeMedida() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                                .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isConflict());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                                .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendienteAtendido").value("LIBERACION_RODADO"))
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false));
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hechosMateriales.ejes[1].clave").value("RODADO"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[1].fase")
+                        .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[0].clave").value("MEDIDA_PREVENTIVA"))
+                .andExpect(jsonPath("$.hechosMateriales.ejes[0].fase").value("NO_APLICA"));
     }
 }
