@@ -7,7 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { Observable, catchError, finalize, forkJoin, map, of, take } from 'rxjs';
 import {
@@ -324,6 +324,9 @@ export class DemoShellComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly ngZone = inject(NgZone);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private restoringFromUrl = true;
+  private actaToRestoreFromUrl: string | null = null;
   @ViewChild(DemoActaListComponent) private readonly actaListComponent?: DemoActaListComponent;
   @ViewChild('actaDetailContainer') private readonly actaDetailContainer?: ElementRef<HTMLElement>;
 
@@ -472,6 +475,11 @@ export class DemoShellComponent implements OnInit {
   ngOnInit(): void {
     this.inicializarDeteccionVistaEstrecha();
     this.restaurarPreferenciaSeguirActa();
+    this.leerYAplicarQueryParamsIniciales();
+    if (this.actaToRestoreFromUrl) {
+      this.actaSeleccionadaId.set(this.actaToRestoreFromUrl);
+      this.cargarDetalle();
+    }
     this.actualizarVistaCorreoPostal(this.router.url);
     this.router.events
       .pipe(
@@ -480,7 +488,10 @@ export class DemoShellComponent implements OnInit {
       )
       .subscribe((event) => this.actualizarVistaCorreoPostal(event.urlAfterRedirects));
     this.cargarBandejasResumen();
-    this.cargarListado();
+    this.cargarListado({ actaIdScrollObjetivo: this.actaToRestoreFromUrl });
+    Promise.resolve().then(() => {
+      this.restoringFromUrl = false;
+    });
   }
 
 
@@ -578,10 +589,12 @@ export class DemoShellComponent implements OnInit {
 
   actualizarTextoBusquedaActa(valor: string): void {
     this.textoBusquedaActa.set(valor);
+    this.actualizarQueryParams({ q: valor || null }, true);
   }
 
   actualizarDependenciaDemo(valor: string | null): void {
     this.dependenciaDemoSeleccionada.set(valor);
+    this.actualizarQueryParams({ dependencia: valor }, true);
   }
 
   etiquetaFiltroOperativoActivo(): string {
@@ -619,6 +632,7 @@ export class DemoShellComponent implements OnInit {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_SEGUIR_ACTA_AL_CAMBIAR_BANDEJA, JSON.stringify(activo));
     }
+    this.actualizarQueryParams({ seguirActa: activo || null }, true);
   }
 
 
@@ -791,6 +805,7 @@ export class DemoShellComponent implements OnInit {
     if (volverATodasEnMismaBandeja) {
       this.limpiarSeguimientoActaFeedback();
       this.limpiarCopiaEstadoFeedback();
+      this.actualizarQueryParams({ filtro: null, dependencia: null }, true);
       this.cargarListado({ actaIdScrollObjetivo: this.actaSeleccionadaId() });
       return;
     }
@@ -824,6 +839,7 @@ export class DemoShellComponent implements OnInit {
     this.limpiarFalloFeedback();
     this.limpiarSeguimientoActaFeedback();
     this.limpiarCopiaEstadoFeedback();
+    this.actualizarQueryParams({ bandeja, filtro: null, dependencia: null, acta: null }, false);
     this.cargarListado();
   }
 
@@ -839,6 +855,7 @@ export class DemoShellComponent implements OnInit {
 
     this.subBandejaSeleccionada.set(subCodigo);
     this.dependenciaDemoSeleccionada.set(null);
+    this.actualizarQueryParams({ filtro: subCodigo, dependencia: null }, true);
     this.limpiarScrollActaPendiente();
     this.cerrarOverlaysMoviles();
     this.limpiarSeguimientoActaFeedback();
@@ -861,6 +878,7 @@ export class DemoShellComponent implements OnInit {
 
     this.limpiarScrollActaPendiente();
     this.actaSeleccionadaId.set(null);
+    this.actualizarQueryParams({ acta: null }, true);
     this.detalle.set(null);
     this.detalleEstado.set('idle');
     this.detalleError.set(null);
@@ -895,6 +913,7 @@ export class DemoShellComponent implements OnInit {
     }
     this.limpiarScrollActaPendiente();
     this.actaSeleccionadaId.set(id);
+    this.actualizarQueryParams({ acta: id }, false);
     if (this.vistaEstrecha()) {
       this.detalleMovilAbierto.set(true);
       this.overlayResumenBandejaAbierto.set(false);
@@ -967,6 +986,7 @@ export class DemoShellComponent implements OnInit {
         }
         this.bandejaSeleccionada.set('ACTAS_EN_ENRIQUECIMIENTO');
         this.actaSeleccionadaId.set(creada.id);
+        this.actualizarQueryParams({ bandeja: 'ACTAS_EN_ENRIQUECIMIENTO', filtro: null, dependencia: null, acta: creada.id, q: null }, false);
         this.detalle.set(creada);
         this.detalleEstado.set('ready');
         this.detalleError.set(null);
@@ -3021,6 +3041,84 @@ export class DemoShellComponent implements OnInit {
     }
   }
 
+  private leerYAplicarQueryParamsIniciales(): void {
+    const params = this.route.snapshot.queryParams;
+
+    const bandeja = params['bandeja'];
+    if (bandeja && this.esBandejaCodigo(bandeja)) {
+      this.bandejaSeleccionada.set(bandeja as BandejaLateralCodigo);
+    }
+
+    const filtro = params['filtro'];
+    if (filtro) {
+      this.subBandejaSeleccionada.set(filtro);
+    }
+
+    const dependencia = params['dependencia'];
+    if (dependencia) {
+      this.dependenciaDemoSeleccionada.set(dependencia);
+    }
+
+    const q = params['q'];
+    if (q) {
+      this.textoBusquedaActa.set(q);
+    }
+
+    const seguirActa = params['seguirActa'];
+    if (seguirActa === 'true') {
+      this.seguirActaAlCambiarBandeja.set(true);
+    }
+
+    const acta = params['acta'];
+    if (acta) {
+      this.actaToRestoreFromUrl = acta;
+    }
+  }
+
+  private actualizarQueryParams(
+    params: {
+      bandeja?: string | null;
+      filtro?: string | null;
+      dependencia?: string | null;
+      acta?: string | null;
+      q?: string | null;
+      seguirActa?: boolean | null;
+      busquedaGlobal?: boolean | null;
+    },
+    replace = true,
+  ): void {
+    if (this.restoringFromUrl) {
+      return;
+    }
+    if (this.enCorreoPostal()) {
+      return;
+    }
+    const current: Record<string, string> = { ...this.route.snapshot.queryParams };
+    const next: Record<string, string> = { ...current };
+
+    const aplicar = (key: string, valor: string | boolean | null | undefined): void => {
+      if (valor === null || valor === undefined || valor === '' || valor === false) {
+        delete next[key];
+      } else {
+        next[key] = String(valor);
+      }
+    };
+
+    if ('bandeja' in params) aplicar('bandeja', params.bandeja);
+    if ('filtro' in params) aplicar('filtro', params.filtro);
+    if ('dependencia' in params) aplicar('dependencia', params.dependencia);
+    if ('acta' in params) aplicar('acta', params.acta);
+    if ('q' in params) aplicar('q', params.q);
+    if ('seguirActa' in params) aplicar('seguirActa', params.seguirActa);
+    if ('busquedaGlobal' in params) aplicar('busquedaGlobal', params.busquedaGlobal);
+
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: next,
+      replaceUrl: replace,
+    });
+  }
+
 
   private actaBandejaDesdeDetalle(det: ActaDetalleDemo): ActaBandejaItem {
     return {
@@ -3080,6 +3178,7 @@ export class DemoShellComponent implements OnInit {
     this.limpiarSeguimientoActaFeedback();
     this.subBandejaSeleccionada.set(null);
     this.bandejaSeleccionada.set(bandejaBackendALateral(bandejaBackend));
+    this.actualizarQueryParams({ bandeja: bandejaBackendALateral(bandejaBackend), filtro: null }, false);
     this.limpiarFirmaFeedback();
     this.limpiarCumplimientoMaterialFeedback();
     this.limpiarResolucionBloqueoCierreFeedback();
@@ -3355,6 +3454,7 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
       const tieneSinDependencia = this.actas().some((acta) => !acta.dependenciaDemo?.trim());
       if (!tieneSinDependencia) {
         this.dependenciaDemoSeleccionada.set(null);
+        this.actualizarQueryParams({ dependencia: null }, true);
       }
       return;
     }
@@ -3363,6 +3463,7 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
     );
     if (!disponibles.has(seleccionada)) {
       this.dependenciaDemoSeleccionada.set(null);
+      this.actualizarQueryParams({ dependencia: null }, true);
     }
   }
 
