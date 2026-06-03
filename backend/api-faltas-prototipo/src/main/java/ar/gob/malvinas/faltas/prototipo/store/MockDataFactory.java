@@ -116,6 +116,7 @@ public class MockDataFactory {
                 bandeja);
         store.getActas().put(id, acta);
         store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+        store.registrarPatenteVehiculo(id, "ABC123");
 
         List<ActaEventoMock> eventos = new ArrayList<>();
         eventos.add(new ActaEventoMock(

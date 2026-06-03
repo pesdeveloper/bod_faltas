@@ -526,34 +526,10 @@ mat-sidenav-content {
   font-family: ui-monospace, monospace;
 }
 
-.notificacion-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
-}
-
-.pago-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
-}
-
-.apelacion-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
-}
-
-.archivo-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
-}
-
+.notificacion-actions,
+.pago-actions,
+.apelacion-actions,
+.archivo-actions,
 .gestion-externa-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,4 @@
-﻿<mat-sidenav-container class="demo-layout" [autosize]="true">
+<mat-sidenav-container class="demo-layout" [autosize]="true">
   <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
     <div class="demo-sidenav-body">
       <div class="sidenav-header">
@@ -38,10 +38,10 @@
           </a>
         }
       </mat-nav-list>
-      <section class="sidenav-operacion" aria-label="OperaciÃ³n de notificaciones">
+      <section class="sidenav-operacion" aria-label="Operación de notificaciones">
         <div class="sidenav-section-divider" aria-hidden="true"></div>
         @if (!bandejasColapsadas()) {
-          <h2 class="sidenav-section-title">OperaciÃ³n de notificaciones</h2>
+          <h2 class="sidenav-section-title">Operación de notificaciones</h2>
         }
         <mat-nav-list class="sidenav-operacion-list">
           <a
@@ -250,7 +250,7 @@
             </ul>
 
             <p class="detail-card__hint bandeja-resumen__hint">
-              SeleccionÃ¡ un acta para ver su detalle operativo.
+              Seleccioná un acta para ver su detalle operativo.
             </p>
           </section>
         } @else if (detalleEstado() === 'loading') {
@@ -278,7 +278,7 @@
                     mat-stroked-button
                     type="button"
                     class="detail-portal-link"
-                    title="Abre el portal infractor en una nueva pestaÃ±a"
+                    title="Abre el portal infractor en una nueva pestaña"
                     (click)="abrirPortalInfractor()"
                   >
                     Abrir en portal infractor
@@ -288,7 +288,7 @@
                   mat-stroked-button
                   type="button"
                   class="detail-copy-state"
-                  title="Copia un resumen compacto del acta para validaciÃ³n."
+                  title="Copia un resumen compacto del acta para validación."
                   (click)="copiarEstadoActaActual()"
                 >
                   Copiar estado
@@ -312,7 +312,7 @@
               <dd>{{ etiquetaBandeja(d.bandejaActual) }}</dd>
               <dt>Estado proceso</dt>
               <dd>{{ d.estadoProcesoActual }}</dd>
-              <dt>SituaciÃ³n administrativa</dt>
+              <dt>Situación administrativa</dt>
               <dd>{{ d.situacionAdministrativaActual }}</dd>
               @if (d.cerrabilidad.resultadoFinal) {
                 <dt>Resultado final</dt>
@@ -367,9 +367,9 @@
               </div>
             }
             @if (d.estaCerrada) {
-              <p class="detail-empty">El acta ya estÃ¡ cerrada.</p>
+              <p class="detail-empty">El acta ya está cerrada.</p>
             } @else if (puedeMostrarCierreActa()) {
-              <p class="detail-card__text">El acta es cerrable, pero requiere cierre explÃ­cito.</p>
+              <p class="detail-card__text">El acta es cerrable, pero requiere cierre explícito.</p>
               <div class="cierre-actions">
                 <button
                   mat-flat-button
@@ -413,7 +413,7 @@
                   -
                 }
               </dd>
-              <dt>SituaciÃ³n pago condena</dt>
+              <dt>Situación pago condena</dt>
               <dd>{{ etiquetaSituacionPagoCondena(d.situacionPagoCondena) }}</dd>
             </dl>
             @if (pagoCondenaMensaje() || pagoCondenaError()) {
@@ -470,7 +470,7 @@
             </p>
             @if (d.bandejaActual === 'ARCHIVO') {
               <p class="detail-card__text">
-                El acta estÃ¡ archivada. Para continuar requiere reingreso explÃ­cito.
+                El acta está archivada. Para continuar requiere reingreso explícito.
               </p>
               @if (actaPuedeReingresarDesdeBackend()) {
                 <div class="archivo-actions">
@@ -517,7 +517,7 @@
 
           @if (puedeMostrarBloqueGestionExterna()) {
           <section class="detail-card" aria-labelledby="gestion-externa-titulo">
-            <h3 id="gestion-externa-titulo" class="detail-card__title">GestiÃ³n externa</h3>
+            <h3 id="gestion-externa-titulo" class="detail-card__title">Gestión externa</h3>
             @if (gestionExternaMensaje() || gestionExternaError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
                 @if (gestionExternaMensaje()) {
@@ -534,11 +534,11 @@
               <dt>Estado proceso</dt>
               <dd>{{ d.estadoProcesoActual }}</dd>
               @if (d.accionPendiente) {
-                <dt>AcciÃ³n pendiente</dt>
+                <dt>Acción pendiente</dt>
                 <dd>{{ d.accionPendiente }}</dd>
               }
               @if (d.tipoGestionExterna) {
-                <dt>Tipo gestiÃ³n externa</dt>
+                <dt>Tipo gestión externa</dt>
                 <dd>{{ d.tipoGestionExterna }}</dd>
               }
             </dl>
@@ -559,7 +559,7 @@
                     </button>
                   </div>
                 } @else if (d.tipoGestionExterna === 'JUZGADO_DE_PAZ') {
-                  <p class="detail-card__text">Acta en Juzgado de Paz. Registrar resoluciÃ³n judicial.</p>
+                  <p class="detail-card__text">Acta en Juzgado de Paz. Registrar resolución judicial.</p>
                   <div class="gestion-externa-actions">
                     <button mat-flat-button type="button" color="primary"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
@@ -584,21 +584,21 @@
                     </button>
                   </div>
                 } @else {
-                  <p class="detail-card__text">Acta en gestiÃ³n externa. Para continuar internamente debe retornar.</p>
+                  <p class="detail-card__text">Acta en gestión externa. Para continuar internamente debe retornar.</p>
                   <div class="gestion-externa-actions">
                     <button mat-flat-button type="button" color="primary"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
                       (click)="retornarGestionExterna()">
-                      @if (ejecutandoGestionExternaAccion() === 'RETORNAR') { Retornando... } @else { Retornar de gestiÃ³n externa }
+                      @if (ejecutandoGestionExternaAccion() === 'RETORNAR') { Retornando... } @else { Retornar de gestión externa }
                     </button>
                   </div>
                 }
               } @else {
-                <p class="detail-card__hint">El retorno no estÃ¡ habilitado por el backend para esta acta.</p>
+                <p class="detail-card__hint">El retorno no está habilitado por el backend para esta acta.</p>
               }
             } @else if (actaPuedeDerivarseAGestionExternaDesdeBackend()) {
               <p class="detail-card__text">
-                El acta puede derivarse a gestiÃ³n externa desde esta instancia.
+                El acta puede derivarse a gestión externa desde esta instancia.
               </p>
               <div class="gestion-externa-actions">
                 <button
@@ -647,11 +647,11 @@
             }
             @if (d.bandejaActual === 'PARALIZADAS') {
               <p class="detail-card__text">
-                el acta estÃ¡ paralizada. Puede reactivarse para volver al circuito operativo.
+                el acta está paralizada. Puede reactivarse para volver al circuito operativo.
               </p>
               <dl class="detail-dl detail-dl--compact">
                 @if (d.accionPendiente) {
-                  <dt>Motivo de paralizaciÃ³n</dt>
+                  <dt>Motivo de paralización</dt>
                   <dd>{{ d.accionPendiente }}</dd>
                 }
               </dl>
@@ -676,7 +676,7 @@
 
           @if (puedeMostrarBloqueNotificacionActa()) {
           <section class="detail-card" aria-labelledby="notificacion-acta-titulo">
-            <h3 id="notificacion-acta-titulo" class="detail-card__title">NotificaciÃ³n del acta</h3>
+            <h3 id="notificacion-acta-titulo" class="detail-card__title">Notificación del acta</h3>
             @if (notificacionMensaje() || notificacionError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
                 @if (notificacionMensaje()) {
@@ -689,7 +689,7 @@
             }
             @if (actaEsNotificableDesdeBackend()) {
               <p class="detail-card__text">
-                Registrar resultado de notificaciÃ³n (mock). No libera bloqueantes materiales ni cierra el acta.
+                Registrar resultado de notificación (mock). No libera bloqueantes materiales ni cierra el acta.
               </p>
               <div class="notificacion-actions">
                 <button
@@ -732,7 +732,7 @@
               </div>
             } @else if (actaPuedeReintentarNotificacionDesdeBackend()) {
               <p class="detail-card__text">
-                El acta retornÃ³ a anÃ¡lisis por una notificaciÃ³n no entregada. Puede reintentarse la notificaciÃ³n para volver al circuito.
+                El acta retornó a análisis por una notificación no entregada. Puede reintentarse la notificación para volver al circuito.
               </p>
               <div class="notificacion-actions">
                 <button
@@ -745,7 +745,7 @@
                   @if (reintentandoNotificacion()) {
                     Reintentando...
                   } @else {
-                    Reintentar notificaciÃ³n
+                    Reintentar notificación
                   }
                 </button>
               </div>
@@ -758,11 +758,11 @@
           <section class="detail-card" aria-labelledby="pago-voluntario-titulo">
             <h3 id="pago-voluntario-titulo" class="detail-card__title">Pago voluntario</h3>
             <p class="detail-card__hint">
-              La validaciÃ³n final la realiza el backend; la pantalla muestra las
-              acciones disponibles segÃºn la situaciÃ³n de pago informada.
+              La validación final la realiza el backend; la pantalla muestra las
+              acciones disponibles según la situación de pago informada.
             </p>
             <dl class="detail-dl detail-dl--compact">
-              <dt>SituaciÃ³n de pago</dt>
+              <dt>Situación de pago</dt>
               <dd>{{ d.situacionPago }}</dd>
               @if (d.cerrabilidad.resultadoFinal) {
                 <dt>Resultado final</dt>
@@ -795,15 +795,15 @@
             }
             @if (situacionPagoSinValorDesdeBackend()) {
               <p class="detail-card__hint">
-                Sin situaciÃ³n de pago informada por el backend.
+                Sin situación de pago informada por el backend.
               </p>
             } @else if (situacionPagoDesconocidaDesdeBackend()) {
               <p class="detail-card__hint">
-                SituaciÃ³n de pago desconocida para la UI; no se muestran acciones.
+                Situación de pago desconocida para la UI; no se muestran acciones.
               </p>
             } @else if (!hayAccionesPagoDisponibles()) {
               <p class="detail-empty">
-                No hay acciones de pago disponibles para la situaciÃ³n actual.
+                No hay acciones de pago disponibles para la situación actual.
               </p>
             } @else {
               <div class="pago-actions">
@@ -852,10 +852,10 @@
 
           @if (puedeMostrarFalloResolucionFondo() || falloMensaje() || falloError() || (detalle()?.cerrabilidad?.resultadoFinal !== 'CONDENA_FIRME' && detalle()?.montoCondena !== null && detalle()?.montoCondena !== undefined)) {
           <section class="detail-card" aria-labelledby="fallo-fondo-titulo">
-            <h3 id="fallo-fondo-titulo" class="detail-card__title">Fallo / resoluciÃ³n de fondo</h3>
+            <h3 id="fallo-fondo-titulo" class="detail-card__title">Fallo / resolución de fondo</h3>
             <p class="detail-card__hint">
-              Dicta el fallo en anÃ¡lisis jurÃ­dico. La validaciÃ³n final la realiza el backend;
-              luego la firma y notificaciÃ³n usan las acciones existentes.
+              Dicta el fallo en análisis jurídico. La validación final la realiza el backend;
+              luego la firma y notificación usan las acciones existentes.
             </p>
             @if (falloMensaje() || falloError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
@@ -922,10 +922,10 @@
 
           @if (puedeMostrarRegistrarApelacionPresencial() || puedeMostrarRegistrarVencimientoPlazoApelacion() || apelacionMensaje() || apelacionError() || vencimientoPlazoApelacionMensaje() || vencimientoPlazoApelacionError()) {
           <section class="detail-card" aria-labelledby="apelacion-titulo">
-            <h3 id="apelacion-titulo" class="detail-card__title">ApelaciÃ³n</h3>
+            <h3 id="apelacion-titulo" class="detail-card__title">Apelación</h3>
             <p class="detail-card__hint">
-              Registra la presentaciÃ³n presencial de apelaciÃ³n sobre fallo condenatorio.
-              La validaciÃ³n final la realiza el backend.
+              Registra la presentación presencial de apelación sobre fallo condenatorio.
+              La validación final la realiza el backend.
             </p>
             @if (apelacionMensaje() || apelacionError() || vencimientoPlazoApelacionMensaje() || vencimientoPlazoApelacionError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
@@ -954,9 +954,9 @@
                     (click)="registrarApelacionPresencial()"
                   >
                     @if (registrandoApelacion()) {
-                      Registrando apelaciÃ³n...
+                      Registrando apelación...
                     } @else {
-                      Registrar apelaciÃ³n presencial
+                      Registrar apelación presencial
                     }
                   </button>
                 }
@@ -982,10 +982,10 @@
 
           @if (puedeMostrarResolucionApelacion() || resolucionApelacionMensaje() || resolucionApelacionError()) {
           <section class="detail-card" aria-labelledby="resolucion-apelacion-titulo">
-            <h3 id="resolucion-apelacion-titulo" class="detail-card__title">ResoluciÃ³n de apelaciÃ³n</h3>
+            <h3 id="resolucion-apelacion-titulo" class="detail-card__title">Resolución de apelación</h3>
             <p class="detail-card__hint">
-              Resuelve una apelaciÃ³n ya presentada sobre fallo condenatorio.
-              La validaciÃ³n final la realiza el backend.
+              Resuelve una apelación ya presentada sobre fallo condenatorio.
+              La validación final la realiza el backend.
             </p>
             @if (resolucionApelacionMensaje() || resolucionApelacionError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
@@ -1007,9 +1007,9 @@
                   (click)="rechazarApelacion()"
                 >
                   @if (resolviendoApelacion()) {
-                    Resolviendo apelaciÃ³n...
+                    Resolviendo apelación...
                   } @else {
-                    Rechazar apelaciÃ³n
+                    Rechazar apelación
                   }
                 </button>
                 <button
@@ -1020,9 +1020,9 @@
                   (click)="aceptarApelacionYAbsolver()"
                 >
                   @if (resolviendoApelacion()) {
-                    Resolviendo apelaciÃ³n...
+                    Resolviendo apelación...
                   } @else {
-                    Aceptar apelaciÃ³n y absolver
+                    Aceptar apelación y absolver
                   }
                 </button>
               </div>
@@ -1042,7 +1042,7 @@
 
           @if (actaMuestraSeccionPiezasRedaccion(d)) {
           <section class="detail-card" aria-labelledby="piezas-redaccion-titulo">
-            <h3 id="piezas-redaccion-titulo" class="detail-card__title">Piezas de redacciÃ³n</h3>
+            <h3 id="piezas-redaccion-titulo" class="detail-card__title">Piezas de redacción</h3>
             @if (nulidadMensaje() || nulidadError() || medidaPreventivaMensaje() || medidaPreventivaError() || notificacionActaMensaje() || notificacionActaError() || resolucionPiezaMensaje() || resolucionPiezaError() || rectificacionPiezaMensaje() || rectificacionPiezaError()) {
               <div class="subresource-feedback" role="status" aria-live="polite">
                 @if (nulidadMensaje()) {
@@ -1095,7 +1095,7 @@
                 }
               </ul>
             } @else {
-              <p class="detail-empty detail-empty--inline">Ninguna pieza generada aÃºn.</p>
+              <p class="detail-empty detail-empty--inline">Ninguna pieza generada aún.</p>
             }
             @if (hayAccionesRedaccionDisponiblesDesdeBackend()) {
               <div class="detail-piezas-resumen__actions">
@@ -1138,9 +1138,9 @@
                     (click)="generarNotificacionActa()"
                   >
                     @if (generandoNotificacionActa()) {
-                      Generando notificaciÃ³n del acta...
+                      Generando notificación del acta...
                     } @else {
-                      Generar notificaciÃ³n del acta
+                      Generar notificación del acta
                     }
                   </button>
                 }
@@ -1176,7 +1176,7 @@
                 }
               </div>
             } @else {
-              <p class="detail-hint">No hay acciones de redacciÃ³n disponibles para esta acta.</p>
+              <p class="detail-hint">No hay acciones de redacción disponibles para esta acta.</p>
             }
           </section>
           }

@@ -1231,6 +1231,9 @@ public class PrototipoStore {
     private final Map<String, ActaBromatologiaMock> actaBromatologiaMockPorActa = new LinkedHashMap<>();
     private final Map<String, String> dependenciaDemoPorActa = new LinkedHashMap<>();
     private final Map<String, String> tipoActaDemoPorActa = new LinkedHashMap<>();
+
+    /** Patente/matrícula vehicular por actaId; solo actas con dato de rodado. */
+    private final Map<String, String> patenteVehiculoPorActa = new LinkedHashMap<>();
     private final AtomicInteger contadorActaLabradoMockDemo = new AtomicInteger(0);
 
     /**
@@ -1440,6 +1443,14 @@ public class PrototipoStore {
         return Optional.ofNullable(tipoActaDemoPorActa.get(actaId));
     }
 
+    void registrarPatenteVehiculo(String actaId, String patente) {
+        patenteVehiculoPorActa.put(actaId, patente);
+    }
+
+    public Optional<String> getPatenteVehiculo(String actaId) {
+        return Optional.ofNullable(patenteVehiculoPorActa.get(actaId));
+    }
+
     public Map<String, List<ActaEventoMock>> getEventosPorActa() {
         return eventosPorActa;
     }
@@ -1472,6 +1483,7 @@ public class PrototipoStore {
         actaBromatologiaMockPorActa.clear();
         dependenciaDemoPorActa.clear();
         tipoActaDemoPorActa.clear();
+        patenteVehiculoPorActa.clear();
         contadorActaLabradoMockDemo.set(0);
         cerrabilidad.clear();
         archivoReingreso.clear();

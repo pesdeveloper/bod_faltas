@@ -1,4 +1,4 @@
-export type BandejaCodigo =
+﻿export type BandejaCodigo =
   | 'NOTIFICACIONES'
   | 'LABRADAS'
   | 'ACTAS_EN_ENRIQUECIMIENTO'
@@ -933,4 +933,16 @@ export interface PrototipoActaBusquedaResponse {
   accionPendiente: string | null;
   tipoGestionExterna: string | null;
   cerrable: boolean;
+  score?: number;
+  scoreLabel?: 'ALTA' | 'MEDIA' | 'BAJA' | string;
+  matches?: PrototipoActaBusquedaMatchResponse[];
+}
+
+/** Detalle de un campo que produjo coincidencia en la busqueda global. */
+export interface PrototipoActaBusquedaMatchResponse {
+  tipo: string;
+  label: string;
+  valor: string;
+  fragmento?: string | null;
+  score?: number | null;
 }

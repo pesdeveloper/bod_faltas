@@ -1,11 +1,11 @@
-﻿import { AfterViewInit, Component, DestroyRef, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, EventEmitter, Input, Output, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { ActaBandejaItem, BadgeDemo, PrototipoActaBusquedaResponse, SubBandejaResumen } from '../../core/models/prototipo-faltas.models';
+import { ActaBandejaItem, BadgeDemo, PrototipoActaBusquedaMatchResponse, PrototipoActaBusquedaResponse, SubBandejaResumen } from '../../core/models/prototipo-faltas.models';
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
 
 type CargaEstado = 'idle' | 'loading' | 'ready' | 'error';
@@ -173,5 +173,65 @@ export class DemoActaListComponent implements AfterViewInit {
     }
     const minusculas = valor.replace(/_/g, ' ').toLocaleLowerCase('es-AR');
     return minusculas.charAt(0).toLocaleUpperCase('es-AR') + minusculas.slice(1);
+  }
+  scoreLabelDe(r: PrototipoActaBusquedaResponse): string {
+    switch (r.scoreLabel) {
+      case 'ALTA': return 'Coincidencia alta';
+      case 'MEDIA': return 'Coincidencia media';
+      case 'BAJA': return 'Coincidencia baja';
+      default: return '';
+    }
+  }
+
+  scoreLabelClase(r: PrototipoActaBusquedaResponse): string {
+    switch (r.scoreLabel) {
+      case 'ALTA': return 'global-search-score--alta';
+      case 'MEDIA': return 'global-search-score--media';
+      case 'BAJA': return 'global-search-score--baja';
+      default: return '';
+    }
+  }
+
+  partesResaltadas(match: PrototipoActaBusquedaMatchResponse): { text: string; highlight: boolean }[] {
+    const valor = match.valor ?? '';
+    const fragmento = match.fragmento;
+    if (!fragmento) {
+      return [{ text: valor, highlight: false }];
+    }
+    const idx = valor.toLowerCase().indexOf(fragmento.toLowerCase());
+    if (idx < 0) {
+      return [{ text: valor, highlight: false }];
+    }
+    const partes: { text: string; highlight: boolean }[] = [];
+    if (idx > 0) {
+      partes.push({ text: valor.slice(0, idx), highlight: false });
+    }
+    partes.push({ text: valor.slice(idx, idx + fragmento.length), highlight: true });
+    if (idx + fragmento.length < valor.length) {
+      partes.push({ text: valor.slice(idx + fragmento.length), highlight: false });
+    }
+    return partes;
+  }
+
+  partesTituloResultadoGlobal(r: PrototipoActaBusquedaResponse): { text: string; highlight: boolean }[] {
+    const matchNumero = r.matches?.find(m => m.tipo === 'NUMERO_ACTA');
+    const valor = r.acta;
+    if (!matchNumero?.fragmento) {
+      return [{ text: valor, highlight: false }];
+    }
+    const fragmento = matchNumero.fragmento;
+    const idx = valor.toLowerCase().indexOf(fragmento.toLowerCase());
+    if (idx < 0) {
+      return [{ text: valor, highlight: false }];
+    }
+    const partes: { text: string; highlight: boolean }[] = [];
+    if (idx > 0) {
+      partes.push({ text: valor.slice(0, idx), highlight: false });
+    }
+    partes.push({ text: valor.slice(idx, idx + fragmento.length), highlight: true });
+    if (idx + fragmento.length < valor.length) {
+      partes.push({ text: valor.slice(idx + fragmento.length), highlight: false });
+    }
+    return partes;
   }
 }

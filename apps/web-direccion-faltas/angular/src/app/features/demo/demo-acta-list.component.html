@@ -62,7 +62,7 @@
         <input
           type="search"
           class="list-search__input"
-          placeholder="Número de acta..."
+          placeholder="Acta, documento, infractor, dominio&#8230;"
           [ngModel]="textoBusquedaActa"
           (ngModelChange)="textoBusquedaActaChange.emit($event)"
           autocomplete="off"
@@ -133,7 +133,15 @@
             (click)="seleccionarActaGlobal.emit(r)"
           >
             <div class="row-main">
-              <span class="row-numero">{{ r.acta }}</span>
+              <span class="row-numero">
+                @for (parte of partesTituloResultadoGlobal(r); track $index) {
+                  @if (parte.highlight) {
+                    <mark class="global-search-highlight">{{ parte.text }}</mark>
+                  } @else {
+                    {{ parte.text }}
+                  }
+                }
+              </span>
               <span class="row-status">{{ r.situacionAdministrativa }}</span>
             </div>
             <div class="row-secondary">
@@ -148,6 +156,28 @@
                 }
               </div>
             </div>
+            @if (r.matches && r.matches.length > 0) {
+              <div class="global-search-match-list">
+                <span class="global-search-match-list__label">Coincidi&#243; por:</span>
+                @for (m of r.matches; track m.tipo) {
+                  <span class="global-search-match">
+                    <span class="global-search-match__label">{{ m.label }}:</span>
+                    <span class="global-search-match__valor">
+                      @for (parte of partesResaltadas(m); track $index) {
+                        @if (parte.highlight) {
+                          <mark class="global-search-highlight">{{ parte.text }}</mark>
+                        } @else {
+                          {{ parte.text }}
+                        }
+                      }
+                    </span>
+                  </span>
+                }
+                @if (r.scoreLabel) {
+                  <span class="global-search-score" [class]="scoreLabelClase(r)">{{ scoreLabelDe(r) }}</span>
+                }
+              </div>
+            }
           </button>
         }
       }
