@@ -114,6 +114,20 @@ export class PrototipoFaltasApiService {
     );
   }
 
+  solicitarPagoVoluntarioInfractor(codigoQr: string): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/solicitar-pago-voluntario`,
+      null,
+    );
+  }
+
+  informarPagoVoluntario(codigoQr: string): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/pagar-voluntario`,
+      null,
+    );
+  }
+
   confirmarVisualizacionNotificacionInfractorPorCodigoQr(
     codigoQr: string,
   ): Observable<ActaInfractorResponseDemo> {
@@ -334,6 +348,16 @@ export class PrototipoFaltasApiService {
   ): Observable<RegistrarSolicitudPagoVoluntarioAccionResponseDemo> {
     return this.http.post<RegistrarSolicitudPagoVoluntarioAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-solicitud-pago-voluntario`,
+      body,
+    );
+  }
+
+  fijarMontoPagoVoluntario(
+    actaId: string,
+    body: RegistrarSolicitudPagoVoluntarioAccionRequest,
+  ): Observable<RegistrarSolicitudPagoVoluntarioAccionResponseDemo> {
+    return this.http.post<RegistrarSolicitudPagoVoluntarioAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/fijar-monto-pago-voluntario`,
       body,
     );
   }

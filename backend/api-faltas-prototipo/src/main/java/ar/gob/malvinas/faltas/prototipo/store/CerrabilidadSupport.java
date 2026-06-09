@@ -657,6 +657,11 @@ final class CerrabilidadSupport {
         if (tieneDocumentoResolutorio(actaId, origen)) {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT);
         }
+        if (tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock.LIBERACION_RODADO
+                && !tieneResultadoHabilitanteParaLiberarRodado(actaId)) {
+            return resultadoRegistroConflictoConMensaje(
+                    "No se puede emitir la liberación del rodado: requiere pago confirmado o absolución.");
+        }
 
         String tipoDoc = tipoDocumentoResolutorio(origen, circuitoSoloAplicaAMedida);
         String estadoDocNuevo = circuitoSoloAplicaAMedida ? ESTADO_DOC_PENDIENTE_FIRMA : ESTADO_DOC_EMITIDO;
@@ -736,6 +741,11 @@ final class CerrabilidadSupport {
             return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
                     .CONFLICT);
         }
+        if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.RODADO_SECUESTRADO
+                && !tieneResultadoHabilitanteParaLiberarRodado(actaId)) {
+            return resultadoCumplimientoConflictoConMensaje(
+                    "No se puede registrar el retiro/liberación del rodado: requiere pago confirmado o absolución.");
+        }
         if (!tieneDocumentoResolutorio(actaId, origen)) {
             if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA) {
                 registrarDocumentoResolutorioDocumentacion(actaId, actual.bloqueActual());
@@ -786,6 +796,18 @@ final class CerrabilidadSupport {
                 false,
                 List.of(),
                 null);
+    }
+
+    private PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreResultado resultadoCumplimientoConflictoConMensaje(
+            String mensaje) {
+        return new PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreResultado(
+                PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado.CONFLICT,
+                null,
+                null,
+                PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL,
+                false,
+                List.of(),
+                mensaje);
     }
 
     private PrototipoStore.RegistrarResolucionBloqueoCierreResultado resultadoRegistroVacio(
@@ -1315,6 +1337,32 @@ final class CerrabilidadSupport {
                 bloqueOrigen, bloqueOrigen,
                 descripcionResolucion(
                         PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA, false));
+    }
+
+    /**
+     * {@code true} si el resultado final del acta habilita operaciones de
+     * liberación de rodado (documental y material). Condición compartida por
+     * {@link #registrarResolucionBloqueoCierreDocumental} y
+     * {@link #registrarCumplimientoMaterialEfectivoBloqueoCierre}.
+     */
+    private boolean tieneResultadoHabilitanteParaLiberarRodado(String actaId) {
+        PrototipoStore.ResultadoFinalCierreMock rf = getResultadoFinal(actaId);
+        return rf == PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
+                || rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO;
+    }
+
+    private PrototipoStore.RegistrarResolucionBloqueoCierreResultado resultadoRegistroConflictoConMensaje(
+            String mensaje) {
+        return new PrototipoStore.RegistrarResolucionBloqueoCierreResultado(
+                PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT,
+                null,
+                null,
+                null,
+                null,
+                PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL,
+                false,
+                List.of(),
+                mensaje);
     }
 
     private void registrarEvento(

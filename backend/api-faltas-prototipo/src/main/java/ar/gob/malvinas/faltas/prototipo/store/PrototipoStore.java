@@ -352,7 +352,8 @@ public class PrototipoStore {
             String actaId,
             String bandejaActual,
             String estadoProcesoActual,
-            String tipoGestionExterna) {
+            String tipoGestionExterna,
+            String motivo) {
     }
 
     public enum ReingresarDesdeGestionExternaEstado {
@@ -569,6 +570,20 @@ public class PrototipoStore {
             String bandejaActual,
             String estadoProcesoActual,
             String accionPendiente,
+            BigDecimal montoPagoVoluntario) {
+    }
+
+    public enum FijarMontoPagoVoluntarioEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record FijarMontoPagoVoluntarioResultado(
+            FijarMontoPagoVoluntarioEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
             BigDecimal montoPagoVoluntario) {
     }
 
@@ -827,7 +842,9 @@ public class PrototipoStore {
     public enum RegistrarPagoInformadoEstado {
         OK,
         NOT_FOUND,
-        CONFLICT
+        CONFLICT,
+        /** Monto de pago voluntario nulo o cero: Dirección aún no lo fijó. */
+        CONFLICT_SIN_MONTO
     }
 
     public record RegistrarPagoInformadoResultado(
@@ -870,6 +887,44 @@ public class PrototipoStore {
 
     public record ObservarPagoInformadoResultado(
             ObservarPagoInformadoEstado estado,
+            String actaId,
+            SituacionPagoMock situacionPago) {
+    }
+
+    public enum InformarPagoVoluntarioDesdePortalEstado {
+        OK,
+        NOT_FOUND,
+        /** Acta en bandeja no operable o condición general no compatible. */
+        CONFLICT,
+        /** Monto no fijado todavía por Dirección de Faltas. */
+        CONFLICT_SIN_MONTO,
+        /** Pago ya informado o pendiente de confirmación: no se puede duplicar. */
+        CONFLICT_YA_INFORMADO,
+        /** Pago ya confirmado: no aplica. */
+        CONFLICT_YA_CONFIRMADO
+    }
+
+    public record InformarPagoVoluntarioDesdePortalResultado(
+            InformarPagoVoluntarioDesdePortalEstado estado,
+            String actaId,
+            SituacionPagoMock situacionPago) {
+    }
+
+    public enum ConfirmarPagoVoluntarioExternoEstado {
+        OK,
+        NOT_FOUND,
+        /** Acta en condición no compatible (cerrada, archivo, gestión externa). */
+        CONFLICT,
+        /** No existe pago informado/pendiente de confirmación previo. */
+        CONFLICT_SIN_PAGO_PENDIENTE,
+        /** Pago ya confirmado: idempotencia rechazada. */
+        CONFLICT_YA_CONFIRMADO,
+        /** El monto recibido no coincide con el monto fijado. */
+        CONFLICT_MONTO_DISTINTO
+    }
+
+    public record ConfirmarPagoVoluntarioExternoResultado(
+            ConfirmarPagoVoluntarioExternoEstado estado,
             String actaId,
             SituacionPagoMock situacionPago) {
     }
@@ -1244,7 +1299,7 @@ public class PrototipoStore {
      * El store mantiene una fachada pública que delega aquí.
      */
     private final ArchivoReingresoSupport archivoReingreso =
-            new ArchivoReingresoSupport(actas, eventosPorActa, accionPendientePorActa);
+            new ArchivoReingresoSupport(actas, eventosPorActa, accionPendientePorActa, documentosPorActa);
 
     /**
      * Soporte funcional del área notificación: notificación positiva,
@@ -1331,7 +1386,7 @@ public class PrototipoStore {
      * confirmación/observación mock, separado del registro de solicitud.
      */
     private final PagoInformadoSupport pagoInformado =
-            new PagoInformadoSupport(actas, eventosPorActa, accionPendientePorActa, situacionPagoPorActa, pagoInformadoPorActa);
+            new PagoInformadoSupport(actas, eventosPorActa, accionPendientePorActa, situacionPagoPorActa, pagoInformadoPorActa, montoPagoVoluntarioPorActa);
 
     private final PagoCondenaSupport pagoCondena =
             new PagoCondenaSupport(
@@ -1590,7 +1645,16 @@ public class PrototipoStore {
         List<String> acciones = new ArrayList<>();
         switch (situacion) {
             case SIN_PAGO -> acciones.add("SOLICITAR");
-            case SOLICITADO, OBSERVADO -> acciones.add("INFORMAR");
+            case SOLICITADO, OBSERVADO -> {
+                BigDecimal monto = getMontoPagoVoluntario(actaId);
+                if (monto != null && monto.compareTo(BigDecimal.ZERO) > 0) {
+                    // Monto fijado: el infractor puede informar pago.
+                    acciones.add("INFORMAR");
+                } else {
+                    // Monto no fijado: Dirección debe evaluarlo y fijarlo.
+                    acciones.add("FIJAR_MONTO");
+                }
+            }
             case PAGO_INFORMADO -> acciones.add("ADJUNTAR_COMPROBANTE");
             case PENDIENTE_CONFIRMACION -> {
                 acciones.add("CONFIRMAR");
@@ -1625,6 +1689,11 @@ public class PrototipoStore {
             return List.of();
         }
         SituacionPagoCondena situacion = getSituacionPagoCondena(actaId);
+        // Ninguna marca habilita gestión externa cuando el pago ya fue informado o confirmado.
+        if (situacion == SituacionPagoCondena.INFORMADO
+                || situacion == SituacionPagoCondena.CONFIRMADO) {
+            return List.of();
+        }
         boolean condenaFirmeDerivable =
                 cerrabilidad.getResultadoFinal(actaId) == ResultadoFinalCierreMock.CONDENA_FIRME
                         && (situacion == SituacionPagoCondena.PENDIENTE
@@ -1789,6 +1858,23 @@ public class PrototipoStore {
     }
 
     /**
+     * Helper interno de mocks: fija el monto de pago voluntario para un acta
+     * precargada sin ejecutar el flujo operativo de solicitud. Uso restringido
+     * a la fábrica de datos demo para representar estados como CONFIRMADO con
+     * monto ya fijado desde precarga.
+     */
+    public void setMontoPagoVoluntario(String actaId, BigDecimal monto) {
+        if (actaId == null) {
+            return;
+        }
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            montoPagoVoluntarioPorActa.remove(actaId);
+            return;
+        }
+        montoPagoVoluntarioPorActa.put(actaId, monto);
+    }
+
+    /**
      * Helper interno de mocks: asigna el motivo de archivo vigente para una
      * acta precargada. Uso restringido a la fábrica de datos demo. Fachada:
      * delega en {@link ArchivoReingresoSupport}.
@@ -1835,6 +1921,17 @@ public class PrototipoStore {
             return;
         }
         montoCondenaPorActa.put(actaId, monto);
+    }
+
+    /**
+     * Helper interno de mocks: situación de pago de condena precargada (demo).
+     * Solo usar en la fábrica de datos; nunca en código de circuito operativo.
+     */
+    public void setSituacionPagoCondenaDemo(String actaId, SituacionPagoCondena situacion) {
+        if (actaId == null || situacion == null) {
+            return;
+        }
+        situacionPagoCondenaPorActa.put(actaId, situacion);
     }
 
     public List<BandejaConteo> listarBandejasConConteoOrdenadas() {
@@ -2377,7 +2474,12 @@ public class PrototipoStore {
     }
 
     public PagoCondenaResultado confirmarPagoCondena(String actaId) {
-        return pagoCondena.confirmarPagoCondena(actaId);
+        PagoCondenaResultado r = pagoCondena.confirmarPagoCondena(actaId);
+        if (r.estado() == PagoCondenaEstado.OK
+                && ACCION_REVISION_POST_GESTION_EXTERNA.equals(accionPendientePorActa.get(actaId))) {
+            accionPendientePorActa.remove(actaId);
+        }
+        return r;
     }
 
     public PagoCondenaResultado observarPagoCondena(String actaId) {
@@ -2525,7 +2627,56 @@ public class PrototipoStore {
             return new ArchivarActaResultado(
                     ArchivarActaEstado.CONFLICT, null, null, null, null);
         }
+        // Bloquear archivo mientras el pago voluntario está en proceso de acreditación.
+        SituacionPagoMock sp = getSituacionPago(actaId);
+        if (sp == SituacionPagoMock.PAGO_INFORMADO || sp == SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+            return new ArchivarActaResultado(
+                    ArchivarActaEstado.CONFLICT, null, null, null, null);
+        }
         return archivoReingreso.archivarActaDesdeAnalisis(actaId);
+    }
+
+    /**
+     * Informa pago voluntario desde el portal del infractor. Requiere que
+     * Direccion haya fijado el monto (situacionPago=SOLICITADO u OBSERVADO,
+     * monto > 0). Mueve el acta a PENDIENTE_CONFIRMACION y genera tarea
+     * operativa VERIFICAR_PAGO_INFORMADO para Direccion de Faltas.
+     */
+    public InformarPagoVoluntarioDesdePortalResultado informarPagoVoluntarioDesdePortal(String actaId) {
+        ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
+        if (rf != ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
+            return new InformarPagoVoluntarioDesdePortalResultado(
+                    InformarPagoVoluntarioDesdePortalEstado.CONFLICT, actaId, getSituacionPago(actaId));
+        }
+        SituacionPagoCondena spc = situacionPagoCondenaPorActa.getOrDefault(actaId, SituacionPagoCondena.NO_APLICA);
+        if (spc != SituacionPagoCondena.NO_APLICA) {
+            return new InformarPagoVoluntarioDesdePortalResultado(
+                    InformarPagoVoluntarioDesdePortalEstado.CONFLICT, actaId, getSituacionPago(actaId));
+        }
+        return pagoVoluntario.informarPagoVoluntarioDesdePortal(actaId);
+    }
+
+    /**
+     * Confirma pago voluntario desde sistema externo de cobro. Requiere pago
+     * previo informado/pendiente de confirmacion y monto coincidente. Genera
+     * evento PAGO_VOLUNTARIO_CONFIRMADO_EXTERNO y fija resultadoFinal=PAGO_CONFIRMADO.
+     */
+    public ConfirmarPagoVoluntarioExternoResultado confirmarPagoVoluntarioExterno(
+            String actaId,
+            java.math.BigDecimal monto,
+            String origen) {
+        ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
+        if (rf == ResultadoFinalCierreMock.ABSUELTO
+                || rf == ResultadoFinalCierreMock.CONDENADO
+                || rf == ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return new ConfirmarPagoVoluntarioExternoResultado(
+                    ConfirmarPagoVoluntarioExternoEstado.CONFLICT, actaId, getSituacionPago(actaId));
+        }
+        ConfirmarPagoVoluntarioExternoResultado r = pagoInformado.confirmarPagoVoluntarioExterno(actaId, monto, origen);
+        if (r.estado() == ConfirmarPagoVoluntarioExternoEstado.OK) {
+            cerrabilidad.setResultadoFinalDemo(actaId, ResultadoFinalCierreMock.PAGO_CONFIRMADO);
+        }
+        return r;
     }
 
     /**
@@ -2538,12 +2689,17 @@ public class PrototipoStore {
     }
 
     /**
-     * Demo: reingreso explícito desde la macro-bandeja ARCHIVO → vuelve a
-     * PENDIENTE_ANALISIS con marca {@link #ACCION_REVISION_POST_REINGRESO} y
-     * {@code motivoArchivo} previo preservado. Fachada pública; la lógica vive
+     * Demo: reingreso explícito desde la macro-bandeja ARCHIVO; vuelve a
+     * PENDIENTE_ANALISIS con {@code motivoArchivo} previo preservado. La
+     * acción pendiente se infiere del estado documental y de los eventos
+     * previos al archivo: si había un fallo condenatorio firmado cuya
+     * notificación falló o venció, la marca resultante es
+     * {@link #ACCION_REINTENTAR_NOTIFICACION} o
+     * {@link #ACCION_EVALUAR_NOTIFICACION_VENCIDA} según corresponda; en
+     * cualquier otro caso se usa {@link #ACCION_REVISION_POST_REINGRESO}
+     * como marca informativa no bloqueante. Fachada pública; la lógica vive
      * en {@link ArchivoReingresoSupport}.
-     */
-    public ReingresarActaResultado reingresarActaDesdeArchivo(String actaId) {
+     */    public ReingresarActaResultado reingresarActaDesdeArchivo(String actaId) {
         return archivoReingreso.reingresarActaDesdeArchivo(actaId);
     }
 
@@ -2810,6 +2966,25 @@ public class PrototipoStore {
     public RegistrarSolicitudPagoVoluntarioResultado registrarSolicitudPagoVoluntario(
             String actaId, BigDecimal monto) {
         return pagoVoluntario.registrarSolicitudPagoVoluntario(actaId, monto);
+    }
+    /**
+     * Solicitud de pago voluntario iniciada por el infractor desde el portal.
+     * Sin monto: Direccion de Faltas evaluara y, si corresponde, lo fijara.
+     * Fachada publica; la logica vive en {@link PagoVoluntarioSupport}.
+     */
+    public RegistrarSolicitudPagoVoluntarioResultado solicitarPagoVoluntarioDesdePortal(
+            String actaId) {
+        return pagoVoluntario.solicitarPagoVoluntarioDesdePortal(actaId);
+    }
+
+    /**
+     * Dirección de Faltas fija el monto del pago voluntario cuando el infractor
+     * solicitó el pago pero aún no hay monto asignado. Fachada pública; la
+     * lógica vive en {@link PagoVoluntarioSupport}.
+     */
+    public FijarMontoPagoVoluntarioResultado fijarMontoPagoVoluntario(
+            String actaId, BigDecimal monto) {
+        return pagoVoluntario.fijarMontoPagoVoluntario(actaId, monto);
     }
 
     /**

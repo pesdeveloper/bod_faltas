@@ -160,6 +160,224 @@ final class PagoVoluntarioSupport {
                 PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO,
                 monto);
     }
+    /**
+     * Acción de Dirección de Faltas para fijar el monto de pago voluntario
+     * cuando el infractor solicitó el pago pero todavía no hay monto fijado.
+     *
+     * <p>Precondiciones:
+     * <ul>
+     *   <li>Acta existe.</li>
+     *   <li>Bandeja operable para pago voluntario.</li>
+     *   <li>Situación de pago es {@code SOLICITADO} (el infractor solicitó
+     *       pero Dirección aún no fijó monto).</li>
+     *   <li>Monto estrictamente mayor a cero (validado en el controller).</li>
+     * </ul>
+     *
+     * <p>Efectos:
+     * <ul>
+     *   <li>Persiste {@code montoPagoVoluntario}.</li>
+     *   <li>Limpia {@code accionPendiente} si era
+     *       {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}: la
+     *       evaluación está hecha; el siguiente paso es del infractor.</li>
+     *   <li>Registra evento {@code PAGO_VOLUNTARIO_MONTO_FIJADO}.</li>
+     * </ul>
+     *
+     * <p>Devuelve {@code CONFLICT} si el acta está en bandeja terminal o si
+     * la situación de pago no es {@code SOLICITADO}.
+     */
+    PrototipoStore.FijarMontoPagoVoluntarioResultado fijarMontoPagoVoluntario(
+            String actaId, BigDecimal monto) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.FijarMontoPagoVoluntarioResultado(
+                    PrototipoStore.FijarMontoPagoVoluntarioEstado.NOT_FOUND,
+                    null, null, null, null);
+        }
+        if (!bandejaPermitePagoVoluntario(actual.estaCerrada(), actual.bandejaActual())) {
+            return new PrototipoStore.FijarMontoPagoVoluntarioResultado(
+                    PrototipoStore.FijarMontoPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, null);
+        }
+        PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        if (situacionActual != PrototipoStore.SituacionPagoMock.SOLICITADO) {
+            return new PrototipoStore.FijarMontoPagoVoluntarioResultado(
+                    PrototipoStore.FijarMontoPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, null);
+        }
+
+        montoPagoVoluntarioPorActa.put(actaId, monto);
+
+        // La evaluación está hecha: Dirección fijó el monto.
+        // Se limpia accionPendiente para que el expediente quede sin marca operativa
+        // hasta que el infractor informe el pago.
+        String accionActual = accionPendientePorActa.get(actaId);
+        if (PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO.equals(accionActual)) {
+            accionPendientePorActa.remove(actaId);
+        }
+
+        registrarEvento(
+                actaId,
+                "PAGO_VOLUNTARIO_MONTO_FIJADO",
+                actual.bloqueActual(),
+                actual.bloqueActual(),
+                "Direccion de Faltas fijo monto de pago voluntario: "
+                        + monto.toPlainString()
+                        + ". El infractor puede ahora informar el pago.");
+
+        return new PrototipoStore.FijarMontoPagoVoluntarioResultado(
+                PrototipoStore.FijarMontoPagoVoluntarioEstado.OK,
+                actual.id(),
+                actual.bandejaActual(),
+                actual.estadoProcesoActual(),
+                monto);
+    }
+
+    /**
+     * Solicitud de pago voluntario iniciada por el infractor desde el portal.
+     * Sin monto: Direccion de Faltas evaluara y, si corresponde, lo fijara.
+     *
+     * <p>Genera evento {@code PAGO_VOLUNTARIO_SOLICITADO} indicando el canal
+     * {@code PORTAL_INFRACTOR}. El acta pasa a {@code PENDIENTE_ANALISIS} con
+     * marca {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}. El monto
+     * queda {@code null} hasta que Direccion lo fije.
+     *
+     * <p>Devuelve {@code CONFLICT} si el acta esta cerrada, en bandeja
+     * terminal/externa o si la situacion de pago no es {@code SIN_PAGO}.
+     */
+    PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado solicitarPagoVoluntarioDesdePortal(
+            String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.NOT_FOUND,
+                    null, null, null, null, null);
+        }
+        if (!bandejaPermitePagoVoluntario(actual.estaCerrada(), actual.bandejaActual())) {
+            return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, null, null);
+        }
+        PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        if (situacionActual != PrototipoStore.SituacionPagoMock.SIN_PAGO) {
+            return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, null, null);
+        }
+
+        String bloqueOrigen = actual.bloqueActual();
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                ESTADO_PENDIENTE_REVISION,
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
+        actas.put(actaId, actualizada);
+
+        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO);
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.SOLICITADO);
+        // Monto no fijado: el infractor solo expresa intencion de pago;
+        // Direccion de Faltas evaluara y fijara el monto si corresponde.
+
+        registrarEvento(
+                actaId,
+                "PAGO_VOLUNTARIO_SOLICITADO",
+                bloqueOrigen,
+                BLOQUE_D5,
+                "Infractor solicito pago voluntario desde PORTAL_INFRACTOR; "
+                        + "expediente pasa a analisis. Monto pendiente de fijacion "
+                        + "por Direccion de Faltas.");
+
+        return new PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado(
+                PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO,
+                null);
+    }
+
+    /**
+     * El infractor confirma su intención de pago desde el portal.
+     * Precondiciones: acta operable, monto fijado por Dirección,
+     * situacionPago == SOLICITADO u OBSERVADO.
+     * Efecto: situacionPago = PENDIENTE_CONFIRMACION + tarea operativa
+     * VERIFICAR_PAGO_INFORMADO para que Dirección pueda confirmar u observar.
+     */
+    PrototipoStore.InformarPagoVoluntarioDesdePortalResultado informarPagoVoluntarioDesdePortal(
+            String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                    PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.NOT_FOUND,
+                    null,
+                    PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        }
+        if (!bandejaPermitePagoVoluntario(actual.estaCerrada(), actual.bandejaActual())) {
+            return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                    PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT,
+                    null,
+                    situacionPagoPorActa.getOrDefault(actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO));
+        }
+        BigDecimal monto = montoPagoVoluntarioPorActa.get(actaId);
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                    PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_SIN_MONTO,
+                    null,
+                    situacionPagoPorActa.getOrDefault(actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO));
+        }
+        PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        if (situacionActual == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
+                || situacionActual == PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+            return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                    PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_YA_INFORMADO,
+                    null,
+                    situacionActual);
+        }
+        if (situacionActual == PrototipoStore.SituacionPagoMock.CONFIRMADO) {
+            return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                    PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_YA_CONFIRMADO,
+                    null,
+                    situacionActual);
+        }
+        if (situacionActual != PrototipoStore.SituacionPagoMock.SOLICITADO
+                && situacionActual != PrototipoStore.SituacionPagoMock.OBSERVADO) {
+            return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                    PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT,
+                    null,
+                    situacionActual);
+        }
+
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_VERIFICAR_PAGO_INFORMADO);
+
+        registrarEvento(
+                actaId,
+                "PAGO_VOLUNTARIO_INFORMADO_PORTAL",
+                actual.bloqueActual(),
+                actual.bloqueActual(),
+                "Infractor informo pago voluntario desde PORTAL_INFRACTOR con monto "
+                        + monto.toPlainString()
+                        + ". Pendiente de confirmacion por Direccion de Faltas.");
+
+        return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
+                PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.OK,
+                actaId,
+                PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+    }
 
     private void registrarEvento(
             String actaId,

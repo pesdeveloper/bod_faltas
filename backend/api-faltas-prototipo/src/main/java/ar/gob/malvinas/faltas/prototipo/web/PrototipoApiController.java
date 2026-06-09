@@ -28,6 +28,8 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.HechosMaterialesActaResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.HechosMaterialesEjeResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ComprobanteMockResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ConfirmarPagoInformadoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ConfirmarPagoVoluntarioExternoAccionRequest;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ConfirmarPagoVoluntarioExternoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.DerivarAGestionExternaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.DictarFalloAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.DictarFalloCondenatorioAccionRequest;
@@ -252,6 +254,63 @@ public class PrototipoApiController {
         }
         if (r.estado() == PrototipoStore.ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
+        return mapActaInfractor(actualizada);
+    }
+    /**
+     * Solicitud de pago voluntario iniciada por el infractor desde el portal.
+     * No requiere monto: Direccion de Faltas evaluara y, si corresponde,
+     * fijara el monto. Devuelve la vista ciudadana actualizada.
+     */
+    @PostMapping("/infractor/actas/{codigoQr}/acciones/solicitar-pago-voluntario")
+    public ActaInfractorResponse solicitarPagoVoluntarioInfractorPorCodigoQr(
+            @PathVariable("codigoQr") String codigoQr) {
+        ActaMock acta = store.findActaPorCodigoQr(codigoQr)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PrototipoStore.RegistrarSolicitudPagoVoluntarioResultado r =
+                store.solicitarPagoVoluntarioDesdePortal(acta.id());
+        if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No es posible solicitar pago voluntario en el estado actual del acta.");
+        }
+        ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
+        return mapActaInfractor(actualizada);
+    }
+
+    /**
+     * El infractor informa el pago voluntario desde el portal.
+     * Precondición: monto fijado por Dirección (situacionPago=SOLICITADO u OBSERVADO).
+     * Efecto: situacionPago pasa a PENDIENTE_CONFIRMACION; Dirección puede confirmar u observar.
+     */
+    @PostMapping("/infractor/actas/{codigoQr}/acciones/pagar-voluntario")
+    public ActaInfractorResponse pagarVoluntarioInfractorPorCodigoQr(
+            @PathVariable("codigoQr") String codigoQr) {
+        ActaMock acta = store.findActaPorCodigoQr(codigoQr)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PrototipoStore.InformarPagoVoluntarioDesdePortalResultado r =
+                store.informarPagoVoluntarioDesdePortal(acta.id());
+        if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_SIN_MONTO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede pagar porque Dirección de Faltas aún no fijó el monto.");
+        }
+        if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_YA_INFORMADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El pago voluntario ya se encuentra en proceso de acreditación.");
+        }
+        if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_YA_CONFIRMADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El pago voluntario ya fue confirmado.");
+        }
+        if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No es posible informar el pago en el estado actual del acta.");
         }
         ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
         return mapActaInfractor(actualizada);
@@ -495,11 +554,55 @@ public class PrototipoApiController {
                 r.montoPagoVoluntario());
     }
 
+    /**
+     * Dirección de Faltas fija el monto de pago voluntario cuando el infractor
+     * solicitó el pago desde el portal pero no hay monto asignado aún.
+     * Precondición: {@code situacionPago=SOLICITADO} y
+     * {@code montoPagoVoluntario=null}. Tras la acción, el infractor puede
+     * informar el pago desde el portal.
+     */
+    @PostMapping("/actas/{id}/acciones/fijar-monto-pago-voluntario")
+    public RegistrarSolicitudPagoVoluntarioAccionResponse fijarMontoPagoVoluntario(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) RegistrarSolicitudPagoVoluntarioAccionRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "body requerido con monto");
+        }
+        BigDecimal monto = request.monto();
+        if (monto == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "monto requerido");
+        }
+        if (monto.signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "monto debe ser mayor a cero");
+        }
+        PrototipoStore.FijarMontoPagoVoluntarioResultado r =
+                store.fijarMontoPagoVoluntario(id, monto);
+        if (r.estado() == PrototipoStore.FijarMontoPagoVoluntarioEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.FijarMontoPagoVoluntarioEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No es posible fijar monto: el acta no está en estado SOLICITADO o se encuentra en bandeja no operable.");
+        }
+        return new RegistrarSolicitudPagoVoluntarioAccionResponse(
+                "OK",
+                "Monto de pago voluntario fijado por Dirección de Faltas. El infractor puede ahora informar el pago.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                store.getAccionPendiente(r.actaId()),
+                r.montoPagoVoluntario());
+    }
+
     @PostMapping("/actas/{id}/acciones/registrar-pago-informado")
     public RegistrarPagoInformadoAccionResponse registrarPagoInformado(@PathVariable("id") String id) {
         PrototipoStore.RegistrarPagoInformadoResultado r = store.registrarPagoInformado(id);
         if (r.estado() == PrototipoStore.RegistrarPagoInformadoEstado.NOT_FOUND) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarPagoInformadoEstado.CONFLICT_SIN_MONTO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede informar pago voluntario porque Dirección de Faltas aún no fijó el monto.");
         }
         if (r.estado() == PrototipoStore.RegistrarPagoInformadoEstado.CONFLICT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT);
@@ -545,6 +648,45 @@ public class PrototipoApiController {
         return new ConfirmarPagoInformadoAccionResponse(
                 "OK",
                 "Pago confirmado internamente (mock).",
+                r.actaId(),
+                r.situacionPago().name());
+    }
+
+    /**
+     * Confirma pago voluntario desde sistema externo de cobro (gateway/caja).
+     * El monto recibido debe coincidir con el monto fijado por Dirección.
+     * Precondición: situacionPago == PAGO_INFORMADO o PENDIENTE_CONFIRMACION.
+     */
+    @PostMapping("/actas/{id}/acciones/confirmar-pago-voluntario-externo")
+    public ConfirmarPagoVoluntarioExternoAccionResponse confirmarPagoVoluntarioExterno(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) ConfirmarPagoVoluntarioExternoAccionRequest request) {
+        java.math.BigDecimal monto = request != null ? request.monto() : null;
+        String origen = request != null && request.origen() != null ? request.origen().trim() : "SISTEMA_EXTERNO";
+        PrototipoStore.ConfirmarPagoVoluntarioExternoResultado r =
+                store.confirmarPagoVoluntarioExterno(id, monto, origen);
+        if (r.estado() == PrototipoStore.ConfirmarPagoVoluntarioExternoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ConfirmarPagoVoluntarioExternoEstado.CONFLICT_YA_CONFIRMADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El pago voluntario ya fue confirmado.");
+        }
+        if (r.estado() == PrototipoStore.ConfirmarPagoVoluntarioExternoEstado.CONFLICT_SIN_PAGO_PENDIENTE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No existe pago voluntario informado previo. El infractor debe iniciar el pago desde el portal.");
+        }
+        if (r.estado() == PrototipoStore.ConfirmarPagoVoluntarioExternoEstado.CONFLICT_MONTO_DISTINTO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El monto informado no coincide con el monto fijado para este expediente.");
+        }
+        if (r.estado() == PrototipoStore.ConfirmarPagoVoluntarioExternoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No es posible confirmar el pago en el estado actual del acta.");
+        }
+        return new ConfirmarPagoVoluntarioExternoAccionResponse(
+                "OK",
+                "Pago voluntario confirmado por sistema externo de cobro.",
                 r.actaId(),
                 r.situacionPago().name());
     }
@@ -758,7 +900,10 @@ public class PrototipoApiController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         if (r.estado() == PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
+            String msg = r.motivoNoCerrable();
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    msg != null && !msg.isBlank() ? msg : "Conflicto al registrar resolución documental.");
         }
         CerrabilidadResponse c = new CerrabilidadResponse(
                 r.resultadoFinal().name(),
@@ -797,7 +942,10 @@ public class PrototipoApiController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         if (r.estado() == PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado.CONFLICT) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
+            String msg = r.motivoNoCerrable();
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    msg != null && !msg.isBlank() ? msg : "Conflicto al registrar cumplimiento material.");
         }
         CerrabilidadResponse c = new CerrabilidadResponse(
                 r.resultadoFinal().name(),
@@ -831,19 +979,19 @@ public class PrototipoApiController {
     @PostMapping("/actas/{id}/acciones/informar-pago-condena")
     public PagoCondenaAccionResponse informarPagoCondena(@PathVariable("id") String id) {
         PrototipoStore.PagoCondenaResultado r = store.informarPagoCondena(id);
-        return mapPagoCondena(r, "Pago de condena informado (mock).");
+        return mapPagoCondena(r, "Pago de condena informado correctamente.");
     }
 
     @PostMapping("/actas/{id}/acciones/confirmar-pago-condena")
     public PagoCondenaAccionResponse confirmarPagoCondena(@PathVariable("id") String id) {
         PrototipoStore.PagoCondenaResultado r = store.confirmarPagoCondena(id);
-        return mapPagoCondena(r, "Pago de condena confirmado (mock).");
+        return mapPagoCondena(r, "Pago de condena confirmado correctamente.");
     }
 
     @PostMapping("/actas/{id}/acciones/observar-pago-condena")
     public PagoCondenaAccionResponse observarPagoCondena(@PathVariable("id") String id) {
         PrototipoStore.PagoCondenaResultado r = store.observarPagoCondena(id);
-        return mapPagoCondena(r, "Pago de condena observado (mock).");
+        return mapPagoCondena(r, "Pago de condena observado.");
     }
 
     @PostMapping("/actas/{id}/acciones/registrar-notificacion-vencida")
@@ -940,7 +1088,10 @@ public class PrototipoApiController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         if (r.estado() == PrototipoStore.DerivarAGestionExternaEstado.CONFLICT) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
+            String motivo = r.motivo();
+            throw motivo != null && !motivo.isBlank()
+                    ? new ResponseStatusException(HttpStatus.CONFLICT, motivo)
+                    : new ResponseStatusException(HttpStatus.CONFLICT);
         }
         return new DerivarAGestionExternaAccionResponse(
                 "OK",
@@ -964,7 +1115,10 @@ public class PrototipoApiController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         if (r.estado() == PrototipoStore.DerivarAGestionExternaEstado.CONFLICT) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
+            String motivo = r.motivo();
+            throw motivo != null && !motivo.isBlank()
+                    ? new ResponseStatusException(HttpStatus.CONFLICT, motivo)
+                    : new ResponseStatusException(HttpStatus.CONFLICT);
         }
         return new DerivarAGestionExternaAccionResponse(
                 "OK",
@@ -1656,10 +1810,9 @@ public class PrototipoApiController {
                 && resultadoFinalEnum == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
                 && !enBandejaNoOperablePorPortal;
         boolean puedePagar = monto != null
-                && situacion != PrototipoStore.SituacionPagoMock.CONFIRMADO
-                && resultadoFinalEnum != PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
-                && resultadoFinalEnum != PrototipoStore.ResultadoFinalCierreMock.CONDENADO
-                && resultadoFinalEnum != PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME
+                && (situacion == PrototipoStore.SituacionPagoMock.SOLICITADO
+                        || situacion == PrototipoStore.SituacionPagoMock.OBSERVADO)
+                && resultadoFinalEnum == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
                 && !enBandejaNoOperablePorPortal;
         boolean puedePresentarApelacion = store.puedePresentarApelacion(a.id());
         ActaNotificacionMock notificacionPortalPendiente = store.findNotificacionPortalPendiente(a.id()).orElse(null);
@@ -1752,6 +1905,16 @@ public class PrototipoApiController {
         }
         if (situacion == PrototipoStore.SituacionPagoMock.CONFIRMADO) {
             return "El pago voluntario ya fue confirmado.";
+        }
+        if (situacion == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
+                || situacion == PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+            return "Pago en proceso de acreditación. Dirección de Faltas verificará la acreditación.";
+        }
+        if (situacion == PrototipoStore.SituacionPagoMock.OBSERVADO && monto != null) {
+            return "El pago fue observado. Puede intentar nuevamente.";
+        }
+        if (situacion == PrototipoStore.SituacionPagoMock.SOLICITADO && monto == null) {
+            return "Solicitud de pago voluntario registrada. Dirección de Faltas evaluará el expediente.";
         }
         if (puedePagar) {
             return "Hay un monto disponible para pago voluntario.";

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -28,11 +28,13 @@ export class InfractorActaPageComponent implements OnInit {
   readonly acta = signal<ActaInfractorResponseDemo | null>(null);
   readonly registrandoApelacion = signal(false);
   readonly registrandoVisualizacionNotificacion = signal(false);
+  readonly registrandoPagoVoluntario = signal(false);
   readonly apelacionPortalMensaje = signal<string | null>(null);
   readonly apelacionPortalMensajeTipo = signal<ApelacionPortalMensajeTipo | null>(null);
   readonly visualizacionPortalMensaje = signal<string | null>(null);
   readonly visualizacionPortalMensajeTipo = signal<VisualizacionPortalMensajeTipo | null>(null);
   readonly pagoVoluntarioPortalMensaje = signal<string | null>(null);
+  readonly pagoVoluntarioPortalMensajeTipo = signal<'success' | 'error' | null>(null);
 
   private codigoQrActual: string | null = null;
 
@@ -51,15 +53,104 @@ export class InfractorActaPageComponent implements OnInit {
 
 
   solicitarPagoVoluntarioInformativo(): void {
-    this.pagoVoluntarioPortalMensaje.set(
-      'La solicitud de pago voluntario desde portal queda pendiente de implementar.',
-    );
+    const codigoQr = this.codigoQrActual ?? this.acta()?.codigoQr ?? null;
+    if (!codigoQr || this.registrandoPagoVoluntario()) {
+      return;
+    }
+
+    this.registrandoPagoVoluntario.set(true);
+    this.pagoVoluntarioPortalMensaje.set(null);
+    this.pagoVoluntarioPortalMensajeTipo.set(null);
+
+    this.api
+      .solicitarPagoVoluntarioInfractor(codigoQr)
+      .pipe(
+        catchError((err: unknown) => {
+          const status =
+            err && typeof err === 'object' && 'status' in err
+              ? (err as { status?: number }).status
+              : undefined;
+          if (status === 404) {
+            this.estado.set('not-found');
+            this.acta.set(null);
+          } else if (status === 409) {
+            this.pagoVoluntarioPortalMensaje.set(
+              'No es posible solicitar pago voluntario en el estado actual del acta.',
+            );
+            this.pagoVoluntarioPortalMensajeTipo.set('error');
+          } else {
+            this.pagoVoluntarioPortalMensaje.set(
+              'No pudimos registrar la solicitud en este momento.',
+            );
+            this.pagoVoluntarioPortalMensajeTipo.set('error');
+          }
+          return of(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        this.registrandoPagoVoluntario.set(false);
+        if (!respuesta) {
+          return;
+        }
+        this.acta.set(respuesta);
+        this.estado.set('ready');
+        this.pagoVoluntarioPortalMensaje.set(
+          'Solicitud de pago voluntario registrada. Direcci\u00f3n de Faltas evaluar\u00e1 el expediente.',
+        );
+        this.pagoVoluntarioPortalMensajeTipo.set('success');
+      });
   }
 
-  pagarInformativo(): void {
-    this.pagoVoluntarioPortalMensaje.set(
-      'El proceso de pago desde portal queda pendiente de implementar en demo.',
-    );
+  pagarVoluntario(): void {
+    const codigoQr = this.codigoQrActual ?? this.acta()?.codigoQr ?? null;
+    if (!codigoQr || this.registrandoPagoVoluntario()) {
+      return;
+    }
+
+    this.registrandoPagoVoluntario.set(true);
+    this.pagoVoluntarioPortalMensaje.set(null);
+    this.pagoVoluntarioPortalMensajeTipo.set(null);
+
+    this.api
+      .informarPagoVoluntario(codigoQr)
+      .pipe(
+        catchError((err: unknown) => {
+          const status =
+            err && typeof err === 'object' && 'status' in err
+              ? (err as { status?: number }).status
+              : undefined;
+          this.registrandoPagoVoluntario.set(false);
+          if (status === 404) {
+            this.estado.set('not-found');
+            this.acta.set(null);
+          } else if (status === 409) {
+            const msg =
+              err && typeof err === 'object' && 'error' in err
+                ? ((err as { error?: { message?: string } }).error?.message ?? '')
+                : '';
+            this.pagoVoluntarioPortalMensaje.set(
+              msg || 'No es posible registrar el pago en el estado actual del acta.',
+            );
+            this.pagoVoluntarioPortalMensajeTipo.set('error');
+          } else {
+            this.pagoVoluntarioPortalMensaje.set('No pudimos registrar el pago en este momento.');
+            this.pagoVoluntarioPortalMensajeTipo.set('error');
+          }
+          return of(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        this.registrandoPagoVoluntario.set(false);
+        if (!respuesta) {
+          return;
+        }
+        this.acta.set(respuesta);
+        this.estado.set('ready');
+        this.pagoVoluntarioPortalMensaje.set('Pago en proceso de acreditaci\u00f3n. Direcci\u00f3n de Faltas verificar\u00e1 la acreditaci\u00f3n.');
+        this.pagoVoluntarioPortalMensajeTipo.set('success');
+      });
   }
 
   presentarApelacion(): void {

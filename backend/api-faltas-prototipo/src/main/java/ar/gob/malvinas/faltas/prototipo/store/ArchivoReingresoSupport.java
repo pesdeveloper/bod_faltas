@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.prototipo.store;
 
+import ar.gob.malvinas.faltas.prototipo.domain.ActaDocumentoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 
@@ -12,7 +13,9 @@ import java.util.Map;
 
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_FIRMADO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_REVISION;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO;
 
 /**
  * Soporte funcional del área archivo/reingreso del prototipo. Extraído de
@@ -45,6 +48,7 @@ final class ArchivoReingresoSupport {
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, String> accionPendientePorActa;
+    private final Map<String, List<ActaDocumentoMock>> documentosPorActa;
 
     /**
      * Motivo por el cual una acta quedó archivada dentro de la macro-bandeja
@@ -57,10 +61,12 @@ final class ArchivoReingresoSupport {
     ArchivoReingresoSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
-            Map<String, String> accionPendientePorActa) {
+            Map<String, String> accionPendientePorActa,
+            Map<String, List<ActaDocumentoMock>> documentosPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
+        this.documentosPorActa = documentosPorActa;
     }
 
     String getMotivoArchivo(String actaId) {
@@ -202,8 +208,21 @@ final class ArchivoReingresoSupport {
      * PENDIENTE_ANALISIS con bloque D5_ANALISIS, estado PENDIENTE_REVISION y
      * situación ACTIVA; el reingreso queda consumido
      * ({@code permiteReingreso = false}); el motivo de archivo previo se
-     * preserva en el store para trazabilidad; la marca operativa pasa a
-     * {@link PrototipoStore#ACCION_REVISION_POST_REINGRESO}.
+     * preserva en el store para trazabilidad.
+     *
+     * <p>La acción pendiente post-reingreso se infiere del estado documental
+     * y de los eventos previos al archivo, en lugar de asignarse siempre como
+     * {@link PrototipoStore#ACCION_REVISION_POST_REINGRESO}. Esto garantiza
+     * que el acta no quede trabada sin acciones operativas cuando el estado
+     * material permite continuar el trámite:
+     * <ul>
+     *   <li>FALLO_CONDENATORIO:FIRMADO + último evento NOTIFICACION_NO_ENTREGADA
+     *       → {@link PrototipoStore#ACCION_REINTENTAR_NOTIFICACION}.</li>
+     *   <li>FALLO_CONDENATORIO:FIRMADO + último evento NOTIFICACION_VENCIDA
+     *       → {@link PrototipoStore#ACCION_EVALUAR_NOTIFICACION_VENCIDA}.</li>
+     *   <li>Cualquier otro caso
+     *       → {@link PrototipoStore#ACCION_REVISION_POST_REINGRESO} (informativa).</li>
+     * </ul>
      */
     PrototipoStore.ReingresarActaResultado reingresarActaDesdeArchivo(String actaId) {
         ActaMock actual = actas.get(actaId);
@@ -237,14 +256,15 @@ final class ArchivoReingresoSupport {
                 BANDEJA_PENDIENTE_ANALISIS);
         actas.put(actaId, actualizada);
 
-        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_REVISION_POST_REINGRESO);
+        String accionInferida = inferirAccionPendientePostReingreso(actaId);
+        accionPendientePorActa.put(actaId, accionInferida);
 
         String descripcion = motivoArchivoPrevio == null
                 ? "Reingreso desde archivo; acta vuelve a análisis con acción pendiente "
-                        + PrototipoStore.ACCION_REVISION_POST_REINGRESO + "."
+                        + accionInferida + "."
                 : "Reingreso desde archivo (motivo previo " + motivoArchivoPrevio
                         + "); acta vuelve a análisis con acción pendiente "
-                        + PrototipoStore.ACCION_REVISION_POST_REINGRESO + ".";
+                        + accionInferida + ".";
         registrarEvento(
                 actaId,
                 "ACTA_REINGRESADA_DESDE_ARCHIVO",
@@ -257,8 +277,58 @@ final class ArchivoReingresoSupport {
                 actualizada.id(),
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual(),
-                PrototipoStore.ACCION_REVISION_POST_REINGRESO,
+                accionInferida,
                 motivoArchivoPrevio);
+    }
+
+    /**
+     * Infiere la acción pendiente operativa real al reingresar un acta desde
+     * archivo. Garantiza que el expediente no quede trabado sin acciones
+     * cuando el estado documental/eventos permite continuar el trámite.
+     *
+     * <p>Regla: si hay un fallo condenatorio firmado, el antecedente de
+     * notificación determina la acción; si no hay fallo firmado o el estado
+     * es otro, se devuelve {@link PrototipoStore#ACCION_REVISION_POST_REINGRESO}
+     * como marca informativa no bloqueante.
+     */
+    private String inferirAccionPendientePostReingreso(String actaId) {
+        if (!tieneDocumentoConTipoYEstado(actaId, TIPO_DOC_FALLO_CONDENATORIO, ESTADO_DOC_FIRMADO)) {
+            return PrototipoStore.ACCION_REVISION_POST_REINGRESO;
+        }
+        String ultimoEvento = ultimoEventoNotificacionRelevante(actaId);
+        if ("NOTIFICACION_VENCIDA".equals(ultimoEvento)) {
+            return PrototipoStore.ACCION_EVALUAR_NOTIFICACION_VENCIDA;
+        }
+        if ("NOTIFICACION_NO_ENTREGADA".equals(ultimoEvento)) {
+            return PrototipoStore.ACCION_REINTENTAR_NOTIFICACION;
+        }
+        return PrototipoStore.ACCION_REVISION_POST_REINGRESO;
+    }
+
+    private boolean tieneDocumentoConTipoYEstado(String actaId, String tipo, String estado) {
+        List<ActaDocumentoMock> docs = documentosPorActa.get(actaId);
+        if (docs == null) {
+            return false;
+        }
+        return docs.stream().anyMatch(d -> tipo.equals(d.tipoDocumento()) && estado.equals(d.estadoDocumento()));
+    }
+
+    /**
+     * Devuelve el tipo del último evento de notificación relevante para
+     * inferir el reintento post-reingreso, o {@code null} si no hay eventos
+     * de ese tipo en el historial.
+     */
+    private String ultimoEventoNotificacionRelevante(String actaId) {
+        List<ActaEventoMock> eventos = eventosPorActa.get(actaId);
+        if (eventos == null || eventos.isEmpty()) {
+            return null;
+        }
+        return eventos.stream()
+                .filter(e -> "NOTIFICACION_NO_ENTREGADA".equals(e.tipoEvento())
+                        || "NOTIFICACION_VENCIDA".equals(e.tipoEvento()))
+                .max(Comparator.comparing(ActaEventoMock::fechaHora))
+                .map(ActaEventoMock::tipoEvento)
+                .orElse(null);
     }
 
     private void registrarEvento(

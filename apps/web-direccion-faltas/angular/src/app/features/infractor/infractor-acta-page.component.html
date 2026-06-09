@@ -1,4 +1,4 @@
-<div class="infractor-layout">
+﻿<div class="infractor-layout">
   <mat-toolbar color="primary" class="infractor-toolbar">
     <div class="infractor-toolbar__identity">
       <span class="infractor-site-label">Sitio actual: Portal infractor</span>
@@ -47,18 +47,30 @@
             <button
               mat-stroked-button
               type="button"
+              color="primary"
+              [disabled]="registrandoPagoVoluntario()"
               (click)="solicitarPagoVoluntarioInformativo()"
             >
-              Solicitar pago voluntario
+              @if (registrandoPagoVoluntario()) {
+                Registrando...
+              } @else {
+                Solicitar pago voluntario
+              }
             </button>
           }
           @if (a.puedePagar) {
             <button
               mat-stroked-button
               type="button"
-              (click)="pagarInformativo()"
+              color="primary"
+              [disabled]="registrandoPagoVoluntario()"
+              (click)="pagarVoluntario()"
             >
-              Pagar
+              @if (registrandoPagoVoluntario()) {
+                Procesando pago...
+              } @else {
+                Pagar
+              }
             </button>
           }
           @if (a.puedeConfirmarVisualizacionNotificacion) {
@@ -105,7 +117,13 @@
           </p>
         }
         @if (pagoVoluntarioPortalMensaje()) {
-          <p class="infractor-info-message" role="status" aria-live="polite">
+          <p
+            class="infractor-info-message"
+            [class.infractor-info-message--success]="pagoVoluntarioPortalMensajeTipo() === 'success'"
+            [class.infractor-info-message--error]="pagoVoluntarioPortalMensajeTipo() === 'error'"
+            role="status"
+            aria-live="polite"
+          >
             {{ pagoVoluntarioPortalMensaje() }}
           </p>
         }

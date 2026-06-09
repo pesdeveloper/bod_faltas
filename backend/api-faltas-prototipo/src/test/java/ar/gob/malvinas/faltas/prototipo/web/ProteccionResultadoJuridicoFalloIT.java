@@ -100,6 +100,10 @@ class ProteccionResultadoJuridicoFalloIT {
     }
 
     private void prepararPagoInformadoPendienteConfirmacion() throws Exception {
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\":12345.67}"))
+                .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-pago-informado"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/adjuntar-comprobante-pago-informado"))

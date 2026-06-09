@@ -547,12 +547,12 @@
                 @if (d.tipoGestionExterna === 'APREMIO') {
                   <p class="detail-card__text">Acta en Apremio. Registrar pago o reingresar sin pago.</p>
                   <div class="gestion-externa-actions">
-                    <button mat-flat-button type="button" color="primary"
+                    <button mat-flat-button type="button" color="primary" class="action-button--external"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
                       (click)="apremioRegistrarPago()">
                       @if (ejecutandoGestionExternaAccion() === 'APREMIO_PAGO') { Registrando... } @else { Registrar pago en apremio }
                     </button>
-                    <button mat-stroked-button type="button" color="primary"
+                    <button mat-stroked-button type="button" color="primary" class="action-button--external"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
                       (click)="apremioReingresarSinPago()">
                       @if (ejecutandoGestionExternaAccion() === 'APREMIO_SIN_PAGO') { Reingresando... } @else { Reingresar sin pago }
@@ -561,12 +561,12 @@
                 } @else if (d.tipoGestionExterna === 'JUZGADO_DE_PAZ') {
                   <p class="detail-card__text">Acta en Juzgado de Paz. Registrar resolución judicial.</p>
                   <div class="gestion-externa-actions">
-                    <button mat-flat-button type="button" color="primary"
+                    <button mat-flat-button type="button" color="primary" class="action-button--external"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
                       (click)="juzgadoReingresarAbsuelto()">
                       @if (ejecutandoGestionExternaAccion() === 'JUZGADO_ABSUELTO') { Registrando... } @else { Reingresar absuelto }
                     </button>
-                    <button mat-stroked-button type="button" color="primary"
+                    <button mat-stroked-button type="button" color="primary" class="action-button--external"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
                       (click)="juzgadoReingresarCondenaConfirmada()">
                       @if (ejecutandoGestionExternaAccion() === 'JUZGADO_CONDENA') { Registrando... } @else { Confirmar condena }
@@ -577,7 +577,7 @@
                       [value]="nuevoMontoJuzgado()"
                       (input)="nuevoMontoJuzgado.set($any($event.target).value)"
                       [disabled]="ejecutandoGestionExternaAccion() !== null" />
-                    <button mat-stroked-button type="button" color="accent"
+                    <button mat-stroked-button type="button" color="accent" class="action-button--external"
                       [disabled]="ejecutandoGestionExternaAccion() !== null || !nuevoMontoJuzgado().trim()"
                       (click)="juzgadoReingresarMontoModificado()">
                       @if (ejecutandoGestionExternaAccion() === 'JUZGADO_MONTO') { Registrando... } @else { Modificar monto de condena }
@@ -586,7 +586,7 @@
                 } @else {
                   <p class="detail-card__text">Acta en gestión externa. Para continuar internamente debe retornar.</p>
                   <div class="gestion-externa-actions">
-                    <button mat-flat-button type="button" color="primary"
+                    <button mat-flat-button type="button" color="primary" class="action-button--external"
                       [disabled]="ejecutandoGestionExternaAccion() !== null"
                       (click)="retornarGestionExterna()">
                       @if (ejecutandoGestionExternaAccion() === 'RETORNAR') { Retornando... } @else { Retornar de gestión externa }
@@ -605,6 +605,7 @@
                   mat-stroked-button
                   type="button"
                   color="primary"
+                  class="action-button--external"
                   [disabled]="ejecutandoGestionExternaAccion() !== null"
                   (click)="derivarGestionExterna('APREMIO')"
                 >
@@ -618,6 +619,7 @@
                   mat-stroked-button
                   type="button"
                   color="primary"
+                  class="action-button--external"
                   [disabled]="ejecutandoGestionExternaAccion() !== null"
                   (click)="derivarGestionExterna('JUZGADO_DE_PAZ')"
                 >
@@ -965,13 +967,14 @@
                     mat-stroked-button
                     type="button"
                     color="primary"
+                    class="action-button--process"
                     [disabled]="registrandoVencimientoPlazoApelacion() || registrandoApelacion()"
                     (click)="registrarVencimientoPlazoApelacion()"
                   >
                     @if (registrandoVencimientoPlazoApelacion()) {
                       Registrando vencimiento...
                     } @else {
-                      Registrar vencimiento de plazo
+                      Registrar vencimiento de plazo (proceso)
                     }
                   </button>
                 }
@@ -1321,19 +1324,36 @@
                         }
                       </button>
                     } @else if (puedeMostrarAccionCumplimientoMaterial(pendiente)) {
-                      <button
-                        mat-stroked-button
-                        type="button"
-                        color="primary"
-                        [disabled]="cumpliendoMaterial() !== null"
-                        (click)="cumplirMaterialmente(pendiente)"
-                      >
-                        @if (cumpliendoMaterial() === pendiente) {
-                          Registrando...
-                        } @else {
-                          {{ etiquetaCumplimientoMaterial(pendiente) }}
-                        }
-                      </button>
+                      @if (pendiente === 'LIBERACION_RODADO') {
+                        <button
+                          mat-flat-button
+                          type="button"
+                          color="primary"
+                          class="action-button--external"
+                          [disabled]="cumpliendoMaterial() !== null"
+                          (click)="cumplirMaterialmente(pendiente)"
+                        >
+                          @if (cumpliendoMaterial() === pendiente) {
+                            Registrando...
+                          } @else {
+                            {{ etiquetaCumplimientoMaterial(pendiente) }}
+                          }
+                        </button>
+                      } @else {
+                        <button
+                          mat-stroked-button
+                          type="button"
+                          color="primary"
+                          [disabled]="cumpliendoMaterial() !== null"
+                          (click)="cumplirMaterialmente(pendiente)"
+                        >
+                          @if (cumpliendoMaterial() === pendiente) {
+                            Registrando...
+                          } @else {
+                            {{ etiquetaCumplimientoMaterial(pendiente) }}
+                          }
+                        </button>
+                      }
                     }
                   </li>
                 }

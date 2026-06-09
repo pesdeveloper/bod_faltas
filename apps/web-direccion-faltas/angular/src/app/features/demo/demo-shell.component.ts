@@ -156,6 +156,7 @@ const ETIQUETA_RESULTADO_NOTIFICACION: Record<ResultadoNotificacionDemo, string>
 
 const ETIQUETA_ACCION_PAGO: Record<AccionPagoVoluntarioDemo, string> = {
   SOLICITAR: 'Pago voluntario',
+  FIJAR_MONTO: 'Fijar monto pago voluntario',
   INFORMAR: 'Informar pago',
   ADJUNTAR_COMPROBANTE: 'Adjuntar comprobante mock',
   CONFIRMAR: 'Confirmar pago',
@@ -164,6 +165,7 @@ const ETIQUETA_ACCION_PAGO: Record<AccionPagoVoluntarioDemo, string> = {
 
 const ETIQUETA_ACCION_PAGO_EN_CURSO: Record<AccionPagoVoluntarioDemo, string> = {
   SOLICITAR: 'Registrando...',
+  FIJAR_MONTO: 'Fijando monto...',
   INFORMAR: 'Informando...',
   ADJUNTAR_COMPROBANTE: 'Adjuntando...',
   CONFIRMAR: 'Confirmando...',
@@ -213,6 +215,7 @@ const SITUACIONES_PAGO_CONDENA_CONOCIDAS: ReadonlyArray<SituacionPagoCondenaDemo
 // computa el backend en accionesPagoVoluntarioDisponibles.
 const ACCIONES_PAGO_CONOCIDAS: ReadonlyArray<AccionPagoVoluntarioDemo> = [
   'SOLICITAR',
+  'FIJAR_MONTO',
   'INFORMAR',
   'ADJUNTAR_COMPROBANTE',
   'CONFIRMAR',
@@ -2160,7 +2163,7 @@ export class DemoShellComponent implements OnInit {
 
   /** True cuando hay que pedir monto al ejecutar la accion. */
   accionPagoRequiereMonto(accion: AccionPagoVoluntarioDemo): boolean {
-    return accion === 'SOLICITAR';
+    return accion === 'SOLICITAR' || accion === 'FIJAR_MONTO';
   }
 
   /**
@@ -2186,6 +2189,10 @@ export class DemoShellComponent implements OnInit {
         // Direccion fija el monto del acta; el backend valida > 0.
         const monto = this.montoPagoVoluntarioParseado();
         return this.api.registrarSolicitudPagoVoluntario(actaId, { monto: monto ?? 0 });
+      }
+      case 'FIJAR_MONTO': {
+        const monto = this.montoPagoVoluntarioParseado();
+        return this.api.fijarMontoPagoVoluntario(actaId, { monto: monto ?? 0 });
       }
       case 'INFORMAR':
         return this.api.registrarPagoInformado(actaId);

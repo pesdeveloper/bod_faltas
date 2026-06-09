@@ -26,9 +26,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *       ({@code cerrable == true}) → archivar-acta responde 409 y la
  *       bandeja no transiciona; cerrar-acta sigue funcionando.</li>
  *   <li>{@code ACTA-0021}: precarga en {@code PENDIENTE_ANALISIS} con
- *       {@code PAGO_CONFIRMADO} y tres pendientes bloqueantes activos
- *       ({@code cerrable == false}) → archivar-acta sigue habilitado
- *       (regla previa intacta).</li>
+ *       {@code PAGO_CONFIRMADO} y dos pendientes bloqueantes activos
+ *       ({@code LIBERACION_RODADO}, {@code ENTREGA_DOCUMENTACION};
+ *       sin medida preventiva — {@code cerrable == false}) → archivar-acta
+ *       sigue habilitado (regla previa intacta).</li>
  *   <li>{@code ACTA-0007}: precarga en {@code ARCHIVO} con
  *       {@code permiteReingreso == true} → reingresar-acta sigue
  *       funcionando.</li>
@@ -86,7 +87,7 @@ class ArchivarActaCerrableRechazoIT {
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("PAGO_CONFIRMADO"))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(3));
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2));
 
         mvc.perform(post(B + "/actas/" + id + "/acciones/archivar-acta"))
                 .andExpect(status().isOk())

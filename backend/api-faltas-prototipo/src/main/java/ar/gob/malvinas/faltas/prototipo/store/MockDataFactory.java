@@ -12,6 +12,7 @@ import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
 import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -90,6 +91,11 @@ public class MockDataFactory {
         cargarActa0124FiscalizacionInicialDemo(store);
         cargarActa0125BromatologiaInicialDemo(store);
         cargarActa0130GestionExternaApremioDemo(store);
+
+        cargarActa0131AbsueltoArchivoReingresoContinuidadDemo(store);
+        cargarActa0132CondenaFirmeConfirmadoArchivoReingresoContinuidadDemo(store);
+        cargarActa0133CondenaFirmePendienteArchivoReingresoContinuidadDemo(store);
+        cargarActa0134CondenaFirmeInformadoArchivoReingresoContinuidadDemo(store);
 
         completarDependenciasDemo(store);
     }
@@ -1629,13 +1635,14 @@ public class MockDataFactory {
 
     /**
      * Caso demo explícito (cerrabilidad + rama de pago confirmado): {@code ACTA-0021},
-     * mismo tronco operativo y mismas anclas/reconocimientos que
-     * {@link #cargarActa0019CerrabilidadMaterialesDemo(PrototipoStore)}, con
-     * {@code resultadoFinal} mock {@code PAGO_CONFIRMADO} precargado. Atajo
-     * para probar material de cierre sin el circuito de pago; el recorrido
-     * integrado pago real → {@code PAGO_CONFIRMADO} es {@code ACTA-0022}.
-     * Misma API: pendientes → resolución documental → cumplimiento material →
-     * {@code cerrable} → cierre vía {@code cerrarActaDesdeAnalisis}.
+     * tránsito urbano con {@code resultadoFinal} mock {@code PAGO_CONFIRMADO} precargado.
+     * Anclas: {@code ACTA_RETENCION} y {@code CONSTATACION_RETENCION_DOCUMENTACION};
+     * pendientes: {@code LIBERACION_RODADO} y {@code ENTREGA_DOCUMENTACION}.
+     * Tránsito puede tener medidas preventivas excepcionales si están justificadas por
+     * ordenanza/artículo; este mock no representa ese caso — la retención de rodado
+     * y documentación no son medidas preventivas. El recorrido integrado con pago
+     * real es {@code ACTA-0022}; el circuito de levantamiento de medida preventiva
+     * (CFN) se testea con {@code ACTA-0022} que sí tiene ancla {@code MEDIDA_PREVENTIVA}.
      */
     private void cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(PrototipoStore store) {
         String id = "ACTA-0021";
@@ -1655,7 +1662,9 @@ public class MockDataFactory {
                 "Demo Pago confirmado (cerrabilidad)",
                 "DNI 33.333.333",
                 "Oficial Demo",
-                "Caso demo ACTA-0021: pago confirmado; medida, rodado y documentación (anclas + reconocimiento; mock).",
+                "Caso demo ACTA-0021: pago confirmado; rodado retenido y documentación retenida (anclas + reconocimiento; mock). "
+                        + "Tránsito puede tener medidas preventivas excepcionales si están justificadas por ordenanza/artículo; "
+                        + "este mock no representa ese caso.",
                 bandeja);
         store.getActas().put(id, acta);
 
@@ -1667,17 +1676,10 @@ public class MockDataFactory {
                 "ALTA_DEMO_CERRABILIDAD_PAGO_CONFIRMADO",
                 "D5_ANALISIS",
                 "D5_ANALISIS",
-                "Precarga demo: resultado PAGO_CONFIRMADO. Tres orígenes vía reconocimiento sobre anclas de expediente (mock)."));
+                "Precarga demo: resultado PAGO_CONFIRMADO. Dos orígenes vía reconocimiento: rodado retenido y documentación retenida (mock)."));
         store.getEventosPorActa().put(id, eventos);
 
         List<ActaDocumentoMock> docs = new ArrayList<>();
-        docs.add(
-                new ActaDocumentoMock(
-                        "DOC-0021-00",
-                        id,
-                        "MEDIDA_PREVENTIVA",
-                        "PENDIENTE_FIRMA",
-                        "medida_preventiva_0021.pdf"));
         docs.add(
                 new ActaDocumentoMock(
                         "DOC-0021-01",
@@ -1695,13 +1697,9 @@ public class MockDataFactory {
         store.getDocumentosPorActa().put(id, docs);
 
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO);
+        store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.CONFIRMADO);
+        store.setMontoPagoVoluntario(id, new BigDecimal("8750.00"));
 
-        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rMed =
-                store.reconocerOrigenBloqueanteMedidaPreventiva(id);
-        if (rMed.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
-            throw new IllegalStateException(
-                    "Carga demo ACTA-0021: reconocer medida preventiva, esperado OK, obtuvo: " + rMed.estado());
-        }
         PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rRodado =
                 store.reconocerOrigenBloqueanteSecuestroRodado(id);
         if (rRodado.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
@@ -1717,10 +1715,14 @@ public class MockDataFactory {
     }
 
     /**
-     * Caso demo e2e: {@code ACTA-0022} — mismas anclas de expediente que
+     * Caso demo e2e: {@code ACTA-0022} — tránsito urbano con tres anclas:
+     * {@code MEDIDA_PREVENTIVA}, {@code ACTA_RETENCION} y
+     * {@code CONSTATACION_RETENCION_DOCUMENTACION}. A diferencia de
      * {@link #cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(PrototipoStore)}
-     * ({@code MEDIDA_PREVENTIVA}, {@code ACTA_RETENCION},
-     * {@code CONSTATACION_RETENCION_DOCUMENTACION}), partida en
+     * (que solo tiene retención de rodado y documentación, sin medida preventiva),
+     * {@code ACTA-0022} incluye el ancla {@code MEDIDA_PREVENTIVA} con justificación
+     * de campo (evento {@code MEDIDA_PREVENTIVA_APLICABLE}); es el mock de referencia
+     * para testear el circuito de levantamiento (CFN). Partida en
      * {@code ACTAS_EN_ENRIQUECIMIENTO} como {@link #cargarActa0018PagoVoluntarioDemo(PrototipoStore)}.
      * No fija {@code resultadoFinal} ni invoca reconocimientos: el
      * {@code PAGO_CONFIRMADO} nace solo al confirmar el pago informado, y
@@ -1903,8 +1905,8 @@ public class MockDataFactory {
     /**
      * <p>Recorrido demo e2e (tránsito + pago + cierre): {@code ACTA-0024}.
      *
-     * <p>Modelo principal: retención de rodado, de documentación y medida
-     * preventiva nacen como <b>datos de tránsito</b> (satélite
+     * <p>Modelo principal: retención de rodado y documentación nacen como
+     * <b>datos de tránsito</b> (satélite
      * {@link ar.gob.malvinas.faltas.prototipo.domain.ActaTransitoMock} + anclas
      * en expediente coherentes con
      * {@link CerrabilidadSupport#ensureOrigenesSincronizados}. No replican en
@@ -1912,6 +1914,13 @@ public class MockDataFactory {
      * {@code POST /acciones/registrar-constatacion-material-temprana} del
      * prototipo es mutación demo/técnica y pruebas (duplicado, D1/D2), no el
      * camino conceptual de este acta.
+     *
+     * <p>{@code medidaPreventivaAplicable = false} (Slice 24A). En tránsito puede
+     * existir medida preventiva real por ordenanza/artículo; lo que no corresponde
+     * es usar {@code MEDIDA_PREVENTIVA} para representar automáticamente la
+     * retención de rodado/documentación. Dos bloqueantes de cierre:
+     * {@code LIBERACION_RODADO} y {@code ENTREGA_DOCUMENTACION}.
+     * El eje {@code MEDIDA_PREVENTIVA} queda {@code NO_APLICA}.
      *
      * <p>Base de URL: {@code /api/prototipo}. Antes de la demo: {@code POST /reset}.
      *
@@ -1933,7 +1942,7 @@ public class MockDataFactory {
     private void cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(PrototipoStore store) {
         String id = "ACTA-0024";
         String bandeja = BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
-        ActaTransitoMock tr = new ActaTransitoMock(true, true, true, true);
+        ActaTransitoMock tr = new ActaTransitoMock(true, true, true, false);
         store.putActaTransitoMock(id, tr);
         ActaMock acta = new ActaMock(
                 id,
@@ -1950,7 +1959,7 @@ public class MockDataFactory {
                 "Demo constatación material temprana (0024)",
                 "DNI 66.666.666",
                 "Oficial Demo",
-                "Caso ACTA-0024: tránsito con retención rodado, documentación y medida (flags mock + anclas al nacimiento).",
+                "Caso ACTA-0024: tránsito con retención de rodado y documentación (flags mock + anclas al nacimiento; sin medida preventiva artificial).",
                 bandeja);
         store.getActas().put(id, acta);
 
@@ -4193,6 +4202,8 @@ public class MockDataFactory {
 
         // El comprobante ya fue adjuntado: la situación es PENDIENTE_CONFIRMACION
         // (no PAGO_INFORMADO, que es el estado previo al adjunto del comprobante).
+        // El monto fue fijado por Dirección de Faltas antes del pago informado.
+        store.setMontoPagoVoluntario(id, java.math.BigDecimal.valueOf(8500));
         store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
         store.setPagoInformadoDemo(
                 id,
@@ -4433,5 +4444,194 @@ public class MockDataFactory {
                 "Acta de bromatología ingresada; pendiente identificación del establecimiento."));
         store.getEventosPorActa().put(id, eventos);
         store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
+    }
+    /**
+     * Caso continuidad de reingreso D: acta con resultadoFinal ABSUELTO en ARCHIVO.
+     * Precargada en ARCHIVO para cubrir el caso de reingreso desde un estado absuelto.
+     * Tras reingresar, la acta debe quedar cerrable=true sin pendientes bloqueantes.
+     */
+    private void cargarActa0131AbsueltoArchivoReingresoContinuidadDemo(PrototipoStore store) {
+        String id = "ACTA-0131";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0131",
+                "SEGURIDAD_VIAL",
+                "ARCHIVO",
+                "PENDIENTE_REVISION",
+                "ARCHIVO",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 5, 1, 9, 0),
+                "Sosa, Andrea",
+                "DNI 40.001.131",
+                "Oficial Demo",
+                "Caso demo ACTA-0131: absuelto en archivo; reingreso y continuidad caso D.",
+                BANDEJA_ARCHIVO);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0131-01", id,
+                LocalDateTime.of(2026, 5, 1, 9, 10),
+                "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
+                "D5_ANALISIS", "ARCHIVO",
+                "Archivado manualmente para demo de continuidad post-reingreso."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0131-01", id, "FALLO_ABSOLUTORIO", "FIRMADO",
+                "fallo_absolutorio_0131.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setMotivoArchivo(id, "ARCHIVO_DESDE_ANALISIS_DIRECTO");
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.ABSUELTO);
+    }
+
+    /**
+     * Caso continuidad de reingreso G: acta con resultadoFinal CONDENA_FIRME y
+     * situacionPagoCondena CONFIRMADO en ARCHIVO.
+     * Tras reingresar, la acta debe quedar cerrable=true y sin gestion externa disponible.
+     */
+    private void cargarActa0132CondenaFirmeConfirmadoArchivoReingresoContinuidadDemo(PrototipoStore store) {
+        String id = "ACTA-0132";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0132",
+                "TRANSITO_URBANO",
+                "ARCHIVO",
+                "PENDIENTE_REVISION",
+                "ARCHIVO",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 5, 10, 10, 0),
+                "Paz, Miguel",
+                "DNI 41.001.132",
+                "Oficial Demo",
+                "Caso demo ACTA-0132: condena firme pago confirmado en archivo; reingreso caso G.",
+                BANDEJA_ARCHIVO);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0132-01", id,
+                LocalDateTime.of(2026, 5, 10, 10, 10),
+                "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
+                "D5_ANALISIS", "ARCHIVO",
+                "Archivado manualmente para demo de continuidad post-reingreso."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0132-01", id, "FALLO_CONDENATORIO", "FIRMADO",
+                "fallo_condenatorio_0132.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setMotivoArchivo(id, "ARCHIVO_DESDE_ANALISIS_DIRECTO");
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(75000));
+        store.setSituacionPagoCondenaDemo(id, PrototipoStore.SituacionPagoCondena.CONFIRMADO);
+    }
+
+    /**
+     * Caso continuidad de reingreso E: acta con resultadoFinal CONDENA_FIRME y
+     * situacionPagoCondena PENDIENTE en ARCHIVO. Precargada directamente en ARCHIVO
+     * porque el circuito normal bloquea archivar actas con CONDENA_FIRME (deben
+     * resolverse por pago/gestión externa). Tras reingresar, gestión externa
+     * debe estar disponible.
+     */
+    private void cargarActa0133CondenaFirmePendienteArchivoReingresoContinuidadDemo(PrototipoStore store) {
+        String id = "ACTA-0133";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0133",
+                "TRANSITO_URBANO",
+                "ARCHIVO",
+                "PENDIENTE_REVISION",
+                "ARCHIVO",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 5, 12, 10, 0),
+                "Ruiz, Laura",
+                "DNI 42.001.133",
+                "Oficial Demo",
+                "Caso demo ACTA-0133: condena firme pago pendiente en archivo; reingreso caso E.",
+                BANDEJA_ARCHIVO);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0133-01", id,
+                LocalDateTime.of(2026, 5, 12, 10, 10),
+                "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
+                "D5_ANALISIS", "ARCHIVO",
+                "Archivado manualmente para demo de continuidad post-reingreso."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0133-01", id, "FALLO_CONDENATORIO", "FIRMADO",
+                "fallo_condenatorio_0133.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setMotivoArchivo(id, "ARCHIVO_DESDE_ANALISIS_DIRECTO");
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(60000));
+        store.setSituacionPagoCondenaDemo(id, PrototipoStore.SituacionPagoCondena.PENDIENTE);
+    }
+
+    /**
+     * Caso continuidad de reingreso F: acta con resultadoFinal CONDENA_FIRME y
+     * situacionPagoCondena INFORMADO en ARCHIVO. Precargada directamente en ARCHIVO
+     * porque el circuito normal bloquea archivar actas con CONDENA_FIRME. Tras
+     * reingresar, deben estar disponibles confirmar y observar pago; gestión
+     * externa no disponible.
+     */
+    private void cargarActa0134CondenaFirmeInformadoArchivoReingresoContinuidadDemo(PrototipoStore store) {
+        String id = "ACTA-0134";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0134",
+                "TRANSITO_URBANO",
+                "ARCHIVO",
+                "PENDIENTE_REVISION",
+                "ARCHIVO",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 5, 14, 11, 0),
+                "Vega, Carlos",
+                "DNI 43.001.134",
+                "Oficial Demo",
+                "Caso demo ACTA-0134: condena firme pago informado en archivo; reingreso caso F.",
+                BANDEJA_ARCHIVO);
+        store.getActas().put(id, acta);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0134-01", id,
+                LocalDateTime.of(2026, 5, 14, 11, 10),
+                "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
+                "D5_ANALISIS", "ARCHIVO",
+                "Archivado manualmente para demo de continuidad post-reingreso."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0134-01", id, "FALLO_CONDENATORIO", "FIRMADO",
+                "fallo_condenatorio_0134.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setMotivoArchivo(id, "ARCHIVO_DESDE_ANALISIS_DIRECTO");
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(55000));
+        store.setSituacionPagoCondenaDemo(id, PrototipoStore.SituacionPagoCondena.INFORMADO);
     }
 }

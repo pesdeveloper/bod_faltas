@@ -556,6 +556,7 @@ export type SituacionPagoDemo =
  */
 export type AccionPagoVoluntarioDemo =
   | 'SOLICITAR'
+  | 'FIJAR_MONTO'
   | 'INFORMAR'
   | 'ADJUNTAR_COMPROBANTE'
   | 'CONFIRMAR'

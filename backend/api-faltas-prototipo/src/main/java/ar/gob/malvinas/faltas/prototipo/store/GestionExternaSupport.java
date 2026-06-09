@@ -146,7 +146,20 @@ final class GestionExternaSupport {
         ActaMock actual = actas.get(actaId);
         if (actual == null) {
             return new PrototipoStore.DerivarAGestionExternaResultado(
-                    PrototipoStore.DerivarAGestionExternaEstado.NOT_FOUND, null, null, null, null);
+                    PrototipoStore.DerivarAGestionExternaEstado.NOT_FOUND, null, null, null, null, null);
+        }
+        // Defensa explícita: situación de pago impide derivación.
+        PrototipoStore.SituacionPagoCondena situacionPago = situacionPagoCondenaPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoCondena.PENDIENTE);
+        if (situacionPago == PrototipoStore.SituacionPagoCondena.CONFIRMADO) {
+            return new PrototipoStore.DerivarAGestionExternaResultado(
+                    PrototipoStore.DerivarAGestionExternaEstado.CONFLICT, null, null, null, null,
+                    "No se puede derivar a gestión externa una condena con pago confirmado.");
+        }
+        if (situacionPago == PrototipoStore.SituacionPagoCondena.INFORMADO) {
+            return new PrototipoStore.DerivarAGestionExternaResultado(
+                    PrototipoStore.DerivarAGestionExternaEstado.CONFLICT, null, null, null, null,
+                    "No se puede derivar a gestión externa mientras el pago de condena informado está pendiente de confirmación.");
         }
         String marcaActual = accionPendientePorActa.get(actaId);
         boolean marcaHabilitaDerivacion =
@@ -157,7 +170,7 @@ final class GestionExternaSupport {
                 || (!marcaHabilitaDerivacion && !condenaFirmeDerivable)
                 || tipoGestionExternaPorActa.containsKey(actaId)) {
             return new PrototipoStore.DerivarAGestionExternaResultado(
-                    PrototipoStore.DerivarAGestionExternaEstado.CONFLICT, null, null, null, null);
+                    PrototipoStore.DerivarAGestionExternaEstado.CONFLICT, null, null, null, null, null);
         }
 
         boolean esRederivacion =
@@ -208,7 +221,8 @@ final class GestionExternaSupport {
                 actualizada.id(),
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual(),
-                tipo);
+                tipo,
+                null);
     }
 
     private boolean condenaFirmeDerivable(String actaId) {

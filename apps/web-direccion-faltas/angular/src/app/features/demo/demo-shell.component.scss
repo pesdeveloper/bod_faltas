@@ -27,6 +27,23 @@ $demo-control-radius: 8px;
     --mdc-icon-button-container-shape: var(--demo-control-radius);
     border-radius: var(--demo-control-radius);
   }
+
+  // Acciones simuladas, automaticas o de circuito externo/ecosistema: ambar con texto negro.
+  // Incluye: procesos automaticos (daemon/job), apps externas (corralon, apremio),
+  // y circuitos de otras aplicaciones del ecosistema municipal.
+  .action-button--process,
+  .action-button--external {
+    --mdc-outlined-button-outline-color: #b8820a;
+    --mdc-outlined-button-label-text-color: #1a1a1a;
+    --mdc-filled-button-container-color: #f9c74f;
+    --mdc-filled-button-label-text-color: #1a1a1a;
+  }
+
+  .action-button--process:not([disabled]),
+  .action-button--external:not([disabled]) {
+    background-color: #f9c74f;
+    color: #1a1a1a;
+  }
 }
 mat-sidenav-content {
   display: flex;
