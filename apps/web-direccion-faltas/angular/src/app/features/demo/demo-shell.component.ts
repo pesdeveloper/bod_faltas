@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -3005,7 +3005,8 @@ export class DemoShellComponent implements OnInit {
   }
 
   badgesDe(acta: ActaResumenDemo): BadgeDemo[] {
-    return badgesDesdeActaResumen(acta);
+    const permiteReingreso = (acta as ActaDetalleDemo).permiteReingreso;
+    return badgesDesdeActaResumen(acta, { permiteReingreso });
   }
 
   claseBadge(badge: BadgeDemo): string {

@@ -1,7 +1,23 @@
 import { ActaResumenDemo, BadgeDemo, CerrabilidadDemo } from '../models/prototipo-faltas.models';
 
-/** Solo presentación: convierte campos del backend en chips visibles. */
-export function badgesDesdeActaResumen(acta: ActaResumenDemo): BadgeDemo[] {
+/** Solo presentacion: convierte campos del backend en chips visibles. */
+export function badgesDesdeActaResumen(
+  acta: ActaResumenDemo,
+  opts?: { permiteReingreso?: boolean },
+): BadgeDemo[] {
+  // Para actas archivadas: no mostrar chips operativos que sugieran cierre,
+  // condena pendiente o acciones internas normales. Solo el motivo de archivo
+  // y un estado claro de archivo (recuperable o definitivo).
+  if (acta.bandejaActual === 'ARCHIVO') {
+    const badges: BadgeDemo[] = [];
+    if (acta.motivoArchivo) {
+      badges.push({ etiqueta: acta.motivoArchivo, tono: 'neutral' });
+    }
+    const etiquetaEstado = opts?.permiteReingreso === true ? 'Archivada recuperable' : 'Archivada';
+    badges.push({ etiqueta: etiquetaEstado, tono: 'neutral' });
+    return badges;
+  }
+
   const badges: BadgeDemo[] = [];
 
   if (acta.situacionPago) {
