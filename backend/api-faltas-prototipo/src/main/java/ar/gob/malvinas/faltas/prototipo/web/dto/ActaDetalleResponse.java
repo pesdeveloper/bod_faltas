@@ -11,6 +11,7 @@ public record ActaDetalleResponse(
         String estadoProcesoActual,
         String situacionAdministrativaActual,
         String situacionPago,
+        String tipoPago,
         PagoInformadoResponse pagoInformado,
         boolean estaCerrada,
         boolean permiteReingreso,
@@ -39,5 +40,7 @@ public record ActaDetalleResponse(
         BromatologiaDatoResponse datosBromatologia,
         BigDecimal montoPagoVoluntario,
         BigDecimal montoCondena,
-        List<ActaNotificacionResponse> notificaciones) {
+        List<ActaNotificacionResponse> notificaciones,
+        AccionesUiResponse accionesUi) {
 }
+

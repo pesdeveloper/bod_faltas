@@ -452,6 +452,46 @@
           </section>
           }
 
+          @if (puedeMostrarBloqueEnriquecimiento()) {
+          <section class="detail-card" aria-labelledby="enriquecimiento-acta-titulo">
+            <h3 id="enriquecimiento-acta-titulo" class="detail-card__title">Enriquecimiento</h3>
+            @if (enriquecimientoMensaje() || enriquecimientoError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (enriquecimientoMensaje()) {
+                  <p class="demo-feedback-ok">{{ enriquecimientoMensaje() }}</p>
+                }
+                @if (enriquecimientoError()) {
+                  <p class="demo-feedback-error">{{ enriquecimientoError() }}</p>
+                }
+              </div>
+            }
+            @if (detalle()?.accionesUi?.enviarANotificacion) {
+              <button
+                mat-flat-button
+                type="button"
+                color="primary"
+                [disabled]="ejecutandoEnriquecimientoAccion() !== null"
+                (click)="enviarActaANotificacion()"
+              >
+                Enviar a notificación
+              </button>
+            }
+            @if (detalle()?.accionesUi?.anularActa) {
+              <button
+                mat-stroked-button
+                type="button"
+                color="warn"
+                [disabled]="ejecutandoEnriquecimientoAccion() !== null"
+                (click)="anularActaPorNulidad()"
+              >
+                Anular acta
+              </button>
+            }
+            @if (!detalle()?.accionesUi?.enviarANotificacion && !detalle()?.accionesUi?.anularActa && !enriquecimientoMensaje() && !enriquecimientoError()) {
+              <p class="detail-empty">Sin acciones de enriquecimiento disponibles.</p>
+            }
+          </section>
+          }
           @if (puedeMostrarBloqueArchivoReingreso()) {
           <section class="detail-card" aria-labelledby="archivo-acta-titulo">
             <h3 id="archivo-acta-titulo" class="detail-card__title">Archivo / reingreso</h3>
@@ -825,7 +865,7 @@
                         placeholder="Ej: 12345.67"
                         [value]="montoPagoVoluntarioInput()"
                         (input)="actualizarMontoPagoVoluntarioInput($any($event.target).value)"
-                        [disabled]="ejecutandoPagoAccion() !== null"
+                        [disabled]="ejecutandoPagoAccion() !== null || registrandoVencimientoPagoVoluntario()"
                       />
                       <p class="detail-card__hint">
                         Fija el monto para dejar disponible el pago voluntario.
@@ -843,6 +883,21 @@
                       {{ etiquetaAccionPagoEnCurso(accion) }}
                     } @else {
                       {{ etiquetaAccionPago(accion) }}
+                    }
+                  </button>
+                }
+                @if (puedeRegistrarVencimientoPagoVoluntario()) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="warn"
+                    [disabled]="ejecutandoPagoAccion() !== null || registrandoVencimientoPagoVoluntario()"
+                    (click)="registrarVencimientoPagoVoluntario()"
+                  >
+                    @if (registrandoVencimientoPagoVoluntario()) {
+                      Registrando vencimiento...
+                    } @else {
+                      Registrar vencimiento de pago voluntario
                     }
                   </button>
                 }
@@ -978,6 +1033,43 @@
                     }
                   </button>
                 }
+              </div>
+            }
+          </section>
+          }
+
+          @if (consentirCondenaYRegistrarPagoHabilitado() || consentirCondenaYRegistrarPagoMensaje() || consentirCondenaYRegistrarPagoError()) {
+          <section class="detail-card" aria-labelledby="consentir-condena-titulo">
+            <h3 id="consentir-condena-titulo" class="detail-card__title">Consentir condena y registrar pago</h3>
+            <p class="detail-card__hint">
+              El infractor se presenta presencialmente, consiente la condena y registra el pago.
+              La acreditaci&oacute;n queda pendiente de confirmaci&oacute;n; no cierra autom&aacute;ticamente.
+            </p>
+            @if (consentirCondenaYRegistrarPagoMensaje() || consentirCondenaYRegistrarPagoError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (consentirCondenaYRegistrarPagoMensaje()) {
+                  <p class="demo-feedback-ok">{{ consentirCondenaYRegistrarPagoMensaje() }}</p>
+                }
+                @if (consentirCondenaYRegistrarPagoError()) {
+                  <p class="demo-feedback-error">{{ consentirCondenaYRegistrarPagoError() }}</p>
+                }
+              </div>
+            }
+            @if (consentirCondenaYRegistrarPagoHabilitado()) {
+              <div class="apelacion-actions">
+                <button
+                  mat-flat-button
+                  type="button"
+                  color="primary"
+                  [disabled]="ejecutandoConsentirCondenaYRegistrarPago()"
+                  (click)="ejecutarConsentirCondenaYRegistrarPago()"
+                >
+                  @if (ejecutandoConsentirCondenaYRegistrarPago()) {
+                    Registrando...
+                  } @else {
+                    Consentir condena y registrar pago
+                  }
+                </button>
               </div>
             }
           </section>

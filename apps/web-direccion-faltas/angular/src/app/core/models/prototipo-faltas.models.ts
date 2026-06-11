@@ -1,4 +1,4 @@
-﻿export type BandejaCodigo =
+export type BandejaCodigo =
   | 'NOTIFICACIONES'
   | 'LABRADAS'
   | 'ACTAS_EN_ENRIQUECIMIENTO'
@@ -142,6 +142,38 @@ export interface ActaNotificacionTipificadaDemo {
   diasPlazoNotificacionElectronica: number | null;
 }
 
+export interface AccionesUiDemo {
+  archivoReingreso: boolean;
+  consentirCondenaYRegistrarPago: boolean;
+  pagoVoluntario: boolean;
+  vencimientoPagoVoluntario: boolean;
+  falloFondo: boolean;
+  cumplimientoMaterial: boolean;
+  resolucionBloqueante: boolean;
+  cierre: boolean;
+  enviarANotificacion: boolean;
+  anularActa: boolean;
+}
+
+/** Contrato POST /actas/{id}/acciones/enviar-a-notificacion - EnviarANotificacionAccionResponse. */
+export interface EnviarANotificacionAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+}
+
+/** Contrato POST /actas/{id}/acciones/anular-acta - AnularActaPorNulidadAccionResponse. */
+export interface AnularActaPorNulidadAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  motivoArchivo: string;
+}
+
 export interface ActaDetalleDemo extends ActaResumenDemo {
   estaCerrada: boolean;
   permiteReingreso: boolean;
@@ -154,6 +186,7 @@ export interface ActaDetalleDemo extends ActaResumenDemo {
   piezasRequeridas: string[];
   piezasGeneradas: string[];
   pagoInformado: PagoInformadoDemo | null;
+  tipoPago: string;
   accionesPagoVoluntarioDisponibles: string[];
   situacionPagoCondena: SituacionPagoCondenaDemo;
   accionesPagoCondenaDisponibles: string[];
@@ -176,6 +209,8 @@ export interface ActaDetalleDemo extends ActaResumenDemo {
   montoCondena: number | null;
   /** Notificaciones tipificadas del acta (detalle). */
   notificaciones?: ActaNotificacionTipificadaDemo[] | null;
+  /** Acciones UI calculadas por el backend para esta acta. */
+  accionesUi?: AccionesUiDemo | null;
 }
 
 export interface BadgeDemo {
@@ -548,7 +583,8 @@ export type SituacionPagoDemo =
   | 'PAGO_INFORMADO'
   | 'PENDIENTE_CONFIRMACION'
   | 'CONFIRMADO'
-  | 'OBSERVADO';
+  | 'OBSERVADO'
+  | 'VENCIDO';
 
 /**
  * Acciones del flujo de pago voluntario soportadas por la UI demo.
@@ -592,6 +628,20 @@ export interface RegistrarSolicitudPagoVoluntarioAccionResponseDemo {
   bandejaActual: string;
   estadoProcesoActual: string;
   accionPendiente: string;
+  montoPagoVoluntario: number | null;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/registrar-vencimiento-pago-voluntario
+ * - RegistrarVencimientoPagoVoluntarioAccionResponse.
+ */
+export interface RegistrarVencimientoPagoVoluntarioAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandejaActual: string;
+  estadoProcesoActual: string;
+  situacionPago: SituacionPagoDemo | string | null;
   montoPagoVoluntario: number | null;
 }
 
@@ -646,6 +696,20 @@ export interface PagoCondenaAccionResponseDemo {
   mensaje: string;
   actaId: string;
   situacionPagoCondena: SituacionPagoCondenaDemo;
+}
+/**
+ * Contrato POST /actas/{id}/acciones/consentir-condena-y-registrar-pago
+ * - ConsentirCondenaYRegistrarPagoAccionResponse.
+ *
+ * Efecto: resultadoFinal=CONDENA_FIRME, situacionPagoCondena=INFORMADO,
+ * situacionPago=PENDIENTE_CONFIRMACION, tipoPago=CONDENA.
+ */
+export interface ConsentirCondenaYRegistrarPagoAccionResponseDemo {
+  status: string;
+  mensaje: string;
+  actaId: string;
+  resultadoFinal: string;
+  situacionPagoCondena: string;
 }
 
 /**
@@ -872,12 +936,24 @@ export interface NotificacionPortalPendienteDemo {
   mensajeVisible: string | null;
 }
 
+export interface DocumentoInfractorDemo {
+  tipo: string;
+  titulo: string;
+  estadoDocumento: string;
+  estadoNotificacion: string;
+  visible: boolean;
+  notificable: boolean;
+  notificado: boolean;
+  puedeAbrir: boolean;
+}
+
 export interface ActaInfractorResponseDemo {
   acta: string;
   codigoQr: string;
   estadoVisible: string;
-  situacionPago: string;
-  resultadoFinal: string;
+  situacionPago: string | null;
+  tipoPago: string | null;
+  resultadoFinal: string | null;
   montoPagoVoluntario: number | null;
   montoCondena: number | null;
   puedeConsultarEstado: boolean;
@@ -887,7 +963,10 @@ export interface ActaInfractorResponseDemo {
   puedeConfirmarVisualizacionNotificacion: boolean;
   notificacionPortalPendiente: NotificacionPortalPendienteDemo | null;
   domicilioElectronicoVerificado: boolean | null;
+  documentos: DocumentoInfractorDemo[];
   mensajeVisible: string | null;
+  puedePagarCondena: boolean;
+  puedeConsentirCondena: boolean;
 }
 
 /**
@@ -947,3 +1026,10 @@ export interface PrototipoActaBusquedaMatchResponse {
   fragmento?: string | null;
   score?: number | null;
 }
+
+
+
+
+
+
+

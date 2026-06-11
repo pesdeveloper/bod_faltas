@@ -1,4 +1,4 @@
-﻿import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_CONFIG, ApiConfig } from '../config/api.config';
@@ -36,6 +36,7 @@ import {
   NotificadorMunicipalNotificacionDemo,
   ObservarPagoInformadoAccionResponseDemo,
   PagoCondenaAccionResponseDemo,
+  ConsentirCondenaYRegistrarPagoAccionResponseDemo,
   ProcesarRespuestaCorreoResultadoDemo,
   PrototipoHealthResponse,
   PrototipoResetResponse,
@@ -48,6 +49,7 @@ import {
   RegistrarResolucionBloqueoCierreAccionResponseDemo,
   RegistrarSolicitudPagoVoluntarioAccionRequest,
   RegistrarSolicitudPagoVoluntarioAccionResponseDemo,
+  RegistrarVencimientoPagoVoluntarioAccionResponseDemo,
   ReactivarActaAccionResponseDemo,
   ReingresarActaAccionResponseDemo,
   ReingresarDesdeGestionExternaAccionResponseDemo,
@@ -62,6 +64,8 @@ import {
   TipoCumplimientoMaterialBloqueante,
   TipoResolucionBloqueoCierre,
   PrototipoActaBusquedaResponse,
+  EnviarANotificacionAccionResponseDemo,
+  AnularActaPorNulidadAccionResponseDemo,
 } from '../models/prototipo-faltas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -137,7 +141,31 @@ export class PrototipoFaltasApiService {
     );
   }
 
-  listarDocumentosActa(actaId: string): Observable<DocumentoActaDemo[]> {
+  verDocumentoInfractor(
+    codigoQr: string,
+    tipoDocumento: string,
+  ): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/documentos/${encodeURIComponent(tipoDocumento)}/ver`,
+      null,
+    );
+  }
+
+  pagarCondena(codigoQr: string): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/pagar-condena`,
+      null,
+    );
+  }
+
+  consentirCondena(codigoQr: string): Observable<ActaInfractorResponseDemo> {
+    return this.http.post<ActaInfractorResponseDemo>(
+      `${this.api.baseUrl}/infractor/actas/${encodeURIComponent(codigoQr)}/acciones/consentir-condena`,
+      null,
+    );
+  }
+
+    listarDocumentosActa(actaId: string): Observable<DocumentoActaDemo[]> {
     return this.http.get<DocumentoActaDemo[]>(`${this.api.baseUrl}/actas/${actaId}/documentos`);
   }
 
@@ -362,6 +390,15 @@ export class PrototipoFaltasApiService {
     );
   }
 
+  registrarVencimientoPagoVoluntario(
+    actaId: string,
+  ): Observable<RegistrarVencimientoPagoVoluntarioAccionResponseDemo> {
+    return this.http.post<RegistrarVencimientoPagoVoluntarioAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/registrar-vencimiento-pago-voluntario`,
+      null,
+    );
+  }
+
   registrarPagoInformado(
     actaId: string,
   ): Observable<RegistrarPagoInformadoAccionResponseDemo> {
@@ -435,6 +472,21 @@ export class PrototipoFaltasApiService {
   reingresarActa(actaId: string): Observable<ReingresarActaAccionResponseDemo> {
     return this.http.post<ReingresarActaAccionResponseDemo>(
       `${this.api.baseUrl}/actas/${actaId}/acciones/reingresar-acta`,
+      null,
+    );
+  }
+
+
+  enviarANotificacion(actaId: string): Observable<EnviarANotificacionAccionResponseDemo> {
+    return this.http.post<EnviarANotificacionAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/enviar-a-notificacion`,
+      null,
+    );
+  }
+
+  anularActa(actaId: string): Observable<AnularActaPorNulidadAccionResponseDemo> {
+    return this.http.post<AnularActaPorNulidadAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/anular-acta`,
       null,
     );
   }
@@ -564,8 +616,21 @@ export class PrototipoFaltasApiService {
       body,
     );
   }
+  consentirCondenaYRegistrarPago(
+    actaId: string,
+  ): Observable<ConsentirCondenaYRegistrarPagoAccionResponseDemo> {
+    return this.http.post<ConsentirCondenaYRegistrarPagoAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/consentir-condena-y-registrar-pago`,
+      null,
+    );
+  }
+
   buscarActasGlobal(q: string): Observable<PrototipoActaBusquedaResponse[]> {
     const params = new HttpParams().set('q', q.trim());
     return this.http.get<PrototipoActaBusquedaResponse[]>(`${this.api.baseUrl}/actas/buscar`, { params });
   }
 }
+
+
+
+

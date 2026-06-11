@@ -175,6 +175,49 @@ public class PrototipoStore {
      */
     public static final String TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ = "JUZGADO_DE_PAZ";
 
+    /**
+     * Motivo de archivo asignado cuando un acta es anulada administrativamente
+     * por nulidad desde la etapa de enriquecimiento. El archivo por nulidad
+     * conserva {@code permiteReingreso=true}: puede reingresarse si la
+     * decisión fue incorrecta.
+     */
+    public static final String MOTIVO_ARCHIVO_NULIDAD = "NULIDAD";
+
+    /**
+     * Marca operativa de actas en {@code ACTAS_EN_ENRIQUECIMIENTO}: el
+     * expediente requiere completar datos de enriquecimiento antes de
+     * avanzar. Se asigna al cargar datos demo (D1/D2) y al reingresar
+     * desde un archivo por nulidad originado en enriquecimiento.
+     */
+    public static final String ACCION_COMPLETAR_ENRIQUECIMIENTO = "COMPLETAR_ENRIQUECIMIENTO";
+
+    public enum EnviarActaANotificacionEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record EnviarActaANotificacionResultado(
+            EnviarActaANotificacionEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual) {
+    }
+
+    public enum AnularActaPorNulidadEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record AnularActaPorNulidadResultado(
+            AnularActaPorNulidadEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String motivoArchivo) {
+    }
+
     public enum RegistrarNotificacionPositivaEstado {
         OK,
         NOT_FOUND,
@@ -274,6 +317,32 @@ public class PrototipoStore {
         PagoCondenaResultado resultado() {
             return new PagoCondenaResultado(estado, null, situacion);
         }
+    }
+
+    public enum ConsentirCondenaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ConsentirCondenaResultado(
+            ConsentirCondenaEstado estado,
+            String actaId,
+            ResultadoFinalCierreMock resultadoFinal,
+            SituacionPagoCondena situacionPagoCondena) {
+    }
+
+    public enum ConsentirCondenaYRegistrarPagoEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ConsentirCondenaYRegistrarPagoResultado(
+            ConsentirCondenaYRegistrarPagoEstado estado,
+            String actaId,
+            ResultadoFinalCierreMock resultadoFinal,
+            SituacionPagoCondena situacionPagoCondena) {
     }
 
     public enum CrearActaMockDemoEstado {
@@ -561,7 +630,18 @@ public class PrototipoStore {
     public enum RegistrarSolicitudPagoVoluntarioEstado {
         OK,
         NOT_FOUND,
-        CONFLICT
+        CONFLICT,
+        /**
+         * El acta está en revisión (D1/D2, aún no validada como
+         * notificable): el portal no admite acciones sustantivas.
+         */
+        CONFLICT_EN_REVISION,
+        /**
+         * Existe un fallo condenatorio dictado (pendiente de firma o ya
+         * firmado): el portal no puede solicitar pago voluntario mientras
+         * haya una resolución en curso.
+         */
+        CONFLICT_FALLO_DICTADO
     }
 
     public record RegistrarSolicitudPagoVoluntarioResultado(
@@ -590,7 +670,7 @@ public class PrototipoStore {
     /**
      * Situación de pago mock, visible por API y separada de {@code accionPendiente}.
      * Modela en mínimo: solicitud, pago informado, pendiente de confirmación,
-     * confirmado y observado.
+     * confirmado, observado y vencido.
      */
     public enum SituacionPagoMock {
         SIN_PAGO,
@@ -598,7 +678,9 @@ public class PrototipoStore {
         PAGO_INFORMADO,
         PENDIENTE_CONFIRMACION,
         CONFIRMADO,
-        OBSERVADO
+        OBSERVADO,
+        /** El plazo/oportunidad de pago voluntario venció sin pago; el trámite puede continuar a fallo. */
+        VENCIDO
     }
 
     /**
@@ -632,6 +714,16 @@ public class PrototipoStore {
         PAGO_CONFIRMADO,
         CONDENADO,
         CONDENA_FIRME
+    }
+
+    /**
+     * Circuito/origen del pago confirmado o en curso.
+     * Especializa {@link SituacionPagoMock} sin reemplazarla.
+     */
+    public enum TipoPago {
+        NO_APLICA,
+        VOLUNTARIO,
+        CONDENA
     }
 
     /**
@@ -901,7 +993,13 @@ public class PrototipoStore {
         /** Pago ya informado o pendiente de confirmación: no se puede duplicar. */
         CONFLICT_YA_INFORMADO,
         /** Pago ya confirmado: no aplica. */
-        CONFLICT_YA_CONFIRMADO
+        CONFLICT_YA_CONFIRMADO,
+        /**
+         * Existe un fallo condenatorio dictado (pendiente de firma o ya
+         * firmado): el portal no puede pagar voluntario mientras haya una
+         * resolución en curso.
+         */
+        CONFLICT_FALLO_DICTADO
     }
 
     public record InformarPagoVoluntarioDesdePortalResultado(
@@ -956,6 +1054,21 @@ public class PrototipoStore {
             String tipoDocumento,
             String bandejaActual,
             String estadoProcesoActual) {
+    }
+
+    public enum RegistrarVencimientoPagoVoluntarioEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record RegistrarVencimientoPagoVoluntarioResultado(
+            RegistrarVencimientoPagoVoluntarioEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            SituacionPagoMock situacionPago,
+            java.math.BigDecimal montoPagoVoluntario) {
     }
 
     public enum RegistrarVencimientoPlazoApelacionEstado {
@@ -1180,6 +1293,34 @@ public class PrototipoStore {
             ActaNotificacionMock notificacion) {
     }
 
+    /**
+     * Documento del expediente formalmente visible para el infractor desde
+     * el portal: firmado y en etapa de notificación
+     * ({@code pendienteNotificacion=true}) o ya notificado
+     * ({@code notificado=true}). Documentos internos, adjuntos o piezas sin
+     * firma nunca se listan acá.
+     */
+    public record DocumentoPortalVista(
+            String tipoDocumento,
+            String titulo,
+            String estadoDocumento,
+            boolean notificado,
+            boolean pendienteNotificacion) {
+    }
+
+    public enum VerDocumentoPortalEstado {
+        OK_NOTIFICADO,
+        OK_YA_NOTIFICADO,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record VerDocumentoPortalResultado(
+            VerDocumentoPortalEstado estado,
+            String actaId,
+            String tipoDocumento) {
+    }
+
     public enum RegistrarAcuseNotificadorMunicipalEstado {
         OK,
         NOT_FOUND,
@@ -1276,6 +1417,7 @@ public class PrototipoStore {
      * resultado final es CONDENA_FIRME; fuera de ese caso se expone NO_APLICA.
      */
     private final Map<String, SituacionPagoCondena> situacionPagoCondenaPorActa = new LinkedHashMap<>();
+    private final Map<String, TipoPago> tipoPagoPorActa = new LinkedHashMap<>();
     /**
      * Mock de datos de tránsito por acta. Solo se puebla donde el escenario
      * demo asigna flags explícitos (p. ej. nacimiento de condiciones
@@ -1360,6 +1502,8 @@ public class PrototipoStore {
                     accionPendientePorActa,
                     cerrabilidad,
                     situacionPagoCondenaPorActa,
+                    situacionPagoPorActa,
+                    tipoPagoPorActa,
                     montoCondenaPorActa);
 
     /**
@@ -1379,6 +1523,7 @@ public class PrototipoStore {
                     eventosPorActa,
                     accionPendientePorActa,
                     situacionPagoPorActa,
+                    tipoPagoPorActa,
                     montoPagoVoluntarioPorActa);
 
     /**
@@ -1393,6 +1538,8 @@ public class PrototipoStore {
                     actas,
                     eventosPorActa,
                     situacionPagoCondenaPorActa,
+                    situacionPagoPorActa,
+                    tipoPagoPorActa,
                     montoCondenaPorActa,
                     cerrabilidad);
 
@@ -1425,7 +1572,10 @@ public class PrototipoStore {
                     notificacionesPorActa,
                     accionPendientePorActa,
                     cerrabilidad,
-                    montoCondenaPorActa);
+                    montoCondenaPorActa,
+                    situacionPagoCondenaPorActa,
+                    situacionPagoPorActa,
+                    tipoPagoPorActa);
 
     private final CorreoPostalNotificacionSupport correoPostal =
             new CorreoPostalNotificacionSupport(
@@ -1534,6 +1684,7 @@ public class PrototipoStore {
         montoPagoVoluntarioPorActa.clear();
         montoCondenaPorActa.clear();
         situacionPagoCondenaPorActa.clear();
+        tipoPagoPorActa.clear();
         actaTransitoMockPorActa.clear();
         actaBromatologiaMockPorActa.clear();
         dependenciaDemoPorActa.clear();
@@ -1589,6 +1740,11 @@ public class PrototipoStore {
             return SituacionPagoCondena.NO_APLICA;
         }
         return situacionPagoCondenaPorActa.getOrDefault(actaId, SituacionPagoCondena.PENDIENTE);
+    }
+
+    public TipoPago getTipoPago(String actaId) {
+        TipoPago v = tipoPagoPorActa.get(actaId);
+        return v != null ? v : TipoPago.NO_APLICA;
     }
 
     /**
@@ -1660,7 +1816,7 @@ public class PrototipoStore {
                 acciones.add("CONFIRMAR");
                 acciones.add("OBSERVAR");
             }
-            case CONFIRMADO -> {
+            case CONFIRMADO, VENCIDO -> {
                 // Terminal de pago: sin nuevas acciones de pago voluntario.
             }
         }
@@ -1712,6 +1868,14 @@ public class PrototipoStore {
     public CerrabilidadActaVista getCerrabilidadActa(String actaId) {
         ActaMock a = actas.get(actaId);
         return cerrabilidad.getVistaCerrabilidad(a);
+    }
+
+    /**
+     * {@code true} si el acta puede cerrarse ahora desde análisis: bandeja
+     * PENDIENTE_ANALISIS, resultado compatible y sin pendientes bloqueantes.
+     */
+    public boolean puedeCerrarDesdeAnalisis(String actaId) {
+        return cerrabilidad.puedeCerrarDesdeAnalisis(actaId);
     }
 
     /**
@@ -1840,6 +2004,23 @@ public class PrototipoStore {
             return;
         }
         pagoInformadoPorActa.put(actaId, pago);
+    }
+
+    /**
+     * Helper interno de mocks: asigna el tipo de pago (circuito de origen) de
+     * una acta precargada sin ejecutar el flujo operativo. Uso restringido a la
+     * fábrica de datos demo para representar estados donde ya se conoce el
+     * circuito (VOLUNTARIO / CONDENA) sin haber transitado por los supports.
+     */
+    public void setTipoPago(String actaId, TipoPago tipoPago) {
+        if (actaId == null) {
+            return;
+        }
+        if (tipoPago == null || tipoPago == TipoPago.NO_APLICA) {
+            tipoPagoPorActa.remove(actaId);
+            return;
+        }
+        tipoPagoPorActa.put(actaId, tipoPago);
     }
 
     /**
@@ -2248,6 +2429,7 @@ public class PrototipoStore {
         reemplazarNotificacion(actualizada);
         ActaMock actaActualizada = actas.get(actaId);
         registrarEventoVisualizacionPortal(actaId, notificacionPortal.tipo());
+        marcarNotificacionesAlternativasSuperadasPorPortal(actaId, notificacionPortal.tipo());
 
         return new ConfirmarVisualizacionNotificacionPortalResultado(
                 ConfirmarVisualizacionNotificacionPortalEstado.OK,
@@ -2255,6 +2437,292 @@ public class PrototipoStore {
                 actaActualizada != null ? actaActualizada.bandejaActual() : actual.bandejaActual(),
                 actaActualizada != null ? actaActualizada.estadoProcesoActual() : actual.estadoProcesoActual(),
                 actualizada);
+    }
+
+    /**
+     * Regla de portal: acta ingresada pero todavía no validada como
+     * notificable (D1/D2, bandeja {@code ACTAS_EN_ENRIQUECIMIENTO}). En ese
+     * estado el portal solo reconoce el número de acta y muestra el mensaje
+     * de revisión; no expone detalle, documentos ni acciones operativas.
+     */
+    public boolean actaEnRevisionParaPortal(String actaId) {
+        ActaMock a = actas.get(actaId);
+        return a != null && BANDEJA_ACTAS_EN_ENRIQUECIMIENTO.equals(a.bandejaActual());
+    }
+
+    /**
+     * Fachada pública de {@link FalloPlazoApelacionSupport}: {@code true} si
+     * hay un documento de fallo firmado todavía sin notificar. Mientras eso
+     * ocurre, el portal no debe ofrecer pago voluntario ni pago de condena.
+     */
+    public boolean hayFalloPendienteDeNotificacion(String actaId) {
+        return falloPlazoApelacion.hayFalloPendienteDeNotificacion(actaId);
+    }
+
+    /**
+     * {@code true} si la acta tiene específicamente un documento
+     * {@code FALLO_CONDENATORIO} firmado y sin notificación positiva
+     * registrada. Usado por la UI para habilitar la acción compuesta
+     * {@code consentir-condena-y-registrar-pago} cuando el operador atiende
+     * presencialmente al infractor antes de que se haya formalizado la
+     * notificación.
+     */
+    public boolean hayFalloCondenatorioPendienteDeNotificacion(String actaId) {
+        return falloPlazoApelacion.hayFalloCondenatorioPendienteDeNotificacion(actaId);
+    }
+
+    /**
+     * {@code true} si existe un documento {@code FALLO_CONDENATORIO} en
+     * estado {@code PENDIENTE_FIRMA} o {@code FIRMADO}: indica que ya se
+     * dictó una resolución condenatoria, aunque todavía no esté firmada ni
+     * notificada. En cualquiera de esos sub-estados el portal no debe
+     * permitir solicitar ni pagar voluntariamente.
+     */
+    public boolean hayFalloCondenatorioDictado(String actaId) {
+        return piezasFirma.listarDocumentosPorActa(actaId).stream()
+                .anyMatch(d -> PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO.equals(d.tipoDocumento())
+                        && (PrototipoConstantes.ESTADO_DOC_PENDIENTE_FIRMA.equals(d.estadoDocumento())
+                                || PrototipoConstantes.ESTADO_DOC_FIRMADO.equals(d.estadoDocumento())));
+    }
+
+    /**
+     * {@code true} si existe cualquier fallo de fondo dictado, pendiente de firma
+     * o ya firmado. Se usa para impedir volver a abrir decisiones de pago
+     * voluntario una vez iniciado el circuito resolutorio.
+     */
+    public boolean hayFalloDictado(String actaId) {
+        return piezasFirma.listarDocumentosPorActa(actaId).stream()
+                .anyMatch(d -> PrototipoConstantes.esFallo(d.tipoDocumento())
+                        && (PrototipoConstantes.ESTADO_DOC_PENDIENTE_FIRMA.equals(d.estadoDocumento())
+                                || PrototipoConstantes.ESTADO_DOC_FIRMADO.equals(d.estadoDocumento())));
+    }
+
+    /**
+     * Documentos del expediente formalmente visibles para el infractor:
+     * firmados y en etapa de notificación (bandeja
+     * {@code PENDIENTE_NOTIFICACION}/{@code EN_NOTIFICACION}) o ya
+     * notificados positivamente. Si el acta está en revisión (D1/D2) no se
+     * expone ningún documento.
+     */
+    public List<DocumentoPortalVista> listarDocumentosVisiblesPortal(String actaId) {
+        ActaMock acta = actas.get(actaId);
+        if (acta == null || actaEnRevisionParaPortal(actaId)) {
+            return List.of();
+        }
+        List<ActaDocumentoMock> docs = piezasFirma.listarDocumentosPorActa(actaId);
+        if (docs.isEmpty()) {
+            return List.of();
+        }
+        boolean enEtapaNotificacion = "PENDIENTE_NOTIFICACION".equals(acta.bandejaActual())
+                || "EN_NOTIFICACION".equals(acta.bandejaActual());
+        List<DocumentoPortalVista> visibles = new ArrayList<>();
+        for (ActaDocumentoMock d : docs) {
+            TipoNotificacion tipo = tipoNotificacionDeDocumentoPortal(d.tipoDocumento());
+            if (tipo == null || !PrototipoConstantes.ESTADO_DOC_FIRMADO.equals(d.estadoDocumento())) {
+                continue;
+            }
+            boolean notificado = tipoNotificadoPositivamentePortal(actaId, tipo);
+            boolean pendiente = !notificado && enEtapaNotificacion;
+            if (!notificado && !pendiente) {
+                continue;
+            }
+            visibles.add(new DocumentoPortalVista(
+                    d.tipoDocumento(),
+                    tituloDocumentoPortal(d.tipoDocumento()),
+                    d.estadoDocumento(),
+                    notificado,
+                    pendiente));
+        }
+        return visibles;
+    }
+
+    /**
+     * Apertura/visualización de un documento notificable desde el portal.
+     * Si el documento estaba pendiente de notificación, registra
+     * notificación positiva por canal {@code PORTAL_INFRACTOR} y aplica los
+     * efectos jurídicos correspondientes (acta inicial → análisis; fallo →
+     * {@code resultadoFinal} y plazo de apelación). Idempotente: si el
+     * documento ya estaba notificado devuelve {@code OK_YA_NOTIFICADO} sin
+     * efectos.
+     */
+    public VerDocumentoPortalResultado verDocumentoPortal(String actaId, String tipoDocumento) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new VerDocumentoPortalResultado(VerDocumentoPortalEstado.NOT_FOUND, null, null);
+        }
+        DocumentoPortalVista vista = listarDocumentosVisiblesPortal(actaId).stream()
+                .filter(d -> d.tipoDocumento().equals(tipoDocumento))
+                .findFirst()
+                .orElse(null);
+        if (vista == null) {
+            return new VerDocumentoPortalResultado(VerDocumentoPortalEstado.NOT_FOUND, null, null);
+        }
+        if (vista.notificado()) {
+            return new VerDocumentoPortalResultado(
+                    VerDocumentoPortalEstado.OK_YA_NOTIFICADO, actaId, tipoDocumento);
+        }
+
+        TipoNotificacion tipo = tipoNotificacionDeDocumentoPortal(tipoDocumento);
+        if (tipo == TipoNotificacion.ACTA_INFRACCION) {
+            if (!"PENDIENTE_NOTIFICACION".equals(actual.bandejaActual())
+                    && !"EN_NOTIFICACION".equals(actual.bandejaActual())) {
+                return new VerDocumentoPortalResultado(
+                        VerDocumentoPortalEstado.CONFLICT, actaId, tipoDocumento);
+            }
+            actas.put(actaId, moverAAnalisisPorVisualizacionPortal(actual));
+            accionPendientePorActa.remove(actaId);
+        } else {
+            RegistrarNotificacionPositivaResultado juridico =
+                    falloPlazoApelacion.registrarNotificacionPositivaDeFalloTipificada(actaId, tipo);
+            if (juridico.estado() == RegistrarNotificacionPositivaEstado.NOT_FOUND) {
+                return new VerDocumentoPortalResultado(VerDocumentoPortalEstado.NOT_FOUND, null, null);
+            }
+            if (juridico.estado() == RegistrarNotificacionPositivaEstado.CONFLICT) {
+                return new VerDocumentoPortalResultado(
+                        VerDocumentoPortalEstado.CONFLICT, actaId, tipoDocumento);
+            }
+        }
+
+        registrarNotificacionPositivaPortalPorVisualizacion(actaId, actual, tipo);
+        registrarEventoVisualizacionPortal(actaId, tipo);
+        marcarNotificacionesAlternativasSuperadasPorPortal(actaId, tipo);
+        return new VerDocumentoPortalResultado(
+                VerDocumentoPortalEstado.OK_NOTIFICADO, actaId, tipoDocumento);
+    }
+
+    private TipoNotificacion tipoNotificacionDeDocumentoPortal(String tipoDocumento) {
+        if (PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO.equals(tipoDocumento)) {
+            return TipoNotificacion.FALLO_CONDENATORIO;
+        }
+        if (PrototipoConstantes.TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumento)) {
+            return TipoNotificacion.FALLO_ABSOLUTORIO;
+        }
+        // Pieza firmada del acta inicial (tipoDocumento de los mocks demo).
+        if ("ACTA_FIRMADA".equals(tipoDocumento)) {
+            return TipoNotificacion.ACTA_INFRACCION;
+        }
+        return null;
+    }
+
+    private String tituloDocumentoPortal(String tipoDocumento) {
+        if (PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO.equals(tipoDocumento)) {
+            return "Fallo condenatorio";
+        }
+        if (PrototipoConstantes.TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumento)) {
+            return "Fallo absolutorio";
+        }
+        return "Acta de infracción";
+    }
+
+    private boolean tipoNotificadoPositivamentePortal(String actaId, TipoNotificacion tipo) {
+        List<ActaNotificacionMock> notifs = notificacionesPorActa.get(actaId);
+        boolean notifPositiva = notifs != null && notifs.stream()
+                .anyMatch(n -> n.tipo() == tipo && n.resultado() == ResultadoNotificacion.POSITIVA);
+        if (notifPositiva) {
+            return true;
+        }
+        if (tipo == TipoNotificacion.ACTA_INFRACCION) {
+            return false;
+        }
+        String evento = tipo == TipoNotificacion.FALLO_ABSOLUTORIO
+                ? "FALLO_ABSOLUTORIO_NOTIFICADO"
+                : "FALLO_CONDENATORIO_NOTIFICADO";
+        List<ActaEventoMock> evs = eventosPorActa.get(actaId);
+        return evs != null && evs.stream().anyMatch(e -> evento.equals(e.tipoEvento()));
+    }
+
+    /**
+     * Registra la notificación positiva derivada de la visualización del
+     * documento en el portal. Si existe una notificación de portal pendiente
+     * del mismo tipo, se confirma esa (sin duplicar); si no, se agrega una
+     * nueva notificación {@code ENTREGADA}/{@code POSITIVA} por canal
+     * {@code PORTAL_INFRACTOR}.
+     */
+    private void registrarNotificacionPositivaPortalPorVisualizacion(
+            String actaId, ActaMock acta, TipoNotificacion tipo) {
+        List<ActaNotificacionMock> notifs =
+                notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        LocalDateTime fecha = LocalDateTime.now();
+        for (int i = 0; i < notifs.size(); i++) {
+            ActaNotificacionMock n = notifs.get(i);
+            if (n.tipo() == tipo && esNotificacionPortalPendiente(n)) {
+                notifs.set(i, n.conVisualizacionPortal(
+                        fecha, "Documento visualizado desde portal infractor"));
+                return;
+            }
+        }
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String idNotif = "NOT-" + sufijoActa + "-" + String.format("%02d", notifs.size() + 1);
+        String descripcion = acta.infractorNombre()
+                + " — notificación positiva por visualización en portal (" + tipo.name() + ")";
+        notifs.add(new ActaNotificacionMock(
+                idNotif,
+                actaId,
+                CanalNotificacion.PORTAL_INFRACTOR.name(),
+                "ENTREGADA",
+                descripcion,
+                tipo,
+                CanalNotificacion.PORTAL_INFRACTOR,
+                EstadoNotificacion.ENTREGADA,
+                ResultadoNotificacion.POSITIVA,
+                descripcion,
+                "DOCUMENTO_VISUALIZADO_PORTAL",
+                null,
+                null,
+                null,
+                null,
+                fecha,
+                "Documento visualizado desde portal infractor",
+                acta.infractorNombre(),
+                null,
+                null,
+                null,
+                null));
+    }
+
+    /**
+     * Regla transversal de notificación: cuando una pieza/documento queda
+     * notificada positivamente por canal {@code PORTAL_INFRACTOR}, toda
+     * notificación alternativa de la misma pieza que siga pendiente
+     * (resultado {@code SIN_RESULTADO}, p. ej. correo postal preparado y
+     * nunca enviado) queda formalmente {@code SUPERADA_POR_PORTAL} /
+     * {@code SIN_EFECTO}: sale de los circuitos operativos (lotes de
+     * correo, acuses, pendientes por resolver) pero conserva trazabilidad.
+     * Registra un evento de auditoría por cada notificación superada.
+     */
+    private void marcarNotificacionesAlternativasSuperadasPorPortal(
+            String actaId, TipoNotificacion tipo) {
+        List<ActaNotificacionMock> notifs = notificacionesPorActa.get(actaId);
+        if (notifs == null || notifs.isEmpty()) {
+            return;
+        }
+        LocalDateTime fecha = LocalDateTime.now();
+        for (int i = 0; i < notifs.size(); i++) {
+            ActaNotificacionMock n = notifs.get(i);
+            if (n.tipo() != tipo || n.resultado() != ResultadoNotificacion.SIN_RESULTADO) {
+                continue;
+            }
+            notifs.set(i, n.conSuperadaPorPortal(fecha));
+            registrarEventoNotificacionSuperadaPorPortal(actaId, n, tipo);
+        }
+    }
+
+    private void registrarEventoNotificacionSuperadaPorPortal(
+            String actaId, ActaNotificacionMock superada, TipoNotificacion tipo) {
+        ActaMock acta = actas.get(actaId);
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String bloque = acta != null ? acta.bloqueActual() : "D5_ANALISIS";
+        eventos.add(new ActaEventoMock(
+                "EVT-" + sufijoActa + "-" + String.format("%02d", eventos.size() + 1),
+                actaId,
+                LocalDateTime.now(),
+                "NOTIFICACION_SUPERADA_POR_PORTAL",
+                bloque,
+                bloque,
+                "Notificación " + superada.id() + " (" + superada.canalTipificado().name()
+                        + ") de " + tipo.name()
+                        + " queda sin efecto: la pieza ya fue notificada positivamente por portal infractor."));
     }
 
     public List<NotificacionMunicipalVista> listarNotificacionesNotificadorMunicipal() {
@@ -2473,6 +2941,10 @@ public class PrototipoStore {
         return pagoCondena.informarPagoCondena(actaId);
     }
 
+    public PagoCondenaResultado informarPagoCondenaDesdePortal(String actaId) {
+        return pagoCondena.informarPagoCondenaDesdePortal(actaId);
+    }
+
     public PagoCondenaResultado confirmarPagoCondena(String actaId) {
         PagoCondenaResultado r = pagoCondena.confirmarPagoCondena(actaId);
         if (r.estado() == PagoCondenaEstado.OK
@@ -2643,6 +3115,10 @@ public class PrototipoStore {
      * operativa VERIFICAR_PAGO_INFORMADO para Direccion de Faltas.
      */
     public InformarPagoVoluntarioDesdePortalResultado informarPagoVoluntarioDesdePortal(String actaId) {
+        if (hayFalloCondenatorioDictado(actaId)) {
+            return new InformarPagoVoluntarioDesdePortalResultado(
+                    InformarPagoVoluntarioDesdePortalEstado.CONFLICT_FALLO_DICTADO, actaId, getSituacionPago(actaId));
+        }
         ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
         if (rf != ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
             return new InformarPagoVoluntarioDesdePortalResultado(
@@ -2701,6 +3177,31 @@ public class PrototipoStore {
      * en {@link ArchivoReingresoSupport}.
      */    public ReingresarActaResultado reingresarActaDesdeArchivo(String actaId) {
         return archivoReingreso.reingresarActaDesdeArchivo(actaId);
+    }
+
+    /**
+     * Demo: envía el acta desde enriquecimiento (D2) a la bandeja de
+     * notificación pendiente (D4). Solo aplica a actas en
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} con situaciónAdministrativa
+     * {@code ACTIVA} y estadoProceso {@code EN_CURSO}. Los bloqueantes
+     * materiales pendientes no impiden esta transición. Fachada pública;
+     * la lógica vive en {@link ArchivoReingresoSupport}.
+     */
+    public EnviarActaANotificacionResultado enviarActaANotificacion(String actaId) {
+        return archivoReingreso.enviarActaANotificacion(actaId);
+    }
+
+    /**
+     * Demo: anula el acta y la archiva por nulidad desde la etapa de
+     * enriquecimiento. Solo aplica a actas en
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} con situaciónAdministrativa
+     * {@code ACTIVA}. El acta queda en ARCHIVO con
+     * {@code motivoArchivo=NULIDAD} y {@code permiteReingreso=true} para
+     * permitir correcciones administrativas. Fachada pública; la lógica
+     * vive en {@link ArchivoReingresoSupport}.
+     */
+    public AnularActaPorNulidadResultado anularActaPorNulidad(String actaId) {
+        return archivoReingreso.anularActaPorNulidad(actaId);
     }
 
     /**
@@ -2909,6 +3410,43 @@ public class PrototipoStore {
         return falloPlazoApelacion.puedePresentarApelacion(actaId);
     }
 
+    /**
+     * {@code true} si el infractor ya presentó apelación/recurso para esta
+     * acta (independientemente de si fue resuelto). Fachada pública; la
+     * lógica vive en {@link FalloPlazoApelacionSupport}.
+     */
+    public boolean hayApelacionPresentada(String actaId) {
+        return falloPlazoApelacion.apelacionPresentada(actaId);
+    }
+
+    /**
+     * El infractor consiente la condena desde el portal, renunciando a
+     * apelar. Precondición: {@code resultadoFinal=CONDENADO}, sin apelación
+     * presentada, {@code situacionPagoCondena=NO_APLICA},
+     * {@code montoCondena > 0}. Efecto: {@code resultadoFinal=CONDENA_FIRME},
+     * {@code situacionPagoCondena=PENDIENTE}, evento {@code CONDENA_CONSENTIDA}.
+     * Fachada pública; la lógica vive en {@link FalloPlazoApelacionSupport}.
+     */
+    public ConsentirCondenaResultado consentirCondena(String actaId) {
+        return falloPlazoApelacion.consentirCondena(actaId);
+    }
+
+    /**
+     * Dirección registra consentimiento presencial de condena y pago en un
+     * único acto. Precondición: {@code resultadoFinal=CONDENADO}, sin
+     * apelación presentada, {@code situacionPagoCondena=NO_APLICA},
+     * {@code situacionPago=SIN_PAGO}, {@code montoCondena > 0}, bandeja
+     * operativa interna (no ARCHIVO, CERRADAS, GESTION_EXTERNA). Efecto:
+     * {@code resultadoFinal=CONDENA_FIRME},
+     * {@code situacionPagoCondena=INFORMADO},
+     * {@code situacionPago=PENDIENTE_CONFIRMACION},
+     * {@code tipoPago=CONDENA}. Fachada pública; la lógica vive en
+     * {@link FalloPlazoApelacionSupport}.
+     */
+    public ConsentirCondenaYRegistrarPagoResultado consentirCondenaYRegistrarPago(String actaId) {
+        return falloPlazoApelacion.consentirCondenaYRegistrarPago(actaId);
+    }
+
     public GenerarLoteCorreoResultado generarLoteCorreoPostalDemo(String tipo, List<String> notificacionIds)
             throws java.io.IOException {
         return correoPostal.generarLote(tipo, notificacionIds);
@@ -2971,9 +3509,25 @@ public class PrototipoStore {
      * Solicitud de pago voluntario iniciada por el infractor desde el portal.
      * Sin monto: Direccion de Faltas evaluara y, si corresponde, lo fijara.
      * Fachada publica; la logica vive en {@link PagoVoluntarioSupport}.
+     *
+     * <p>Regla de portal: si el acta está en revisión (D1/D2, todavía no
+     * validada como notificable; ver {@link #actaEnRevisionParaPortal}), el
+     * portal no admite acciones sustantivas y la solicitud se rechaza con
+     * {@link RegistrarSolicitudPagoVoluntarioEstado#CONFLICT_EN_REVISION}
+     * sin modificar el expediente.
      */
     public RegistrarSolicitudPagoVoluntarioResultado solicitarPagoVoluntarioDesdePortal(
             String actaId) {
+        if (actaEnRevisionParaPortal(actaId)) {
+            return new RegistrarSolicitudPagoVoluntarioResultado(
+                    RegistrarSolicitudPagoVoluntarioEstado.CONFLICT_EN_REVISION,
+                    null, null, null, null, null);
+        }
+        if (hayFalloCondenatorioDictado(actaId)) {
+            return new RegistrarSolicitudPagoVoluntarioResultado(
+                    RegistrarSolicitudPagoVoluntarioEstado.CONFLICT_FALLO_DICTADO,
+                    actaId, null, null, null, null);
+        }
         return pagoVoluntario.solicitarPagoVoluntarioDesdePortal(actaId);
     }
 
@@ -2985,6 +3539,33 @@ public class PrototipoStore {
     public FijarMontoPagoVoluntarioResultado fijarMontoPagoVoluntario(
             String actaId, BigDecimal monto) {
         return pagoVoluntario.fijarMontoPagoVoluntario(actaId, monto);
+    }
+
+    /**
+     * Dirección de Faltas registra que el plazo/oportunidad de pago voluntario
+     * venció sin que el infractor pagara. El acta queda en situación
+     * {@link SituacionPagoMock#VENCIDO} y puede continuar hacia fallo de fondo.
+     * El {@code montoPagoVoluntario} se conserva como dato histórico.
+     * Fachada pública; la lógica vive en {@link PagoVoluntarioSupport}.
+     */
+    public RegistrarVencimientoPagoVoluntarioResultado registrarVencimientoPagoVoluntario(
+            String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new RegistrarVencimientoPagoVoluntarioResultado(
+                    RegistrarVencimientoPagoVoluntarioEstado.NOT_FOUND,
+                    null, null, null, null, null);
+        }
+        BigDecimal monto = getMontoPagoVoluntario(actaId);
+        if (monto == null
+                || monto.signum() <= 0
+                || cerrabilidad.getResultadoFinal(actaId) != ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
+                || hayFalloDictado(actaId)) {
+            return new RegistrarVencimientoPagoVoluntarioResultado(
+                    RegistrarVencimientoPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, getSituacionPago(actaId), monto);
+        }
+        return pagoVoluntario.registrarVencimientoPagoVoluntario(actaId);
     }
 
     /**
@@ -3223,3 +3804,11 @@ public class PrototipoStore {
         };
     }
 }
+
+
+
+
+
+
+
+

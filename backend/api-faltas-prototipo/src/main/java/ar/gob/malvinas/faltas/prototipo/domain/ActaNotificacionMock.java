@@ -236,6 +236,38 @@ public record ActaNotificacionMock(
                 diasPlazoNotificacionElectronica);
     }
 
+    /**
+     * Marca esta notificación pendiente como superada por una notificación
+     * positiva de portal sobre la misma pieza: queda {@code SIN_EFECTO} /
+     * {@code SUPERADA_POR_PORTAL}, fuera de los circuitos operativos pero
+     * conservando trazabilidad (no es una notificación fallida).
+     */
+    public ActaNotificacionMock conSuperadaPorPortal(LocalDateTime fecha) {
+        return new ActaNotificacionMock(
+                id,
+                actaId,
+                canal,
+                "SUPERADA_POR_PORTAL",
+                destinatarioResumen,
+                tipo,
+                canalTipificado,
+                EstadoNotificacion.SIN_EFECTO,
+                ResultadoNotificacion.SUPERADA_POR_PORTAL,
+                referencia,
+                "NOTIFICACION_SUPERADA_POR_PORTAL",
+                loteId,
+                referenciaExterna,
+                fechaPreparacion,
+                fechaEnvio,
+                fecha,
+                "Superada por notificación positiva en portal infractor; queda sin efecto.",
+                destinatarioNombre,
+                destinatarioEmail,
+                domicilioTexto,
+                domicilioElectronicoVerificado,
+                diasPlazoNotificacionElectronica);
+    }
+
     public ActaNotificacionMock conPreparacion(
             EstadoNotificacion nuevoEstado,
             String nuevoEstadoLegacy,

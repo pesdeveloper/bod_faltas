@@ -33,9 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *       {@code puedePresentarApelacion true};</li>
  *   <li>vencimiento del plazo sin apelación → {@code CONDENA_FIRME},
  *       portal/infractor {@code puedePresentarApelacion false};</li>
- *   <li>dictar fallo se rechaza con 409 si hay bloqueantes materiales
- *       pendientes o si el acta no está en {@code PENDIENTE_ANALISIS}
- *       (incluyendo {@code CERRADAS}, {@code ARCHIVO},
+ *   <li>dictar fallo puede continuar aunque haya bloqueantes materiales
+ *       pendientes; esos bloqueantes impiden cierre/materiales, no el fallo;</li>
+ *   <li>dictar fallo se rechaza con 409 si el acta no está en
+ *       {@code PENDIENTE_ANALISIS} (incluyendo {@code CERRADAS}, {@code ARCHIVO},
  *       {@code GESTION_EXTERNA});</li>
  *   <li>NO se genera ni se devuelve EM/RC/Cmte/Pref/Nro ni emisión de
  *       deuda ni recibo (alcance estricto del slice).</li>
@@ -261,7 +262,7 @@ class FalloYPlazoApelacionIT {
     }
 
     @Test
-    void dictarFallo_rechazadoSiHayBloqueantesMaterialesPendientes() throws Exception {
+    void dictarFallo_permiteBloqueantesMaterialesPendientes() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
         // Origina un bloqueante material posterior al labrado sobre acta en análisis.
@@ -275,9 +276,17 @@ class FalloYPlazoApelacionIT {
                         .value("LEVANTAMIENTO_MEDIDA_PREVENTIVA"));
 
         mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/dictar-fallo-absolutorio"))
-                .andExpect(status().isConflict());
-        mvc.perform(postDictarFalloCondenatorio(ACTA_ANALISIS_LIMPIA))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipoDocumento").value("FALLO_ABSOLUTORIO"))
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"));
+
+        mvc.perform(get(B + "/actas/" + ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false))
+                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(false))
+                .andExpect(jsonPath("$.accionesUi.cierre").value(false));
     }
 
     @Test

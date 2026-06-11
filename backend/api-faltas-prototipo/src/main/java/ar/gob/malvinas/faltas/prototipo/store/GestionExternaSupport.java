@@ -53,6 +53,10 @@ final class GestionExternaSupport {
     private final Map<String, String> accionPendientePorActa;
     private final CerrabilidadSupport cerrabilidad;
     private final Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa;
+    @SuppressWarnings("unused")
+    private final Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa;
+    @SuppressWarnings("unused")
+    private final Map<String, PrototipoStore.TipoPago> tipoPagoPorActa;
     private final Map<String, BigDecimal> montoCondenaPorActa;
 
     /**
@@ -68,12 +72,16 @@ final class GestionExternaSupport {
             Map<String, String> accionPendientePorActa,
             CerrabilidadSupport cerrabilidad,
             Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa,
+            Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa,
+            Map<String, PrototipoStore.TipoPago> tipoPagoPorActa,
             Map<String, BigDecimal> montoCondenaPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
         this.cerrabilidad = cerrabilidad;
         this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
+        this.situacionPagoPorActa = situacionPagoPorActa;
+        this.tipoPagoPorActa = tipoPagoPorActa;
         this.montoCondenaPorActa = montoCondenaPorActa;
     }
 

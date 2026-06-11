@@ -19,6 +19,8 @@ final class PagoCondenaSupport {
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa;
+    private final Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa;
+    private final Map<String, PrototipoStore.TipoPago> tipoPagoPorActa;
     private final Map<String, BigDecimal> montoCondenaPorActa;
     private final CerrabilidadSupport cerrabilidad;
 
@@ -26,11 +28,15 @@ final class PagoCondenaSupport {
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
             Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa,
+            Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa,
+            Map<String, PrototipoStore.TipoPago> tipoPagoPorActa,
             Map<String, BigDecimal> montoCondenaPorActa,
             CerrabilidadSupport cerrabilidad) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
+        this.situacionPagoPorActa = situacionPagoPorActa;
+        this.tipoPagoPorActa = tipoPagoPorActa;
         this.montoCondenaPorActa = montoCondenaPorActa;
         this.cerrabilidad = cerrabilidad;
     }
@@ -46,10 +52,32 @@ final class PagoCondenaSupport {
             return resultado(PrototipoStore.PagoCondenaEstado.CONFLICT, actaId, situacion);
         }
         situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.INFORMADO);
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.CONDENA);
         registrarEvento(
                 actaId,
                 "PAGO_CONDENA_INFORMADO",
                 "Pago de condena informado/iniciado en demo; sin comprobante real ni EM/RC/Cmte/Pref/Nro.");
+        return resultado(PrototipoStore.PagoCondenaEstado.OK, actaId, PrototipoStore.SituacionPagoCondena.INFORMADO);
+    }
+
+    PrototipoStore.PagoCondenaResultado informarPagoCondenaDesdePortal(String actaId) {
+        PrototipoStore.PagoCondenaPrecondicion pre = validarPrecondicionComun(actaId);
+        if (pre.estado() != PrototipoStore.PagoCondenaEstado.OK) {
+            return pre.resultado();
+        }
+        PrototipoStore.SituacionPagoCondena situacion = pre.situacion();
+        if (situacion != PrototipoStore.SituacionPagoCondena.PENDIENTE
+                && situacion != PrototipoStore.SituacionPagoCondena.OBSERVADO) {
+            return resultado(PrototipoStore.PagoCondenaEstado.CONFLICT, actaId, situacion);
+        }
+        situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.INFORMADO);
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.CONDENA);
+        registrarEvento(
+                actaId,
+                "PAGO_CONDENA_INFORMADO",
+                "PORTAL_INFRACTOR: Pago de condena informado desde el portal del infractor; sin comprobante real.");
         return resultado(PrototipoStore.PagoCondenaEstado.OK, actaId, PrototipoStore.SituacionPagoCondena.INFORMADO);
     }
 
@@ -62,6 +90,8 @@ final class PagoCondenaSupport {
             return resultado(PrototipoStore.PagoCondenaEstado.CONFLICT, actaId, pre.situacion());
         }
         situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.CONFIRMADO);
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.CONFIRMADO);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.CONDENA);
         registrarEvento(
                 actaId,
                 "PAGO_CONDENA_CONFIRMADO",
@@ -78,6 +108,8 @@ final class PagoCondenaSupport {
             return resultado(PrototipoStore.PagoCondenaEstado.CONFLICT, actaId, pre.situacion());
         }
         situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.OBSERVADO);
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.NO_APLICA);
         registrarEvento(
                 actaId,
                 "PAGO_CONDENA_OBSERVADO",

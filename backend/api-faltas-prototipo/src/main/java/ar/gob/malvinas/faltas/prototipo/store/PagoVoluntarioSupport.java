@@ -54,6 +54,7 @@ final class PagoVoluntarioSupport {
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, String> accionPendientePorActa;
     private final Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa;
+    private final Map<String, PrototipoStore.TipoPago> tipoPagoPorActa;
     private final Map<String, BigDecimal> montoPagoVoluntarioPorActa;
 
     PagoVoluntarioSupport(
@@ -61,11 +62,13 @@ final class PagoVoluntarioSupport {
             Map<String, List<ActaEventoMock>> eventosPorActa,
             Map<String, String> accionPendientePorActa,
             Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa,
+            Map<String, PrototipoStore.TipoPago> tipoPagoPorActa,
             Map<String, BigDecimal> montoPagoVoluntarioPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.accionPendientePorActa = accionPendientePorActa;
         this.situacionPagoPorActa = situacionPagoPorActa;
+        this.tipoPagoPorActa = tipoPagoPorActa;
         this.montoPagoVoluntarioPorActa = montoPagoVoluntarioPorActa;
     }
 
@@ -137,9 +140,8 @@ final class PagoVoluntarioSupport {
         actas.put(actaId, actualizada);
 
         accionPendientePorActa.put(actaId, PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO);
-        // Habilitación administrativa: situacionPago queda SOLICITADO; visualmente
-        // se interpreta como "Pago voluntario habilitado" (ver badge en la UI).
         situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.SOLICITADO);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.VOLUNTARIO);
         montoPagoVoluntarioPorActa.put(actaId, monto);
 
         registrarEvento(
@@ -288,6 +290,7 @@ final class PagoVoluntarioSupport {
 
         accionPendientePorActa.put(actaId, PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO);
         situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.SOLICITADO);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.VOLUNTARIO);
         // Monto no fijado: el infractor solo expresa intencion de pago;
         // Direccion de Faltas evaluara y fijara el monto si corresponde.
 
@@ -307,6 +310,83 @@ final class PagoVoluntarioSupport {
                 actualizada.estadoProcesoActual(),
                 PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO,
                 null);
+    }
+
+    /**
+     * Dirección de Faltas registra que el plazo/oportunidad de pago voluntario
+     * venció sin que el infractor pagara.
+     *
+     * <p>Precondiciones:
+     * <ul>
+     *   <li>Acta existe.</li>
+     *   <li>Bandeja operable para pago voluntario (excluye ARCHIVO, CERRADAS,
+     *       GESTION_EXTERNA).</li>
+     *   <li>Situación de pago es {@code SOLICITADO}: hay una solicitud activa
+     *       sin pago confirmado.</li>
+     *   <li>No hay resultado final distinto de {@code SIN_RESULTADO_FINAL}.</li>
+     * </ul>
+     *
+     * <p>Efectos:
+     * <ul>
+     *   <li>Cambia {@code situacionPago} a {@link PrototipoStore.SituacionPagoMock#VENCIDO}.</li>
+     *   <li>Limpia {@code accionPendiente} si era
+     *       {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}: la evaluación
+     *       terminó con vencimiento.</li>
+     *   <li>Conserva {@code montoPagoVoluntario} como dato histórico.</li>
+     *   <li>Registra evento {@code PAGO_VOLUNTARIO_VENCIDO}.</li>
+     * </ul>
+     *
+     * <p>Devuelve {@code CONFLICT} si el acta está cerrada, en bandeja terminal,
+     * si la situación de pago no es {@code SOLICITADO}, o si el resultado final
+     * es distinto de {@code SIN_RESULTADO_FINAL} (fallo ya dictado/notificado).
+     */
+    PrototipoStore.RegistrarVencimientoPagoVoluntarioResultado registrarVencimientoPagoVoluntario(
+            String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.RegistrarVencimientoPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarVencimientoPagoVoluntarioEstado.NOT_FOUND,
+                    null, null, null, null, null);
+        }
+        if (!bandejaPermitePagoVoluntario(actual.estaCerrada(), actual.bandejaActual())) {
+            return new PrototipoStore.RegistrarVencimientoPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarVencimientoPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, null, null);
+        }
+        PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        if (situacionActual != PrototipoStore.SituacionPagoMock.SOLICITADO) {
+            return new PrototipoStore.RegistrarVencimientoPagoVoluntarioResultado(
+                    PrototipoStore.RegistrarVencimientoPagoVoluntarioEstado.CONFLICT,
+                    null, null, null, situacionActual, null);
+        }
+
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.VENCIDO);
+
+        String accionActual = accionPendientePorActa.get(actaId);
+        if (PrototipoStore.ACCION_EVALUAR_PAGO_VOLUNTARIO.equals(accionActual)) {
+            accionPendientePorActa.remove(actaId);
+        }
+
+        java.math.BigDecimal monto = montoPagoVoluntarioPorActa.get(actaId);
+        String descripcion = "Direccion de Faltas registro vencimiento de pago voluntario sin pago."
+                + (monto != null ? " Monto historico: " + monto.toPlainString() + "." : "")
+                + " El tramite puede continuar a fallo de fondo.";
+
+        registrarEvento(
+                actaId,
+                "PAGO_VOLUNTARIO_VENCIDO",
+                actual.bloqueActual(),
+                actual.bloqueActual(),
+                descripcion);
+
+        return new PrototipoStore.RegistrarVencimientoPagoVoluntarioResultado(
+                PrototipoStore.RegistrarVencimientoPagoVoluntarioEstado.OK,
+                actual.id(),
+                actual.bandejaActual(),
+                actual.estadoProcesoActual(),
+                PrototipoStore.SituacionPagoMock.VENCIDO,
+                monto);
     }
 
     /**

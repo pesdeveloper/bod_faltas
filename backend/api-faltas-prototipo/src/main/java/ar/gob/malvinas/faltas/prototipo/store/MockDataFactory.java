@@ -55,6 +55,7 @@ public class MockDataFactory {
         cargarActa0006(store);
         cargarActa0007(store);
         cargarActa0008(store);
+        cargarActa0009(store);
 
         // --- Mocks con dependencias de tests ---
         cargarActa0011(store);
@@ -67,6 +68,7 @@ public class MockDataFactory {
         cargarActa0019CerrabilidadMaterialesDemo(store);
         cargarActa0020OrigenMedidaDesdeGenerarMedidaDemo(store);
         cargarActa0021CerrabilidadMaterialesPagoConfirmadoDemo(store);
+        cargarActa0022PagoRealYCerrabilidadMaterialDemo(store);
         cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo(store);
         cargarActa0025SoloD1TrazasSinAnclasMaterialesDemo(store);
         cargarActa0026MedidaPreventivaPosteriorContravencionDemo(store);
@@ -96,6 +98,8 @@ public class MockDataFactory {
         cargarActa0132CondenaFirmeConfirmadoArchivoReingresoContinuidadDemo(store);
         cargarActa0133CondenaFirmePendienteArchivoReingresoContinuidadDemo(store);
         cargarActa0134CondenaFirmeInformadoArchivoReingresoContinuidadDemo(store);
+
+        cargarActa0140CondenaFirmeSinPagoConMaterialesPendientesDemo(store);
 
         completarDependenciasDemo(store);
     }
@@ -663,6 +667,7 @@ public class MockDataFactory {
                 "Giros indebidos en rotonda (corte de senda).",
                 bandeja);
         store.getActas().put(id, acta);
+        store.setAccionPendiente(id, PrototipoStore.ACCION_COMPLETAR_ENRIQUECIMIENTO);
 
         List<ActaEventoMock> eventos = new ArrayList<>();
         eventos.add(new ActaEventoMock(
@@ -1698,6 +1703,7 @@ public class MockDataFactory {
 
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO);
         store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.CONFIRMADO);
+        store.setTipoPago(id, PrototipoStore.TipoPago.VOLUNTARIO);
         store.setMontoPagoVoluntario(id, new BigDecimal("8750.00"));
 
         PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rRodado =
@@ -1828,6 +1834,7 @@ public class MockDataFactory {
                         "ADJUNTO",
                         "constatacion_retencion_doc_0022.pdf"));
         store.getDocumentosPorActa().put(id, docs);
+        store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
     }
 
     /**
@@ -2753,6 +2760,7 @@ public class MockDataFactory {
                 "Volumen demo: enriquecimiento con pago voluntario solicitado.",
                 LocalDateTime.of(2026, 4, 5, 11, 20));
         store.setSituacionPago("ACTA-0049", PrototipoStore.SituacionPagoMock.SOLICITADO);
+        store.setTipoPago("ACTA-0049", PrototipoStore.TipoPago.VOLUNTARIO);
     }
 
     private void cargarActaVolumenEnriquecimiento(
@@ -3746,6 +3754,7 @@ public class MockDataFactory {
                 false,
                 LocalDateTime.of(2026, 6, 12, 11, 0));
         store.setSituacionPago("ACTA-0110", PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+        store.setTipoPago("ACTA-0110", PrototipoStore.TipoPago.VOLUNTARIO);
         store.setPagoInformadoDemo(
                 "ACTA-0110",
                 new PrototipoStore.PagoInformadoMock(
@@ -4205,6 +4214,7 @@ public class MockDataFactory {
         // El monto fue fijado por Dirección de Faltas antes del pago informado.
         store.setMontoPagoVoluntario(id, java.math.BigDecimal.valueOf(8500));
         store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+        store.setTipoPago(id, PrototipoStore.TipoPago.VOLUNTARIO);
         store.setPagoInformadoDemo(
                 id,
                 new PrototipoStore.PagoInformadoMock(
@@ -4535,6 +4545,7 @@ public class MockDataFactory {
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
         store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(75000));
         store.setSituacionPagoCondenaDemo(id, PrototipoStore.SituacionPagoCondena.CONFIRMADO);
+        store.setTipoPago(id, PrototipoStore.TipoPago.CONDENA);
     }
 
     /**
@@ -4633,5 +4644,85 @@ public class MockDataFactory {
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
         store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(55000));
         store.setSituacionPagoCondenaDemo(id, PrototipoStore.SituacionPagoCondena.INFORMADO);
+        store.setTipoPago(id, PrototipoStore.TipoPago.CONDENA);
+        store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+    }
+
+    /**
+     * Acta demo para verificar que condena firme sin pago de condena confirmado
+     * no habilita materiales. Simula el estado post-reingreso desde gestion
+     * externa (Apremio/Juzgado) donde el acta volvio al circuito interno pero
+     * no hay pago confirmado. Tiene dos origenes materiales (rodado y
+     * documentacion) para que los bloqueantes sean visibles y verificables.
+     * No tiene situacionPagoCondena=CONFIRMADO: el habilitante no se cumple.
+     */
+    private void cargarActa0140CondenaFirmeSinPagoConMaterialesPendientesDemo(PrototipoStore store) {
+        String id = "ACTA-0140";
+        ActaMock acta = new ActaMock(
+                id,
+                "A-2026-0140",
+                "TRANSITO_URBANO",
+                "D5_ANALISIS",
+                "PENDIENTE_REVISION",
+                "ACTIVA",
+                false,
+                true,
+                true,
+                false,
+                LocalDateTime.of(2026, 4, 1, 9, 0),
+                "Demo condena firme sin pago (0140)",
+                "DNI 50.000.140",
+                "Oficial Demo",
+                "ACTA-0140: condena firme, reingresada, sin pago de condena confirmado; materiales pendientes (demo).",
+                BANDEJA_PENDIENTE_ANALISIS);
+        store.getActas().put(id, acta);
+        store.registrarDependenciaDemo(id, PrototipoStore.DependenciaActaDemo.TRANSITO);
+
+        List<ActaEventoMock> eventos = new ArrayList<>();
+        eventos.add(new ActaEventoMock(
+                "EVT-0140-01", id,
+                LocalDateTime.of(2026, 4, 1, 9, 10),
+                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "Acta ingresada: rodado retenido y documentacion retenida (mock)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0140-02", id,
+                LocalDateTime.of(2026, 4, 10, 10, 0),
+                "CONDENA_FIRME", "D5_ANALISIS", "D5_ANALISIS",
+                "Condena firme (plazo vencido sin apelacion)."));
+        eventos.add(new ActaEventoMock(
+                "EVT-0140-03", id,
+                LocalDateTime.of(2026, 4, 20, 9, 0),
+                "REINGRESO_POST_GESTION_EXTERNA", "GESTION_EXTERNA", "D5_ANALISIS",
+                "Reingreso desde gestion externa sin pago: materiales pendientes de resolucion."));
+        store.getEventosPorActa().put(id, eventos);
+
+        List<ActaDocumentoMock> docs = new ArrayList<>();
+        docs.add(new ActaDocumentoMock(
+                "DOC-0140-01", id,
+                PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_VEHICULO,
+                PrototipoConstantes.ESTADO_DOC_ADJUNTO,
+                "acta_retencion_vehiculo_0140.pdf"));
+        docs.add(new ActaDocumentoMock(
+                "DOC-0140-02", id,
+                PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL,
+                PrototipoConstantes.ESTADO_DOC_ADJUNTO,
+                "constatacion_retencion_doc_0140.pdf"));
+        store.getDocumentosPorActa().put(id, docs);
+
+        store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        store.setMontoCondenaDemo(id, java.math.BigDecimal.valueOf(40000));
+
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rRodado =
+                store.reconocerOrigenBloqueanteSecuestroRodado(id);
+        if (rRodado.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0140: reconocer rodado, esperado OK, obtuvo: " + rRodado.estado());
+        }
+        PrototipoStore.ReconocerOrigenBloqueanteMaterialResultado rDoc =
+                store.reconocerOrigenBloqueanteRetencionDocumental(id);
+        if (rDoc.estado() != PrototipoStore.ReconocerOrigenBloqueanteMaterialEstado.OK) {
+            throw new IllegalStateException(
+                    "Carga demo ACTA-0140: reconocer documentacion, esperado OK, obtuvo: " + rDoc.estado());
+        }
     }
 }

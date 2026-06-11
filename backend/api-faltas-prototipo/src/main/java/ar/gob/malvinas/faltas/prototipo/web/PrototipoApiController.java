@@ -11,8 +11,12 @@ import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
 import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaCodigo;
 import ar.gob.malvinas.faltas.prototipo.store.MockDataFactory;
 import ar.gob.malvinas.faltas.prototipo.store.PrototipoStore;
+import ar.gob.malvinas.faltas.prototipo.web.dto.AccionesUiResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.AnularActaPorNulidadAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.EnviarANotificacionAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaBandejaItemResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaDetalleResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ActaDocumentoPortalResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaDocumentoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaEventoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ActaInfractorResponse;
@@ -23,6 +27,7 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.SubBandejaResumenResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarActaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ArchivarPorVencimientoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CerrarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ConsentirCondenaYRegistrarPagoAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CerrabilidadResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.HechosMaterialesActaResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.HechosMaterialesEjeResponse;
@@ -54,6 +59,7 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarSolicitudPagoVoluntario
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarSolicitudPagoVoluntarioAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarApelacionAccionRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarApelacionAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarVencimientoPagoVoluntarioAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarVencimientoPlazoApelacionAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ResolverApelacionAccionRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ResolverApelacionAccionResponse;
@@ -273,6 +279,14 @@ public class PrototipoApiController {
         if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.NOT_FOUND) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+        if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT_EN_REVISION) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede solicitar pago voluntario porque el acta se encuentra en revisión.");
+        }
+        if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT_FALLO_DICTADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede solicitar pago voluntario porque existe un fallo condenatorio en proceso.");
+        }
         if (r.estado() == PrototipoStore.RegistrarSolicitudPagoVoluntarioEstado.CONFLICT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "No es posible solicitar pago voluntario en el estado actual del acta.");
@@ -308,9 +322,78 @@ public class PrototipoApiController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "El pago voluntario ya fue confirmado.");
         }
+        if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_FALLO_DICTADO) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede informar pago voluntario porque existe un fallo condenatorio dictado.");
+        }
         if (r.estado() == PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "No es posible informar el pago en el estado actual del acta.");
+        }
+        ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
+        return mapActaInfractor(actualizada);
+    }
+
+    /**
+     * El infractor abre un documento notificable desde el portal, confirmando
+     * su visualización. Si el documento ya fue notificado, es idempotente.
+     * Devuelve 404 si el documento no existe o no es visible para el infractor.
+     */
+    @PostMapping("/infractor/actas/{codigoQr}/documentos/{tipoDocumento}/ver")
+    public ActaInfractorResponse verDocumentoInfractorPorCodigoQr(
+            @PathVariable("codigoQr") String codigoQr,
+            @PathVariable("tipoDocumento") String tipoDocumento) {
+        ActaMock acta = store.findActaPorCodigoQr(codigoQr)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PrototipoStore.VerDocumentoPortalResultado r = store.verDocumentoPortal(acta.id(), tipoDocumento);
+        if (r.estado() == PrototipoStore.VerDocumentoPortalEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.VerDocumentoPortalEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
+        return mapActaInfractor(actualizada);
+    }
+
+    /**
+     * El infractor informa el pago de condena desde el portal.
+     * Precondición: resultadoFinal=CONDENA_FIRME y situacionPagoCondena=PENDIENTE u OBSERVADO.
+     * Devuelve 409 si no se puede pagar en el estado actual.
+     */
+    @PostMapping("/infractor/actas/{codigoQr}/acciones/pagar-condena")
+    public ActaInfractorResponse pagarCondenaInfractorPorCodigoQr(
+            @PathVariable("codigoQr") String codigoQr) {
+        ActaMock acta = store.findActaPorCodigoQr(codigoQr)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PrototipoStore.PagoCondenaResultado r = store.informarPagoCondenaDesdePortal(acta.id());
+        if (r.estado() == PrototipoStore.PagoCondenaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.PagoCondenaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
+        return mapActaInfractor(actualizada);
+    }
+
+    /**
+     * El infractor consiente la condena desde el portal, renunciando a apelar.
+     * Precondición: resultadoFinal=CONDENADO, sin apelacion presentada.
+     * Efecto: resultadoFinal=CONDENA_FIRME, situacionPagoCondena=PENDIENTE.
+     */
+    @PostMapping("/infractor/actas/{codigoQr}/acciones/consentir-condena")
+    public ActaInfractorResponse consentirCondenaInfractorPorCodigoQr(
+            @PathVariable("codigoQr") String codigoQr) {
+        ActaMock acta = store.findActaPorCodigoQr(codigoQr)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PrototipoStore.ConsentirCondenaResultado r = store.consentirCondena(acta.id());
+        if (r.estado() == PrototipoStore.ConsentirCondenaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ConsentirCondenaEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede consentir la condena en el estado actual del acta.");
         }
         ActaMock actualizada = store.findActaPorCodigoQr(codigoQr).orElse(acta);
         return mapActaInfractor(actualizada);
@@ -591,6 +674,35 @@ public class PrototipoApiController {
                 r.bandejaActual(),
                 r.estadoProcesoActual(),
                 store.getAccionPendiente(r.actaId()),
+                r.montoPagoVoluntario());
+    }
+
+    /**
+     * Dirección de Faltas registra que el plazo/oportunidad de pago voluntario
+     * venció sin que el infractor pagara. Precondición: {@code situacionPago=SOLICITADO}
+     * y {@code resultadoFinal=SIN_RESULTADO_FINAL}. Tras la acción, el acta queda con
+     * {@code situacionPago=VENCIDO} y el trámite puede continuar a fallo de fondo.
+     * El {@code montoPagoVoluntario} se conserva como dato histórico.
+     */
+    @PostMapping("/actas/{id}/acciones/registrar-vencimiento-pago-voluntario")
+    public RegistrarVencimientoPagoVoluntarioAccionResponse registrarVencimientoPagoVoluntario(
+            @PathVariable("id") String id) {
+        PrototipoStore.RegistrarVencimientoPagoVoluntarioResultado r =
+                store.registrarVencimientoPagoVoluntario(id);
+        if (r.estado() == PrototipoStore.RegistrarVencimientoPagoVoluntarioEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.RegistrarVencimientoPagoVoluntarioEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No es posible registrar vencimiento: el acta no esta en situacion SOLICITADO o se encuentra en bandeja no operable.");
+        }
+        return new RegistrarVencimientoPagoVoluntarioAccionResponse(
+                "OK",
+                "Vencimiento de pago voluntario registrado. El tramite puede continuar a fallo.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.situacionPago() != null ? r.situacionPago().name() : null,
                 r.montoPagoVoluntario());
     }
 
@@ -976,6 +1088,42 @@ public class PrototipoApiController {
                 r.situacionPago().name());
     }
 
+    /**
+     * Dirección registra en un único acto el consentimiento presencial de la
+     * condena y el pago correspondiente. Precondición:
+     * {@code resultadoFinal=CONDENADO}, sin apelación presentada,
+     * {@code situacionPagoCondena=NO_APLICA}, {@code situacionPago=SIN_PAGO},
+     * {@code montoCondena > 0}. Efecto: {@code resultadoFinal=CONDENA_FIRME},
+     * {@code situacionPagoCondena=INFORMADO},
+     * {@code situacionPago=PENDIENTE_CONFIRMACION}, {@code tipoPago=CONDENA}.
+     * No confirma la acreditación; luego quedan disponibles confirmar y
+     * observar acreditación.
+     */
+    @PostMapping("/actas/{id}/acciones/consentir-condena-y-registrar-pago")
+    public ConsentirCondenaYRegistrarPagoAccionResponse consentirCondenaYRegistrarPago(
+            @PathVariable("id") String id) {
+        if (!store.existeActa(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        PrototipoStore.ConsentirCondenaYRegistrarPagoResultado r =
+                store.consentirCondenaYRegistrarPago(id);
+        if (r.estado() == PrototipoStore.ConsentirCondenaYRegistrarPagoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ConsentirCondenaYRegistrarPagoEstado.CONFLICT) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "No se puede consentir la condena y registrar el pago en el estado actual del acta.");
+        }
+        return new ConsentirCondenaYRegistrarPagoAccionResponse(
+                "OK",
+                "Condena consentida presencialmente y pago registrado."
+                        + " La acreditacion queda pendiente de confirmacion.",
+                id,
+                r.resultadoFinal() != null ? r.resultadoFinal().name() : null,
+                r.situacionPagoCondena() != null ? r.situacionPagoCondena().name() : null);
+    }
+
     @PostMapping("/actas/{id}/acciones/informar-pago-condena")
     public PagoCondenaAccionResponse informarPagoCondena(@PathVariable("id") String id) {
         PrototipoStore.PagoCondenaResultado r = store.informarPagoCondena(id);
@@ -1357,10 +1505,11 @@ public class PrototipoApiController {
         if (r.estado() == PrototipoStore.ReingresarActaEstado.CONFLICT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
+        String destino = r.bandejaActual() != null ? r.bandejaActual() : "PENDIENTE_ANALISIS";
         String mensaje = r.motivoArchivoPrevio() == null
-                ? "Reingreso desde archivo; acta vuelve a PENDIENTE_ANALISIS."
+                ? "Reingreso desde archivo; acta vuelve a " + destino + "."
                 : "Reingreso desde archivo (motivo previo " + r.motivoArchivoPrevio()
-                        + "); acta vuelve a PENDIENTE_ANALISIS.";
+                        + "); acta vuelve a " + destino + ".";
         return new ReingresarActaAccionResponse(
                 "OK",
                 mensaje,
@@ -1369,6 +1518,57 @@ public class PrototipoApiController {
                 r.estadoProcesoActual(),
                 r.accionPendiente(),
                 r.motivoArchivoPrevio());
+    }
+
+    /**
+     * Envía el acta desde enriquecimiento (D2) a la bandeja de notificación
+     * pendiente (D4/PENDIENTE_NOTIFICACION). Solo aplica a actas en
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} con situaciónAdministrativa ACTIVA.
+     * Los bloqueantes materiales pendientes no impiden esta transición.
+     */
+    @PostMapping("/actas/{id}/acciones/enviar-a-notificacion")
+    public EnviarANotificacionAccionResponse enviarANotificacion(@PathVariable("id") String id) {
+        PrototipoStore.EnviarActaANotificacionResultado r = store.enviarActaANotificacion(id);
+        if (r.estado() == PrototipoStore.EnviarActaANotificacionEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.EnviarActaANotificacionEstado.CONFLICT) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El acta no está en enriquecimiento activo; no se puede enviar a notificación.");
+        }
+        return new EnviarANotificacionAccionResponse(
+                "OK",
+                "Acta enviada a notificación.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual());
+    }
+
+    /**
+     * Anula el acta y la archiva por nulidad desde la etapa de enriquecimiento.
+     * Solo aplica a actas en {@code ACTAS_EN_ENRIQUECIMIENTO} con
+     * situaciónAdministrativa ACTIVA. El acta queda en ARCHIVO con
+     * {@code motivoArchivo=NULIDAD} y {@code permiteReingreso=true}.
+     */
+    @PostMapping("/actas/{id}/acciones/anular-acta")
+    public AnularActaPorNulidadAccionResponse anularActa(@PathVariable("id") String id) {
+        PrototipoStore.AnularActaPorNulidadResultado r = store.anularActaPorNulidad(id);
+        if (r.estado() == PrototipoStore.AnularActaPorNulidadEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.AnularActaPorNulidadEstado.CONFLICT) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El acta no está en enriquecimiento activo; no se puede anular.");
+        }
+        return new AnularActaPorNulidadAccionResponse(
+                "OK",
+                "Acta anulada y archivada por nulidad.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.motivoArchivo());
     }
 
     /**
@@ -1747,6 +1947,7 @@ public class PrototipoApiController {
                 a.estadoProcesoActual(),
                 a.situacionAdministrativaActual(),
                 store.getSituacionPago(a.id()).name(),
+                store.getTipoPago(a.id()).name(),
                 mapPagoInformado(pagoInformado),
                 a.estaCerrada(),
                 a.permiteReingreso(),
@@ -1787,7 +1988,125 @@ public class PrototipoApiController {
                 store.getMontoCondena(a.id()),
                 store.listarNotificacionesPorActa(a.id()).stream()
                         .map(this::mapActaNotificacion)
-                        .toList());
+                        .toList(),
+                computarAccionesUi(a));
+    }
+
+    private AccionesUiResponse computarAccionesUi(ActaMock a) {
+        boolean archivoReingreso = a.permiteReingreso() && "ARCHIVO".equals(a.bandejaActual());
+
+        String bandeja = a.bandejaActual();
+        boolean bandejaOperativaInterna = !"ARCHIVO".equals(bandeja)
+                && !"CERRADAS".equals(bandeja)
+                && !"GESTION_EXTERNA".equals(bandeja);
+
+        boolean consentirCondenaYRegistrarPago = false;
+        boolean pagoVoluntario = false;
+        boolean vencimientoPagoVoluntario = false;
+        boolean falloFondo = false;
+        boolean cumplimientoMaterial = false;
+        boolean resolucionBloqueante = false;
+        boolean cierre = false;
+        boolean enviarANotificacion = false;
+        boolean anularActa = false;
+
+        if (!a.estaCerrada()
+                && bandejaOperativaInterna
+                && "ACTIVA".equals(a.situacionAdministrativaActual())) {
+            PrototipoStore.ResultadoFinalCierreMock rf = resultadoFinalVigente(a.id());
+            PrototipoStore.SituacionPagoMock sp = store.getSituacionPago(a.id());
+
+            // consentirCondenaYRegistrarPago
+            // Camino A: fallo ya notificado (CONDENADO)
+            // Camino B: fallo condenatorio firmado aún sin notificar (infractor se presenta presencialmente)
+            boolean candidato = rf == PrototipoStore.ResultadoFinalCierreMock.CONDENADO
+                    || (rf == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
+                            && store.hayFalloCondenatorioPendienteDeNotificacion(a.id()));
+            if (candidato && !store.hayApelacionPresentada(a.id())) {
+                java.math.BigDecimal monto = store.getMontoCondena(a.id());
+                PrototipoStore.SituacionPagoCondena spc = store.getSituacionPagoCondena(a.id());
+                consentirCondenaYRegistrarPago =
+                        monto != null
+                                && monto.signum() > 0
+                                && spc == PrototipoStore.SituacionPagoCondena.NO_APLICA
+                                && sp == PrototipoStore.SituacionPagoMock.SIN_PAGO;
+            }
+
+            boolean sinResultadoFinal = rf == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL;
+            boolean sinFalloDictado = !store.hayFalloDictado(a.id());
+            boolean analisisOperativo = "PENDIENTE_ANALISIS".equals(bandeja)
+                    && "PENDIENTE_REVISION".equals(a.estadoProcesoActual());
+
+            // pagoVoluntario: Dirección puede iniciar o gestionar una solicitud activa.
+            boolean sinPago = sp == PrototipoStore.SituacionPagoMock.SIN_PAGO;
+            boolean solicitudActiva = sp == PrototipoStore.SituacionPagoMock.SOLICITADO;
+            pagoVoluntario = sinResultadoFinal && sinFalloDictado && (sinPago || solicitudActiva);
+
+            // vencimientoPagoVoluntario: hay solicitud activa y monto vigente sin pago.
+            BigDecimal montoPagoVoluntario = store.getMontoPagoVoluntario(a.id());
+            vencimientoPagoVoluntario = sinResultadoFinal
+                    && sinFalloDictado
+                    && sp == PrototipoStore.SituacionPagoMock.SOLICITADO
+                    && montoPagoVoluntario != null
+                    && montoPagoVoluntario.signum() > 0;
+
+            // falloFondo: solo en análisis operativo; notificación y firma lo bloquean.
+            boolean pagoCompatibleConFallo = sp == PrototipoStore.SituacionPagoMock.SIN_PAGO
+                    || sp == PrototipoStore.SituacionPagoMock.VENCIDO;
+            falloFondo = analisisOperativo && sinResultadoFinal && sinFalloDictado && pagoCompatibleConFallo;
+
+            // cumplimientoMaterial / resolucionBloqueante:
+            // solo ejecutables cuando existe un habilitante material
+            PrototipoStore.CerrabilidadActaVista cv = store.getCerrabilidadActa(a.id());
+            boolean tieneHabilitante = hayHabilitanteMaterialParaUi(a.id(), rf, cv);
+            boolean tienePendientesMateriales = cv != null && !cv.pendientesBloqueantes().isEmpty();
+            if (tieneHabilitante && tienePendientesMateriales) {
+                cumplimientoMaterial = true;
+                resolucionBloqueante = true;
+            }
+
+            // cierre: puede ejecutarse cerrar-acta ahora
+            cierre = store.puedeCerrarDesdeAnalisis(a.id());
+
+            // enviarANotificacion / anularActa: solo en ACTAS_EN_ENRIQUECIMIENTO activa
+            if ("ACTAS_EN_ENRIQUECIMIENTO".equals(bandeja)) {
+                enviarANotificacion = true;
+                anularActa = true;
+            }
+        }
+
+        return new AccionesUiResponse(
+                archivoReingreso,
+                consentirCondenaYRegistrarPago,
+                pagoVoluntario,
+                vencimientoPagoVoluntario,
+                falloFondo,
+                cumplimientoMaterial,
+                resolucionBloqueante,
+                cierre,
+                enviarANotificacion,
+                anularActa);
+    }
+
+    /**
+     * Habilitante material para UI: ABSUELTO, PAGO_CONFIRMADO o CONDENA_FIRME
+     * con situacionPagoCondena=CONFIRMADO. Duplica intencionalmente la lógica
+     * de {@code CerrabilidadSupport#tieneResultadoHabilitanteMaterial} para
+     * evitar acoplamiento controller-support.
+     */
+    private boolean hayHabilitanteMaterialParaUi(
+            String actaId,
+            PrototipoStore.ResultadoFinalCierreMock rf,
+            PrototipoStore.CerrabilidadActaVista cv) {
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
+                || rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO) {
+            return true;
+        }
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            PrototipoStore.SituacionPagoCondena spc = store.getSituacionPagoCondena(actaId);
+            return spc == PrototipoStore.SituacionPagoCondena.CONFIRMADO;
+        }
+        return false;
     }
 
     private ActaInfractorResponse mapActaInfractor(ActaMock a) {
@@ -1799,24 +2118,28 @@ public class PrototipoApiController {
                 (cv != null && cv.resultadoFinal() != null)
                         ? cv.resultadoFinal()
                         : PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL;
-        String resultadoFinal = resultadoFinalEnum.name();
+        PrototipoStore.SituacionPagoCondena situacionPagoCondena = store.getSituacionPagoCondena(a.id());
 
         boolean enBandejaNoOperablePorPortal = estaEnBandejaNoOperablePorPortal(a);
         String estadoVisible = computarEstadoVisible(a);
+        boolean enRevision = "EN_REVISION".equals(estadoVisible);
 
         boolean puedeConsultarEstado = true;
-        boolean puedeSolicitarPagoVoluntario = monto == null
+        boolean puedeSolicitarPagoVoluntario = !enRevision
+                && monto == null
                 && situacion == PrototipoStore.SituacionPagoMock.SIN_PAGO
                 && resultadoFinalEnum == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
-                && !enBandejaNoOperablePorPortal;
-        boolean puedePagar = monto != null
+                && !enBandejaNoOperablePorPortal
+                && !store.hayFalloCondenatorioDictado(a.id());
+        boolean puedePagar = !enRevision
+                && monto != null
                 && (situacion == PrototipoStore.SituacionPagoMock.SOLICITADO
                         || situacion == PrototipoStore.SituacionPagoMock.OBSERVADO)
                 && resultadoFinalEnum == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
                 && !enBandejaNoOperablePorPortal;
-        boolean puedePresentarApelacion = store.puedePresentarApelacion(a.id());
+        boolean puedePresentarApelacion = !enRevision && store.puedePresentarApelacion(a.id());
         ActaNotificacionMock notificacionPortalPendiente = store.findNotificacionPortalPendiente(a.id()).orElse(null);
-        boolean puedeConfirmarVisualizacionNotificacion = notificacionPortalPendiente != null;
+        boolean puedeConfirmarVisualizacionNotificacion = !enRevision && notificacionPortalPendiente != null;
         Boolean domicilioElectronicoVerificado = store.listarNotificacionesPorActa(a.id()).stream()
                 .filter(n -> n.canalTipificado().name().equals("DOMICILIO_ELECTRONICO"))
                 .map(ActaNotificacionMock::domicilioElectronicoVerificado)
@@ -1824,25 +2147,71 @@ public class PrototipoApiController {
                 .findFirst()
                 .orElse(Boolean.FALSE);
 
+        // Nullable fields: null means absent from JSON for EN_REVISION
+        String situacionPagoJson = enRevision ? null : situacion.name();
+        PrototipoStore.TipoPago tipoPagoEnum = store.getTipoPago(a.id());
+        String tipoPagoJson = enRevision ? null : tipoPagoEnum.name();
+        String resultadoFinalJson = enRevision ? null : resultadoFinalEnum.name();
+        String situacionPagoCondenaJson = enRevision ? null : situacionPagoCondena.name();
+        BigDecimal montoPagoVoluntarioJson = enRevision ? null : monto;
+        BigDecimal montoCondenaJson = enRevision ? null : store.getMontoCondena(a.id());
+
+        Boolean puedeConsentirCondena = enRevision ? null
+                : (resultadoFinalEnum == PrototipoStore.ResultadoFinalCierreMock.CONDENADO
+                        && !store.hayApelacionPresentada(a.id()));
+        Boolean puedePagarCondena = enRevision ? null
+                : (resultadoFinalEnum == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME
+                        && (situacionPagoCondena == PrototipoStore.SituacionPagoCondena.PENDIENTE
+                                || situacionPagoCondena == PrototipoStore.SituacionPagoCondena.OBSERVADO));
+
+        List<ActaDocumentoPortalResponse> documentos = store.listarDocumentosVisiblesPortal(a.id()).stream()
+                .map(this::mapDocumentoPortal)
+                .toList();
+
+        boolean hayDocumentoPendienteNotificacion = documentos.stream()
+                .anyMatch(ActaDocumentoPortalResponse::notificable);
+
         String mensajeVisible = computarMensajeVisibleInfractor(
-                estadoVisible, situacion, monto, puedePagar, puedeSolicitarPagoVoluntario);
+                estadoVisible, situacion, monto, puedePagar, puedeSolicitarPagoVoluntario,
+                resultadoFinalEnum, situacionPagoCondena, hayDocumentoPendienteNotificacion, a);
 
         return new ActaInfractorResponse(
                 a.numeroActa(),
                 codigoQr,
                 estadoVisible,
-                situacion.name(),
-                resultadoFinal,
-                monto,
-                store.getMontoCondena(a.id()),
+                situacionPagoJson,
+                tipoPagoJson,
+                resultadoFinalJson,
+                situacionPagoCondenaJson,
+                montoPagoVoluntarioJson,
+                montoCondenaJson,
                 puedeConsultarEstado,
                 puedeSolicitarPagoVoluntario,
                 puedePagar,
                 puedePresentarApelacion,
                 puedeConfirmarVisualizacionNotificacion,
+                puedeConsentirCondena,
+                puedePagarCondena,
                 mapNotificacionPortalPendiente(notificacionPortalPendiente),
                 domicilioElectronicoVerificado,
+                documentos,
                 mensajeVisible);
+    }
+
+    private ActaDocumentoPortalResponse mapDocumentoPortal(PrototipoStore.DocumentoPortalVista v) {
+        boolean notificado = v.notificado();
+        boolean pendienteNotificacion = v.pendienteNotificacion();
+        String estadoNotificacion = pendienteNotificacion ? "PENDIENTE_NOTIFICACION"
+                : notificado ? "NOTIFICADO" : "SIN_NOTIFICACION";
+        return new ActaDocumentoPortalResponse(
+                v.tipoDocumento(),
+                v.titulo(),
+                v.estadoDocumento(),
+                estadoNotificacion,
+                true,
+                pendienteNotificacion,
+                notificado,
+                true);
     }
 
     private NotificacionPortalPendienteResponse mapNotificacionPortalPendiente(ActaNotificacionMock n) {
@@ -1885,6 +2254,9 @@ public class PrototipoApiController {
         if ("GESTION_EXTERNA".equals(a.bandejaActual())) {
             return "EN_GESTION_EXTERNA";
         }
+        if ("ACTAS_EN_ENRIQUECIMIENTO".equals(a.bandejaActual())) {
+            return "EN_REVISION";
+        }
         return "EN_TRAMITE";
     }
 
@@ -1893,16 +2265,66 @@ public class PrototipoApiController {
             PrototipoStore.SituacionPagoMock situacion,
             BigDecimal monto,
             boolean puedePagar,
-            boolean puedeSolicitarPagoVoluntario) {
+            boolean puedeSolicitarPagoVoluntario,
+            PrototipoStore.ResultadoFinalCierreMock resultadoFinal,
+            PrototipoStore.SituacionPagoCondena situacionPagoCondena,
+            boolean hayDocumentoPendienteNotificacion,
+            ActaMock acta) {
         if ("CERRADA".equals(estadoVisible)) {
             return "El acta se encuentra cerrada; no requiere gestiones desde el portal.";
         }
         if ("ARCHIVADA".equals(estadoVisible)) {
+            if (resultadoFinal == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+                if (situacionPagoCondena == PrototipoStore.SituacionPagoCondena.INFORMADO) {
+                    return "La actuación se encuentra archivada administrativamente."
+                            + " El pago de condena se encuentra en proceso de verificación"
+                            + " por Dirección de Faltas.";
+                }
+                return "La actuación se encuentra archivada administrativamente, pero registra una"
+                        + " condena firme pendiente de pago. Puede regularizar el pago desde este portal.";
+            }
             return "El acta se encuentra archivada; no admite gestiones desde el portal.";
         }
         if ("EN_GESTION_EXTERNA".equals(estadoVisible)) {
             return "El acta se encuentra en gestión externa; no admite gestiones desde el portal.";
         }
+        if ("EN_REVISION".equals(estadoVisible)) {
+            return "El acta se encuentra en revisión. "
+                    + "Será notificado cuando la documentación esté validada y disponible.";
+        }
+        // Condena firme — mensajes según situación de pago de condena
+        if (resultadoFinal == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            if (situacionPagoCondena == PrototipoStore.SituacionPagoCondena.CONFIRMADO) {
+                return "Pago de condena confirmado.";
+            }
+            if (situacionPagoCondena == PrototipoStore.SituacionPagoCondena.OBSERVADO) {
+                return "El pago de condena fue observado. Puede reintentar el pago.";
+            }
+            if (situacionPagoCondena == PrototipoStore.SituacionPagoCondena.INFORMADO) {
+                return "Pago de condena en proceso de acreditación. "
+                        + "Dirección de Faltas verificará la acreditación.";
+            }
+            if (situacionPagoCondena == PrototipoStore.SituacionPagoCondena.PENDIENTE) {
+                return "La condena se encuentra firme y registra un monto pendiente de pago.";
+            }
+        }
+        // Condenado (fallo notificado, condena aún no firme)
+        if (resultadoFinal == PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {
+            return "El fallo fue notificado. Puede presentar apelación dentro del plazo correspondiente"
+                    + " o consentir la condena para avanzar al pago.";
+        }
+        // Documento con notificación pendiente
+        if (hayDocumentoPendienteNotificacion) {
+            return "El expediente registra documentación pendiente de notificación. "
+                    + "Abra el documento para quedar notificado.";
+        }
+        // Fallo condenatorio dictado pero aún pendiente de firma
+        if (store.hayFalloCondenatorioDictado(acta.id())
+                && "PENDIENTE_FIRMA".equals(acta.bandejaActual())) {
+            return "El expediente registra una resolución en proceso de formalización. "
+                    + "No puede realizar acciones hasta que sea firmada y notificada.";
+        }
+        // Pago voluntario
         if (situacion == PrototipoStore.SituacionPagoMock.CONFIRMADO) {
             return "El pago voluntario ya fue confirmado.";
         }

@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -182,8 +182,8 @@ const ETIQUETA_SITUACION_PAGO_CONDENA: Record<SituacionPagoCondenaDemo, string> 
 
 const ETIQUETA_ACCION_PAGO_CONDENA: Record<AccionPagoCondenaDemo, string> = {
   INFORMAR: 'Informar pago de condena',
-  CONFIRMAR: 'Confirmar pago de condena',
-  OBSERVAR: 'Observar pago de condena',
+  CONFIRMAR: 'Confirmar acreditacion',
+  OBSERVAR: 'Observar acreditacion',
 };
 
 const ETIQUETA_ACCION_PAGO_CONDENA_EN_CURSO: Record<AccionPagoCondenaDemo, string> = {
@@ -199,6 +199,7 @@ const SITUACIONES_PAGO_CONOCIDAS: ReadonlyArray<SituacionPagoDemo> = [
   'PENDIENTE_CONFIRMACION',
   'CONFIRMADO',
   'OBSERVADO',
+  'VENCIDO',
 ];
 
 const SITUACIONES_PAGO_CONDENA_CONOCIDAS: ReadonlyArray<SituacionPagoCondenaDemo> = [
@@ -282,6 +283,7 @@ const ETIQUETA_BADGE_COMPACTA: Record<string, string> = {
   PENDIENTE_CONFIRMACION: 'Pendiente confirmación',
   CONFIRMADO: 'Pago confirmado',
   OBSERVADO: 'Pago observado',
+  VENCIDO: 'Pago voluntario vencido',
   SIN_RESULTADO_FINAL: 'Sin resultado final',
   FALTA_RESULTADO_FINAL: 'Falta resultado final',
   LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Levantamiento medida',
@@ -400,12 +402,16 @@ export class DemoShellComponent implements OnInit {
   readonly registrandoVencimientoPlazoApelacion = signal<boolean>(false);
   readonly vencimientoPlazoApelacionError = signal<string | null>(null);
   readonly vencimientoPlazoApelacionMensaje = signal<string | null>(null);
+  readonly ejecutandoConsentirCondenaYRegistrarPago = signal<boolean>(false);
+  readonly consentirCondenaYRegistrarPagoError = signal<string | null>(null);
+  readonly consentirCondenaYRegistrarPagoMensaje = signal<string | null>(null);
 
   readonly resolviendoApelacion = signal<boolean>(false);
   readonly resolucionApelacionError = signal<string | null>(null);
   readonly resolucionApelacionMensaje = signal<string | null>(null);
 
   readonly ejecutandoPagoAccion = signal<AccionPagoVoluntarioDemo | null>(null);
+  readonly registrandoVencimientoPagoVoluntario = signal<boolean>(false);
   readonly pagoError = signal<string | null>(null);
   readonly pagoMensaje = signal<string | null>(null);
 
@@ -424,6 +430,10 @@ export class DemoShellComponent implements OnInit {
   readonly ejecutandoArchivoAccion = signal<'ARCHIVAR' | 'REINGRESAR' | null>(null);
   readonly archivoError = signal<string | null>(null);
   readonly archivoMensaje = signal<string | null>(null);
+
+  readonly ejecutandoEnriquecimientoAccion = signal<'ENVIAR_NOTIFICACION' | 'ANULAR_ACTA' | null>(null);
+  readonly enriquecimientoMensaje = signal<string | null>(null);
+  readonly enriquecimientoError = signal<string | null>(null);
 
   // Accion de gestion externa en curso. APREMIO/JUZGADO_DE_PAZ corresponden
   // a las dos derivaciones tipadas del backend; RETORNAR corresponde al
@@ -1266,6 +1276,9 @@ export class DemoShellComponent implements OnInit {
     if (!det) {
       return false;
     }
+    if (det.accionesUi?.falloFondo != null) {
+      return det.accionesUi.falloFondo;
+    }
     if (det.estaCerrada || det.bandejaActual === 'CERRADAS') {
       return false;
     }
@@ -1384,6 +1397,34 @@ export class DemoShellComponent implements OnInit {
     return true;
   }
 
+  ejecutarConsentirCondenaYRegistrarPago(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || this.ejecutandoConsentirCondenaYRegistrarPago()) {
+      return;
+    }
+    this.limpiarConsentirCondenaYRegistrarPagoFeedback();
+    this.ejecutandoConsentirCondenaYRegistrarPago.set(true);
+    this.api
+      .consentirCondenaYRegistrarPago(actaId)
+      .pipe(
+        catchError((err) => {
+          this.consentirCondenaYRegistrarPagoError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.ejecutandoConsentirCondenaYRegistrarPago.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.consentirCondenaYRegistrarPagoMensaje.set(
+          'Condena consentida y pago registrado. La acreditacion quedo pendiente de confirmacion.',
+        );
+        this.refrescarLuegoDeAccion({ actaId: respuesta.actaId });
+      });
+  }
+
   actaTieneApelacionPresentada(): boolean {
     return this.eventos().some((evento) => evento.tipoEvento === 'APELACION_PRESENTADA');
   }
@@ -1426,6 +1467,10 @@ export class DemoShellComponent implements OnInit {
       return false;
     }
     return true;
+  }
+
+  consentirCondenaYRegistrarPagoHabilitado(): boolean {
+    return this.detalle()?.accionesUi?.consentirCondenaYRegistrarPago ?? false;
   }
 
   registrarApelacionPresencial(): void {
@@ -1604,6 +1649,79 @@ export class DemoShellComponent implements OnInit {
     return resultadoFinal === 'CONDENADO' || resultadoFinal === 'CONDENA_FIRME';
   }
 
+  puedeMostrarBloqueEnriquecimiento(): boolean {
+    const det = this.detalle();
+    if (!det) {
+      return false;
+    }
+    return (
+      det.bandejaActual === 'ACTAS_EN_ENRIQUECIMIENTO' ||
+      !!(this.enriquecimientoMensaje() || this.enriquecimientoError())
+    );
+  }
+
+  private limpiarEnriquecimientoFeedback(): void {
+    this.enriquecimientoMensaje.set(null);
+    this.enriquecimientoError.set(null);
+  }
+
+  enviarActaANotificacion(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (this.ejecutandoEnriquecimientoAccion() !== null) {
+      return;
+    }
+    this.limpiarEnriquecimientoFeedback();
+    this.ejecutandoEnriquecimientoAccion.set('ENVIAR_NOTIFICACION');
+    this.api
+      .enviarANotificacion(actaId)
+      .pipe(
+        catchError((err) => {
+          this.enriquecimientoError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.ejecutandoEnriquecimientoAccion.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.enriquecimientoMensaje.set('Acta enviada a notificacion.');
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
+
+  anularActaPorNulidad(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (this.ejecutandoEnriquecimientoAccion() !== null) {
+      return;
+    }
+    this.limpiarEnriquecimientoFeedback();
+    this.ejecutandoEnriquecimientoAccion.set('ANULAR_ACTA');
+    this.api
+      .anularActa(actaId)
+      .pipe(
+        catchError((err) => {
+          this.enriquecimientoError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.ejecutandoEnriquecimientoAccion.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.enriquecimientoMensaje.set('Acta anulada y archivada por nulidad.');
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
   puedeMostrarBloqueArchivoReingreso(): boolean {
     const det = this.detalle();
     if (!det) {
@@ -1683,6 +1801,9 @@ export class DemoShellComponent implements OnInit {
     if (!det) {
       return false;
     }
+    if (det.accionesUi != null && det.accionesUi.cumplimientoMaterial === false) {
+      return false;
+    }
     return this.pendientesBloqueantes(det).some((pendiente) =>
       this.esTipoCumplimientoMaterialConocido(pendiente),
     );
@@ -1716,6 +1837,10 @@ export class DemoShellComponent implements OnInit {
     pendiente: string,
   ): pendiente is TipoResolucionBloqueoCierre {
     if (this.bandejaActaSinAccionesInternasOperativas()) {
+      return false;
+    }
+    const det = this.detalle();
+    if (det?.accionesUi != null && det.accionesUi.resolucionBloqueante === false) {
       return false;
     }
     if (!this.esTipoCumplimientoMaterialConocido(pendiente)) {
@@ -1975,7 +2100,13 @@ export class DemoShellComponent implements OnInit {
     if (!this.puedeMostrarPagoVoluntario()) {
       return false;
     }
-    return this.accionesPagoDisponiblesDesdeBackend().length > 0;
+    return this.accionesPagoDisponiblesDesdeBackend().length > 0 ||
+      this.puedeRegistrarVencimientoPagoVoluntario();
+  }
+
+  puedeRegistrarVencimientoPagoVoluntario(): boolean {
+    return this.puedeMostrarPagoVoluntario() &&
+      this.detalle()?.accionesUi?.vencimientoPagoVoluntario === true;
   }
 
   situacionPagoSinValorDesdeBackend(): boolean {
@@ -2096,7 +2227,7 @@ export class DemoShellComponent implements OnInit {
     if (!this.puedeMostrarPagoVoluntario()) {
       return;
     }
-    if (this.ejecutandoPagoAccion() !== null) {
+    if (this.ejecutandoPagoAccion() !== null || this.registrandoVencimientoPagoVoluntario()) {
       return;
     }
     if (this.accionPagoRequiereMonto(accion) && !this.montoPagoVoluntarioInputEsValido()) {
@@ -2135,6 +2266,39 @@ export class DemoShellComponent implements OnInit {
       });
   }
 
+  registrarVencimientoPagoVoluntario(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId || !this.puedeRegistrarVencimientoPagoVoluntario()) {
+      return;
+    }
+    if (this.ejecutandoPagoAccion() !== null || this.registrandoVencimientoPagoVoluntario()) {
+      return;
+    }
+
+    this.limpiarPagoFeedback();
+    this.registrandoVencimientoPagoVoluntario.set(true);
+
+    this.api
+      .registrarVencimientoPagoVoluntario(actaId)
+      .pipe(
+        catchError((err) => {
+          this.pagoError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.registrandoVencimientoPagoVoluntario.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.pagoMensaje.set(
+          respuesta.mensaje ??
+            'Vencimiento de pago voluntario registrado. El tramite puede continuar a fallo.',
+        );
+        this.refrescarLuegoDeAccion(respuesta);
+      });
+  }
   actualizarMontoPagoVoluntarioInput(valor: string): void {
     this.montoPagoVoluntarioInput.set(valor ?? '');
   }
@@ -2171,7 +2335,7 @@ export class DemoShellComponent implements OnInit {
    * demas acciones solo dependen de que no haya otra accion en curso.
    */
   puedeEjecutarAccionPago(accion: AccionPagoVoluntarioDemo): boolean {
-    if (this.ejecutandoPagoAccion() !== null) {
+    if (this.ejecutandoPagoAccion() !== null || this.registrandoVencimientoPagoVoluntario()) {
       return false;
     }
     if (this.accionPagoRequiereMonto(accion)) {
@@ -2915,6 +3079,7 @@ export class DemoShellComponent implements OnInit {
 
     return {
       pagoVoluntario: this.hayAccionesPagoDisponibles(),
+      vencimientoPagoVoluntario: det?.accionesUi?.vencimientoPagoVoluntario === true,
       pagoCondena: this.accionesPagoCondenaDisponiblesDesdeBackend().includes('INFORMAR'),
       confirmarPagoCondena: this.accionesPagoCondenaDisponiblesDesdeBackend().includes('CONFIRMAR'),
       observarPagoCondena: this.accionesPagoCondenaDisponiblesDesdeBackend().includes('OBSERVAR'),
@@ -2935,6 +3100,7 @@ export class DemoShellComponent implements OnInit {
       redaccion: this.hayAccionesRedaccionDisponiblesDesdeBackend(),
       firmaPendiente: this.documentos().some((doc) => this.documentoEsFirmable(doc)),
       falloFondo: this.puedeMostrarFalloResolucionFondo(),
+      consentirCondenaYRegistrarPago: this.consentirCondenaYRegistrarPagoHabilitado(),
     };
   }
 
@@ -3059,6 +3225,11 @@ export class DemoShellComponent implements OnInit {
   private limpiarVencimientoPlazoApelacionFeedback(): void {
     this.vencimientoPlazoApelacionError.set(null);
     this.vencimientoPlazoApelacionMensaje.set(null);
+  }
+
+  private limpiarConsentirCondenaYRegistrarPagoFeedback(): void {
+    this.consentirCondenaYRegistrarPagoError.set(null);
+    this.consentirCondenaYRegistrarPagoMensaje.set(null);
   }
 
   private limpiarResolucionApelacionFeedback(): void {
@@ -3738,3 +3909,10 @@ function mensajeErrorResolverApelacionHttp(err: unknown): string {
   }
   return 'Error inesperado al consultar el backend.';
 }
+
+
+
+
+
+
+

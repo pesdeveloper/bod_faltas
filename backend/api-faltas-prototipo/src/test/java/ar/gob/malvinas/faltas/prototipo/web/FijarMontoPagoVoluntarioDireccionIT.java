@@ -19,7 +19,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Flujo: portal solicita pago voluntario → Dirección fija monto.
  *
- * <p>Caso principal ACTA-0024 (situacionPago=SIN_PAGO al inicio):
+ * <p>Caso principal ACTA-0016 (acta validada en PENDIENTE_ANALISIS,
+ * situacionPago=SIN_PAGO al inicio; el portal no admite solicitar sobre
+ * actas en revisión D1/D2):
  * <ol>
  *   <li>Portal solicita pago voluntario: situacionPago=SOLICITADO, monto=null.</li>
  *   <li>Dirección ve acción FIJAR_MONTO disponible; no ve INFORMAR.</li>
@@ -35,8 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FijarMontoPagoVoluntarioDireccionIT {
 
     private static final String B = "/api/prototipo";
-    private static final String ACTA = "ACTA-0024";
-    private static final String QR = "QR-ACTA-0024-DEMO";
+    private static final String ACTA = "ACTA-0016";
+    private static final String QR = "QR-ACTA-0016-DEMO";
 
     @Autowired
     private MockMvc mvc;
@@ -79,7 +81,7 @@ class FijarMontoPagoVoluntarioDireccionIT {
 
     /**
      * Caso B (cont.): después de fijar monto, el detalle admin refleja
-     * montoPagoVoluntario=1000, resultadoFinal y bloqueantes invariantes.
+     * montoPagoVoluntario=1000 y resultadoFinal invariante.
      */
     @Test
     void fijarMonto_detalleAdminActualizado() throws Exception {
@@ -99,8 +101,6 @@ class FijarMontoPagoVoluntarioDireccionIT {
                 .andExpect(jsonPath("$.montoPagoVoluntario").value(1000))
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
                 .andExpect(jsonPath("$.estaCerrada").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre", hasItem("ENTREGA_DOCUMENTACION")))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre", hasItem("LIBERACION_RODADO")))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false));
     }
 

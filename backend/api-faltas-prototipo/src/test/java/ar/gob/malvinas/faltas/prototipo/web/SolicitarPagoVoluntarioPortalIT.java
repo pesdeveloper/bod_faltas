@@ -20,13 +20,17 @@ import org.springframework.http.MediaType;
  * Solicitud de pago voluntario iniciada por el infractor desde el portal
  * ({@code POST /api/prototipo/infractor/actas/{codigoQr}/acciones/solicitar-pago-voluntario}).
  *
- * <p>Caso principal: ACTA-0024 en ACTAS_EN_ENRIQUECIMIENTO con
- * {@code situacionPago=SIN_PAGO}. Tras la accion:
+ * <p>Regla vigente: la acción solo está permitida sobre actas ya validadas
+ * como notificables. Para actas en revisión (D1/D2,
+ * {@code ACTAS_EN_ENRIQUECIMIENTO}) el POST devuelve 409 (ver
+ * {@link SolicitarPagoVoluntarioPortalEnRevisionIT}).
+ *
+ * <p>Caso principal: ACTA-0016 en PENDIENTE_ANALISIS (acta validada y
+ * notificada) con {@code situacionPago=SIN_PAGO}. Tras la accion:
  * <ul>
  *   <li>situacionPago != SIN_PAGO;</li>
  *   <li>evento PAGO_VOLUNTARIO_SOLICITADO registrado con canal PORTAL_INFRACTOR;</li>
  *   <li>resultadoFinal sigue SIN_RESULTADO_FINAL;</li>
- *   <li>bloqueantes materiales siguen presentes;</li>
  *   <li>puedeSolicitarPagoVoluntario=false (ya solicitado);</li>
  *   <li>acta no cerrable todavia.</li>
  * </ul>
@@ -37,20 +41,40 @@ import org.springframework.http.MediaType;
 class SolicitarPagoVoluntarioPortalIT {
 
     private static final String B = "/api/prototipo";
-    private static final String ACTA = "ACTA-0024";
-    private static final String QR = "QR-ACTA-0024-DEMO";
+    private static final String ACTA = "ACTA-0016";
+    private static final String QR = "QR-ACTA-0016-DEMO";
 
     @Autowired
     private MockMvc mvc;
 
+    /**
+     * Regla de portal vigente: mientras el acta está en D1/D2 (no validada
+     * como notificable), el portal solo muestra el mensaje de revisión, no
+     * ofrece acciones y el POST se rechaza (ver
+     * {@link SolicitarPagoVoluntarioPortalEnRevisionIT}).
+     */
     @Test
-    void solicitar_estadoInicial_puedeSolicitarPagoVoluntario_esTrue() throws Exception {
+    void solicitar_estadoInicial_actaEnRevision_portalNoOfreceAcciones() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(get(B + "/infractor/actas/QR-ACTA-0024-DEMO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoVisible").value("EN_REVISION"))
+                .andExpect(jsonPath("$.puedeSolicitarPagoVoluntario").value(false))
+                .andExpect(jsonPath("$.puedePagar").value(false));
+    }
+
+    /**
+     * Acta validada (PENDIENTE_ANALISIS): el portal sí ofrece la acción.
+     */
+    @Test
+    void solicitar_actaValidada_portalOfreceSolicitarPagoVoluntario() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
         mvc.perform(get(B + "/infractor/actas/" + QR))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoVisible").value("EN_TRAMITE"))
                 .andExpect(jsonPath("$.situacionPago").value("SIN_PAGO"))
-                .andExpect(jsonPath("$.resultadoFinal").value("SIN_RESULTADO_FINAL"))
                 .andExpect(jsonPath("$.puedeSolicitarPagoVoluntario").value(true))
                 .andExpect(jsonPath("$.puedePagar").value(false));
     }
@@ -98,20 +122,6 @@ class SolicitarPagoVoluntarioPortalIT {
     }
 
     @Test
-    void solicitar_bloqueantesMaterilesSignuenPresentes() throws Exception {
-        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
-
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-
-        mvc.perform(get(B + "/actas/" + ACTA))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre", hasItem("ENTREGA_DOCUMENTACION")))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre", hasItem("LIBERACION_RODADO")))
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false));
-    }
-
-    @Test
     void solicitar_noNoAfectaSituacionPagoCondena() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
@@ -131,6 +141,14 @@ class SolicitarPagoVoluntarioPortalIT {
                 .andExpect(status().isOk());
 
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void solicitar_rechazadoSiActaEnRevision_devuelve409() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(post(B + "/infractor/actas/QR-ACTA-0024-DEMO/acciones/solicitar-pago-voluntario"))
                 .andExpect(status().isConflict());
     }
 
@@ -195,8 +213,7 @@ class SolicitarPagoVoluntarioPortalIT {
 
     /**
      * Caso D: después de solicitar desde portal, el estado admin debe conservar
-     * accionPendiente=EVALUAR_PAGO_VOLUNTARIO, bloqueantes materiales y
-     * resultadoFinal=SIN_RESULTADO_FINAL.
+     * accionPendiente=EVALUAR_PAGO_VOLUNTARIO y resultadoFinal=SIN_RESULTADO_FINAL.
      */
     @Test
     void solicitar_desdePortal_estadoAdminInvariante() throws Exception {
@@ -213,31 +230,31 @@ class SolicitarPagoVoluntarioPortalIT {
                 .andExpect(jsonPath("$.montoPagoVoluntario").doesNotExist())
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
                 .andExpect(jsonPath("$.situacionPagoCondena").value("NO_APLICA"))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre", hasItem("ENTREGA_DOCUMENTACION")))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre", hasItem("LIBERACION_RODADO")));
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false));
     }
 
     /**
      * Demo admin: con monto fijado sí aparece acción INFORMAR en acciones disponibles.
      * Verifica que el flujo positivo (admin fija monto) habilita informar pago.
+     * Acción administrativa: sigue disponible incluso en enriquecimiento (ACTA-0024).
      */
     @Test
     void conMontoFijadoPorAdmin_accionInformarDisponible() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-solicitud-pago-voluntario")
+        mvc.perform(post(B + "/actas/ACTA-0024/acciones/registrar-solicitud-pago-voluntario")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"monto\":5000.00}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.montoPagoVoluntario").value(5000.00));
 
-        mvc.perform(get(B + "/actas/" + ACTA))
+        mvc.perform(get(B + "/actas/ACTA-0024"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.situacionPago").value("SOLICITADO"))
                 .andExpect(jsonPath("$.montoPagoVoluntario").value(5000.00))
                 .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles", hasItem("INFORMAR")));
 
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-pago-informado"))
+        mvc.perform(post(B + "/actas/ACTA-0024/acciones/registrar-pago-informado"))
                 .andExpect(status().isOk());
     }
 
@@ -256,7 +273,7 @@ class SolicitarPagoVoluntarioPortalIT {
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actaId").doesNotExist())
-                .andExpect(jsonPath("$.acta").value("A-2026-0024"))
+                .andExpect(jsonPath("$.acta").value("A-2026-0016"))
                 .andExpect(jsonPath("$.codigoQr").value(QR));
     }
 }

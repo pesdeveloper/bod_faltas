@@ -36,19 +36,19 @@ class ResolucionBloqueoCierreOperativaIT {
     private MockMvc mvc;
 
     /**
-     * La bandeja se conserva después del resolutorio documental de
-     * ENTREGA_DOCUMENTACION (permitido sin pago). LIBERACION_RODADO requiere
-     * pago confirmado o absolución; se usa ENTREGA_DOCUMENTACION para validar
-     * el comportamiento de conservación de bandeja.
+     * La bandeja se conserva en ACTAS_EN_ENRIQUECIMIENTO después de emitir el
+     * resolutorio de LEVANTAMIENTO_MEDIDA_PREVENTIVA (ACTA-0022), que no requiere
+     * habilitante. ENTREGA_DOCUMENTACION y LIBERACION_RODADO sí requieren
+     * habilitante (pago confirmado, absolución o condena firme con pago).
      */
     @Test
     void resolutorioBloqueoCierre_enActasEnEnriquecimiento_200YbandejaConservada() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        String id = "ACTA-0024";
+        String id = "ACTA-0022";
         mvc.perform(
                         post(B + "/actas/" + id + "/acciones/registrar-resolucion-bloqueo-cierre")
-                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+                                .param("tipo", "LEVANTAMIENTO_MEDIDA_PREVENTIVA"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false));
 
@@ -112,8 +112,12 @@ class ResolucionBloqueoCierreOperativaIT {
                                 .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"));
     }
 
+    /**
+     * Incluso en PENDIENTE_ANALISIS (pago solicitado pero no confirmado),
+     * ENTREGA_DOCUMENTACION devuelve 409: el pago solicitado no es habilitante.
+     */
     @Test
-    void resolutorioBloqueoCierre_conActaPendienteAnalisis_200() throws Exception {
+    void resolutorioBloqueoCierre_entregaDocumentacionSinHabilitante_409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
         String id = "ACTA-0024";
         mvc.perform(post(B + "/actas/" + id + "/acciones/registrar-solicitud-pago-voluntario")
@@ -125,7 +129,7 @@ class ResolucionBloqueoCierreOperativaIT {
         mvc.perform(
                         post(B + "/actas/" + id + "/acciones/registrar-resolucion-bloqueo-cierre")
                                 .param("tipo", "ENTREGA_DOCUMENTACION"))
-                .andExpect(status().isOk());
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -156,23 +160,23 @@ class ResolucionBloqueoCierreOperativaIT {
     }
 
     /**
-     * El resolutorio documental de ENTREGA_DOCUMENTACION no libera el
-     * cumplimiento material por sí solo: el bloqueante permanece hasta que se
-     * registre el hecho efectivo. LIBERACION_RODADO requiere pago; se usa
-     * ENTREGA_DOCUMENTACION para validar el comportamiento genérico.
+     * El resolutorio documental de LEVANTAMIENTO_MEDIDA_PREVENTIVA (ACTA-0022)
+     * no libera el cumplimiento material por sí solo: el bloqueante permanece
+     * hasta que se registre el hecho efectivo. El eje pasa a
+     * RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL pero cerrable sigue false.
      */
     @Test
     void resolutorioBloqueoCierre_noLiberaCumplimientoMaterialNialone() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
-        String id = "ACTA-0024";
+        String id = "ACTA-0022";
         mvc.perform(
                         post(B + "/actas/" + id + "/acciones/registrar-resolucion-bloqueo-cierre")
-                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+                                .param("tipo", "LEVANTAMIENTO_MEDIDA_PREVENTIVA"))
                 .andExpect(status().isOk());
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2));
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(3));
     }
 
 }

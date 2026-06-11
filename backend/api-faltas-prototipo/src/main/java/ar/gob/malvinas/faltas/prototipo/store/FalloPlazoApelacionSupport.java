@@ -103,6 +103,15 @@ final class FalloPlazoApelacionSupport {
     /** Monto de condena fijado al dictar fallo condenatorio (distinto de pago voluntario). */
     private final Map<String, java.math.BigDecimal> montoCondenaPorActa;
 
+    /** Situacion de pago de condena compartida con {@link PagoCondenaSupport}. */
+    private final Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa;
+
+    /** Situacion de pago voluntario compartida con {@link PagoInformadoSupport}. */
+    private final Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa;
+
+    /** Tipo de pago compartido con {@link PagoCondenaSupport}. */
+    private final Map<String, PrototipoStore.TipoPago> tipoPagoPorActa;
+
     FalloPlazoApelacionSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
@@ -110,7 +119,10 @@ final class FalloPlazoApelacionSupport {
             Map<String, List<ActaNotificacionMock>> notificacionesPorActa,
             Map<String, String> accionPendientePorActa,
             CerrabilidadSupport cerrabilidad,
-            Map<String, java.math.BigDecimal> montoCondenaPorActa) {
+            Map<String, java.math.BigDecimal> montoCondenaPorActa,
+            Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa,
+            Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa,
+            Map<String, PrototipoStore.TipoPago> tipoPagoPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.documentosPorActa = documentosPorActa;
@@ -118,6 +130,9 @@ final class FalloPlazoApelacionSupport {
         this.accionPendientePorActa = accionPendientePorActa;
         this.cerrabilidad = cerrabilidad;
         this.montoCondenaPorActa = montoCondenaPorActa;
+        this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
+        this.situacionPagoPorActa = situacionPagoPorActa;
+        this.tipoPagoPorActa = tipoPagoPorActa;
     }
 
     void clear() {
@@ -191,9 +206,6 @@ final class FalloPlazoApelacionSupport {
                 != PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
             return conflict();
         }
-        if (!cerrabilidad.listarPendientesBloqueantesOrdenados(actaId).isEmpty()) {
-            return conflict();
-        }
         if (expedienteIncluyeFallo(actaId)) {
             return conflict();
         }
@@ -234,6 +246,20 @@ final class FalloPlazoApelacionSupport {
     // ---------------------------------------------------------------
     // Hooks invocados por la fachada del store
     // ---------------------------------------------------------------
+
+    /**
+     * @return {@code true} si la acta tiene específicamente un documento
+     *     {@code FALLO_CONDENATORIO} firmado y aún sin notificación positiva
+     *     registrada. No requiere bandeja particular; aplica mientras el fallo
+     *     esté firmado y no exista evento {@code FALLO_CONDENATORIO_NOTIFICADO}.
+     */
+    boolean hayFalloCondenatorioPendienteDeNotificacion(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null || actual.estaCerrada()) {
+            return false;
+        }
+        return TIPO_DOC_FALLO_CONDENATORIO.equals(tipoFalloFirmadoSinNotificar(actaId));
+    }
 
     /**
      * @return {@code true} si la acta tiene un documento fallo firmado y la
@@ -566,6 +592,195 @@ final class FalloPlazoApelacionSupport {
         } else {
             cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Consentimiento de condena desde portal infractor
+    // ---------------------------------------------------------------
+
+    /**
+     * El infractor consiente la condena desde el portal, renunciando a apelar.
+     * Precondiciones: {@code resultadoFinal=CONDENADO}, sin apelacion presentada,
+     * {@code situacionPagoCondena=NO_APLICA}, {@code montoCondena > 0}, acta no
+     * cerrada/archivada/gestion-externa.
+     * Efecto: {@code resultadoFinal=CONDENA_FIRME}, plazo apelacion cerrado,
+     * {@code situacionPagoCondena=PENDIENTE}, evento {@code CONDENA_CONSENTIDA}.
+     */
+    PrototipoStore.ConsentirCondenaResultado consentirCondena(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.ConsentirCondenaResultado(
+                    PrototipoStore.ConsentirCondenaEstado.NOT_FOUND, null, null, null);
+        }
+        if (actual.estaCerrada()) {
+            return conflictConsentir();
+        }
+        String b = actual.bandejaActual();
+        if ("CERRADAS".equals(b) || "ARCHIVO".equals(b) || "GESTION_EXTERNA".equals(b)) {
+            return conflictConsentir();
+        }
+        if (cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {
+            return conflictConsentir();
+        }
+        if (apelacionPresentada(actaId)) {
+            return conflictConsentir();
+        }
+        PrototipoStore.SituacionPagoCondena situacion = situacionPagoCondenaPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoCondena.NO_APLICA);
+        if (situacion != PrototipoStore.SituacionPagoCondena.NO_APLICA) {
+            return conflictConsentir();
+        }
+        java.math.BigDecimal monto = montoCondenaPorActa.get(actaId);
+        if (monto == null || monto.signum() <= 0) {
+            return conflictConsentir();
+        }
+
+        cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        plazoApelacionAbiertoPorActa.remove(actaId);
+        situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.PENDIENTE);
+
+        String bloque = actual.bloqueActual();
+        registrarEvento(
+                actaId,
+                "CONDENA_CONSENTIDA",
+                bloque,
+                bloque,
+                "Condena consentida por el infractor desde PORTAL_INFRACTOR; resultadoFinal CONDENA_FIRME; situacionPagoCondena PENDIENTE.");
+
+        return new PrototipoStore.ConsentirCondenaResultado(
+                PrototipoStore.ConsentirCondenaEstado.OK,
+                actaId,
+                PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME,
+                PrototipoStore.SituacionPagoCondena.PENDIENTE);
+    }
+
+    private PrototipoStore.ConsentirCondenaResultado conflictConsentir() {
+        return new PrototipoStore.ConsentirCondenaResultado(
+                PrototipoStore.ConsentirCondenaEstado.CONFLICT, null, null, null);
+    }
+
+    // ---------------------------------------------------------------
+    // Consentimiento + registro de pago presencial (acción Dirección)
+    // ---------------------------------------------------------------
+
+    /**
+     * Dirección registra en un único acto el consentimiento presencial de la
+     * condena y el pago correspondiente.
+     *
+     * <p>Admite dos caminos:
+     * <ul>
+     *   <li><b>Fallo ya notificado:</b> {@code resultadoFinal=CONDENADO}, sin
+     *       apelación presentada. Comportamiento original.</li>
+     *   <li><b>Fallo firmado no notificado:</b> {@code resultadoFinal=SIN_RESULTADO_FINAL},
+     *       fallo condenatorio firmado pendiente de notificación. La acción
+     *       registra primero una notificación positiva presencial
+     *       ({@code FALLO_CONDENATORIO_NOTIFICADO_PRESENCIAL}) y luego
+     *       procede igual que el camino anterior. La DDJJ de domicilio
+     *       electrónico es opcional en este caso (no bloqueante).</li>
+     * </ul>
+     *
+     * <p>Precondiciones comunes: {@code situacionPagoCondena=NO_APLICA},
+     * {@code situacionPago=SIN_PAGO}, {@code montoCondena > 0}, acta no
+     * cerrada ni en bandeja terminal, sin apelación pendiente.
+     *
+     * <p>Efecto: {@code resultadoFinal=CONDENA_FIRME},
+     * {@code situacionPagoCondena=INFORMADO},
+     * {@code situacionPago=PENDIENTE_CONFIRMACION}, {@code tipoPago=CONDENA},
+     * eventos {@code CONDENA_CONSENTIDA_PRESENCIAL} +
+     * {@code PAGO_CONDENA_REGISTRADO_PRESENCIAL} (precedidos por
+     * {@code FALLO_CONDENATORIO_NOTIFICADO_PRESENCIAL} en el camino B).
+     */
+    PrototipoStore.ConsentirCondenaYRegistrarPagoResultado consentirCondenaYRegistrarPago(String actaId) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new PrototipoStore.ConsentirCondenaYRegistrarPagoResultado(
+                    PrototipoStore.ConsentirCondenaYRegistrarPagoEstado.NOT_FOUND, null, null, null);
+        }
+        if (actual.estaCerrada()) {
+            return conflictConsentirYPagar();
+        }
+        String b = actual.bandejaActual();
+        if ("CERRADAS".equals(b) || "ARCHIVO".equals(b) || "GESTION_EXTERNA".equals(b)) {
+            return conflictConsentirYPagar();
+        }
+
+        PrototipoStore.ResultadoFinalCierreMock rf = cerrabilidad.getResultadoFinal(actaId);
+        boolean conFalloPendienteNotificacion = false;
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
+            // Camino B: fallo condenatorio firmado pero aún no notificado
+            if (!TIPO_DOC_FALLO_CONDENATORIO.equals(tipoFalloFirmadoSinNotificar(actaId))) {
+                return conflictConsentirYPagar();
+            }
+            conFalloPendienteNotificacion = true;
+        } else if (rf != PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {
+            return conflictConsentirYPagar();
+        }
+
+        if (apelacionPresentada(actaId)) {
+            return conflictConsentirYPagar();
+        }
+        PrototipoStore.SituacionPagoCondena situacionCondena = situacionPagoCondenaPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoCondena.NO_APLICA);
+        if (situacionCondena != PrototipoStore.SituacionPagoCondena.NO_APLICA) {
+            return conflictConsentirYPagar();
+        }
+        PrototipoStore.SituacionPagoMock situacionPago = situacionPagoPorActa.getOrDefault(
+                actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
+        if (situacionPago != PrototipoStore.SituacionPagoMock.SIN_PAGO) {
+            return conflictConsentirYPagar();
+        }
+        java.math.BigDecimal monto = montoCondenaPorActa.get(actaId);
+        if (monto == null || monto.signum() <= 0) {
+            return conflictConsentirYPagar();
+        }
+
+        // Camino B: registrar notificación presencial del fallo antes del consentimiento
+        if (conFalloPendienteNotificacion) {
+            ActaMock actualizada = moverAAnalisisPostFallo(actual);
+            actas.put(actaId, actualizada);
+            accionPendientePorActa.remove(actaId);
+            registrarEvento(
+                    actaId,
+                    "FALLO_CONDENATORIO_NOTIFICADO_PRESENCIAL",
+                    BLOQUE_D4,
+                    BLOQUE_D5,
+                    "Fallo condenatorio notificado presencialmente ante Direccion de Faltas"
+                            + " en acto de consentimiento y pago de condena.");
+            actual = actualizada;
+        }
+
+        cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        plazoApelacionAbiertoPorActa.remove(actaId);
+        situacionPagoCondenaPorActa.put(actaId, PrototipoStore.SituacionPagoCondena.INFORMADO);
+        situacionPagoPorActa.put(actaId, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+        tipoPagoPorActa.put(actaId, PrototipoStore.TipoPago.CONDENA);
+
+        String bloque = actual.bloqueActual();
+        registrarEvento(
+                actaId,
+                "CONDENA_CONSENTIDA_PRESENCIAL",
+                bloque,
+                bloque,
+                "Condena consentida presencialmente por el infractor ante Direccion de Faltas;"
+                        + " resultadoFinal CONDENA_FIRME.");
+        registrarEvento(
+                actaId,
+                "PAGO_CONDENA_REGISTRADO_PRESENCIAL",
+                bloque,
+                bloque,
+                "Pago de condena registrado/informado presencialmente por Direccion de Faltas;"
+                        + " situacionPagoCondena INFORMADO; pendiente confirmacion de acreditacion.");
+
+        return new PrototipoStore.ConsentirCondenaYRegistrarPagoResultado(
+                PrototipoStore.ConsentirCondenaYRegistrarPagoEstado.OK,
+                actaId,
+                PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME,
+                PrototipoStore.SituacionPagoCondena.INFORMADO);
+    }
+
+    private PrototipoStore.ConsentirCondenaYRegistrarPagoResultado conflictConsentirYPagar() {
+        return new PrototipoStore.ConsentirCondenaYRegistrarPagoResultado(
+                PrototipoStore.ConsentirCondenaYRegistrarPagoEstado.CONFLICT, null, null, null);
     }
 
     // ---------------------------------------------------------------

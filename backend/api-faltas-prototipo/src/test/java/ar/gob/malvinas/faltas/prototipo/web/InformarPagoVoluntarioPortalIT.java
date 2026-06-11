@@ -22,8 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>Criterio de aceptacion principal (ACTA-0024):
  * <ol>
- *   <li>Portal solicita pago voluntario.</li>
- *   <li>Direccion fija monto 5000.</li>
+ *   <li>Direccion habilita el pago voluntario con monto 5000 (el portal no
+ *       admite solicitar mientras el acta esta en revision D1/D2).</li>
  *   <li>Portal muestra boton Pagar (puedePagar=true).</li>
  *   <li>Portal presiona Pagar.</li>
  *   <li>Portal ya no muestra boton Pagar (puedePagar=false).</li>
@@ -34,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>resultadoFinal=PAGO_CONFIRMADO.</li>
  *   <li>Como siguen bloqueantes materiales, cierre=false.</li>
  * </ol>
+ *
+ * <p>El caso "solicitud portal sin monto" (caso A) usa ACTA-0016, acta ya
+ * validada/notificable donde el portal sí admite solicitar pago voluntario.
  */
 @SuppressWarnings("null")
 @SpringBootTest(classes = ApiFaltasPrototipoApplication.class)
@@ -43,25 +46,38 @@ class InformarPagoVoluntarioPortalIT {
     private static final String B = "/api/prototipo";
     private static final String ACTA = "ACTA-0024";
     private static final String QR = "QR-ACTA-0024-DEMO";
+    private static final String QR_VALIDADA = "QR-ACTA-0016-DEMO";
 
     @Autowired
     private MockMvc mvc;
 
+    /**
+     * Setup admin: Dirección habilita el pago voluntario de ACTA-0024 con
+     * monto 5000 (equivalente a solicitud + fijación de monto). El acta
+     * pasa a PENDIENTE_ANALISIS, estado validado donde el portal opera.
+     */
+    private void habilitarPagoVoluntarioConMonto() throws Exception {
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-solicitud-pago-voluntario")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monto\":5000.00}"))
+                .andExpect(status().isOk());
+    }
+
     // -------------------------------------------------------------------------
-    // Caso A: pagar sin monto fijado devuelve 409
+    // Caso A: pagar sin monto fijado devuelve 409 (solicitud portal en acta validada)
     // -------------------------------------------------------------------------
 
     @Test
     void casoA_pagarSinMonto_devuelve409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        // Infractor solicita pago voluntario (sin monto)
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
+        // Infractor solicita pago voluntario (sin monto) sobre acta validada
+        mvc.perform(post(B + "/infractor/actas/" + QR_VALIDADA + "/acciones/solicitar-pago-voluntario"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.situacionPago").value("SOLICITADO"));
 
         // Intento de pagar sin monto fijado
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
+        mvc.perform(post(B + "/infractor/actas/" + QR_VALIDADA + "/acciones/pagar-voluntario"))
                 .andExpect(status().isConflict());
     }
 
@@ -69,13 +85,13 @@ class InformarPagoVoluntarioPortalIT {
     void casoA_pagarSinMonto_estadoQuedaSolicitado() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
+        mvc.perform(post(B + "/infractor/actas/" + QR_VALIDADA + "/acciones/solicitar-pago-voluntario"))
                 .andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
+        mvc.perform(post(B + "/infractor/actas/" + QR_VALIDADA + "/acciones/pagar-voluntario"))
                 .andExpect(status().isConflict());
 
-        mvc.perform(get(B + "/infractor/actas/" + QR))
+        mvc.perform(get(B + "/infractor/actas/" + QR_VALIDADA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.situacionPago").value("SOLICITADO"))
                 .andExpect(jsonPath("$.puedePagar").value(false));
@@ -89,13 +105,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_pagarConMontoFijado_devuelve200() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
 
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk())
@@ -109,12 +119,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_pagarConMontoFijado_situacionPagoEsPendienteConfirmacion() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
 
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk())
@@ -125,12 +130,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_portalMuestraMensajePagoEnProceso() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
 
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
@@ -146,12 +146,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_adminMuestraConfirmarYObservar() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -169,12 +164,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_archivoBloqueadoMientrasPagoEnProceso() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -187,12 +177,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_bloqueantesMaterialesSignuenPresentes() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -207,12 +192,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoB_eventoPortalRegistradoConPortalInfractor() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -230,12 +210,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoC_pagarDosVeces_segundaLlamadaDevuelve409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
 
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
@@ -252,12 +227,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoD_confirmarDesdeDireccion_resultadoFinalPagoConfirmado() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -278,12 +248,7 @@ class InformarPagoVoluntarioPortalIT {
     void casoD_confirmarDesdeDireccion_portalMuestraPagoConfirmado() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/confirmar-pago-informado"))
@@ -340,12 +305,7 @@ class InformarPagoVoluntarioPortalIT {
     void confirmarExterno_desdePortalInformado_devuelve200() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -360,12 +320,7 @@ class InformarPagoVoluntarioPortalIT {
     void confirmarExterno_resultadoFinalPagoConfirmado_bloqueantesSignuenPresentes() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/confirmar-pago-voluntario-externo")
@@ -386,12 +341,7 @@ class InformarPagoVoluntarioPortalIT {
     void confirmarExterno_eventoExternoRegistrado() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/confirmar-pago-voluntario-externo")
@@ -408,12 +358,7 @@ class InformarPagoVoluntarioPortalIT {
     void confirmarExterno_sinPagoIniciado_devuelve409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         // No se llama a pagar-voluntario -> no hay pago iniciado
 
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/confirmar-pago-voluntario-externo")
@@ -436,12 +381,7 @@ class InformarPagoVoluntarioPortalIT {
     void confirmarExterno_conMontoDiferente_devuelve409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
 
@@ -456,12 +396,7 @@ class InformarPagoVoluntarioPortalIT {
     void confirmarExterno_duplicado_devuelve409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/confirmar-pago-voluntario-externo")
@@ -494,12 +429,7 @@ class InformarPagoVoluntarioPortalIT {
     void responseCiudadano_noExponeActaIdInterno() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/solicitar-pago-voluntario"))
-                .andExpect(status().isOk());
-        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/fijar-monto-pago-voluntario")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"monto\":5000.00}"))
-                .andExpect(status().isOk());
+        habilitarPagoVoluntarioConMonto();
 
         mvc.perform(post(B + "/infractor/actas/" + QR + "/acciones/pagar-voluntario"))
                 .andExpect(status().isOk())

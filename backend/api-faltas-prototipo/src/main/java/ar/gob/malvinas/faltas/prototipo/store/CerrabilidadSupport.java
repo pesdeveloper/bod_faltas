@@ -657,10 +657,15 @@ final class CerrabilidadSupport {
         if (tieneDocumentoResolutorio(actaId, origen)) {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.CONFLICT);
         }
-        if (tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock.LIBERACION_RODADO
-                && !tieneResultadoHabilitanteParaLiberarRodado(actaId)) {
+        if ((tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock.LIBERACION_RODADO
+                        || tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock.ENTREGA_DOCUMENTACION)
+                && !tieneResultadoHabilitanteMaterial(actaId)) {
+            String descripcion = tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock.LIBERACION_RODADO
+                    ? "la liberación del rodado"
+                    : "la entrega de documentación";
             return resultadoRegistroConflictoConMensaje(
-                    "No se puede emitir la liberación del rodado: requiere pago confirmado o absolución.");
+                    "No se puede emitir el resolutorio de " + descripcion
+                            + ": requiere pago confirmado, absolución o condena firme con pago confirmado.");
         }
 
         String tipoDoc = tipoDocumentoResolutorio(origen, circuitoSoloAplicaAMedida);
@@ -741,10 +746,15 @@ final class CerrabilidadSupport {
             return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
                     .CONFLICT);
         }
-        if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.RODADO_SECUESTRADO
-                && !tieneResultadoHabilitanteParaLiberarRodado(actaId)) {
+        if ((origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.RODADO_SECUESTRADO
+                        || origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA)
+                && !tieneResultadoHabilitanteMaterial(actaId)) {
+            String descripcion = origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.RODADO_SECUESTRADO
+                    ? "el retiro/liberación del rodado"
+                    : "la entrega de documentación retenida";
             return resultadoCumplimientoConflictoConMensaje(
-                    "No se puede registrar el retiro/liberación del rodado: requiere pago confirmado o absolución.");
+                    "No se puede registrar " + descripcion
+                            + ": requiere pago confirmado, absolución o condena firme con pago confirmado.");
         }
         if (!tieneDocumentoResolutorio(actaId, origen)) {
             if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA) {
@@ -977,6 +987,9 @@ final class CerrabilidadSupport {
         if (rf == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
             return "Falta resultado final compatible con cierre (ABSUELTO o PAGO_CONFIRMADO).";
         }
+        if (pend != null && !pend.isEmpty() && tieneResultadoHabilitanteMaterial(acta.id())) {
+            return motivoPendientesMateriales(pend);
+        }
         if (rf == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
             PrototipoStore.SituacionPagoCondena situacion = getSituacionPagoCondena(acta.id());
             if (situacion == PrototipoStore.SituacionPagoCondena.INFORMADO) {
@@ -989,12 +1002,16 @@ final class CerrabilidadSupport {
             return "Resultado final no habilita cierre en este slice.";
         }
         if (pend != null && !pend.isEmpty()) {
-            return "Aún no se cumple la condición de cierre: "
-                    + resumenPendientes(pend)
-                    + " (cada eje: documento resolutorio en expediente y luego hecho material efectivo; el "
-                    + "documento no sustituye al hecho).";
+            return motivoPendientesMateriales(pend);
         }
         return "No cumple condición de cierre (ver resultado final y pendientes).";
+    }
+
+    private String motivoPendientesMateriales(List<PrototipoStore.PendienteBloqueanteCierreMock> pend) {
+        return "Aún no se cumple la condición de cierre: "
+                + resumenPendientes(pend)
+                + " (cada eje: documento resolutorio en expediente y luego hecho material efectivo; el "
+                + "documento no sustituye al hecho).";
     }
 
     private PrototipoStore.SituacionPagoCondena getSituacionPagoCondena(String actaId) {
@@ -1340,15 +1357,21 @@ final class CerrabilidadSupport {
     }
 
     /**
-     * {@code true} si el resultado final del acta habilita operaciones de
-     * liberación de rodado (documental y material). Condición compartida por
-     * {@link #registrarResolucionBloqueoCierreDocumental} y
-     * {@link #registrarCumplimientoMaterialEfectivoBloqueoCierre}.
+     * {@code true} si el resultado final habilita la ejecucion de operaciones
+     * materiales (entrega de documentacion, liberacion de rodado, levantamiento
+     * de medida preventiva). Habilitantes validos: ABSUELTO, PAGO_CONFIRMADO
+     * o CONDENA_FIRME con situacionPagoCondena=CONFIRMADO.
      */
-    private boolean tieneResultadoHabilitanteParaLiberarRodado(String actaId) {
+    boolean tieneResultadoHabilitanteMaterial(String actaId) {
         PrototipoStore.ResultadoFinalCierreMock rf = getResultadoFinal(actaId);
-        return rf == PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
-                || rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO;
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.ABSUELTO
+                || rf == PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO) {
+            return true;
+        }
+        if (rf == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
+            return getSituacionPagoCondena(actaId) == PrototipoStore.SituacionPagoCondena.CONFIRMADO;
+        }
+        return false;
     }
 
     private PrototipoStore.RegistrarResolucionBloqueoCierreResultado resultadoRegistroConflictoConMensaje(

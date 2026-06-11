@@ -8,6 +8,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,6 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>Alineado con
  * {@code MockDataFactory#cargarActa0024NacimientoCondicionesMaterialesPorConstatacionTempranaDemo}.
  */
+@SuppressWarnings("null")
 @SpringBootTest(classes = ApiFaltasPrototipoApplication.class)
 @AutoConfigureMockMvc
 class DemoRecorridoPuntaAPuntaActa0024IT {
@@ -141,29 +144,23 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
                         .content("{\"monto\":12345.67}"))
                 .andExpect(status().isOk());
 
-        // Entregar documentación (permitido sin pago)
-        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
-                        .param("tipo", "ENTREGA_DOCUMENTACION"))
-                .andExpect(status().isOk());
-
         // Sin pago confirmado: emitir DOC_LIBERACION_RODADO debe devolver 409
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isConflict());
 
-        // RODADO sigue SITUACION_PENDIENTE_DE_RESOLUTORIO; bloqueante activo
+        // Ambos bloqueantes siguen activos; RODADO sigue SITUACION_PENDIENTE_DE_RESOLUTORIO
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]").value("LIBERACION_RODADO"))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[1].clave").value("RODADO"))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[1].fase").value("SITUACION_PENDIENTE_DE_RESOLUTORIO"));
 
-        // No existe DOC_LIBERACION_RODADO: solo 2 docs originales + DOC_RESTITUCION_DOCUMENTACION
+        // No se emitió ningún documento resolutorio: solo los 2 originales
         mvc.perform(get(B + "/actas/" + ID + "/documentos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3));
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     /**
@@ -233,11 +230,12 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
     }
 
     /**
-     * Slate 24B — La entrega de documentación puede resolverse antes del pago.
-     * Solo el bloqueante LIBERACION_RODADO queda condicionado al pago.
+     * ENTREGA_DOCUMENTACION y LIBERACION_RODADO requieren resultado habilitante
+     * (pago confirmado, absolución o condena firme con pago). Sin habilitante, el
+     * cumplimiento material devuelve 409 aunque el pago esté solicitado.
      */
     @Test
-    void documentacionPuedeEntregarseSinPago() throws Exception {
+    void documentacionNoEjecutableSinResultadoHabilitante() throws Exception {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
@@ -247,18 +245,15 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
                         .content("{\"monto\":12345.67}"))
                 .andExpect(status().isOk());
 
-        // Cumplimiento de ENTREGA_DOCUMENTACION sin pago confirmado: debe ser permitido
+        // Sin pago confirmado: cumplimiento de ENTREGA_DOCUMENTACION debe ser rechazado
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.pendienteCumplido").value("ENTREGA_DOCUMENTACION"))
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1));
+                .andExpect(status().isConflict());
 
-        // RODADO sigue pendiente
+        // Ambos bloqueantes siguen presentes
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]").value("LIBERACION_RODADO"));
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2));
     }
 
     /**
@@ -351,13 +346,14 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
     }
 
     /**
-     * Slate 24C — Recorrido e2e con rodado condicionado al pago:
-     * documentación resuelta primero; intento de liberar rodado antes del pago
-     * devuelve 409 (documental bloqueada); luego pago; luego documental de
-     * liberación; luego retiro; luego cierre. Sin LEVANTAMIENTO_MEDIDA_PREVENTIVA.
+     * Ambos materiales (ENTREGA_DOCUMENTACION y LIBERACION_RODADO) requieren
+     * resultado habilitante: antes del pago devuelven 409. Tras pago confirmado,
+     * accionesUi.cumplimientoMaterial y resolucionBloqueante pasan a true.
+     * El recorrido completo hasta cierre está cubierto por
+     * {@link #recorridoActa0024_pagoYcierreConDosBloqueantes()}.
      */
     @Test
-    void recorridoActa0024_pagoYcierreConRodadoCondicionado() throws Exception {
+    void recorridoActa0024_ambosMaterialesCondicionadosAlPago() throws Exception {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
@@ -367,25 +363,22 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
                         .content("{\"monto\":12345.67}"))
                 .andExpect(status().isOk());
 
-        // 2. Entregar documentación antes del pago: permitido
+        // 2. Antes del pago: ambos materiales devuelven 409 (requieren habilitante)
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.pendienteCumplido").value("ENTREGA_DOCUMENTACION"));
+                .andExpect(status().isConflict());
 
-        // Verificar: rodado sigue bloqueando
-        mvc.perform(get(B + "/actas/" + ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]").value("LIBERACION_RODADO"));
-
-        // 3. Intentar emitir DOC_LIBERACION_RODADO ANTES del pago: 409
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isConflict());
 
-        // 4. Pago informado + comprobante + confirmación
+        // Ambos bloqueantes siguen presentes
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2));
+
+        // 3. Pago informado + comprobante + confirmación
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-pago-informado"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ID + "/acciones/adjuntar-comprobante-pago-informado")
@@ -394,43 +387,14 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
         mvc.perform(post(B + "/actas/" + ID + "/acciones/confirmar-pago-informado"))
                 .andExpect(status().isOk());
 
-        // Pago confirmado; rodado sigue en SITUACION_PENDIENTE_DE_RESOLUTORIO
+        // Pago confirmado; ambos bloqueantes siguen pendientes
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("PAGO_CONFIRMADO"))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]").value("LIBERACION_RODADO"))
-                .andExpect(jsonPath("$.hechosMateriales.lecturaOperativa").value(LECTURA_TEMPRANAS));
-
-        // 5. Ahora sí: emitir DOC_LIBERACION_RODADO (pago confirmado)
-        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
-                        .param("tipo", "LIBERACION_RODADO"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.pendienteAtendido").value("LIBERACION_RODADO"));
-
-        // RODADO pasa a RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL
-        mvc.perform(get(B + "/actas/" + ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.hechosMateriales.lecturaOperativa").value(LECTURA_SIN_CUMPLIMIENTO));
-
-        // 6. Registrar retiro efectivo (app)
-        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
-                        .param("tipo", "LIBERACION_RODADO"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.pendienteCumplido").value("LIBERACION_RODADO"))
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true))
-                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(0));
-
-        // 7. Cerrar acta
-        mvc.perform(post(B + "/actas/" + ID + "/acciones/cerrar-acta"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bandejaActual").value("CERRADAS"));
-
-        mvc.perform(get(B + "/actas/" + ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estaCerrada").value(true))
-                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("PAGO_CONFIRMADO"));
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true))
+                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true));
     }
 
     /**
@@ -509,5 +473,47 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estaCerrada").value(true));
+    }
+
+    @Test
+    void condenaFirmePagadaConMaterialesPendientes_motivoCerrabilidadEsMaterial() throws Exception {
+        mvc.perform(post(B + "/reset"))
+                .andExpect(status().isOk());
+
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/enviar-a-notificacion"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-notificacion-positiva"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/dictar-fallo-condenatorio")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"montoCondena\":35000}"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0024-03"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-notificacion-positiva"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-vencimiento-plazo-apelacion"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/informar-pago-condena"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/confirmar-pago-condena"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENA_FIRME"))
+                .andExpect(jsonPath("$.situacionPago").value("CONFIRMADO"))
+                .andExpect(jsonPath("$.situacionPagoCondena").value("CONFIRMADO"))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]")
+                        .value("ENTREGA_DOCUMENTACION"))
+                .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[1]")
+                        .value("LIBERACION_RODADO"))
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
+                .andExpect(jsonPath("$.cerrabilidad.motivoNoCerrable")
+                        .value(containsString("Aún no se cumple la condición de cierre")))
+                .andExpect(jsonPath("$.cerrabilidad.motivoNoCerrable")
+                        .value(containsString("ENTREGA_DOCUMENTACION, LIBERACION_RODADO")))
+                .andExpect(jsonPath("$.cerrabilidad.motivoNoCerrable")
+                        .value(not(containsString("pendiente de pago o derivación externa"))));
     }
 }

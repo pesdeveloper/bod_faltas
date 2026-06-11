@@ -107,6 +107,61 @@
   color: rgba(0, 0, 0, 0.58);
 }
 
+.infractor-docs {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.infractor-docs__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.infractor-docs__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.infractor-docs__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.infractor-docs__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.infractor-docs__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.infractor-docs__estado {
+  font-size: 0.8125rem;
+  color: rgba(46, 125, 50, 0.92);
+}
+
+.infractor-docs__estado--pendiente {
+  color: rgba(230, 81, 0, 0.92);
+}
+
 .state-box {
   display: flex;
   flex-direction: column;

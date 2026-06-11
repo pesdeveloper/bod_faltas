@@ -1,4 +1,4 @@
-﻿<div class="infractor-layout">
+<div class="infractor-layout">
   <mat-toolbar color="primary" class="infractor-toolbar">
     <div class="infractor-toolbar__identity">
       <span class="infractor-site-label">Sitio actual: Portal infractor</span>
@@ -22,6 +22,17 @@
       </div>
     } @else if (acta()) {
       @if (acta(); as a) {
+      @if (a.estadoVisible === 'EN_REVISION') {
+      <section class="infractor-card" aria-label="Acta en revisión">
+        <dl class="infractor-dl">
+          <dt>Acta</dt>
+          <dd>{{ a.acta }}</dd>
+        </dl>
+        <p class="infractor-info-message" role="status" aria-live="polite">
+          {{ a.mensajeVisible }}
+        </p>
+      </section>
+      } @else {
       <section class="infractor-card" aria-label="Detalle de infraccion">
         <dl class="infractor-dl">
           <dt>Acta</dt>
@@ -30,11 +41,19 @@
           <dd>{{ a.estadoVisible }}</dd>
           <dt>Situación de pago</dt>
           <dd>{{ a.situacionPago }}</dd>
+          @if (a.tipoPago && a.tipoPago !== 'NO_APLICA') {
+            <dt>Tipo de pago</dt>
+            <dd>{{ a.tipoPago }}</dd>
+          }
           <dt>Resultado final</dt>
           <dd>{{ a.resultadoFinal }}</dd>
           @if (a.montoPagoVoluntario !== null && a.montoPagoVoluntario !== undefined) {
             <dt>Monto pago voluntario</dt>
             <dd>$ {{ a.montoPagoVoluntario }}</dd>
+          }
+          @if (a.montoCondena !== null && a.montoCondena !== undefined) {
+            <dt>{{ a.resultadoFinal === 'CONDENA_FIRME' ? 'Monto condena' : 'Monto del fallo' }}</dt>
+            <dd>$ {{ a.montoCondena }}</dd>
           }
           @if (a.mensajeVisible) {
             <dt>Mensaje</dt>
@@ -70,6 +89,36 @@
                 Procesando pago...
               } @else {
                 Pagar
+              }
+            </button>
+          }
+          @if (a.puedePagarCondena) {
+            <button
+              mat-stroked-button
+              type="button"
+              color="warn"
+              [disabled]="registrandoPagoCondena()"
+              (click)="pagarCondena()"
+            >
+              @if (registrandoPagoCondena()) {
+                Procesando pago de condena...
+              } @else {
+                Pagar condena
+              }
+            </button>
+          }
+          @if (a.puedeConsentirCondena) {
+            <button
+              mat-stroked-button
+              type="button"
+              color="accent"
+              [disabled]="consentindoCondena()"
+              (click)="consentirCondena()"
+            >
+              @if (consentindoCondena()) {
+                Procesando consentimiento...
+              } @else {
+                Consentir condena y pagar
               }
             </button>
           }
@@ -127,6 +176,17 @@
             {{ pagoVoluntarioPortalMensaje() }}
           </p>
         }
+        @if (pagoCondenaPortalMensaje()) {
+          <p
+            class="infractor-info-message"
+            [class.infractor-info-message--success]="pagoCondenaPortalMensajeTipo() === 'success'"
+            [class.infractor-info-message--error]="pagoCondenaPortalMensajeTipo() === 'error'"
+            role="status"
+            aria-live="polite"
+          >
+            {{ pagoCondenaPortalMensaje() }}
+          </p>
+        }
         @if (apelacionPortalMensaje()) {
           <p
             class="infractor-info-message"
@@ -138,8 +198,73 @@
             {{ apelacionPortalMensaje() }}
           </p>
         }
+
+        @if (consentirCondenaPortalMensaje()) {
+          <p
+            class="infractor-info-message"
+            [class.infractor-info-message--success]="consentirCondenaPortalMensajeTipo() === 'success'"
+            [class.infractor-info-message--error]="consentirCondenaPortalMensajeTipo() === 'error'"
+            role="status"
+            aria-live="polite"
+          >
+            {{ consentirCondenaPortalMensaje() }}
+          </p>
+        }
+        @if (a.documentos.length > 0) {
+          <section class="infractor-docs" aria-label="Documentos disponibles">
+            <h2 class="infractor-docs__title">Documentos disponibles</h2>
+            <ul class="infractor-docs__list">
+              @for (doc of a.documentos; track doc.tipo) {
+                <li class="infractor-docs__item">
+                  <div class="infractor-docs__info">
+                    <span class="infractor-docs__name">{{ doc.titulo }}</span>
+                    <span
+                      class="infractor-docs__estado"
+                      [class.infractor-docs__estado--pendiente]="!doc.notificado"
+                    >
+                      @if (doc.notificado) {
+                        Notificado
+                      } @else {
+                        Pendiente de notificación
+                      }
+                    </span>
+                  </div>
+                  @if (doc.puedeAbrir) {
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      color="primary"
+                      [disabled]="abriendoDocumento() !== null"
+                      (click)="verDocumento(doc.tipo)"
+                    >
+                      @if (abriendoDocumento() === doc.tipo) {
+                        Abriendo...
+                      } @else {
+                        Ver documento
+                      }
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @if (documentoPortalMensaje()) {
+          <p
+            class="infractor-info-message"
+            [class.infractor-info-message--success]="documentoPortalMensajeTipo() === 'success'"
+            [class.infractor-info-message--error]="documentoPortalMensajeTipo() === 'error'"
+            role="status"
+            aria-live="polite"
+          >
+            {{ documentoPortalMensaje() }}
+          </p>
+        }
       </section>
+      }
       }
     }
   </main>
 </div>
+
+
