@@ -60,8 +60,8 @@ class AbsolucionHabilitaMaterialesPeroNoCierreSiPendientesIT {
         mvc.perform(get(B + "/actas/" + ACTA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("ABSUELTO"))
-                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true))
-                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true));
+                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false));
     }
 
     @Test

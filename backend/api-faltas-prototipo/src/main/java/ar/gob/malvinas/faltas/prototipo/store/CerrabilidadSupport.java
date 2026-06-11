@@ -20,6 +20,7 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_ADJUNTO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_FIRMADO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_PENDIENTE_FIRMA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_ANCLA_MEDIDA_PREVENTIVA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_ACUSE_RETENCION_DOCUMENTAL;
@@ -527,15 +528,6 @@ final class CerrabilidadSupport {
         };
     }
 
-    private static String tipoDocumentoResolutorio(
-            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
-        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
-                && documentoConCircuitoFirmaNotifMedida) {
-            return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF;
-        }
-        return tipoDocumentoResolutorioSegunOrigen(o);
-    }
-
     private static String tipoDocumentoResolutorioSegunOrigen(
             PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
         return switch (o) {
@@ -546,11 +538,7 @@ final class CerrabilidadSupport {
     }
 
     private static String prefijoArchivoResolutorio(
-            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
-        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
-                && documentoConCircuitoFirmaNotifMedida) {
-            return "levantamiento_medida_cfn_";
-        }
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA -> "levantamiento_medida_";
             case RODADO_SECUESTRADO -> "liberacion_rodado_";
@@ -559,32 +547,23 @@ final class CerrabilidadSupport {
     }
 
     private static String eventoResolucion(
-            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
-        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
-                && documentoConCircuitoFirmaNotifMedida) {
-            return "LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF_INCORPORADO";
-        }
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
         return switch (o) {
-            case MEDIDA_PREVENTIVA_ACTIVA -> "LEVANTAMIENTO_MEDIDA_PREVENTIVA_EMITIDO";
-            case RODADO_SECUESTRADO -> "LIBERACION_RODADO_EMITIDA";
-            case DOCUMENTACION_RETENIDA -> "RESTITUCION_DOCUMENTACION_EMITIDA";
+            case MEDIDA_PREVENTIVA_ACTIVA -> "LEVANTAMIENTO_MEDIDA_PREVENTIVA_PENDIENTE_FIRMA";
+            case RODADO_SECUESTRADO -> "LIBERACION_RODADO_PENDIENTE_FIRMA";
+            case DOCUMENTACION_RETENIDA -> "RESTITUCION_DOCUMENTACION_PENDIENTE_FIRMA";
         };
     }
 
     private static String descripcionResolucion(
-            PrototipoStore.OrigenBloqueanteCierreMaterialMock o, boolean documentoConCircuitoFirmaNotifMedida) {
-        if (o == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA
-                && documentoConCircuitoFirmaNotifMedida) {
-            return "Documento de levantamiento de medida (circuito firma+notif mock) en expediente, pendiente"
-                    + " de firma; no inicia notificación de acta hasta constancia de firma. El eje de cierre"
-                    + " material sigue siendo LEVANTAMIENTO_MEDIDA_PREVENTIVA (mock).";
-        }
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock o) {
         return switch (o) {
             case MEDIDA_PREVENTIVA_ACTIVA ->
-                    "Documento de levantamiento de medida preventiva incorporado al expediente (mock).";
-            case RODADO_SECUESTRADO -> "Acta de liberación de rodado incorporada al expediente (mock).";
+                    "Resolutorio de levantamiento de medida preventiva generado; pendiente de firma antes del cumplimiento material (mock).";
+            case RODADO_SECUESTRADO ->
+                    "Resolutorio de liberación de rodado generado; pendiente de firma antes del cumplimiento material (mock).";
             case DOCUMENTACION_RETENIDA ->
-                    "Constancia de entrega / restitución de documentación retenida (mock).";
+                    "Resolutorio de restitución de documentación generado; pendiente de firma antes del cumplimiento material (mock).";
         };
     }
 
@@ -605,6 +584,65 @@ final class CerrabilidadSupport {
                             }
                             return tipoEstandar.equals(t);
                         });
+    }
+
+    /** Variante estricta: solo cuenta el resolutorio si ya está firmado (FIRMADO). */
+    private boolean tieneDocumentoResolutorioFirmado(
+            String actaId, PrototipoStore.OrigenBloqueanteCierreMaterialMock origen) {
+        String tipoEstandar = tipoDocumentoResolutorioSegunOrigen(origen);
+        List<ActaDocumentoMock> docs = documentosPorActa.get(actaId);
+        if (docs == null) {
+            return false;
+        }
+        return docs.stream()
+                .anyMatch(
+                        d -> {
+                            if (!ESTADO_DOC_FIRMADO.equals(d.estadoDocumento())) {
+                                return false;
+                            }
+                            String t = d.tipoDocumento();
+                            if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.MEDIDA_PREVENTIVA_ACTIVA) {
+                                return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF.equals(t)
+                                        || TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA.equals(t);
+                            }
+                            return tipoEstandar.equals(t);
+                        });
+    }
+
+    /**
+     * {@code true} si al menos un bloqueante pendiente no tiene aún ningún
+     * documento resolutorio generado (en ningún estado). Informa que la acción
+     * "Generar resolución" sigue disponible.
+     */
+    boolean hayPendientesSinResolutorio(String actaId) {
+        ensureOrigenesSincronizados(actaId);
+        List<PrototipoStore.PendienteBloqueanteCierreMock> pend = listarPendientesBloqueantesOrdenados(actaId);
+        for (PrototipoStore.PendienteBloqueanteCierreMock p : pend) {
+            if (!tieneDocumentoResolutorio(actaId, origenParaPendiente(p))
+                    && !tieneCumplimientoMaterialEfectivo(actaId, origenParaPendiente(p))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * {@code true} si al menos un bloqueante pendiente tiene un documento
+     * resolutorio ya firmado ({@code FIRMADO}) pero el cumplimiento material
+     * aún no fue registrado. Informa que la acción "Registrar cumplimiento"
+     * está disponible.
+     */
+    boolean hayPendientesConResolutorioFirmado(String actaId) {
+        ensureOrigenesSincronizados(actaId);
+        List<PrototipoStore.PendienteBloqueanteCierreMock> pend = listarPendientesBloqueantesOrdenados(actaId);
+        for (PrototipoStore.PendienteBloqueanteCierreMock p : pend) {
+            PrototipoStore.OrigenBloqueanteCierreMaterialMock origen = origenParaPendiente(p);
+            if (tieneDocumentoResolutorioFirmado(actaId, origen)
+                    && !tieneCumplimientoMaterialEfectivo(actaId, origen)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean tieneCumplimientoMaterialEfectivo(
@@ -635,10 +673,6 @@ final class CerrabilidadSupport {
             PrototipoStore.PendienteBloqueanteCierreMock tipoPendiente,
             boolean documentoConCircuitoFirmaNotif) {
         PrototipoStore.OrigenBloqueanteCierreMaterialMock origen = origenParaPendiente(tipoPendiente);
-        boolean circuitoSoloAplicaAMedida =
-                documentoConCircuitoFirmaNotif
-                        && tipoPendiente == PrototipoStore.PendienteBloqueanteCierreMock
-                                .LEVANTAMIENTO_MEDIDA_PREVENTIVA;
         ActaMock actual = actas.get(actaId);
         if (actual == null) {
             return resultadoRegistroVacio(PrototipoStore.RegistrarResolucionBloqueoCierreEstado.NOT_FOUND);
@@ -668,44 +702,28 @@ final class CerrabilidadSupport {
                             + ": requiere pago confirmado, absolución o condena firme con pago confirmado.");
         }
 
-        String tipoDoc = tipoDocumentoResolutorio(origen, circuitoSoloAplicaAMedida);
-        String estadoDocNuevo = circuitoSoloAplicaAMedida ? ESTADO_DOC_PENDIENTE_FIRMA : ESTADO_DOC_EMITIDO;
+        String tipoDoc = tipoDocumentoResolutorioSegunOrigen(origen);
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguienteDoc = docs.size() + 1;
         String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
         String idDoc = "DOC-" + sufijoActa + "-" + String.format("%02d", siguienteDoc);
-        String nombreArchivo = prefijoArchivoResolutorio(origen, circuitoSoloAplicaAMedida) + sufijoActa + ".pdf";
-        docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDoc, estadoDocNuevo, nombreArchivo));
-
-        if (!actual.tieneDocumentos()) {
-            actas.put(
-                    actaId,
-                    new ActaMock(
-                            actual.id(),
-                            actual.numeroActa(),
-                            actual.dominioReferencia(),
-                            actual.bloqueActual(),
-                            actual.estadoProcesoActual(),
-                            actual.situacionAdministrativaActual(),
-                            actual.estaCerrada(),
-                            actual.permiteReingreso(),
-                            true,
-                            actual.tieneNotificaciones(),
-                            actual.fechaCreacion(),
-                            actual.infractorNombre(),
-                            actual.infractorDocumento(),
-                            actual.inspectorNombre(),
-                            actual.resumenHecho(),
-                            actual.bandejaActual()));
-        }
+        String nombreArchivo = prefijoArchivoResolutorio(origen) + sufijoActa + ".pdf";
+        docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDoc, ESTADO_DOC_PENDIENTE_FIRMA, nombreArchivo));
 
         String bloqueOrigen = actual.bloqueActual();
+        // Mover acta a PENDIENTE_FIRMA si no está ya allí (la firma del resolutorio
+        // es obligatoria antes de registrar cumplimiento material).
+        ActaMock actualizada = moverAPendienteFirmaResolutorio(actual);
+        if (actualizada != actual) {
+            actas.put(actaId, actualizada);
+        }
+
         registrarEvento(
                 actaId,
-                eventoResolucion(origen, circuitoSoloAplicaAMedida),
+                eventoResolucion(origen),
                 bloqueOrigen,
-                bloqueOrigen,
-                descripcionResolucion(origen, circuitoSoloAplicaAMedida));
+                actualizada.bandejaActual(),
+                descripcionResolucion(origen));
 
         ActaMock post = actas.get(actaId);
         PrototipoStore.CerrabilidadActaVista vista = getVistaCerrabilidad(post);
@@ -721,6 +739,28 @@ final class CerrabilidadSupport {
                         .map(PrototipoStore.PendienteBloqueanteCierreMock::name)
                         .toList(),
                 vista.motivoNoCerrable());
+    }
+
+    private static final String BANDEJA_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
+    private static final String ESTADO_PENDIENTE_FIRMA_RESOLUTORIO = "PENDIENTE_FIRMA_PIEZAS";
+
+    private ActaMock moverAPendienteFirmaResolutorio(ActaMock actual) {
+        if (BANDEJA_PENDIENTE_FIRMA.equals(actual.bandejaActual())) {
+            // Ya está en cola de firma; solo asegurar tieneDocumentos=true
+            if (!actual.tieneDocumentos()) {
+                return new ActaMock(actual.id(), actual.numeroActa(), actual.dominioReferencia(),
+                        actual.bloqueActual(), actual.estadoProcesoActual(), actual.situacionAdministrativaActual(),
+                        actual.estaCerrada(), actual.permiteReingreso(), true, actual.tieneNotificaciones(),
+                        actual.fechaCreacion(), actual.infractorNombre(), actual.infractorDocumento(),
+                        actual.inspectorNombre(), actual.resumenHecho(), actual.bandejaActual());
+            }
+            return actual;
+        }
+        return new ActaMock(actual.id(), actual.numeroActa(), actual.dominioReferencia(),
+                actual.bloqueActual(), ESTADO_PENDIENTE_FIRMA_RESOLUTORIO, actual.situacionAdministrativaActual(),
+                actual.estaCerrada(), actual.permiteReingreso(), true, actual.tieneNotificaciones(),
+                actual.fechaCreacion(), actual.infractorNombre(), actual.infractorDocumento(),
+                actual.inspectorNombre(), actual.resumenHecho(), BANDEJA_PENDIENTE_FIRMA);
     }
 
     PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreResultado
@@ -756,13 +796,9 @@ final class CerrabilidadSupport {
                     "No se puede registrar " + descripcion
                             + ": requiere pago confirmado, absolución o condena firme con pago confirmado.");
         }
-        if (!tieneDocumentoResolutorio(actaId, origen)) {
-            if (origen == PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA) {
-                registrarDocumentoResolutorioDocumentacion(actaId, actual.bloqueActual());
-            } else {
-                return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
-                        .CONFLICT);
-            }
+        if (!tieneDocumentoResolutorioFirmado(actaId, origen)) {
+            return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
+                    .CONFLICT);
         }
         if (tieneCumplimientoMaterialEfectivo(actaId, origen)) {
             return resultadoCumplimientoVacio(PrototipoStore.RegistrarCumplimientoMaterialBloqueoCierreEstado
@@ -1332,30 +1368,6 @@ final class CerrabilidadSupport {
      * el punto de vista del operador: un solo POST registra la constancia y el
      * cumplimiento material.
      */
-    private void registrarDocumentoResolutorioDocumentacion(String actaId, String bloqueOrigen) {
-        List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        int siguiente = docs.size() + 1;
-        String sufijo = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        String idDoc = "DOC-" + sufijo + "-" + String.format("%02d", siguiente);
-        String nombreArchivo = "restitucion_documentacion_" + sufijo.toLowerCase() + ".pdf";
-        docs.add(new ActaDocumentoMock(idDoc, actaId, TIPO_DOC_RESTITUCION_DOCUMENTACION, ESTADO_DOC_EMITIDO, nombreArchivo));
-        ActaMock a = actas.get(actaId);
-        if (a != null && !a.tieneDocumentos()) {
-            actas.put(actaId, new ActaMock(
-                    a.id(), a.numeroActa(), a.dominioReferencia(), a.bloqueActual(),
-                    a.estadoProcesoActual(), a.situacionAdministrativaActual(),
-                    a.estaCerrada(), a.permiteReingreso(), true, a.tieneNotificaciones(),
-                    a.fechaCreacion(), a.infractorNombre(), a.infractorDocumento(),
-                    a.inspectorNombre(), a.resumenHecho(), a.bandejaActual()));
-        }
-        registrarEvento(
-                actaId,
-                eventoResolucion(PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA, false),
-                bloqueOrigen, bloqueOrigen,
-                descripcionResolucion(
-                        PrototipoStore.OrigenBloqueanteCierreMaterialMock.DOCUMENTACION_RETENIDA, false));
-    }
-
     /**
      * {@code true} si el resultado final habilita la ejecucion de operaciones
      * materiales (entrega de documentacion, liberacion de rodado, levantamiento

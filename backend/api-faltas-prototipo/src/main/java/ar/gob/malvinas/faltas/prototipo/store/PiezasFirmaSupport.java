@@ -13,11 +13,14 @@ import java.util.Map;
 import java.util.Optional;
 
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaHabilitaResolucionBloqueoCierre;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_NOTIFICACION;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D4;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_ENVIO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esResolutorioBloqueoCierreCircuitoFirmaYNotif;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esResolutorioBloqueoCierreParaFirmaDirecta;
 
 /**
  * Soporte funcional del área piezas/firma del prototipo. Extraído de
@@ -447,6 +450,10 @@ final class PiezasFirmaSupport {
             tipoEvento = "NULIDAD_FIRMADA";
             descripcionEvento =
                     "Documento " + documentoId + " firmado; nulidad concluye el expediente (cerrada, sin notificación).";
+        } else if (esResolutorioBloqueoCierreParaFirmaDirecta(doc.tipoDocumento())) {
+            actualizada = moverAPendienteAnalisisPostFirmaResolutorio(actual);
+            tipoEvento = "DOCUMENTO_FIRMADO";
+            descripcionEvento = "Documento " + documentoId + " firmado (resolutorio de bloqueante material); acta vuelve a análisis para registrar cumplimiento.";
         } else {
             actualizada = moverAPendienteNotificacion(actual);
             tipoEvento = "DOCUMENTO_FIRMADO";
@@ -461,7 +468,8 @@ final class PiezasFirmaSupport {
                 actualizada.bloqueActual(),
                 descripcionEvento);
 
-        if (!restanPendientes && !PIEZA_NULIDAD.equals(doc.tipoDocumento())) {
+        boolean esResolutorioMaterial = esResolutorioBloqueoCierreParaFirmaDirecta(doc.tipoDocumento());
+        if (!restanPendientes && !PIEZA_NULIDAD.equals(doc.tipoDocumento()) && !esResolutorioMaterial) {
             notificacion.asegurarNotificacionPendienteParaDocumento(actaId, actual, doc.tipoDocumento());
         }
 
@@ -537,6 +545,31 @@ final class PiezasFirmaSupport {
                 actual.inspectorNombre(),
                 actual.resumenHecho(),
                 BANDEJA_PENDIENTE_NOTIFICACION);
+    }
+
+    /**
+     * Tras firmar el último resolutorio de bloqueante material, el acta vuelve
+     * a análisis en estado {@code PENDIENTE_CIERRE_MATERIAL}: el bloqueante
+     * sigue activo hasta registrar el cumplimiento material efectivo.
+     */
+    private ActaMock moverAPendienteAnalisisPostFirmaResolutorio(ActaMock actual) {
+        return new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                BLOQUE_D5,
+                "PENDIENTE_CIERRE_MATERIAL",
+                actual.situacionAdministrativaActual(),
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                BANDEJA_PENDIENTE_ANALISIS);
     }
 
     /**

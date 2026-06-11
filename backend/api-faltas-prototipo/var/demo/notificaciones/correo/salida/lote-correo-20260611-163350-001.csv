@@ -1,0 +1,2 @@
+loteId,notificacionId,actaId,acta,tipo,canal,destinatario,domicilio,referenciaExterna,fechaGeneracion
+LOTE-CORREO-20260611-163350-001,NOT-0037-01,ACTA-0037,A-2026-0037,FALLO_CONDENATORIO,CORREO_POSTAL,Demo Correo Fallo Condenatorio 1,Domicilio demo postal 0037,CORREO-LOTE-CORREO-20260611-163350-001-NOT-0037-01,2026-06-11T16:33:50.430085

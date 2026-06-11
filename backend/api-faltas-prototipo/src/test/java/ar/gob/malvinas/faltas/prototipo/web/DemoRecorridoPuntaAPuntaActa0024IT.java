@@ -302,8 +302,7 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
     }
 
     /**
-     * Slate 24B — Después de pago confirmado, el cumplimiento material de
-     * LIBERACION_RODADO debe ser permitido. Los bloqueantes quedan vacíos.
+     * Slate 24B — Con pago confirmado: resolutorio → firma → cumplimiento para ambos bloqueantes.
      */
     @Test
     void permiteLiberarRodadoConPagoConfirmado() throws Exception {
@@ -323,17 +322,23 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
         mvc.perform(post(B + "/actas/" + ID + "/acciones/confirmar-pago-informado"))
                 .andExpect(status().isOk());
 
-        // Con PAGO_CONFIRMADO: emitir resolutorio documental y luego cumplimiento para ambos
+        // LIBERACION_RODADO: resolutorio → firma → cumplimiento (DOC-0024-03)
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk());
-
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0024-03"))
+                .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pendienteCumplido").value("LIBERACION_RODADO"));
 
-        // Resolver ENTREGA_DOCUMENTACION (atómica)
+        // ENTREGA_DOCUMENTACION: resolutorio → firma → cumplimiento (DOC-0024-04)
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0024-04"))
+                .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
                 .andExpect(status().isOk());
@@ -387,14 +392,15 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
         mvc.perform(post(B + "/actas/" + ID + "/acciones/confirmar-pago-informado"))
                 .andExpect(status().isOk());
 
-        // Pago confirmado; ambos bloqueantes siguen pendientes
+        // Pago confirmado; ambos bloqueantes pendientes, resolutorio no generado aún
+        // → resolucionBloqueante=true, cumplimientoMaterial=false (sin resolutorio firmado)
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("PAGO_CONFIRMADO"))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2))
-                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true))
-                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true));
+                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false));
     }
 
     /**
@@ -428,37 +434,45 @@ class DemoRecorridoPuntaAPuntaActa0024IT {
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2))
                 .andExpect(jsonPath("$.hechosMateriales.lecturaOperativa").value(LECTURA_TEMPRANAS));
 
-        String[] pendientes = {"ENTREGA_DOCUMENTACION", "LIBERACION_RODADO"};
-        for (String p : pendientes) {
-            mvc.perform(
-                            post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
-                                    .param("tipo", p))
-                    .andExpect(status().isOk());
-        }
+        // ENTREGA_DOCUMENTACION: resolutorio → firma → cumplimiento (DOC-0024-03)
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0024-03"))
+                .andExpect(status().isOk());
 
+        // Estado mixto: DOCUMENTACION tiene resolutorio firmado (falta cumplimiento material),
+        // pero RODADO todavía no tiene resolutorio. En ese caso los flags conviven:
+        // resolucionBloqueante=true y cumplimientoMaterial=true, y lecturaOperativa
+        // prioriza el eje sin resolutorio → LECTURA_TEMPRANAS.
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(2))
-                .andExpect(jsonPath("$.hechosMateriales.lecturaOperativa").value(LECTURA_SIN_CUMPLIMIENTO))
-                // MEDIDA_PREVENTIVA sigue NO_APLICA — sin resolutorio artificial
+                .andExpect(jsonPath("$.hechosMateriales.lecturaOperativa").value(LECTURA_TEMPRANAS))
+                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true))
+                // MEDIDA_PREVENTIVA: NO_APLICA
                 .andExpect(jsonPath("$.hechosMateriales.ejes[0].fase").value("NO_APLICA"))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[0].ejeBloqueanteCierre").doesNotExist())
-                // RODADO y DOCUMENTACION: resolutorio en expediente, falta hecho material
-                .andExpect(jsonPath("$.hechosMateriales.ejes[1].fase")
-                        .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"))
-                .andExpect(jsonPath("$.hechosMateriales.ejes[1].ejeBloqueanteCierre").value("LIBERACION_RODADO"))
+                // DOCUMENTACION: resolutorio firmado, falta hecho material
                 .andExpect(jsonPath("$.hechosMateriales.ejes[2].fase")
                         .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[2].ejeBloqueanteCierre").value("ENTREGA_DOCUMENTACION"));
 
-        // PAGO_CONFIRMADO ya activo: cumplimiento permitido para ambos
-        for (String p : pendientes) {
-            mvc.perform(
-                            post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
-                                    .param("tipo", p))
-                    .andExpect(status().isOk());
-        }
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk());
+
+        // LIBERACION_RODADO: resolutorio → firma → cumplimiento (DOC-0024-04)
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0024-04"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                        .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isOk());
 
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())

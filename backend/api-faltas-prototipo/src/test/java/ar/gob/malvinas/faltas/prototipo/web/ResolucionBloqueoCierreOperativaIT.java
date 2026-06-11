@@ -36,13 +36,12 @@ class ResolucionBloqueoCierreOperativaIT {
     private MockMvc mvc;
 
     /**
-     * La bandeja se conserva en ACTAS_EN_ENRIQUECIMIENTO después de emitir el
-     * resolutorio de LEVANTAMIENTO_MEDIDA_PREVENTIVA (ACTA-0022), que no requiere
-     * habilitante. ENTREGA_DOCUMENTACION y LIBERACION_RODADO sí requieren
-     * habilitante (pago confirmado, absolución o condena firme con pago).
+     * Generar resolutorio de LEVANTAMIENTO_MEDIDA_PREVENTIVA (ACTA-0022, sin habilitante):
+     * el documento queda PENDIENTE_FIRMA y el acta pasa a la bandeja PENDIENTE_FIRMA.
+     * La firma del resolutorio es obligatoria antes del cumplimiento material.
      */
     @Test
-    void resolutorioBloqueoCierre_enActasEnEnriquecimiento_200YbandejaConservada() throws Exception {
+    void resolutorioBloqueoCierre_generaDocumentoPendienteFirmaYActaEnBandejaPendienteFirma() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
         String id = "ACTA-0022";
@@ -54,7 +53,14 @@ class ResolucionBloqueoCierreOperativaIT {
 
         mvc.perform(get(B + "/actas/" + id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bandejaActual").value("ACTAS_EN_ENRIQUECIMIENTO"));
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"))
+                .andExpect(jsonPath("$.accionesUi.firmaPendiente").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false));
+
+        mvc.perform(get(B + "/actas/" + id + "/documentos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.tipoDocumento=='DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA')].estadoDocumento")
+                        .value("PENDIENTE_FIRMA"));
     }
 
     /**

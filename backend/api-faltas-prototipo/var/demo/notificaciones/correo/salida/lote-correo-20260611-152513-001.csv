@@ -1,0 +1,2 @@
+loteId,notificacionId,actaId,acta,tipo,canal,destinatario,domicilio,referenciaExterna,fechaGeneracion
+LOTE-CORREO-20260611-152513-001,NOT-0030-03,ACTA-0030,A-2026-0030,FALLO_CONDENATORIO,CORREO_POSTAL,Demo Apelación Absuelve,pendiente constancia de domicilio,CORREO-LOTE-CORREO-20260611-152513-001-NOT-0030-03,2026-06-11T15:25:13.9926297

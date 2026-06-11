@@ -187,7 +187,8 @@ class RegistrarPagoVoluntarioConMontoIT {
                 .andExpect(status().isOk());
 
         mvc.perform(get(B + "/actas/" + id))
-                .andExpect(jsonPath("$.situacionPago").value("PAGO_INFORMADO"))
+                .andExpect(jsonPath("$.situacionPago").value("PENDIENTE_CONFIRMACION"))
+                .andExpect(jsonPath("$.accionPendiente").value("VERIFICAR_PAGO_INFORMADO"))
                 .andExpect(jsonPath("$.montoPagoVoluntario").value(12345.67))
                 .andExpect(jsonPath("$.pagoInformado.comprobante").doesNotExist());
 

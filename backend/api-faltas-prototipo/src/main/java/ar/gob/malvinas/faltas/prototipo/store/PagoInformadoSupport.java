@@ -81,7 +81,8 @@ final class PagoInformadoSupport {
                 LocalDateTime.now(),
                 null,
                 null));
-        setSituacionPago(actaId, PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+        setSituacionPago(actaId, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
+        accionPendientePorActa.put(actaId, PrototipoStore.ACCION_VERIFICAR_PAGO_INFORMADO);
 
         registrarEvento(
                 actaId,
@@ -93,7 +94,7 @@ final class PagoInformadoSupport {
         return new PrototipoStore.RegistrarPagoInformadoResultado(
                 PrototipoStore.RegistrarPagoInformadoEstado.OK,
                 actaId,
-                PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+                PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
     }
 
     PrototipoStore.AdjuntarComprobantePagoInformadoResultado adjuntarComprobantePagoInformado(
@@ -187,7 +188,7 @@ final class PagoInformadoSupport {
 
     /**
      * Confirmación de pago voluntario por sistema externo de cobro.
-     * Precondición: situacionPago == PAGO_INFORMADO o PENDIENTE_CONFIRMACION;
+     * Precondición: situacionPago == PENDIENTE_CONFIRMACION;
      * monto externo debe coincidir con monto fijado (si se provee).
      */
     PrototipoStore.ConfirmarPagoVoluntarioExternoResultado confirmarPagoVoluntarioExterno(
@@ -219,8 +220,7 @@ final class PagoInformadoSupport {
                     null,
                     situacion);
         }
-        if (situacion != PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
-                && situacion != PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+        if (situacion != PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
             return new PrototipoStore.ConfirmarPagoVoluntarioExternoResultado(
                     PrototipoStore.ConfirmarPagoVoluntarioExternoEstado.CONFLICT_SIN_PAGO_PENDIENTE,
                     null,

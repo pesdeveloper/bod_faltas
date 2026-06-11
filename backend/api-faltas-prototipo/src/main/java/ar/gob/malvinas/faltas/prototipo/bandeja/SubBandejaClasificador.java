@@ -35,7 +35,7 @@ public final class SubBandejaClasificador {
     private static final Set<PrototipoStore.SituacionPagoMock> PAGO_VOLUNTARIO_EN_CURSO =
             EnumSet.of(
                     PrototipoStore.SituacionPagoMock.SOLICITADO,
-                    PrototipoStore.SituacionPagoMock.PAGO_INFORMADO,
+                    PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION,
                     PrototipoStore.SituacionPagoMock.OBSERVADO);
 
     public SubBandejaAsignacion clasificar(SubBandejaContexto ctx) {
@@ -192,8 +192,7 @@ public final class SubBandejaClasificador {
         if (ACCION_REVISION_POST_REINGRESO.equals(ctx.accionPendiente())) {
             out.add(SubBandejaCodigo.ANALISIS_POST_REINGRESO);
         }
-        if (ACCION_VERIFICAR_PAGO_INFORMADO.equals(ctx.accionPendiente())
-                || ctx.situacionPago() == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO) {
+        if (ACCION_VERIFICAR_PAGO_INFORMADO.equals(ctx.accionPendiente())) {
             out.add(SubBandejaCodigo.ANALISIS_PAGO_INFORMADO);
         }
         if (ACCION_EVALUAR_PAGO_VOLUNTARIO.equals(ctx.accionPendiente())
@@ -210,8 +209,7 @@ public final class SubBandejaClasificador {
     }
 
     private static void evaluarPendientesFallo(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
-        if (ctx.situacionPago() == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
-                || ACCION_VERIFICAR_PAGO_INFORMADO.equals(ctx.accionPendiente())) {
+        if (ACCION_VERIFICAR_PAGO_INFORMADO.equals(ctx.accionPendiente())) {
             out.add(SubBandejaCodigo.FALLO_TRAS_PAGO_INFORMADO);
         }
         if (ctx.documentos().stream().anyMatch(d -> "INFORME_ALCOHOTEST".equals(d.tipoDocumento()))) {

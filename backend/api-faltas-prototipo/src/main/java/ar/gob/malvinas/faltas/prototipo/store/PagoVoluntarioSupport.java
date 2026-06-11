@@ -420,8 +420,7 @@ final class PagoVoluntarioSupport {
         }
         PrototipoStore.SituacionPagoMock situacionActual = situacionPagoPorActa.getOrDefault(
                 actaId, PrototipoStore.SituacionPagoMock.SIN_PAGO);
-        if (situacionActual == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
-                || situacionActual == PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+        if (situacionActual == PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
             return new PrototipoStore.InformarPagoVoluntarioDesdePortalResultado(
                     PrototipoStore.InformarPagoVoluntarioDesdePortalEstado.CONFLICT_YA_INFORMADO,
                     null,

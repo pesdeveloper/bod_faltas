@@ -644,6 +644,8 @@ public class MockDataFactory {
         store.getNotificacionesPorActa().put(id, notifs);
 
         store.setResultadoFinalCierreDemo(id, PrototipoStore.ResultadoFinalCierreMock.PAGO_CONFIRMADO);
+        store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.CONFIRMADO);
+        store.setTipoPago(id, PrototipoStore.TipoPago.VOLUNTARIO);
     }
 
     private void cargarActa0009(PrototipoStore store) {
@@ -1817,7 +1819,7 @@ public class MockDataFactory {
                         "DOC-0022-00",
                         id,
                         "MEDIDA_PREVENTIVA",
-                        "PENDIENTE_FIRMA",
+                        "FIRMADO",
                         "medida_preventiva_0022.pdf"));
         docs.add(
                 new ActaDocumentoMock(
@@ -1902,7 +1904,7 @@ public class MockDataFactory {
                         "DOC-0023-01",
                         id,
                         "DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA",
-                        "EMITIDO",
+                        "FIRMADO",
                         "levantamiento_medida_0023.pdf"));
         store.getDocumentosPorActa().put(id, docs);
 
@@ -3753,7 +3755,7 @@ public class MockDataFactory {
                 "Caso demo ACTA-0110: pago informado; expediente derivado a fallo.",
                 false,
                 LocalDateTime.of(2026, 6, 12, 11, 0));
-        store.setSituacionPago("ACTA-0110", PrototipoStore.SituacionPagoMock.PAGO_INFORMADO);
+        store.setSituacionPago("ACTA-0110", PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);
         store.setTipoPago("ACTA-0110", PrototipoStore.TipoPago.VOLUNTARIO);
         store.setPagoInformadoDemo(
                 "ACTA-0110",
@@ -4209,8 +4211,7 @@ public class MockDataFactory {
                 "Julián Herrera — notificación positiva del acta"));
         store.getNotificacionesPorActa().put(id, notifs);
 
-        // El comprobante ya fue adjuntado: la situación es PENDIENTE_CONFIRMACION
-        // (no PAGO_INFORMADO, que es el estado previo al adjunto del comprobante).
+        // El comprobante ya fue adjuntado: la situación es PENDIENTE_CONFIRMACION.
         // El monto fue fijado por Dirección de Faltas antes del pago informado.
         store.setMontoPagoVoluntario(id, java.math.BigDecimal.valueOf(8500));
         store.setSituacionPago(id, PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION);

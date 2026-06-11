@@ -114,20 +114,54 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
     }
 
     /**
-     * Regla Slice 22C: ENTREGA_DOCUMENTACION es atómica.
-     * Una sola llamada a registrar-cumplimiento-material-bloqueo-cierre
-     * resuelve el bloqueante sin requerir registrar-resolucion-bloqueo-cierre previo.
+     * Regla nueva: ENTREGA_DOCUMENTACION requiere resolutorio firmado.
+     * Cumplimiento directo sin resolutorio previo devuelve 409.
      */
     @Test
-    void acta0019_entregaDocumentacion_atomicaSinResolutorioPrevio() throws Exception {
+    void acta0019_entregaDocumentacion_sinResolutorio_devuelve409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isConflict());
+    }
+
+    /**
+     * Flujo completo: resolutorio → firma → cumplimiento para ENTREGA_DOCUMENTACION.
+     * El resolutorio queda PENDIENTE_FIRMA, tras firma el acta vuelve a análisis
+     * y el cumplimiento material ya es ejecutable.
+     */
+    @Test
+    void acta0019_entregaDocumentacion_resolutorioFirmaYCumplimiento() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoId").value("DOC-0019-03"));
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"))
+                .andExpect(jsonPath("$.accionesUi.firmaPendiente").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false));
+
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0019-03"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.accionesUi.firmaPendiente").value(false))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true));
 
         mvc.perform(
                         post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                                 .param("tipo", "ENTREGA_DOCUMENTACION"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.pendienteCumplido").value("ENTREGA_DOCUMENTACION"))
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1));
 
         mvc.perform(get(B + "/actas/" + ID))
@@ -137,26 +171,33 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
     }
 
     /**
-     * Regla Slice 22F: resolver los dos bloqueantes de tránsito (RODADO + DOCUMENTACION)
-     * habilita cierre. DOCUMENTACION es atómica; LIBERACION_RODADO requiere
-     * resolutorio documental previo. Sin LEVANTAMIENTO_MEDIDA_PREVENTIVA.
+     * Flujo completo para ambos bloqueantes: resolutorio → firma → cumplimiento
+     * para LIBERACION_RODADO y ENTREGA_DOCUMENTACION → habilita cierre.
      */
     @Test
     void acta0019_resolverDosBloqueantes_habilitaCierre() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
-        mvc.perform(
-                        post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
-                                .param("tipo", "LIBERACION_RODADO"))
+        // LIBERACION_RODADO: resolutorio → firma → cumplimiento
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoId").value("DOC-0019-03"));
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0019-03"))
                 .andExpect(status().isOk());
-        mvc.perform(
-                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
-                                .param("tipo", "LIBERACION_RODADO"))
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                        .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk());
 
-        mvc.perform(
-                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
-                                .param("tipo", "ENTREGA_DOCUMENTACION"))
+        // ENTREGA_DOCUMENTACION: resolutorio → firma → cumplimiento
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoId").value("DOC-0019-04"));
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0019-04"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true))
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(0));
@@ -167,12 +208,12 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
     }
 
     /**
-     * Regla Slice 22C/22F: LIBERACION_RODADO mantiene semántica de retiro y
-     * sigue requiriendo dos pasos (resolutorio + cumplimiento material).
-     * No se confunde con MEDIDA_PREVENTIVA, que queda NO_APLICA en tránsito.
+     * LIBERACION_RODADO requiere resolutorio + firma antes del cumplimiento.
+     * Sin resolutorio: 409. Con resolutorio PENDIENTE_FIRMA: acta en PENDIENTE_FIRMA,
+     * eje en RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL.
      */
     @Test
-    void acta0019_liberacionRodado_dosPasosDistintoDeMedida() throws Exception {
+    void acta0019_liberacionRodado_requiereResolutorioFirmado() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
         mvc.perform(
@@ -189,10 +230,18 @@ class CerrabilidadMaterialAbsueltosActa0019IT {
 
         mvc.perform(get(B + "/actas/" + ID))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"))
+                .andExpect(jsonPath("$.accionesUi.firmaPendiente").value(true))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[1].clave").value("RODADO"))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[1].fase")
                         .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[0].clave").value("MEDIDA_PREVENTIVA"))
                 .andExpect(jsonPath("$.hechosMateriales.ejes[0].fase").value("NO_APLICA"));
+
+        // Cumplimiento antes de firmar → 409
+        mvc.perform(
+                        post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+                                .param("tipo", "LIBERACION_RODADO"))
+                .andExpect(status().isConflict());
     }
 }

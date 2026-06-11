@@ -253,6 +253,17 @@ final class PrototipoConstantes {
         return TIPO_DOC_LEVANTAMIENTO_MEDIDA_CIRCUITO_FIRMA_NOTIF.equals(tipoDocumento);
     }
 
+    /**
+     * {@code true} si el tipo de documento es un resolutorio de bloqueante material
+     * que requiere firma directa (no circuito notificación): levantamiento, liberación
+     * de rodado o restitución documental.
+     */
+    static boolean esResolutorioBloqueoCierreParaFirmaDirecta(String tipoDocumento) {
+        return TIPO_DOC_LEVANTAMIENTO_MEDIDA_PREVENTIVA.equals(tipoDocumento)
+                || TIPO_DOC_LIBERACION_RODADO.equals(tipoDocumento)
+                || TIPO_DOC_RESTITUCION_DOCUMENTACION.equals(tipoDocumento);
+    }
+
     private PrototipoConstantes() {
     }
 }

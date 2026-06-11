@@ -1852,10 +1852,10 @@ public class PrototipoStore {
      *   <li>{@code INFORMAR}: situación {@code SOLICITADO} u
      *       {@code OBSERVADO} (administrado puede (re)informar pago).</li>
      *   <li>{@code ADJUNTAR_COMPROBANTE}: situación
-     *       {@code PAGO_INFORMADO} (existe pago informado sin
-     *       comprobante).</li>
+     *       {@code PENDIENTE_CONFIRMACION} sin comprobante adjunto aún.</li>
      *   <li>{@code CONFIRMAR} y {@code OBSERVAR}: situación
-     *       {@code PENDIENTE_CONFIRMACION}.</li>
+     *       {@code PENDIENTE_CONFIRMACION} (Dirección puede confirmar u observar
+     *       en cualquier subestado de esa situación).</li>
      * </ul>
      *
      * <p>Lista vacía si el acta no existe, está cerrada, o se encuentra en
@@ -1889,8 +1889,11 @@ public class PrototipoStore {
                     acciones.add("FIJAR_MONTO");
                 }
             }
-            case PAGO_INFORMADO -> acciones.add("ADJUNTAR_COMPROBANTE");
             case PENDIENTE_CONFIRMACION -> {
+                PagoInformadoMock pago = pagoInformadoPorActa.get(actaId);
+                if (pago != null && pago.comprobanteId() == null) {
+                    acciones.add("ADJUNTAR_COMPROBANTE");
+                }
                 acciones.add("CONFIRMAR");
                 acciones.add("OBSERVAR");
             }
@@ -1960,6 +1963,23 @@ public class PrototipoStore {
      */
     public boolean puedeCerrarDesdeAnalisis(String actaId) {
         return cerrabilidad.puedeCerrarDesdeAnalisis(actaId);
+    }
+
+    /**
+     * {@code true} si al menos un bloqueante pendiente no tiene aún documento
+     * resolutorio generado. Indica que la acción "Generar resolución" está disponible.
+     */
+    public boolean hayPendientesSinResolutorio(String actaId) {
+        return cerrabilidad.hayPendientesSinResolutorio(actaId);
+    }
+
+    /**
+     * {@code true} si al menos un bloqueante pendiente tiene resolutorio FIRMADO
+     * pero el cumplimiento material no fue registrado. Indica que la acción
+     * "Registrar cumplimiento" está disponible.
+     */
+    public boolean hayPendientesConResolutorioFirmado(String actaId) {
+        return cerrabilidad.hayPendientesConResolutorioFirmado(actaId);
     }
 
     /**
@@ -3194,7 +3214,7 @@ public class PrototipoStore {
         }
         // Bloquear archivo mientras el pago voluntario está en proceso de acreditación.
         SituacionPagoMock sp = getSituacionPago(actaId);
-        if (sp == SituacionPagoMock.PAGO_INFORMADO || sp == SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+        if (sp == SituacionPagoMock.PENDIENTE_CONFIRMACION) {
             return new ArchivarActaResultado(
                     ArchivarActaEstado.CONFLICT, null, null, null, null);
         }

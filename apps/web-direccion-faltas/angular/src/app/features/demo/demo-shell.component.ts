@@ -112,9 +112,9 @@ const TIPOS_CUMPLIMIENTO_MATERIAL: ReadonlyArray<TipoCumplimientoMaterialBloquea
 ];
 
 const ETIQUETA_CUMPLIMIENTO_MATERIAL: Record<TipoCumplimientoMaterialBloqueante, string> = {
-  LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Registrar levantamiento material',
+  LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Registrar levantamiento efectivo de medida preventiva',
   LIBERACION_RODADO: 'Registrar retiro (app)',
-  ENTREGA_DOCUMENTACION: 'Entregar documentación',
+  ENTREGA_DOCUMENTACION: 'Registrar entrega efectiva de documentación',
 };
 
 // Fases del eje material reportadas por el backend (HechosMaterialesEje.fase).
@@ -124,15 +124,15 @@ const FASE_EJE_PENDIENTE_RESOLUTORIO = 'SITUACION_PENDIENTE_DE_RESOLUTORIO';
 const FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE = 'RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL';
 
 const ETIQUETA_RESOLUCION_BLOQUEO_CIERRE: Record<TipoResolucionBloqueoCierre, string> = {
-  LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Resolver levantamiento de medida preventiva',
-  LIBERACION_RODADO: 'Resolver liberación de rodado',
-  ENTREGA_DOCUMENTACION: 'Resolver entrega de documentación',
+  LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Generar resolución de levantamiento de medida preventiva',
+  LIBERACION_RODADO: 'Generar resolución de liberación de rodado',
+  ENTREGA_DOCUMENTACION: 'Generar resolución de restitución de documentación',
 };
 
 const ETIQUETA_RESOLUCION_BLOQUEO_CIERRE_EN_CURSO: Record<TipoResolucionBloqueoCierre, string> = {
-  LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Resolviendo levantamiento...',
-  LIBERACION_RODADO: 'Resolviendo liberación...',
-  ENTREGA_DOCUMENTACION: 'Resolviendo entrega...',
+  LEVANTAMIENTO_MEDIDA_PREVENTIVA: 'Generando resolución...',
+  LIBERACION_RODADO: 'Generando resolución...',
+  ENTREGA_DOCUMENTACION: 'Generando resolución...',
 };
 
 const BANDEJAS_NOTIFICABLES: ReadonlyArray<string> = [
@@ -1850,10 +1850,9 @@ export class DemoShellComponent implements OnInit {
     );
   }
 
-  // El cumplimiento material aplica cuando el eje material ya tiene resolutorio
-  // (fase RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL). Excepcion: DOCUMENTACION
-  // es atomica desde SITUACION_PENDIENTE_DE_RESOLUTORIO; el backend crea el
-  // resolutorio automaticamente si no existe.
+  // El cumplimiento material aplica cuando el eje tiene resolutorio ya FIRMADO
+  // (fase RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL). Igual para los tres tipos:
+  // ENTREGA_DOCUMENTACION, LEVANTAMIENTO_MEDIDA_PREVENTIVA y LIBERACION_RODADO.
   puedeMostrarAccionCumplimientoMaterial(
     pendiente: string,
   ): pendiente is TipoCumplimientoMaterialBloqueante {
@@ -1863,17 +1862,13 @@ export class DemoShellComponent implements OnInit {
     if (!this.esTipoCumplimientoMaterialConocido(pendiente)) {
       return false;
     }
-    const fase = this.faseEjeParaPendiente(pendiente);
-    if (pendiente === 'ENTREGA_DOCUMENTACION') {
-      return fase === FASE_EJE_PENDIENTE_RESOLUTORIO || fase === FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE;
-    }
-    return fase === FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE;
+    return this.faseEjeParaPendiente(pendiente) === FASE_EJE_RESOLUTORIO_EN_EXPEDIENTE;
   }
 
-  // Visibilidad de resolucion documental de bloqueante. ENTREGA_DOCUMENTACION
-  // no muestra este paso porque su accion es atomica: el cumplimiento material
-  // crea el resolutorio automaticamente. Para medida y rodado se muestra cuando
-  // la fase es SITUACION_PENDIENTE_DE_RESOLUTORIO.
+  // Visibilidad de generación de resolutorio de bloqueante material. Los tres tipos
+  // (ENTREGA_DOCUMENTACION, LEVANTAMIENTO_MEDIDA_PREVENTIVA, LIBERACION_RODADO)
+  // siguen el mismo ciclo: generar resolutorio  firmar  cumplimiento.
+  // Se muestra cuando la fase es SITUACION_PENDIENTE_DE_RESOLUTORIO.
   puedeMostrarAccionResolucionBloqueoCierre(
     pendiente: string,
   ): pendiente is TipoResolucionBloqueoCierre {
@@ -1885,9 +1880,6 @@ export class DemoShellComponent implements OnInit {
       return false;
     }
     if (!this.esTipoCumplimientoMaterialConocido(pendiente)) {
-      return false;
-    }
-    if (pendiente === 'ENTREGA_DOCUMENTACION') {
       return false;
     }
     return this.faseEjeParaPendiente(pendiente) === FASE_EJE_PENDIENTE_RESOLUTORIO;

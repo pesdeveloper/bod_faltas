@@ -99,16 +99,37 @@ class DemoRecorridoPuntaAPuntaActa0021IT {
     }
 
     /**
-     * Como el pago ya está confirmado, no hace falta el ciclo de pago:
-     * documentación y rodado pueden resolverse directamente desde el estado inicial.
-     * Al resolver ambos bloqueantes, el acta queda cerrable.
+     * Flujo completo: resolutorio → firma → cumplimiento para ambos bloqueantes.
+     * El pago ya está confirmado, así que no hace falta ciclo de pago.
      */
     @Test
     void acta0021_documentacionYRodado_resuelvenYHabilitanCierre() throws Exception {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
-        // 1. Entrega de documentación (atómica: cumplimiento directo, no requiere pago)
+        // 1. Resolutorio de ENTREGA_DOCUMENTACION → DOC-0021-03
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendienteAtendido").value("ENTREGA_DOCUMENTACION"));
+
+        // Acta en PENDIENTE_FIRMA, cumplimientoMaterial=false
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"))
+                .andExpect(jsonPath("$.accionesUi.firmaPendiente").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false));
+
+        // 2. Firmar resolutorio → acta vuelve a análisis
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0021-03"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true));
+
+        // 3. Cumplimiento de ENTREGA_DOCUMENTACION
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
                 .andExpect(status().isOk())
@@ -117,7 +138,7 @@ class DemoRecorridoPuntaAPuntaActa0021IT {
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre.length()").value(1))
                 .andExpect(jsonPath("$.cerrabilidad.pendientesBloqueantesCierre[0]").value("LIBERACION_RODADO"));
 
-        // 2. Emitir DOC_LIBERACION_RODADO (pago ya confirmado en precarga)
+        // 4. Resolutorio de LIBERACION_RODADO → DOC-0021-04
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk())
@@ -131,7 +152,11 @@ class DemoRecorridoPuntaAPuntaActa0021IT {
                 .andExpect(jsonPath("$.hechosMateriales.ejes[1].fase")
                         .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"));
 
-        // 3. Registrar retiro efectivo (app)
+        // 5. Firmar resolutorio de rodado → acta vuelve a análisis
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0021-04"))
+                .andExpect(status().isOk());
+
+        // 6. Registrar retiro efectivo
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk())
@@ -141,25 +166,29 @@ class DemoRecorridoPuntaAPuntaActa0021IT {
     }
 
     /**
-     * Recorrido e2e completo: resolver materiales y cerrar.
-     * Verifica estado final de ACTA-0021 en CERRADAS con PAGO_CONFIRMADO.
+     * Recorrido e2e completo: resolver materiales (resolutorio→firma→cumplimiento) y cerrar.
      */
     @Test
     void acta0021_cierreFinal_luegoDe_resolverMateriales() throws Exception {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
-        // Entregar documentación
+        // ENTREGA_DOCUMENTACION: resolutorio → firma → cumplimiento
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0021-03"))
+                .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
                 .andExpect(status().isOk());
 
-        // Emitir liberación rodado
+        // LIBERACION_RODADO: resolutorio → firma → cumplimiento
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-resolucion-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk());
-
-        // Registrar retiro
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0021-04"))
+                .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk());

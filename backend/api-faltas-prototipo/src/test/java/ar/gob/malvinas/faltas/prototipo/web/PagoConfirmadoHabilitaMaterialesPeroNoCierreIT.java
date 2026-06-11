@@ -52,8 +52,8 @@ class PagoConfirmadoHabilitaMaterialesPeroNoCierreIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("PAGO_CONFIRMADO"))
                 .andExpect(jsonPath("$.situacionPago").value("CONFIRMADO"))
-                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(true))
-                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true));
+                .andExpect(jsonPath("$.accionesUi.resolucionBloqueante").value(true))
+                .andExpect(jsonPath("$.accionesUi.cumplimientoMaterial").value(false));
     }
 
     @Test

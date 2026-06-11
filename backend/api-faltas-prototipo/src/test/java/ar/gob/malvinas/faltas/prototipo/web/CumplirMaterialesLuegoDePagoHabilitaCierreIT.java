@@ -39,31 +39,37 @@ class CumplirMaterialesLuegoDePagoHabilitaCierreIT {
     @Autowired
     private MockMvc mvc;
 
+    /** Flujo completo resolutorio → firma → cumplimiento para ambos bloqueantes. */
     private void cumplirMateriales() throws Exception {
-        mvc.perform(post(B + "/actas/" + ACTA
-                        + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+        // ENTREGA_DOCUMENTACION: resolutorio → firma → cumplimiento (DOC-0021-03)
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-resolucion-bloqueo-cierre")
+                        .param("tipo", "ENTREGA_DOCUMENTACION"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/firmar-documento/DOC-0021-03"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
                 .andExpect(status().isOk());
 
-        mvc.perform(post(B + "/actas/" + ACTA
-                        + "/acciones/registrar-resolucion-bloqueo-cierre")
+        // LIBERACION_RODADO: resolutorio → firma → cumplimiento (DOC-0021-04)
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-resolucion-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk());
-
-        mvc.perform(post(B + "/actas/" + ACTA
-                        + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/firmar-documento/DOC-0021-04"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "LIBERACION_RODADO"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void cumplirDocumentacion_devuelveOk() throws Exception {
+    void cumplirDocumentacion_requiereResolutorioFirmado_sinResolutorio409() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 
         mvc.perform(post(B + "/actas/" + ACTA
                         + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                         .param("tipo", "ENTREGA_DOCUMENTACION"))
-                .andExpect(status().isOk());
+                .andExpect(status().isConflict());
     }
 
     @Test

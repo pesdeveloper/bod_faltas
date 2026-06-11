@@ -769,7 +769,7 @@ public class PrototipoApiController {
     /**
      * Confirma pago voluntario desde sistema externo de cobro (gateway/caja).
      * El monto recibido debe coincidir con el monto fijado por Dirección.
-     * Precondición: situacionPago == PAGO_INFORMADO o PENDIENTE_CONFIRMACION.
+     * Precondición: situacionPago == PENDIENTE_CONFIRMACION.
      */
     @PostMapping("/actas/{id}/acciones/confirmar-pago-voluntario-externo")
     public ConfirmarPagoVoluntarioExternoAccionResponse confirmarPagoVoluntarioExterno(
@@ -2165,13 +2165,19 @@ public class PrototipoApiController {
                     && ((sinResultadoFinal && sinFalloDictado && pagoCompatibleConFallo) || falloPostGestionExterna);
 
             // cumplimientoMaterial / resolucionBloqueante:
-            // solo ejecutables cuando existe un habilitante material
+            // Separados según fase del resolutorio (PENDIENTE_FIRMA / FIRMADO / sin doc).
+            // resolucionBloqueante: bloqueante sin resolutorio → operador debe generarlo.
+            // cumplimientoMaterial: resolutorio FIRMADO → operador puede registrar hecho.
             PrototipoStore.CerrabilidadActaVista cv = store.getCerrabilidadActa(a.id());
             boolean tieneHabilitante = hayHabilitanteMaterialParaUi(a.id(), rf, cv);
             boolean tienePendientesMateriales = cv != null && !cv.pendientesBloqueantes().isEmpty();
             if (tieneHabilitante && tienePendientesMateriales) {
-                cumplimientoMaterial = true;
-                resolucionBloqueante = true;
+                if (store.hayPendientesSinResolutorio(a.id())) {
+                    resolucionBloqueante = true;
+                }
+                if (store.hayPendientesConResolutorioFirmado(a.id())) {
+                    cumplimientoMaterial = true;
+                }
             }
 
             // cierre: puede ejecutarse cerrar-acta ahora
@@ -2455,8 +2461,7 @@ public class PrototipoApiController {
         if (situacion == PrototipoStore.SituacionPagoMock.CONFIRMADO) {
             return "El pago voluntario ya fue confirmado.";
         }
-        if (situacion == PrototipoStore.SituacionPagoMock.PAGO_INFORMADO
-                || situacion == PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
+        if (situacion == PrototipoStore.SituacionPagoMock.PENDIENTE_CONFIRMACION) {
             return "Pago en proceso de acreditación. Dirección de Faltas verificará la acreditación.";
         }
         if (situacion == PrototipoStore.SituacionPagoMock.OBSERVADO && monto != null) {

@@ -1,0 +1,5 @@
+loteId,notificacionId,resultado,fechaResultado,observacion
+LOTE-CORREO-20260611-152531-001,NOT-0027-03,POSITIVA,2026-05-25T10:00:00,Fallo condenatorio entregado por correo
+LOTE-CORREO-20260611-152531-001,NOT-0028-03,POSITIVA,2026-05-25T10:05:00,Fallo absolutorio entregado por correo
+LOTE-CORREO-20260611-152531-001,NOT-0004-01,NEGATIVA,2026-05-25T10:10:00,Domicilio insuficiente
+LOTE-CORREO-20260611-152531-001,NOT-0030-03,VENCIDA,2026-05-25T10:15:00,Sin constancia dentro del plazo

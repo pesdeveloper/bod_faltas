@@ -86,6 +86,12 @@ class MedidaPreventivaPosteriorContravencionIT {
                         jsonPath("$.hechosMateriales.ejes[0].fase")
                                 .value("RESOLUTORIO_EN_EXPEDIENTE_SIN_HECHO_MATERIAL"));
 
+        // El resolutorio queda PENDIENTE_FIRMA; debe firmarse antes de registrar cumplimiento.
+        // DOC-0026-01 = acta firmada (mock); DOC-0026-02 = ancla medida posterior;
+        // DOC-0026-03 = resolutorio levantamiento generado recién arriba.
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/firmar-documento/DOC-0026-03"))
+                .andExpect(status().isOk());
+
         mvc.perform(
                         post(B + "/actas/" + ID + "/acciones/registrar-cumplimiento-material-bloqueo-cierre")
                                 .param("tipo", "LEVANTAMIENTO_MEDIDA_PREVENTIVA"))
