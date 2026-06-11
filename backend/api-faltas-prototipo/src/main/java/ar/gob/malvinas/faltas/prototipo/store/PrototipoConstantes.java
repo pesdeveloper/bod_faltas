@@ -209,6 +209,7 @@ final class PrototipoConstantes {
         }
         if (BANDEJA_GESTION_EXTERNA.equals(bandejaActual)
                 || BANDEJA_ARCHIVO.equals(bandejaActual)
+                || BANDEJA_PARALIZADAS.equals(bandejaActual)
                 || BANDEJA_CERRADAS.equals(bandejaActual)) {
             return false;
         }
@@ -241,6 +242,7 @@ final class PrototipoConstantes {
         }
         if (BANDEJA_GESTION_EXTERNA.equals(bandejaActual)
                 || BANDEJA_ARCHIVO.equals(bandejaActual)
+                || BANDEJA_PARALIZADAS.equals(bandejaActual)
                 || BANDEJA_CERRADAS.equals(bandejaActual)) {
             return false;
         }

@@ -58,9 +58,14 @@ package ar.gob.malvinas.faltas.prototipo.web.dto;
  * <p>{@code reintentarNotificacion}: Dirección puede devolver el expediente
  * al circuito de notificación porque la notificación previa quedó no
  * entregada o vencida y requiere nuevo intento/canal.
+ *
+ * <p>{@code paralizarActa}: acción administrativa transversal para suspender
+ * un acta activa en bandeja interna operable. Falsa en ARCHIVO, CERRADAS,
+ * GESTION_EXTERNA, PARALIZADAS o con situación administrativa no activa.
  */
 public record AccionesUiResponse(
         boolean archivoReingreso,
+        boolean paralizarActa,
         boolean consentirCondenaYRegistrarPago,
         boolean pagoVoluntario,
         boolean vencimientoPagoVoluntario,

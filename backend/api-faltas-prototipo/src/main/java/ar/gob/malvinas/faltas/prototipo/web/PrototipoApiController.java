@@ -51,6 +51,8 @@ import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalAcuseRespons
 import ar.gob.malvinas.faltas.prototipo.web.dto.NotificadorMunicipalNotificacionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.NotificacionPortalPendienteResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.ObservarPagoInformadoAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ParalizarActaAccionResponse;
+import ar.gob.malvinas.faltas.prototipo.web.dto.ParalizarActaRequest;
 import ar.gob.malvinas.faltas.prototipo.web.dto.PagoInformadoResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.PagoCondenaAccionResponse;
 import ar.gob.malvinas.faltas.prototipo.web.dto.RegistrarNotificacionNegativaAccionResponse;
@@ -1642,6 +1644,36 @@ public class PrototipoApiController {
                 r.accionPendiente());
     }
 
+    /**
+     * Paralización administrativa transversal. Solo aplica a actas activas en
+     * bandejas internas operativas; excluye cerradas, archivo, gestión externa
+     * y actas ya paralizadas.
+     */
+    @PostMapping("/actas/{id}/acciones/paralizar-acta")
+    public ParalizarActaAccionResponse paralizarActa(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) ParalizarActaRequest request) {
+        PrototipoStore.MotivoParalizacionActa motivo = parseMotivoParalizacion(request);
+        String observacion = request != null ? request.observacion() : null;
+        PrototipoStore.ParalizarActaResultado r = store.paralizarActa(id, motivo, observacion);
+        if (r.estado() == PrototipoStore.ParalizarActaEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ParalizarActaEstado.CONFLICT) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El acta no está activa en una bandeja interna operativa; no se puede paralizar.");
+        }
+        return new ParalizarActaAccionResponse(
+                "OK",
+                "Acta paralizada correctamente.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.situacionAdministrativa(),
+                r.accionPendiente());
+    }
+
     @PostMapping("/actas/{id}/acciones/generar-medida-preventiva")
     public GenerarMedidaPreventivaAccionResponse generarMedidaPreventiva(@PathVariable("id") String id) {
         PrototipoStore.GenerarMedidaPreventivaResultado r = store.generarMedidaPreventiva(id);
@@ -2042,11 +2074,13 @@ public class PrototipoApiController {
 
     private AccionesUiResponse computarAccionesUi(ActaMock a) {
         boolean archivoReingreso = a.permiteReingreso() && "ARCHIVO".equals(a.bandejaActual());
+        boolean paralizarActa = store.puedeParalizarActa(a.id());
 
         String bandeja = a.bandejaActual();
         boolean bandejaOperativaInterna = !"ARCHIVO".equals(bandeja)
                 && !"CERRADAS".equals(bandeja)
-                && !"GESTION_EXTERNA".equals(bandeja);
+                && !"GESTION_EXTERNA".equals(bandeja)
+                && !"PARALIZADAS".equals(bandeja);
 
         boolean consentirCondenaYRegistrarPago = false;
         boolean pagoVoluntario = false;
@@ -2158,6 +2192,7 @@ public class PrototipoApiController {
 
         return new AccionesUiResponse(
                 archivoReingreso,
+                paralizarActa,
                 consentirCondenaYRegistrarPago,
                 pagoVoluntario,
                 vencimientoPagoVoluntario,
@@ -2463,6 +2498,17 @@ public class PrototipoApiController {
             return PrototipoStore.SituacionPagoMock.valueOf(raw.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "situacionPago inválida: " + raw);
+        }
+    }
+
+    private PrototipoStore.MotivoParalizacionActa parseMotivoParalizacion(ParalizarActaRequest request) {
+        if (request == null || request.motivo() == null || request.motivo().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "motivo requerido");
+        }
+        try {
+            return PrototipoStore.MotivoParalizacionActa.valueOf(request.motivo().trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "motivo inválido: " + request.motivo());
         }
     }
 

@@ -125,6 +125,14 @@ public class PrototipoStore {
      * trazabilidad; no bloquea acciones luego de reactivar.
      */
     public static final String ACCION_REVISION_POST_REACTIVACION = "REVISION_POST_REACTIVACION";
+    public static final String ACCION_PARALIZACION_ESPERA_DOCUMENTAL = "PARALIZACION_ESPERA_DOCUMENTAL";
+    public static final String ACCION_PARALIZACION_ESPERA_INFORME_EXTERNO =
+            "PARALIZACION_ESPERA_INFORME_EXTERNO";
+    public static final String ACCION_PARALIZACION_ESPERA_OTRA_DEPENDENCIA =
+            "PARALIZACION_ESPERA_OTRA_DEPENDENCIA";
+    public static final String ACCION_PARALIZACION_ESPERA_RESOLUCION_RELACIONADA =
+            "PARALIZACION_ESPERA_RESOLUCION_RELACIONADA";
+    public static final String ACCION_PARALIZACION_OTRO = "PARALIZACION_OTRO";
     /**
      * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso ingresó a
      * análisis porque en una etapa temprana del expediente se registró una
@@ -504,6 +512,29 @@ public class PrototipoStore {
             String actaId,
             String bandejaActual,
             String estadoProcesoActual,
+            String accionPendiente) {
+    }
+
+    public enum MotivoParalizacionActa {
+        ESPERA_DOCUMENTAL,
+        ESPERA_INFORME_EXTERNO,
+        ESPERA_OTRA_DEPENDENCIA,
+        ESPERA_RESOLUCION_RELACIONADA,
+        OTRO
+    }
+
+    public enum ParalizarActaEstado {
+        OK,
+        NOT_FOUND,
+        CONFLICT
+    }
+
+    public record ParalizarActaResultado(
+            ParalizarActaEstado estado,
+            String actaId,
+            String bandejaActual,
+            String estadoProcesoActual,
+            String situacionAdministrativa,
             String accionPendiente) {
     }
 
@@ -3250,6 +3281,64 @@ public class PrototipoStore {
         return archivoReingreso.anularActaPorNulidad(actaId);
     }
 
+    public boolean puedeParalizarActa(String actaId) {
+        return puedeParalizarActa(actas.get(actaId));
+    }
+
+    /**
+     * Demo: paralización administrativa transversal desde cualquier bandeja
+     * interna operativa activa. Conserva expediente, pagos, montos y resultado
+     * de fondo; sólo cambia la proyección operativa agregadora y deja el motivo
+     * como acción pendiente trazable.
+     */
+    public ParalizarActaResultado paralizarActa(
+            String actaId, MotivoParalizacionActa motivo, String observacion) {
+        ActaMock actual = actas.get(actaId);
+        if (actual == null) {
+            return new ParalizarActaResultado(
+                    ParalizarActaEstado.NOT_FOUND, null, null, null, null, null);
+        }
+        if (!puedeParalizarActa(actual)) {
+            return new ParalizarActaResultado(
+                    ParalizarActaEstado.CONFLICT, null, null, null, null, null);
+        }
+
+        MotivoParalizacionActa motivoVigente =
+                motivo != null ? motivo : MotivoParalizacionActa.ESPERA_DOCUMENTAL;
+        String accionPendiente = accionPendienteParalizacion(motivoVigente);
+        String bloqueAnterior = actual.bloqueActual();
+
+        ActaMock actualizada = new ActaMock(
+                actual.id(),
+                actual.numeroActa(),
+                actual.dominioReferencia(),
+                actual.bloqueActual(),
+                "PARALIZADA",
+                "PARALIZADA",
+                actual.estaCerrada(),
+                actual.permiteReingreso(),
+                actual.tieneDocumentos(),
+                actual.tieneNotificaciones(),
+                actual.fechaCreacion(),
+                actual.infractorNombre(),
+                actual.infractorDocumento(),
+                actual.inspectorNombre(),
+                actual.resumenHecho(),
+                PrototipoConstantes.BANDEJA_PARALIZADAS);
+        actas.put(actaId, actualizada);
+        accionPendientePorActa.put(actaId, accionPendiente);
+
+        registrarEventoParalizacion(actaId, bloqueAnterior, accionPendiente, observacion);
+
+        return new ParalizarActaResultado(
+                ParalizarActaEstado.OK,
+                actualizada.id(),
+                actualizada.bandejaActual(),
+                actualizada.estadoProcesoActual(),
+                actualizada.situacionAdministrativaActual(),
+                accionPendiente);
+    }
+
     /**
      * Demo: reactivación explícita desde la macro-bandeja PARALIZADAS →
      * vuelve a PENDIENTE_ANALISIS con bloque D5_ANALISIS, estado
@@ -3323,6 +3412,53 @@ public class PrototipoStore {
                 actualizada.bandejaActual(),
                 actualizada.estadoProcesoActual(),
                 ACCION_REVISION_POST_REACTIVACION);
+    }
+
+    private boolean puedeParalizarActa(ActaMock acta) {
+        if (acta == null || acta.estaCerrada()) {
+            return false;
+        }
+        if (!"ACTIVA".equals(acta.situacionAdministrativaActual())) {
+            return false;
+        }
+        String bandeja = acta.bandejaActual();
+        return !PrototipoConstantes.BANDEJA_CERRADAS.equals(bandeja)
+                && !PrototipoConstantes.BANDEJA_ARCHIVO.equals(bandeja)
+                && !PrototipoConstantes.BANDEJA_GESTION_EXTERNA.equals(bandeja)
+                && !PrototipoConstantes.BANDEJA_PARALIZADAS.equals(bandeja);
+    }
+
+    private String accionPendienteParalizacion(MotivoParalizacionActa motivo) {
+        return switch (motivo) {
+            case ESPERA_DOCUMENTAL -> ACCION_PARALIZACION_ESPERA_DOCUMENTAL;
+            case ESPERA_INFORME_EXTERNO -> ACCION_PARALIZACION_ESPERA_INFORME_EXTERNO;
+            case ESPERA_OTRA_DEPENDENCIA -> ACCION_PARALIZACION_ESPERA_OTRA_DEPENDENCIA;
+            case ESPERA_RESOLUCION_RELACIONADA -> ACCION_PARALIZACION_ESPERA_RESOLUCION_RELACIONADA;
+            case OTRO -> ACCION_PARALIZACION_OTRO;
+        };
+    }
+
+    private void registrarEventoParalizacion(
+            String actaId, String bloqueAnterior, String accionPendiente, String observacion) {
+        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
+        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        int siguiente = eventos.size() + 1;
+        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
+        LocalDateTime fechaEvento = eventos.stream()
+                .max(Comparator.comparing(ActaEventoMock::fechaHora))
+                .map(e -> e.fechaHora().plusMinutes(1))
+                .orElse(LocalDateTime.now());
+        String detalleObservacion = observacion == null || observacion.isBlank()
+                ? ""
+                : " Observacion: " + observacion.trim();
+        eventos.add(new ActaEventoMock(
+                idEvento,
+                actaId,
+                fechaEvento,
+                "PARALIZACION",
+                bloqueAnterior,
+                PrototipoConstantes.BANDEJA_PARALIZADAS,
+                "Acta paralizada; accionPendiente " + accionPendiente + "." + detalleObservacion));
     }
 
     /**
