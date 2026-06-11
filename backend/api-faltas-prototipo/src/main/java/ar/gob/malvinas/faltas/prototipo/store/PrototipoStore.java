@@ -1425,6 +1425,13 @@ public class PrototipoStore {
     private final Map<String, String> accionPendientePorActa = new LinkedHashMap<>();
 
     /**
+     * Observaci&oacute;n de paralizaci&oacute;n por acta. Se guarda al paralizar y se
+     * expone en el detalle mientras el acta permanece en PARALIZADAS.
+     * Valor {@code null} si no se ingres&oacute; observaci&oacute;n.
+     */
+    private final Map<String, String> observacionParalizacionPorActa = new LinkedHashMap<>();
+
+    /**
      * Situación de pago mock por acta. Si una acta no está en el mapa, se
      * interpreta como {@link SituacionPagoMock#SIN_PAGO}.
      */
@@ -1727,6 +1734,7 @@ public class PrototipoStore {
         notificacionesPorActa.clear();
         piezasRequeridasPorActa.clear();
         accionPendientePorActa.clear();
+        observacionParalizacionPorActa.clear();
         situacionPagoPorActa.clear();
         pagoInformadoPorActa.clear();
         montoPagoVoluntarioPorActa.clear();
@@ -1754,6 +1762,14 @@ public class PrototipoStore {
      */
     public String getAccionPendiente(String actaId) {
         return accionPendientePorActa.get(actaId);
+    }
+
+    /**
+     * Observaci&oacute;n de paralizaci&oacute;n registrada al momento de paralizar el
+     * acta. {@code null} si no se ingres&oacute; o si el acta no est&aacute; paralizada.
+     */
+    public String getObservacionParalizacion(String actaId) {
+        return observacionParalizacionPorActa.get(actaId);
     }
 
     /**
@@ -3327,6 +3343,14 @@ public class PrototipoStore {
                 PrototipoConstantes.BANDEJA_PARALIZADAS);
         actas.put(actaId, actualizada);
         accionPendientePorActa.put(actaId, accionPendiente);
+        String observacionNormalizada = (observacion == null || observacion.isBlank())
+                ? null
+                : observacion.trim();
+        if (observacionNormalizada != null) {
+            observacionParalizacionPorActa.put(actaId, observacionNormalizada);
+        } else {
+            observacionParalizacionPorActa.remove(actaId);
+        }
 
         registrarEventoParalizacion(actaId, bloqueAnterior, accionPendiente, observacion);
 

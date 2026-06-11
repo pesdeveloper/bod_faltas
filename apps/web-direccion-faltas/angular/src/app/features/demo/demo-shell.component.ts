@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -1806,6 +1806,13 @@ export class DemoShellComponent implements OnInit {
     return det.bandejaActual === 'PARALIZADAS';
   }
 
+  etiquetaMotivoParalizacion(): string | null {
+    const motivo = this.detalle()?.motivoParalizacion;
+    if (!motivo) return null;
+    const found = MOTIVOS_PARALIZACION.find((m) => m.valor === motivo);
+    return found?.etiqueta ?? motivo;
+  }
+
   puedeMostrarBloqueParalizarActa(): boolean {
     if (this.paralizarMensaje() || this.paralizarError()) {
       return true;
@@ -3139,6 +3146,8 @@ export class DemoShellComponent implements OnInit {
       cerrable: cerrabilidad?.cerrable ?? false,
       motivoCerrabilidad: cerrabilidad?.motivoNoCerrable ?? null,
       accionPendiente: det.accionPendiente ?? null,
+      motivoParalizacion: det.motivoParalizacion ?? null,
+      observacionParalizacion: det.observacionParalizacion ?? null,
       permiteReingreso: det.permiteReingreso ?? false,
       tipoGestionExterna: det.tipoGestionExterna ?? null,
       motivoArchivo: det.motivoArchivo ?? null,
@@ -3192,6 +3201,7 @@ export class DemoShellComponent implements OnInit {
       firmaPendiente: this.documentos().some((doc) => this.documentoEsFirmable(doc)),
       falloFondo: this.puedeMostrarFalloResolucionFondo(),
       consentirCondenaYRegistrarPago: this.consentirCondenaYRegistrarPagoHabilitado(),
+      paralizarActa: det?.accionesUi?.paralizarActa ?? false,
     };
   }
 

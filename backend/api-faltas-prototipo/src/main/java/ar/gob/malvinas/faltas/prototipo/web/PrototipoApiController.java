@@ -2069,7 +2069,9 @@ public class PrototipoApiController {
                 store.listarNotificacionesPorActa(a.id()).stream()
                         .map(this::mapActaNotificacion)
                         .toList(),
-                computarAccionesUi(a));
+                computarAccionesUi(a),
+                derivarMotivoParalizacion(store.getAccionPendiente(a.id())),
+                store.getObservacionParalizacion(a.id()));
     }
 
     private AccionesUiResponse computarAccionesUi(ActaMock a) {
@@ -2510,6 +2512,25 @@ public class PrototipoApiController {
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "motivo inválido: " + request.motivo());
         }
+    }
+
+    /**
+     * Deriva el c&oacute;digo de motivo de paralizaci&oacute;n desde la acci&oacute;n pendiente.
+     * Solo aplica cuando la acci&oacute;n pendiente es una de las PARALIZACION_* reconocidas.
+     * Retorna {@code null} en cualquier otro caso.
+     */
+    private String derivarMotivoParalizacion(String accionPendiente) {
+        if (accionPendiente == null) {
+            return null;
+        }
+        return switch (accionPendiente) {
+            case PrototipoStore.ACCION_PARALIZACION_ESPERA_DOCUMENTAL -> "ESPERA_DOCUMENTAL";
+            case PrototipoStore.ACCION_PARALIZACION_ESPERA_INFORME_EXTERNO -> "ESPERA_INFORME_EXTERNO";
+            case PrototipoStore.ACCION_PARALIZACION_ESPERA_OTRA_DEPENDENCIA -> "ESPERA_OTRA_DEPENDENCIA";
+            case PrototipoStore.ACCION_PARALIZACION_ESPERA_RESOLUCION_RELACIONADA -> "ESPERA_RESOLUCION_RELACIONADA";
+            case PrototipoStore.ACCION_PARALIZACION_OTRO -> "OTRO";
+            default -> null;
+        };
     }
 
     private PrototipoStore.ResultadoFinalCierreMock parseResultadoFinalCierre(String raw) {

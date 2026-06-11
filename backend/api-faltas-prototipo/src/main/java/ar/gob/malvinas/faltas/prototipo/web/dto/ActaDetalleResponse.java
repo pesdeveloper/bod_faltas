@@ -43,6 +43,8 @@ public record ActaDetalleResponse(
         BigDecimal montoPagoVoluntario,
         BigDecimal montoCondena,
         List<ActaNotificacionResponse> notificaciones,
-        AccionesUiResponse accionesUi) {
+        AccionesUiResponse accionesUi,
+        String motivoParalizacion,
+        String observacionParalizacion) {
 }
 

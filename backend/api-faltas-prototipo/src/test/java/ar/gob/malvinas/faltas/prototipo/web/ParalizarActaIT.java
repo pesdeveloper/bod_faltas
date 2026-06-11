@@ -147,6 +147,72 @@ class ParalizarActaIT {
                 .andExpect(jsonPath("$[?(@.estadoDocumento == 'PENDIENTE_FIRMA')]").exists());
     }
 
+    @Test
+    void detalleExponeMotivoYObservacionDespuesDeParalizar() throws Exception {
+        paralizarOk("ACTA-0016", """
+                {
+                  "motivo": "OTRO",
+                  "observacion": "Prueba de observacion de paralizacion"
+                }
+                """);
+
+        mvc.perform(get(B + "/actas/ACTA-0016"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PARALIZADAS"))
+                .andExpect(jsonPath("$.motivoParalizacion").value("OTRO"))
+                .andExpect(jsonPath("$.observacionParalizacion").value("Prueba de observacion de paralizacion"));
+    }
+
+    @Test
+    void observacionBlankSeNormalizaANull() throws Exception {
+        paralizarOk("ACTA-0016", """
+                {
+                  "motivo": "ESPERA_DOCUMENTAL",
+                  "observacion": "   "
+                }
+                """);
+
+        mvc.perform(get(B + "/actas/ACTA-0016"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.motivoParalizacion").value("ESPERA_DOCUMENTAL"))
+                .andExpect(jsonPath("$.observacionParalizacion").isEmpty());
+    }
+
+    @Test
+    void sinObservacionElCampoEsNull() throws Exception {
+        paralizarOk("ACTA-0016", """
+                {
+                  "motivo": "ESPERA_INFORME_EXTERNO"
+                }
+                """);
+
+        mvc.perform(get(B + "/actas/ACTA-0016"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.motivoParalizacion").value("ESPERA_INFORME_EXTERNO"))
+                .andExpect(jsonPath("$.observacionParalizacion").doesNotExist());
+    }
+
+    @Test
+    void reactivacionSigueExitosaConObservacion() throws Exception {
+        paralizarOk("ACTA-0016", """
+                {
+                  "motivo": "OTRO",
+                  "observacion": "Pendiente documentacion"
+                }
+                """);
+
+        mvc.perform(post(B + "/actas/ACTA-0016/acciones/reactivar-acta"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.accionPendiente").value("REVISION_POST_REACTIVACION"));
+
+        mvc.perform(get(B + "/actas/ACTA-0016"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.motivoParalizacion").isEmpty())
+                .andExpect(jsonPath("$.accionesUi.paralizarActa").value(true));
+    }
+
     private org.springframework.test.web.servlet.ResultActions paralizarOk(String actaId, String body) throws Exception {
         return mvc.perform(post(B + "/actas/" + actaId + "/acciones/paralizar-acta")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -1,4 +1,4 @@
-export type BandejaCodigo =
+﻿export type BandejaCodigo =
   | 'NOTIFICACIONES'
   | 'LABRADAS'
   | 'ACTAS_EN_ENRIQUECIMIENTO'
@@ -248,6 +248,14 @@ export interface ActaDetalleDemo extends ActaResumenDemo {
   notificaciones?: ActaNotificacionTipificadaDemo[] | null;
   /** Acciones UI calculadas por el backend para esta acta. */
   accionesUi?: AccionesUiDemo | null;
+  /**
+   * Codigo de motivo de paralizacion (ESPERA_DOCUMENTAL, ESPERA_INFORME_EXTERNO,
+   * ESPERA_OTRA_DEPENDENCIA, ESPERA_RESOLUCION_RELACIONADA, OTRO).
+   * Null si el acta no esta paralizada o si no se puede determinar el motivo.
+   */
+  motivoParalizacion?: string | null;
+  /** Observacion ingresada al paralizar. Null si no se ingreso observacion. */
+  observacionParalizacion?: string | null;
 }
 
 export interface BadgeDemo {

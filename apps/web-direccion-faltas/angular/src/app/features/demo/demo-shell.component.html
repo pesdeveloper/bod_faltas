@@ -1,4 +1,4 @@
-<mat-sidenav-container class="demo-layout" [autosize]="true">
+﻿<mat-sidenav-container class="demo-layout" [autosize]="true">
   <mat-sidenav mode="side" opened class="demo-sidenav" [class.demo-sidenav--collapsed]="bandejasColapsadas()">
     <div class="demo-sidenav-body">
       <div class="sidenav-header">
@@ -781,9 +781,13 @@
                 el acta está paralizada. Puede reactivarse para volver al circuito operativo.
               </p>
               <dl class="detail-dl detail-dl--compact">
-                @if (d.accionPendiente) {
+                @if (etiquetaMotivoParalizacion()) {
                   <dt>Motivo de paralización</dt>
-                  <dd>{{ d.accionPendiente }}</dd>
+                  <dd>{{ etiquetaMotivoParalizacion() }}</dd>
+                }
+                @if (d.observacionParalizacion) {
+                  <dt>Observación</dt>
+                  <dd>{{ d.observacionParalizacion }}</dd>
                 }
               </dl>
               <div class="paralizadas-actions">
