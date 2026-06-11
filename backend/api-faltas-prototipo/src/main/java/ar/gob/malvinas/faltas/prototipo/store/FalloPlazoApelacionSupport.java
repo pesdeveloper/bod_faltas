@@ -209,8 +209,12 @@ final class FalloPlazoApelacionSupport {
         if (!SITUACION_ADMIN_ACTIVA.equals(actual.situacionAdministrativaActual())) {
             return conflict();
         }
-        boolean postGestionExterna = PrototipoStore.ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(
-                accionPendientePorActa.get(actaId));
+        String accionPendiente = accionPendientePorActa.get(actaId);
+        if (PrototipoStore.ACCION_REINTENTAR_NOTIFICACION.equals(accionPendiente)
+                || PrototipoStore.ACCION_EVALUAR_NOTIFICACION_VENCIDA.equals(accionPendiente)) {
+            return conflict();
+        }
+        boolean postGestionExterna = PrototipoStore.ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(accionPendiente);
         boolean resultadoCompatible = cerrabilidad.getResultadoFinal(actaId)
                 == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
                 || (postGestionExterna

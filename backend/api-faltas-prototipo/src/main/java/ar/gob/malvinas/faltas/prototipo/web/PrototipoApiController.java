@@ -2059,6 +2059,7 @@ public class PrototipoApiController {
         boolean anularActa = false;
         boolean firmaPendiente = false;
         boolean notificacion = false;
+        boolean reintentarNotificacion = false;
         boolean pagoCondena = false;
         boolean confirmarPagoCondena = false;
         boolean observarPagoCondena = false;
@@ -2095,9 +2096,14 @@ public class PrototipoApiController {
             boolean sinFalloDictado = !store.hayFalloDictado(a.id());
             boolean analisisOperativo = "PENDIENTE_ANALISIS".equals(bandeja)
                     && "PENDIENTE_REVISION".equals(a.estadoProcesoActual());
+            String accionPendiente = store.getAccionPendiente(a.id());
             boolean falloPostGestionExterna = PrototipoStore.ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(
-                    store.getAccionPendiente(a.id()))
+                    accionPendiente)
                     && store.hayResultadoExternoPostGestionPendiente(a.id());
+            boolean notificacionPendienteDeDecision =
+                    PrototipoStore.ACCION_REINTENTAR_NOTIFICACION.equals(accionPendiente)
+                            || PrototipoStore.ACCION_EVALUAR_NOTIFICACION_VENCIDA.equals(accionPendiente);
+            reintentarNotificacion = analisisOperativo && notificacionPendienteDeDecision;
 
             // pagoVoluntario: Dirección puede iniciar o gestionar una solicitud activa.
             boolean sinPago = sp == PrototipoStore.SituacionPagoMock.SIN_PAGO;
@@ -2119,6 +2125,7 @@ public class PrototipoApiController {
             boolean pagoCompatibleConFallo = sp == PrototipoStore.SituacionPagoMock.SIN_PAGO
                     || sp == PrototipoStore.SituacionPagoMock.VENCIDO;
             falloFondo = analisisOperativo
+                    && !notificacionPendienteDeDecision
                     && ((sinResultadoFinal && sinFalloDictado && pagoCompatibleConFallo) || falloPostGestionExterna);
 
             // cumplimientoMaterial / resolucionBloqueante:
@@ -2162,6 +2169,7 @@ public class PrototipoApiController {
                 anularActa,
                 firmaPendiente,
                 notificacion,
+                reintentarNotificacion,
                 pagoCondena,
                 confirmarPagoCondena,
                 observarPagoCondena,

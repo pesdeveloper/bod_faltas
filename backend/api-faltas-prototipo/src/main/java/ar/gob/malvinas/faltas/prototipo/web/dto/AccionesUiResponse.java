@@ -54,6 +54,10 @@ package ar.gob.malvinas.faltas.prototipo.web.dto;
  * <p>{@code anularActa}: Dirección puede anular el acta y archivarla por
  * nulidad. Solo disponible en {@code ACTAS_EN_ENRIQUECIMIENTO} activa.
  * El acta queda en ARCHIVO con motivoArchivo=NULIDAD y permiteReingreso=true.
+ *
+ * <p>{@code reintentarNotificacion}: Dirección puede devolver el expediente
+ * al circuito de notificación porque la notificación previa quedó no
+ * entregada o vencida y requiere nuevo intento/canal.
  */
 public record AccionesUiResponse(
         boolean archivoReingreso,
@@ -68,6 +72,7 @@ public record AccionesUiResponse(
         boolean anularActa,
         boolean firmaPendiente,
         boolean notificacion,
+        boolean reintentarNotificacion,
         boolean pagoCondena,
         boolean confirmarPagoCondena,
         boolean observarPagoCondena,

@@ -230,6 +230,56 @@ class FalloYPlazoApelacionIT {
     }
 
     @Test
+    void falloCondenatorioFirmado_conNegativaReintentoYPositiva_noHabilitaNuevoFallo() throws Exception {
+        mvc.perform(post(B + "/reset")).andExpect(status().isOk());
+
+        mvc.perform(postDictarFalloCondenatorio(ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/firmar-documento/DOC-0006-02"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_NOTIFICACION"));
+
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/registrar-notificacion-negativa"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.accionPendiente").value("REINTENTAR_NOTIFICACION"));
+
+        mvc.perform(get(B + "/actas/" + ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
+                .andExpect(jsonPath("$.accionesUi.reintentarNotificacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false));
+
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/dictar-fallo-absolutorio"))
+                .andExpect(status().isConflict());
+
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/reintentar-notificacion"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_NOTIFICACION"))
+                .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_ENVIO"));
+
+        mvc.perform(get(B + "/actas/" + ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accionPendiente").value(nullValue()))
+                .andExpect(jsonPath("$.accionesUi.notificacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.reintentarNotificacion").value(false))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false));
+
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS_LIMPIA + "/acciones/registrar-notificacion-positiva"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
+
+        mvc.perform(get(B + "/actas/" + ACTA_ANALISIS_LIMPIA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENADO"))
+                .andExpect(jsonPath("$.accionesUi.apelacionPresencial").value(true))
+                .andExpect(jsonPath("$.accionesUi.vencimientoPlazoApelacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false))
+                .andExpect(jsonPath("$.notificaciones[?(@.tipo == 'FALLO_CONDENATORIO')].resultado")
+                        .value(hasItem("POSITIVA")));
+    }
+
+    @Test
     void registrarVencimientoPlazoApelacion_marcaCondenaFirmeYquitaApelacion() throws Exception {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
 

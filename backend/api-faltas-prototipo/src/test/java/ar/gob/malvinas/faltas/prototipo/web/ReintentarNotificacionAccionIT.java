@@ -64,7 +64,12 @@ class ReintentarNotificacionAccionIT {
                 .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_REVISION"))
                 .andExpect(jsonPath("$.accionPendiente").value("REINTENTAR_NOTIFICACION"))
                 .andExpect(jsonPath("$.situacionPago").value("SIN_PAGO"))
-                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"));
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
+                .andExpect(jsonPath("$.accionesUi.reintentarNotificacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false));
+
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/dictar-fallo-absolutorio"))
+                .andExpect(status().isConflict());
 
         mvc.perform(post(B + "/actas/" + ID + "/acciones/reintentar-notificacion"))
                 .andExpect(status().isOk())
@@ -78,12 +83,31 @@ class ReintentarNotificacionAccionIT {
                 .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_ENVIO"))
                 .andExpect(jsonPath("$.accionPendiente").value(nullValue()))
                 .andExpect(jsonPath("$.situacionPago").value("SIN_PAGO"))
-                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"));
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
+                .andExpect(jsonPath("$.accionesUi.notificacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.reintentarNotificacion").value(false))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false));
+
+        mvc.perform(post(B + "/actas/" + ID + "/acciones/registrar-notificacion-positiva"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_REVISION"));
+
+        mvc.perform(get(B + "/actas/" + ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_REVISION"))
+                .andExpect(jsonPath("$.accionPendiente").value(nullValue()))
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
+                .andExpect(jsonPath("$.accionesUi.notificacion").value(false))
+                .andExpect(jsonPath("$.accionesUi.reintentarNotificacion").value(false))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(true));
 
         mvc.perform(get(B + "/actas/" + ID + "/eventos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].tipoEvento", hasItem("NOTIFICACION_NO_ENTREGADA")))
-                .andExpect(jsonPath("$[*].tipoEvento", hasItem("NOTIFICACION_REINTENTADA")));
+                .andExpect(jsonPath("$[*].tipoEvento", hasItem("NOTIFICACION_REINTENTADA")))
+                .andExpect(jsonPath("$[*].tipoEvento", hasItem("NOTIFICACION_ENTREGADA")));
     }
 
     /**
