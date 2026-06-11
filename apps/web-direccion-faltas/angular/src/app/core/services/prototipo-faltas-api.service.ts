@@ -66,6 +66,8 @@ import {
   PrototipoActaBusquedaResponse,
   EnviarANotificacionAccionResponseDemo,
   AnularActaPorNulidadAccionResponseDemo,
+  ParalizarActaRequestDemo,
+  ParalizarActaAccionResponseDemo,
 } from '../models/prototipo-faltas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -628,6 +630,16 @@ export class PrototipoFaltasApiService {
   buscarActasGlobal(q: string): Observable<PrototipoActaBusquedaResponse[]> {
     const params = new HttpParams().set('q', q.trim());
     return this.http.get<PrototipoActaBusquedaResponse[]>(`${this.api.baseUrl}/actas/buscar`, { params });
+  }
+
+  paralizarActa(
+    actaId: string,
+    body: ParalizarActaRequestDemo,
+  ): Observable<ParalizarActaAccionResponseDemo> {
+    return this.http.post<ParalizarActaAccionResponseDemo>(
+      `${this.api.baseUrl}/actas/${actaId}/acciones/paralizar-acta`,
+      body,
+    );
   }
 }
 

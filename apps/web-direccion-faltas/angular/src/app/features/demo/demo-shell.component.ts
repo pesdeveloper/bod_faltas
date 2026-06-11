@@ -48,6 +48,9 @@ import {
   TipoGestionExternaDemo,
   TipoResolucionBloqueoCierre,
   codigoQrDemoParaActa,
+  MotivoParalizacionDemo,
+  ParalizarActaRequestDemo,
+  ParalizarActaAccionResponseDemo,
   PrototipoActaBusquedaResponse,
 } from '../../core/models/prototipo-faltas.models';
 import { badgesDesdeActaResumen } from '../../core/services/acta-badges.presenter';
@@ -146,6 +149,14 @@ const BANDEJAS_SIN_ACCIONES_INTERNAS_OPERATIVAS: ReadonlyArray<BandejaCodigo> = 
   'ARCHIVO',
   'GESTION_EXTERNA',
   'PARALIZADAS',
+];
+
+const MOTIVOS_PARALIZACION: ReadonlyArray<{ valor: MotivoParalizacionDemo; etiqueta: string }> = [
+  { valor: 'ESPERA_DOCUMENTAL', etiqueta: 'Espera documental' },
+  { valor: 'ESPERA_INFORME_EXTERNO', etiqueta: 'Espera informe externo' },
+  { valor: 'ESPERA_OTRA_DEPENDENCIA', etiqueta: 'Espera otra dependencia' },
+  { valor: 'ESPERA_RESOLUCION_RELACIONADA', etiqueta: 'Espera resolucion relacionada' },
+  { valor: 'OTRO', etiqueta: 'Otro' },
 ];
 
 const ETIQUETA_RESULTADO_NOTIFICACION: Record<ResultadoNotificacionDemo, string> = {
@@ -447,6 +458,14 @@ export class DemoShellComponent implements OnInit {
   readonly ejecutandoReactivacionAccion = signal<boolean>(false);
   readonly reactivacionError = signal<string | null>(null);
   readonly reactivacionMensaje = signal<string | null>(null);
+
+  readonly ejecutandoParalizarAccion = signal<boolean>(false);
+  readonly paralizarError = signal<string | null>(null);
+  readonly paralizarMensaje = signal<string | null>(null);
+  readonly paralizarFormAbierto = signal<boolean>(false);
+  readonly paralizarMotivoSeleccionado = signal<string>('');
+  readonly paralizarObservacion = signal<string>('');
+  readonly motivosParalizacion = MOTIVOS_PARALIZACION;
 
   readonly generandoNulidad = signal<boolean>(false);
   readonly nulidadError = signal<string | null>(null);
@@ -958,6 +977,10 @@ export class DemoShellComponent implements OnInit {
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
     this.limpiarReactivacionFeedback();
+    this.limpiarParalizarFeedback();
+    this.paralizarFormAbierto.set(false);
+    this.paralizarMotivoSeleccionado.set('');
+    this.paralizarObservacion.set('');
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarSeguimientoActaFeedback();
@@ -1056,6 +1079,10 @@ export class DemoShellComponent implements OnInit {
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
     this.limpiarReactivacionFeedback();
+    this.limpiarParalizarFeedback();
+    this.paralizarFormAbierto.set(false);
+    this.paralizarMotivoSeleccionado.set('');
+    this.paralizarObservacion.set('');
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();
@@ -1777,6 +1804,13 @@ export class DemoShellComponent implements OnInit {
       return true;
     }
     return det.bandejaActual === 'PARALIZADAS';
+  }
+
+  puedeMostrarBloqueParalizarActa(): boolean {
+    if (this.paralizarMensaje() || this.paralizarError()) {
+      return true;
+    }
+    return this.detalle()?.accionesUi?.paralizarActa === true;
   }
 
   puedeMostrarBloqueNotificacionActa(): boolean {
@@ -2707,6 +2741,63 @@ export class DemoShellComponent implements OnInit {
       });
   }
 
+  abrirFormParalizarActa(): void {
+    this.limpiarParalizarFeedback();
+    this.paralizarFormAbierto.set(true);
+  }
+
+  cancelarParalizarActa(): void {
+    this.paralizarFormAbierto.set(false);
+    this.paralizarMotivoSeleccionado.set('');
+    this.paralizarObservacion.set('');
+    this.limpiarParalizarFeedback();
+  }
+
+  confirmarParalizarActa(): void {
+    const actaId = this.actaSeleccionadaId();
+    if (!actaId) {
+      return;
+    }
+    if (this.ejecutandoParalizarAccion()) {
+      return;
+    }
+    const motivo = this.paralizarMotivoSeleccionado();
+    if (!motivo) {
+      return;
+    }
+
+    this.limpiarParalizarFeedback();
+    this.ejecutandoParalizarAccion.set(true);
+
+    const body: ParalizarActaRequestDemo = {
+      motivo: motivo as MotivoParalizacionDemo,
+      observacion: this.paralizarObservacion().trim() || null,
+    };
+
+    this.api
+      .paralizarActa(actaId, body)
+      .pipe(
+        catchError((err) => {
+          this.paralizarError.set(mensajeErrorHttp(err));
+          return of(null);
+        }),
+        finalize(() => this.ejecutandoParalizarAccion.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((respuesta) => {
+        if (!respuesta) {
+          return;
+        }
+        this.paralizarMensaje.set(
+          'Acta paralizada correctamente (' + respuesta.bandeja + ').',
+        );
+        this.paralizarFormAbierto.set(false);
+        this.paralizarMotivoSeleccionado.set('');
+        this.paralizarObservacion.set('');
+        this.refrescarLuegoDeAccion({ actaId: respuesta.actaId, bandejaActual: respuesta.bandeja });
+      });
+  }
+
 
   actaPuedeGenerarNulidadDesdeBackend(): boolean {
     return this.piezaRedaccionPendienteDesdeBackend(PIEZA_NULIDAD);
@@ -3270,6 +3361,11 @@ export class DemoShellComponent implements OnInit {
     this.reactivacionError.set(null);
     this.reactivacionMensaje.set(null);
   }
+
+  private limpiarParalizarFeedback(): void {
+    this.paralizarError.set(null);
+    this.paralizarMensaje.set(null);
+  }
   private limpiarNulidadFeedback(): void {
     this.nulidadError.set(null);
     this.nulidadMensaje.set(null);
@@ -3487,6 +3583,10 @@ export class DemoShellComponent implements OnInit {
     this.limpiarArchivoFeedback();
     this.limpiarGestionExternaFeedback();
     this.limpiarReactivacionFeedback();
+    this.limpiarParalizarFeedback();
+    this.paralizarFormAbierto.set(false);
+    this.paralizarMotivoSeleccionado.set('');
+    this.paralizarObservacion.set('');
     this.limpiarRedaccionFeedback();
     this.limpiarFalloFeedback();
     this.limpiarCopiaEstadoFeedback();

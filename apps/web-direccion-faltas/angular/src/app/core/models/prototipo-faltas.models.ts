@@ -144,6 +144,7 @@ export interface ActaNotificacionTipificadaDemo {
 
 export interface AccionesUiDemo {
   archivoReingreso: boolean;
+  paralizarActa: boolean;
   consentirCondenaYRegistrarPago: boolean;
   pagoVoluntario: boolean;
   vencimientoPagoVoluntario: boolean;
@@ -153,6 +154,42 @@ export interface AccionesUiDemo {
   cierre: boolean;
   enviarANotificacion: boolean;
   anularActa: boolean;
+}
+
+/**
+ * Motivos validos para paralizar un acta.
+ */
+export type MotivoParalizacionDemo =
+  | 'ESPERA_DOCUMENTAL'
+  | 'ESPERA_INFORME_EXTERNO'
+  | 'ESPERA_OTRA_DEPENDENCIA'
+  | 'ESPERA_RESOLUCION_RELACIONADA'
+  | 'OTRO';
+
+/**
+ * Body de POST /actas/{id}/acciones/paralizar-acta.
+ */
+export interface ParalizarActaRequestDemo {
+  motivo: MotivoParalizacionDemo;
+  observacion?: string | null;
+}
+
+/**
+ * Contrato POST /actas/{id}/acciones/paralizar-acta
+ * - ParalizarActaAccionResponse.
+ *
+ * Precondicion backend: acta activa en bandeja interna operable.
+ * Efecto: acta pasa a PARALIZADAS con estadoProceso=PARALIZADA y
+ * situacionAdministrativa=PARALIZADA. La accionPendiente refleja el motivo.
+ */
+export interface ParalizarActaAccionResponseDemo {
+  resultado: string;
+  mensaje: string;
+  actaId: string;
+  bandeja: string;
+  estadoProceso: string;
+  situacionAdministrativa: string;
+  accionPendiente: string | null;
 }
 
 /** Contrato POST /actas/{id}/acciones/enviar-a-notificacion - EnviarANotificacionAccionResponse. */

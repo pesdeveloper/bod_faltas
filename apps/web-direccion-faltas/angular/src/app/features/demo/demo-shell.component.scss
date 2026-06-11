@@ -547,7 +547,9 @@ mat-sidenav-content {
 .pago-actions,
 .apelacion-actions,
 .archivo-actions,
-.gestion-externa-actions {
+.gestion-externa-actions,
+.paralizar-actions,
+.paralizar-form__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -555,6 +557,35 @@ mat-sidenav-content {
 }
 
 
+
+.paralizar-form {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.paralizar-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.paralizar-form__select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.24);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.paralizar-form__textarea {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.24);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+}
 
 /* ===== Seleccionar acta global preview ===== */
 

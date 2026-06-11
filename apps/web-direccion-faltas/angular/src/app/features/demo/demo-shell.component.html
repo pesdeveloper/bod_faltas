@@ -555,6 +555,95 @@
           </section>
           }
 
+          @if (puedeMostrarBloqueParalizarActa()) {
+          <section class="detail-card" aria-labelledby="paralizar-acta-titulo">
+            <h3 id="paralizar-acta-titulo" class="detail-card__title">Paralizar acta</h3>
+            @if (paralizarMensaje() || paralizarError()) {
+              <div class="subresource-feedback" role="status" aria-live="polite">
+                @if (paralizarMensaje()) {
+                  <p class="demo-feedback-ok">{{ paralizarMensaje() }}</p>
+                }
+                @if (paralizarError()) {
+                  <p class="demo-feedback-error">{{ paralizarError() }}</p>
+                }
+              </div>
+            }
+            @if (detalle()?.accionesUi?.paralizarActa) {
+              @if (!paralizarFormAbierto()) {
+                <p class="detail-card__text">
+                  La acta pasar&#225; a la bandeja Paralizadas y quedar&#225;n suspendidas las acciones internas hasta su reactivaci&#243;n.
+                </p>
+                <div class="paralizar-actions">
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    [disabled]="ejecutandoParalizarAccion()"
+                    (click)="abrirFormParalizarActa()"
+                  >
+                    Paralizar acta
+                  </button>
+                </div>
+              } @else {
+                <p class="detail-card__text">
+                  La acta pasar&#225; a la bandeja Paralizadas y quedar&#225;n suspendidas las acciones internas hasta su reactivaci&#243;n.
+                </p>
+                <div class="paralizar-form">
+                  <div class="paralizar-form__field">
+                    <label for="paralizar-motivo" class="detail-card__hint">Motivo</label>
+                    <select
+                      id="paralizar-motivo"
+                      class="paralizar-form__select"
+                      [value]="paralizarMotivoSeleccionado()"
+                      (change)="paralizarMotivoSeleccionado.set($any($event.target).value)"
+                      [disabled]="ejecutandoParalizarAccion()"
+                    >
+                      <option value="">-- Seleccionar motivo --</option>
+                      @for (m of motivosParalizacion; track m.valor) {
+                        <option [value]="m.valor">{{ m.etiqueta }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="paralizar-form__field">
+                    <label for="paralizar-observacion" class="detail-card__hint">Observaci&#243;n</label>
+                    <textarea
+                      id="paralizar-observacion"
+                      class="paralizar-form__textarea"
+                      rows="3"
+                      placeholder="Detalle opcional del motivo de paralizaci&#243;n"
+                      [value]="paralizarObservacion()"
+                      (input)="paralizarObservacion.set($any($event.target).value)"
+                      [disabled]="ejecutandoParalizarAccion()"
+                    ></textarea>
+                  </div>
+                  <div class="paralizar-form__actions">
+                    <button
+                      mat-flat-button
+                      type="button"
+                      color="warn"
+                      [disabled]="ejecutandoParalizarAccion() || !paralizarMotivoSeleccionado()"
+                      (click)="confirmarParalizarActa()"
+                    >
+                      @if (ejecutandoParalizarAccion()) {
+                        Paralizando...
+                      } @else {
+                        Paralizar acta
+                      }
+                    </button>
+                    <button
+                      mat-button
+                      type="button"
+                      [disabled]="ejecutandoParalizarAccion()"
+                      (click)="cancelarParalizarActa()"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </section>
+          }
+
           @if (puedeMostrarBloqueGestionExterna()) {
           <section class="detail-card" aria-labelledby="gestion-externa-titulo">
             <h3 id="gestion-externa-titulo" class="detail-card__title">Gestión externa</h3>
