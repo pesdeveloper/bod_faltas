@@ -112,6 +112,9 @@ final class FalloPlazoApelacionSupport {
     /** Tipo de pago compartido con {@link PagoCondenaSupport}. */
     private final Map<String, PrototipoStore.TipoPago> tipoPagoPorActa;
 
+    private final Map<String, PrototipoStore.ResultadoExternoPostGestion> resultadoExternoPostGestionPorActa;
+    private final Map<String, java.math.BigDecimal> montoCondenaSugeridoPostGestionExternaPorActa;
+
     FalloPlazoApelacionSupport(
             Map<String, ActaMock> actas,
             Map<String, List<ActaEventoMock>> eventosPorActa,
@@ -122,7 +125,9 @@ final class FalloPlazoApelacionSupport {
             Map<String, java.math.BigDecimal> montoCondenaPorActa,
             Map<String, PrototipoStore.SituacionPagoCondena> situacionPagoCondenaPorActa,
             Map<String, PrototipoStore.SituacionPagoMock> situacionPagoPorActa,
-            Map<String, PrototipoStore.TipoPago> tipoPagoPorActa) {
+            Map<String, PrototipoStore.TipoPago> tipoPagoPorActa,
+            Map<String, PrototipoStore.ResultadoExternoPostGestion> resultadoExternoPostGestionPorActa,
+            Map<String, java.math.BigDecimal> montoCondenaSugeridoPostGestionExternaPorActa) {
         this.actas = actas;
         this.eventosPorActa = eventosPorActa;
         this.documentosPorActa = documentosPorActa;
@@ -133,6 +138,8 @@ final class FalloPlazoApelacionSupport {
         this.situacionPagoCondenaPorActa = situacionPagoCondenaPorActa;
         this.situacionPagoPorActa = situacionPagoPorActa;
         this.tipoPagoPorActa = tipoPagoPorActa;
+        this.resultadoExternoPostGestionPorActa = resultadoExternoPostGestionPorActa;
+        this.montoCondenaSugeridoPostGestionExternaPorActa = montoCondenaSugeridoPostGestionExternaPorActa;
     }
 
     void clear() {
@@ -202,11 +209,20 @@ final class FalloPlazoApelacionSupport {
         if (!SITUACION_ADMIN_ACTIVA.equals(actual.situacionAdministrativaActual())) {
             return conflict();
         }
-        if (cerrabilidad.getResultadoFinal(actaId)
-                != PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL) {
+        boolean postGestionExterna = PrototipoStore.ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(
+                accionPendientePorActa.get(actaId));
+        boolean resultadoCompatible = cerrabilidad.getResultadoFinal(actaId)
+                == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL
+                || (postGestionExterna
+                        && cerrabilidad.getResultadoFinal(actaId)
+                                == PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME);
+        if (!resultadoCompatible) {
             return conflict();
         }
-        if (expedienteIncluyeFallo(actaId)) {
+        if (!postGestionExterna && expedienteIncluyeFallo(actaId)) {
+            return conflict();
+        }
+        if (postGestionExterna && !resultadoExternoPostGestionPorActa.containsKey(actaId)) {
             return conflict();
         }
 
@@ -221,13 +237,18 @@ final class FalloPlazoApelacionSupport {
         ActaMock actualizada = moverAPendienteFirma(actual);
         actas.put(actaId, actualizada);
         accionPendientePorActa.remove(actaId);
+        if (postGestionExterna) {
+            cerrabilidad.setResultadoFinalDemo(actaId, PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL);
+            resultadoExternoPostGestionPorActa.remove(actaId);
+            montoCondenaSugeridoPostGestionExternaPorActa.remove(actaId);
+        }
 
         registrarEvento(
                 actaId,
-                tipoEvento,
+                postGestionExterna ? tipoEventoPostGestion(tipoDocumentoFallo) : tipoEvento,
                 bloqueOrigen,
                 actualizada.bloqueActual(),
-                descripcionEvento);
+                postGestionExterna ? descripcionPostGestion(tipoDocumentoFallo) : descripcionEvento);
 
         return new PrototipoStore.DictarFalloResultado(
                 PrototipoStore.DictarFalloEstado.OK,
@@ -835,31 +856,48 @@ final class FalloPlazoApelacionSupport {
             return null;
         }
         String tipoFalloFirmado = null;
+        int cantidadFirmados = 0;
         for (ActaDocumentoMock d : docs) {
             if (esFallo(d.tipoDocumento()) && ESTADO_DOC_FIRMADO.equals(d.estadoDocumento())) {
                 tipoFalloFirmado = d.tipoDocumento();
+                cantidadFirmados++;
             }
         }
         if (tipoFalloFirmado == null) {
             return null;
         }
-        if (yaSeRegistroNotificacionDeFallo(actaId)) {
+        if (cantidadFirmados <= cantidadNotificacionesDeFallo(actaId)) {
             return null;
         }
         return tipoFalloFirmado;
     }
 
-    private boolean yaSeRegistroNotificacionDeFallo(String actaId) {
+    private int cantidadNotificacionesDeFallo(String actaId) {
         List<ActaEventoMock> evs = eventosPorActa.get(actaId);
         if (evs == null || evs.isEmpty()) {
-            return false;
+            return 0;
         }
-        return evs.stream()
+        return (int) evs.stream()
                 .map(ActaEventoMock::tipoEvento)
-                .anyMatch(
+                .filter(
                         t ->
                                 "FALLO_ABSOLUTORIO_NOTIFICADO".equals(t)
-                                        || "FALLO_CONDENATORIO_NOTIFICADO".equals(t));
+                                        || "FALLO_CONDENATORIO_NOTIFICADO".equals(t))
+                .count();
+    }
+
+    private String tipoEventoPostGestion(String tipoDocumentoFallo) {
+        if (TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumentoFallo)) {
+            return "RESOLUCION_POST_GESTION_EXTERNA_ABSOLUTORIA_DICTADA";
+        }
+        return "FALLO_POST_GESTION_EXTERNA_DICTADO";
+    }
+
+    private String descripcionPostGestion(String tipoDocumentoFallo) {
+        if (TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumentoFallo)) {
+            return "Resolución absolutoria post gestión externa dictada; documento mock generado pendiente de firma.";
+        }
+        return "Fallo condenatorio post gestión externa dictado; documento mock generado pendiente de firma.";
     }
 
     private ActaMock moverAPendienteFirma(ActaMock actual) {

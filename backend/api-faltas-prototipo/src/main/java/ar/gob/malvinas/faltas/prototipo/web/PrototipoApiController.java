@@ -1354,10 +1354,54 @@ public class PrototipoApiController {
         }
         return new RegistrarPagoEnApremioAccionResponse(
                 "OK",
-                "Pago en apremio registrado; el acta queda en condición de cierre.",
+                "Pago informado desde Apremio; queda pendiente de confirmación interna.",
                 r.actaId(),
                 r.bandejaActual(),
                 r.estadoProcesoActual());
+    }
+
+    @PostMapping("/actas/{id}/acciones/apremio-reingresar-monto-modificado")
+    public RegistrarResolucionJuzgadoAccionResponse apremioReingresarMontoModificado(
+            @PathVariable("id") String id,
+            @RequestBody JuzgadoMontoModificadoRequest request) {
+        PrototipoStore.ReingresarDesdeJuzgadoResultado r =
+                store.reingresarDesdeApremioMontoModificado(id, request.nuevoMonto());
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarResolucionJuzgadoAccionResponse(
+                "OK",
+                "Resultado externo de Apremio registrado: propone modificar monto de condena a "
+                        + request.nuevoMonto() + ".",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.resolucion());
+    }
+
+    @PostMapping("/actas/{id}/acciones/apremio-reingresar-absuelto")
+    public RegistrarResolucionJuzgadoAccionResponse apremioReingresarAbsuelto(
+            @PathVariable("id") String id) {
+        PrototipoStore.ReingresarDesdeJuzgadoResultado r =
+                store.reingresarDesdeApremioAbsuelto(id);
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.NOT_FOUND) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (r.estado() == PrototipoStore.ReingresarDesdeJuzgadoEstado.CONFLICT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return new RegistrarResolucionJuzgadoAccionResponse(
+                "OK",
+                "Resultado externo de Apremio registrado: propone absolución.",
+                r.actaId(),
+                r.bandejaActual(),
+                r.estadoProcesoActual(),
+                r.accionPendiente(),
+                r.resolucion());
     }
 
     /**
@@ -1379,7 +1423,7 @@ public class PrototipoApiController {
         }
         return new RegistrarResolucionJuzgadoAccionResponse(
                 "OK",
-                "Resolución de Juzgado de Paz registrada: absuelve.",
+                "Resultado externo de Juzgado de Paz registrado: propone absolución.",
                 r.actaId(),
                 r.bandejaActual(),
                 r.estadoProcesoActual(),
@@ -1436,7 +1480,7 @@ public class PrototipoApiController {
         }
         return new RegistrarResolucionJuzgadoAccionResponse(
                 "OK",
-                "Resolución de Juzgado de Paz registrada: monto de condena modificado a "
+                "Resultado externo de Juzgado de Paz registrado: propone modificar monto de condena a "
                         + request.nuevoMonto() + ".",
                 r.actaId(),
                 r.bandejaActual(),
@@ -1969,6 +2013,10 @@ public class PrototipoApiController {
                 store.getSituacionPagoCondena(a.id()).name(),
                 store.getAccionesPagoCondenaDisponibles(a.id()),
                 store.getAccionesGestionExternaDisponibles(a.id()),
+                store.getResultadoExternoPostGestion(a.id()) != null
+                        ? store.getResultadoExternoPostGestion(a.id()).name()
+                        : null,
+                store.getMontoCondenaSugeridoPostGestionExterna(a.id()),
                 mapHechosMateriales(store.getHechosMaterialesActa(a.id())),
                 store.getDependenciaDemo(a.id()).orElse(null),
                 store.getTipoActaAltaDemo(a.id()).orElse(null),
@@ -2009,6 +2057,14 @@ public class PrototipoApiController {
         boolean cierre = false;
         boolean enviarANotificacion = false;
         boolean anularActa = false;
+        boolean firmaPendiente = false;
+        boolean notificacion = false;
+        boolean pagoCondena = false;
+        boolean confirmarPagoCondena = false;
+        boolean observarPagoCondena = false;
+        boolean gestionExterna = false;
+        boolean apelacionPresencial = false;
+        boolean vencimientoPlazoApelacion = false;
 
         if (!a.estaCerrada()
                 && bandejaOperativaInterna
@@ -2031,16 +2087,25 @@ public class PrototipoApiController {
                                 && spc == PrototipoStore.SituacionPagoCondena.NO_APLICA
                                 && sp == PrototipoStore.SituacionPagoMock.SIN_PAGO;
             }
+            apelacionPresencial = rf == PrototipoStore.ResultadoFinalCierreMock.CONDENADO
+                    && store.puedePresentarApelacion(a.id());
+            vencimientoPlazoApelacion = store.puedePresentarApelacion(a.id());
 
             boolean sinResultadoFinal = rf == PrototipoStore.ResultadoFinalCierreMock.SIN_RESULTADO_FINAL;
             boolean sinFalloDictado = !store.hayFalloDictado(a.id());
             boolean analisisOperativo = "PENDIENTE_ANALISIS".equals(bandeja)
                     && "PENDIENTE_REVISION".equals(a.estadoProcesoActual());
+            boolean falloPostGestionExterna = PrototipoStore.ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(
+                    store.getAccionPendiente(a.id()))
+                    && store.hayResultadoExternoPostGestionPendiente(a.id());
 
             // pagoVoluntario: Dirección puede iniciar o gestionar una solicitud activa.
             boolean sinPago = sp == PrototipoStore.SituacionPagoMock.SIN_PAGO;
             boolean solicitudActiva = sp == PrototipoStore.SituacionPagoMock.SOLICITADO;
-            pagoVoluntario = sinResultadoFinal && sinFalloDictado && (sinPago || solicitudActiva);
+            pagoVoluntario = !falloPostGestionExterna
+                    && sinResultadoFinal
+                    && sinFalloDictado
+                    && (sinPago || solicitudActiva);
 
             // vencimientoPagoVoluntario: hay solicitud activa y monto vigente sin pago.
             BigDecimal montoPagoVoluntario = store.getMontoPagoVoluntario(a.id());
@@ -2053,7 +2118,8 @@ public class PrototipoApiController {
             // falloFondo: solo en análisis operativo; notificación y firma lo bloquean.
             boolean pagoCompatibleConFallo = sp == PrototipoStore.SituacionPagoMock.SIN_PAGO
                     || sp == PrototipoStore.SituacionPagoMock.VENCIDO;
-            falloFondo = analisisOperativo && sinResultadoFinal && sinFalloDictado && pagoCompatibleConFallo;
+            falloFondo = analisisOperativo
+                    && ((sinResultadoFinal && sinFalloDictado && pagoCompatibleConFallo) || falloPostGestionExterna);
 
             // cumplimientoMaterial / resolucionBloqueante:
             // solo ejecutables cuando existe un habilitante material
@@ -2075,6 +2141,14 @@ public class PrototipoApiController {
             }
         }
 
+        firmaPendiente = "PENDIENTE_FIRMA".equals(bandeja);
+        notificacion = "PENDIENTE_NOTIFICACION".equals(bandeja) || "EN_NOTIFICACION".equals(bandeja);
+        List<String> accionesPagoCondena = store.getAccionesPagoCondenaDisponibles(a.id());
+        pagoCondena = accionesPagoCondena.contains("INFORMAR");
+        confirmarPagoCondena = accionesPagoCondena.contains("CONFIRMAR");
+        observarPagoCondena = accionesPagoCondena.contains("OBSERVAR");
+        gestionExterna = !store.getAccionesGestionExternaDisponibles(a.id()).isEmpty();
+
         return new AccionesUiResponse(
                 archivoReingreso,
                 consentirCondenaYRegistrarPago,
@@ -2085,7 +2159,15 @@ public class PrototipoApiController {
                 resolucionBloqueante,
                 cierre,
                 enviarANotificacion,
-                anularActa);
+                anularActa,
+                firmaPendiente,
+                notificacion,
+                pagoCondena,
+                confirmarPagoCondena,
+                observarPagoCondena,
+                gestionExterna,
+                apelacionPresencial,
+                vencimientoPlazoApelacion);
     }
 
     /**

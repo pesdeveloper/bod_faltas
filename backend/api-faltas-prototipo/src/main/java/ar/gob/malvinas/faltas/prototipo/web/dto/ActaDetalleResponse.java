@@ -33,6 +33,8 @@ public record ActaDetalleResponse(
         String situacionPagoCondena,
         List<String> accionesPagoCondenaDisponibles,
         List<String> accionesGestionExternaDisponibles,
+        String resultadoExternoPostGestion,
+        BigDecimal montoCondenaSugeridoPostGestionExterna,
         HechosMaterialesActaResponse hechosMateriales,
         String dependenciaDemo,
         String tipoActaDemo,

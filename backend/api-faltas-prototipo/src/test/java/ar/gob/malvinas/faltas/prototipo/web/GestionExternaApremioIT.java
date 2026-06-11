@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItem;
@@ -23,8 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>Criterios de aceptación:
  * <ul>
- *   <li>Pago en apremio: situacionPagoCondena=CONFIRMADO, tipoGestionExterna=null,
- *       resultadoFinal=CONDENA_FIRME, cerrable=true, pagoCondena=false.</li>
+ *   <li>Pago en apremio: situacionPagoCondena=INFORMADO, tipoGestionExterna=null,
+ *       resultadoFinal=CONDENA_FIRME, confirmación/observación habilitadas.</li>
  *   <li>Reingreso sin pago: vuelve a análisis, tipoGestionExterna=null,
  *       situacionPagoCondena=PENDIENTE, pagoCondena=true (acción INFORMAR disponible),
  *       cerrable=false.</li>
@@ -48,7 +49,7 @@ class GestionExternaApremioIT {
         mvc.perform(post(B + "/reset")).andExpect(status().isOk());
     }
 
-    // ── Estado inicial ──────────────────────────────────────────────────────────
+    // -- Estado inicial ----------------------------------------------------------
 
     @Test
     void actaExisteEnDatasetConEstadoInicialApremio() throws Exception {
@@ -64,10 +65,10 @@ class GestionExternaApremioIT {
                 .andExpect(jsonPath("$.situacionPagoCondena").value("PENDIENTE"));
     }
 
-    // ── Pago en apremio ─────────────────────────────────────────────────────────
+    // -- Pago informado desde gestion externa -----------------------------------
 
     @Test
-    void registrarPagoEnApremio_dejaSituacionConfirmadaYCerrable() throws Exception {
+    void registrarPagoEnApremio_dejaPagoInformadoPendienteConfirmacion() throws Exception {
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/apremio-registrar-pago"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultado").value("OK"))
@@ -80,10 +81,11 @@ class GestionExternaApremioIT {
                 .andExpect(jsonPath("$.situacionAdministrativaActual").value("ACTIVA"))
                 .andExpect(jsonPath("$.tipoGestionExterna").isEmpty())
                 .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENA_FIRME"))
-                .andExpect(jsonPath("$.situacionPagoCondena").value("CONFIRMADO"))
-                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true))
-                .andExpect(jsonPath("$.accionesPagoCondenaDisponibles").isEmpty())
-                .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles").isEmpty());
+                .andExpect(jsonPath("$.situacionPago").value("PENDIENTE_CONFIRMACION"))
+                .andExpect(jsonPath("$.situacionPagoCondena").value("INFORMADO"))
+                .andExpect(jsonPath("$.accionesUi.confirmarPagoCondena").value(true))
+                .andExpect(jsonPath("$.accionesUi.observarPagoCondena").value(true))
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(false));
     }
 
     @Test
@@ -97,16 +99,15 @@ class GestionExternaApremioIT {
     }
 
     @Test
-    void registrarPagoEnApremio_permiteSerrarDepues() throws Exception {
+    void registrarPagoEnApremio_noPermiteCerrarSinConfirmacion() throws Exception {
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/apremio-registrar-pago"))
                 .andExpect(status().isOk());
 
         mvc.perform(post(B + "/actas/" + ACTA + "/acciones/cerrar-acta"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.bandejaActual").value("CERRADAS"));
+                .andExpect(status().isConflict());
     }
 
-    // ── Reingreso sin pago ──────────────────────────────────────────────────────
+    // -- Reingreso sin pago ------------------------------------------------------
 
     @Test
     void apremioReingresarSinPago_vuelveAAnalisisConPagoCondena() throws Exception {
@@ -126,7 +127,10 @@ class GestionExternaApremioIT {
                 .andExpect(jsonPath("$.situacionPagoCondena").value("PENDIENTE"))
                 .andExpect(jsonPath("$.cerrabilidad.cerrable").value(false))
                 .andExpect(jsonPath("$.accionesPagoCondenaDisponibles[0]").value("INFORMAR"))
-                .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles").isEmpty());
+                .andExpect(jsonPath("$.accionesPagoVoluntarioDisponibles").isEmpty())
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(true))
+                .andExpect(jsonPath("$.accionesUi.gestionExterna").value(true))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false));
     }
 
     @Test
@@ -140,7 +144,128 @@ class GestionExternaApremioIT {
                         hasItem("ACTA_REINGRESADA_DESDE_APREMIO_SIN_PAGO")));
     }
 
-    // ── Conflictos ──────────────────────────────────────────────────────────────
+    // -- Resultado externo sustantivo -------------------------------------------
+
+    @Test
+    void apremioResultadoExternoModificaMonto_requiereNuevoFallo() throws Exception {
+        registrarResultadoApremioModificaMonto(9000);
+
+        mvc.perform(get(B + "/actas/" + ACTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_REVISION"))
+                .andExpect(jsonPath("$.situacionAdministrativaActual").value("ACTIVA"))
+                .andExpect(jsonPath("$.tipoGestionExterna").isEmpty())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENA_FIRME"))
+                .andExpect(jsonPath("$.situacionPagoCondena").value("PENDIENTE"))
+                .andExpect(jsonPath("$.accionPendiente").value("DICTAR_FALLO_POST_GESTION_EXTERNA"))
+                .andExpect(jsonPath("$.resultadoExternoPostGestion").value("MODIFICA_MONTO"))
+                .andExpect(jsonPath("$.montoCondenaSugeridoPostGestionExterna").value(9000))
+                .andExpect(jsonPath("$.montoCondena").value(75000))
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(false))
+                .andExpect(jsonPath("$.accionesUi.gestionExterna").value(false))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(true))
+                .andExpect(jsonPath("$.accionesUi.cierre").value(false));
+
+        mvc.perform(get(B + "/actas/" + ACTA + "/eventos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].tipoEvento",
+                        hasItem("RESULTADO_GESTION_EXTERNA_PROPONE_MODIFICAR_MONTO")));
+    }
+
+    @Test
+    void apremioDictaNuevoFalloModificatorioFirmaNotificaYQuedaCondenado() throws Exception {
+        registrarResultadoApremioModificaMonto(9000);
+
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/dictar-fallo-condenatorio")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"montoCondena\":9000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoId").value("DOC-0130-03"))
+                .andExpect(jsonPath("$.tipoDocumento").value("FALLO_CONDENATORIO"))
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"));
+
+        mvc.perform(get(B + "/actas/" + ACTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("SIN_RESULTADO_FINAL"))
+                .andExpect(jsonPath("$.montoCondena").value(9000))
+                .andExpect(jsonPath("$.accionesUi.firmaPendiente").value(true))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false))
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(false));
+
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/firmar-documento/DOC-0130-03"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_NOTIFICACION"))
+                .andExpect(jsonPath("$.estadoProcesoActual").value("PENDIENTE_ENVIO"));
+
+        mvc.perform(get(B + "/actas/" + ACTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accionesUi.notificacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(false));
+
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-notificacion-positiva"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
+
+        mvc.perform(get(B + "/actas/" + ACTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENADO"))
+                .andExpect(jsonPath("$.montoCondena").value(9000))
+                .andExpect(jsonPath("$.accionesUi.apelacionPresencial").value(true))
+                .andExpect(jsonPath("$.accionesUi.vencimientoPlazoApelacion").value(true))
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(false));
+    }
+
+    @Test
+    void apremioResultadoExternoProponeAbsolucion_requiereResolucion() throws Exception {
+        registrarResultadoApremioAbsuelve();
+
+        mvc.perform(get(B + "/actas/" + ACTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
+                .andExpect(jsonPath("$.accionPendiente").value("DICTAR_FALLO_POST_GESTION_EXTERNA"))
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("CONDENA_FIRME"))
+                .andExpect(jsonPath("$.situacionPagoCondena").value("PENDIENTE"))
+                .andExpect(jsonPath("$.resultadoExternoPostGestion").value("ABSUELVE"))
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(false))
+                .andExpect(jsonPath("$.accionesUi.gestionExterna").value(false))
+                .andExpect(jsonPath("$.accionesUi.falloFondo").value(true));
+
+        mvc.perform(get(B + "/actas/" + ACTA + "/eventos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].tipoEvento",
+                        hasItem("RESULTADO_GESTION_EXTERNA_PROPONE_ABSOLVER")));
+    }
+
+    @Test
+    void apremioDictaResolucionAbsolutoriaFirmaNotificaYQuedaAbsuelto() throws Exception {
+        registrarResultadoApremioAbsuelve();
+
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/dictar-fallo-absolutorio"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoId").value("DOC-0130-03"))
+                .andExpect(jsonPath("$.tipoDocumento").value("FALLO_ABSOLUTORIO"))
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_FIRMA"));
+
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/firmar-documento/DOC-0130-03"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_NOTIFICACION"));
+
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/registrar-notificacion-positiva"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"));
+
+        mvc.perform(get(B + "/actas/" + ACTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cerrabilidad.resultadoFinal").value("ABSUELTO"))
+                .andExpect(jsonPath("$.situacionPagoCondena").value("NO_APLICA"))
+                .andExpect(jsonPath("$.cerrabilidad.cerrable").value(true))
+                .andExpect(jsonPath("$.accionesUi.pagoCondena").value(false))
+                .andExpect(jsonPath("$.accionesUi.gestionExterna").value(false))
+                .andExpect(jsonPath("$.accionesUi.cierre").value(true));
+    }
+
+    // -- Conflictos --------------------------------------------------------------
 
     @Test
     void registrarPagoEnApremio_desdeApremio_segundaVezConflict() throws Exception {
@@ -168,5 +293,19 @@ class GestionExternaApremioIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bandejaActual").value("PENDIENTE_ANALISIS"))
                 .andExpect(jsonPath("$.tipoGestionExterna").isEmpty());
+    }
+
+    private void registrarResultadoApremioModificaMonto(int monto) throws Exception {
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/apremio-reingresar-monto-modificado")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nuevoMonto\":" + monto + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accionPendiente").value("DICTAR_FALLO_POST_GESTION_EXTERNA"));
+    }
+
+    private void registrarResultadoApremioAbsuelve() throws Exception {
+        mvc.perform(post(B + "/actas/" + ACTA + "/acciones/apremio-reingresar-absuelto"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accionPendiente").value("DICTAR_FALLO_POST_GESTION_EXTERNA"));
     }
 }

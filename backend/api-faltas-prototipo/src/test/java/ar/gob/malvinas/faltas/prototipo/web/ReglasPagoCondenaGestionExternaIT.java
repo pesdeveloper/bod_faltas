@@ -64,6 +64,14 @@ class ReglasPagoCondenaGestionExternaIT {
         mvc.perform(post(B + "/actas/" + ACTA_ANALISIS + "/acciones/derivar-a-juzgado-de-paz"))
                 .andExpect(status().isOk());
         mvc.perform(post(B + "/actas/" + ACTA_ANALISIS + "/acciones/juzgado-reingresar-absuelto"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accionPendiente").value("DICTAR_FALLO_POST_GESTION_EXTERNA"));
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS + "/acciones/dictar-fallo-absolutorio"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoId").value("DOC-0029-03"));
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS + "/acciones/firmar-documento/DOC-0029-03"))
+                .andExpect(status().isOk());
+        mvc.perform(post(B + "/actas/" + ACTA_ANALISIS + "/acciones/registrar-notificacion-positiva"))
                 .andExpect(status().isOk());
 
         mvc.perform(get(B + "/actas/" + ACTA_ANALISIS))

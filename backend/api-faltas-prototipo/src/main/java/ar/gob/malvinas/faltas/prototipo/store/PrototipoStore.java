@@ -110,6 +110,12 @@ public class PrototipoStore {
      */
     public static final String ACCION_REVISION_POST_GESTION_EXTERNA = "REVISION_POST_GESTION_EXTERNA";
     /**
+     * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: la gestión
+     * externa devolvió un resultado sustantivo que debe formalizarse con un
+     * nuevo fallo/resolución interno antes de alterar el fondo del expediente.
+     */
+    public static final String ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA = "DICTAR_FALLO_POST_GESTION_EXTERNA";
+    /**
      * Marca operativa dentro de {@code PENDIENTE_ANALISIS}: el caso volvió a
      * análisis por reactivación explícita desde la macro-bandeja
      * {@code PARALIZADAS}. Permite distinguir y filtrar dentro de análisis
@@ -480,6 +486,11 @@ public class PrototipoStore {
             String estadoProcesoActual,
             String accionPendiente,
             String resolucion) {
+    }
+
+    public enum ResultadoExternoPostGestion {
+        MODIFICA_MONTO,
+        ABSUELVE
     }
 
     public enum ReactivarActaEstado {
@@ -1412,6 +1423,8 @@ public class PrototipoStore {
      * habilita pago post condena en este slice.
      */
     private final Map<String, BigDecimal> montoCondenaPorActa = new LinkedHashMap<>();
+    private final Map<String, ResultadoExternoPostGestion> resultadoExternoPostGestionPorActa = new LinkedHashMap<>();
+    private final Map<String, BigDecimal> montoCondenaSugeridoPostGestionExternaPorActa = new LinkedHashMap<>();
     /**
      * Situación operativa del pago de condena. Solo aplica cuando el
      * resultado final es CONDENA_FIRME; fuera de ese caso se expone NO_APLICA.
@@ -1504,7 +1517,9 @@ public class PrototipoStore {
                     situacionPagoCondenaPorActa,
                     situacionPagoPorActa,
                     tipoPagoPorActa,
-                    montoCondenaPorActa);
+                    montoCondenaPorActa,
+                    resultadoExternoPostGestionPorActa,
+                    montoCondenaSugeridoPostGestionExternaPorActa);
 
     /**
      * Soporte funcional del área presentaciones / pagos (alcance mínimo):
@@ -1575,7 +1590,9 @@ public class PrototipoStore {
                     montoCondenaPorActa,
                     situacionPagoCondenaPorActa,
                     situacionPagoPorActa,
-                    tipoPagoPorActa);
+                    tipoPagoPorActa,
+                    resultadoExternoPostGestionPorActa,
+                    montoCondenaSugeridoPostGestionExternaPorActa);
 
     private final CorreoPostalNotificacionSupport correoPostal =
             new CorreoPostalNotificacionSupport(
@@ -1683,6 +1700,8 @@ public class PrototipoStore {
         pagoInformadoPorActa.clear();
         montoPagoVoluntarioPorActa.clear();
         montoCondenaPorActa.clear();
+        resultadoExternoPostGestionPorActa.clear();
+        montoCondenaSugeridoPostGestionExternaPorActa.clear();
         situacionPagoCondenaPorActa.clear();
         tipoPagoPorActa.clear();
         actaTransitoMockPorActa.clear();
@@ -1724,6 +1743,18 @@ public class PrototipoStore {
      */
     public String getTipoGestionExterna(String actaId) {
         return gestionExterna.getTipoGestionExterna(actaId);
+    }
+
+    public ResultadoExternoPostGestion getResultadoExternoPostGestion(String actaId) {
+        return resultadoExternoPostGestionPorActa.get(actaId);
+    }
+
+    public BigDecimal getMontoCondenaSugeridoPostGestionExterna(String actaId) {
+        return montoCondenaSugeridoPostGestionExternaPorActa.get(actaId);
+    }
+
+    public boolean hayResultadoExternoPostGestionPendiente(String actaId) {
+        return resultadoExternoPostGestionPorActa.containsKey(actaId);
     }
 
     /**
@@ -1828,6 +1859,9 @@ public class PrototipoStore {
         if (acta == null || acta.estaCerrada() || !"PENDIENTE_ANALISIS".equals(acta.bandejaActual())) {
             return List.of();
         }
+        if (ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(getAccionPendiente(actaId))) {
+            return List.of();
+        }
         if (cerrabilidad.getResultadoFinal(actaId) != ResultadoFinalCierreMock.CONDENA_FIRME) {
             return List.of();
         }
@@ -1842,6 +1876,9 @@ public class PrototipoStore {
     public List<String> getAccionesGestionExternaDisponibles(String actaId) {
         ActaMock acta = actas.get(actaId);
         if (acta == null || acta.estaCerrada() || !"PENDIENTE_ANALISIS".equals(acta.bandejaActual())) {
+            return List.of();
+        }
+        if (ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(getAccionPendiente(actaId))) {
             return List.of();
         }
         SituacionPagoCondena situacion = getSituacionPagoCondena(actaId);
@@ -3065,6 +3102,15 @@ public class PrototipoStore {
     public ReingresarDesdeJuzgadoResultado reingresarDesdeJuzgadoMontoModificado(
             String actaId, java.math.BigDecimal nuevoMonto) {
         return gestionExterna.reingresarDesdeJuzgadoMontoModificado(actaId, nuevoMonto);
+    }
+
+    public ReingresarDesdeJuzgadoResultado reingresarDesdeApremioMontoModificado(
+            String actaId, java.math.BigDecimal nuevoMonto) {
+        return gestionExterna.reingresarDesdeApremioMontoModificado(actaId, nuevoMonto);
+    }
+
+    public ReingresarDesdeJuzgadoResultado reingresarDesdeApremioAbsuelto(String actaId) {
+        return gestionExterna.reingresarDesdeApremioAbsuelto(actaId);
     }
 
     /**

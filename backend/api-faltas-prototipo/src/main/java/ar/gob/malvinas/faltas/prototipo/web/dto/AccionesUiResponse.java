@@ -65,4 +65,12 @@ public record AccionesUiResponse(
         boolean resolucionBloqueante,
         boolean cierre,
         boolean enviarANotificacion,
-        boolean anularActa) {}
+        boolean anularActa,
+        boolean firmaPendiente,
+        boolean notificacion,
+        boolean pagoCondena,
+        boolean confirmarPagoCondena,
+        boolean observarPagoCondena,
+        boolean gestionExterna,
+        boolean apelacionPresencial,
+        boolean vencimientoPlazoApelacion) {}
