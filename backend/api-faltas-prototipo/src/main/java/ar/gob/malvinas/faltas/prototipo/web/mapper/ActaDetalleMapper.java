@@ -32,8 +32,8 @@ import java.util.List;
  *
  * <p>Los tres mappers estáticos ({@link #mapActaNotificacion},
  * {@link #mapCerrabilidad}, {@link #mapPagoInformado}) son accesibles también
- * desde {@code PrototipoApiController} para los endpoints que los necesitan
- * individualmente, evitando duplicación.
+ * desde los controllers especializados del prototipo para los endpoints que los
+ * necesitan individualmente, evitando duplicación.
  */
 @Component
 public final class ActaDetalleMapper {
@@ -105,7 +105,7 @@ public final class ActaDetalleMapper {
     }
 
     // -------------------------------------------------------------------------
-    // Mappers estáticos compartidos con PrototipoApiController
+    // Mappers estáticos compartidos por controllers del prototipo
     // -------------------------------------------------------------------------
 
     public static ActaNotificacionResponse mapActaNotificacion(ActaNotificacionMock n) {
