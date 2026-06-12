@@ -109,7 +109,39 @@
       <div class="toolbar-identity">
         <span class="toolbar-title">{{ tituloVistaPrincipal() }}</span>
       </div>
+      <div class="qa-menu-container">
+        <button
+          mat-icon-button
+          type="button"
+          class="qa-menu-btn"
+          title="Herramientas QA"
+          aria-label="Herramientas QA"
+          [disabled]="resetMocksBusy()"
+          (click)="toggleQaMenu()"
+        >
+          <mat-icon>more_vert</mat-icon>
+        </button>
+      </div>
     </mat-toolbar>
+    @if (qaMenuAbierto()) {
+      <div class="qa-menu-dropdown" role="menu">
+        <button
+          type="button"
+          class="qa-menu-item"
+          role="menuitem"
+          [disabled]="resetMocksBusy()"
+          (click)="resetMocksDesdeQaMenu()"
+        >
+          @if (resetMocksBusy()) { Reiniciando... } @else { Reset mocks }
+        </button>
+      </div>
+    }
+    @if (resetMocksOk()) {
+      <div class="qa-reset-toast qa-reset-toast--ok" role="status" aria-live="polite">{{ resetMocksOk() }}</div>
+    }
+    @if (resetMocksError()) {
+      <div class="qa-reset-toast qa-reset-toast--error" role="alert" aria-live="polite">{{ resetMocksError() }}</div>
+    }
 
     @if (creandoDemo() !== null || altaDemoMensaje() || altaDemoError()) {
       <div class="demo-feedback" role="status" aria-live="polite">

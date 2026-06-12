@@ -1,4 +1,4 @@
-import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, ElementRef, NgZone, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -504,7 +504,13 @@ export class DemoShellComponent implements OnInit {
 
   readonly copiaEstadoMensaje = signal<string | null>(null);
   readonly copiaEstadoError = signal<string | null>(null);
+
+  readonly qaMenuAbierto = signal(false);
+  readonly resetMocksBusy = signal(false);
+  readonly resetMocksOk = signal<string | null>(null);
+  readonly resetMocksError = signal<string | null>(null);
   private static readonly SCROLL_VISIBILITY_MARGIN_PX = 8;
+  private resetMocksToastTimerId: ReturnType<typeof setTimeout> | null = null;
   private static readonly SCROLL_VERIFY_DELAY_MS = 150;
 
   private pendingScrollToActaId: string | null = null;
@@ -3940,6 +3946,42 @@ this.actaListComponent?.buscarFila(actaId) ?? null;
           this.eventos.set(items);
           this.eventosEstado.set('ready');
         }
+      });
+  }
+
+  toggleQaMenu(): void {
+    this.qaMenuAbierto.update((v) => !v);
+    this.resetMocksOk.set(null);
+    this.resetMocksError.set(null);
+  }
+
+  resetMocksDesdeQaMenu(): void {
+    if (this.resetMocksBusy()) {
+      return;
+    }
+    this.qaMenuAbierto.set(false);
+    this.resetMocksOk.set(null);
+    this.resetMocksError.set(null);
+    this.resetMocksBusy.set(true);
+    this.api
+      .reset()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.resetMocksBusy.set(false);
+          this.resetMocksOk.set('Mocks reiniciados');
+          if (this.resetMocksToastTimerId !== null) { clearTimeout(this.resetMocksToastTimerId); }
+          this.resetMocksToastTimerId = setTimeout(() => { this.resetMocksOk.set(null); this.resetMocksToastTimerId = null; }, 2000);
+          this.actaSeleccionadaId.set(null);
+          this.detalle.set(null);
+          this.detalleEstado.set('idle');
+          this.limpiarSubRecursosDetalle();
+          this.cargarListado();
+        },
+        error: () => {
+          this.resetMocksBusy.set(false);
+          this.resetMocksError.set('No se pudieron reiniciar los mocks');
+        },
       });
   }
 }
