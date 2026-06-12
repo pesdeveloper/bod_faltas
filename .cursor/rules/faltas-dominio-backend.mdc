@@ -1,0 +1,380 @@
+---
+description: Reglas backend y dominio para Faltas / Dirección de Faltas
+globs:
+  - "apps/api-faltas-java/**/*.java"
+  - "docs/MATRIZ_REGLAS_ACTA.md"
+  - "docs/VALIDACION_FUNCIONAL.md"
+  - "docs/guia_qa/**/*.md"
+alwaysApply: false
+---
+
+# Faltas / Dirección de Faltas — Reglas backend y dominio
+
+Estas reglas aplican a cambios Java/backend del prototipo de Faltas y a cualquier slice que toque reglas de actas, bandejas, pagos, notificaciones, fallo, apelación, gestión externa, archivo, paralización, materiales o portal infractor.
+
+## 1. Contrato funcional
+
+La fuente formal de reglas es:
+
+- `docs/MATRIZ_REGLAS_ACTA.md`
+
+La evidencia de validación funcional es:
+
+- `docs/VALIDACION_FUNCIONAL.md`
+- `docs/guia_qa/`
+
+No cambiar reglas de dominio contradiciendo la matriz. Si una regla funcional debe cambiar, primero actualizar o indicar explícitamente el impacto sobre la matriz.
+
+## 2. Strings internos vs strings externos
+
+No usar strings literales para decisiones internas de dominio cuando exista enum, constante, value object o helper.
+
+Evitar lógica nueva como:
+
+- `"PENDIENTE_ANALISIS".equals(...)`
+- `"GESTION_EXTERNA".equals(...)`
+- `"CONDENA_FIRME".equals(...)`
+- `"PENDIENTE_CONFIRMACION".equals(...)`
+- `"PARALIZADAS".equals(...)`
+- `"CERRADAS".equals(...)`
+
+Preferir:
+
+- enums internos;
+- constantes centralizadas;
+- helpers semánticos;
+- métodos con intención de dominio.
+
+Ejemplos de helpers preferidos:
+
+- `esActaInternamenteOperable(...)`
+- `estaSuspendida(...)`
+- `esTerminal(...)`
+- `esBandejaSuspendida(...)`
+- `esBandejaTerminal(...)`
+- `permitePagoVoluntario(...)`
+- `permitePagoCondena(...)`
+- `permiteAccionesInternas(...)`
+
+Los strings legibles sí deben mantenerse en responses, DTOs, copy-paste de control, QA, debugging y Angular.
+
+No reemplazar el contrato externo por códigos numéricos opacos.
+
+Correcto hacia afuera:
+
+- `PENDIENTE_ANALISIS`
+- `GESTION_EXTERNA`
+- `CONDENA_FIRME`
+- `PENDIENTE_CONFIRMACION`
+- `PARALIZADAS`
+- `CERRADAS`
+
+Incorrecto hacia afuera para control/QA/debugging:
+
+- `estado=3`
+- `bandeja=8`
+- `resultado=14`
+
+Regla práctica:
+
+- Internamente: tipos fuertes, enums, constantes o helpers.
+- Externamente: strings claros, estables y entendibles.
+
+## 3. No duplicar reglas
+
+No duplicar reglas de negocio en controllers, presenters o UI.
+
+La UI puede ocultar botones, pero el backend/store/dominio debe rechazar la acción por precondición aunque alguien llame directo al endpoint.
+
+Toda acción expuesta por endpoint debe validar sus propias precondiciones en backend/store/dominio.
+
+No alcanza con que `computarAccionesUi()` o Angular oculten el botón.
+
+Si una condición aparece repetida, extraer o reutilizar helper común.
+
+Evitar listas locales repetidas como:
+
+- `ARCHIVO`
+- `CERRADAS`
+- `GESTION_EXTERNA`
+- `PARALIZADAS`
+
+Cuando se agregue o modifique una regla que excluye estados suspendidos/terminales, revisar todas las variantes:
+
+- archivo;
+- cerradas;
+- gestión externa;
+- paralizadas.
+
+Importante:
+
+- Para el portal infractor, `PARALIZADAS` puede mostrarse como `EN_TRAMITE` porque es un estado interno administrativo.
+- Eso no habilita a ejecutar acciones ciudadanas indebidas si el dominio las bloquea.
+- No exponer al infractor textos internos como "acta paralizada" salvo pedido explícito funcional.
+
+## 4. Bandeja no es dominio primario
+
+No usar la bandeja como única fuente de verdad del dominio.
+
+La bandeja debe ser una proyección derivada de:
+
+- estado del proceso;
+- situación administrativa;
+- resultado final;
+- documentos;
+- notificaciones;
+- pagos;
+- bloqueantes materiales;
+- gestión externa;
+- archivo;
+- paralización;
+- cierre.
+
+Si una regla depende solo de bandeja, revisar si debería depender de estado real.
+
+## 5. Estados suspendidos y terminales
+
+Mantener estas reglas duras:
+
+### ARCHIVO
+
+- solo consulta/historial;
+- reingreso solo si `permiteReingreso=true`;
+- no acciones internas normales;
+- no pago;
+- no fallo;
+- no notificación;
+- no cierre interno;
+- no materiales internos.
+
+### GESTION_EXTERNA
+
+- solo seguimiento/registro/reingreso;
+- no acciones internas normales;
+- no pago voluntario;
+- no fallo;
+- no notificación;
+- no cierre;
+- no archivo;
+- no paralización;
+- no materiales internos.
+
+### PARALIZADAS
+
+- circuito interno suspendido;
+- solo consultar motivo/observación y reactivar;
+- no acciones internas normales;
+- para portal infractor puede verse como `EN_TRAMITE`.
+
+### CERRADAS
+
+- estado terminal;
+- solo consulta/trazabilidad;
+- no reingreso ordinario;
+- no acciones internas.
+
+## 6. Pagos
+
+### Pago voluntario
+
+Estados válidos:
+
+- `SIN_PAGO`
+- `SOLICITADO`
+- `PENDIENTE_CONFIRMACION`
+- `CONFIRMADO`
+- `OBSERVADO`
+- `VENCIDO`
+
+Evitar introducir o reutilizar `PAGO_INFORMADO` como estado estable.
+
+Portal:
+
+- puede solicitar/informar pago;
+- no confirma pago.
+
+Dirección/Tesorería:
+
+- confirma u observa.
+
+Pago confirmado no cierra automáticamente si quedan bloqueantes materiales.
+
+### Pago de condena
+
+Aplica después de condena firme.
+
+Informar pago condena no cierra.
+
+Confirmar pago condena debe mantener:
+
+- `resultadoFinal=CONDENA_FIRME`
+
+No cambiar a:
+
+- `PAGO_CONFIRMADO`
+
+Cierre solo si no hay bloqueantes y existe acción explícita de cierre.
+
+## 7. Notificaciones
+
+Notificación positiva:
+
+- acredita conocimiento;
+- habilita avance según documento.
+
+Notificación negativa o vencida:
+
+- no equivale a positiva;
+- no habilita fallo de fondo;
+- no habilita cierre;
+- debe permitir reintento u otro canal.
+
+Fallo condenatorio:
+
+- debe firmarse;
+- debe notificarse;
+- notificación positiva deja `resultadoFinal=CONDENADO`;
+- luego corresponde apelación, consentimiento o vencimiento de plazo;
+- no cierre directo por notificación.
+
+Portal infractor:
+
+- abrir documento notificable firmado puede registrar notificación positiva con canal `PORTAL_INFRACTOR`.
+
+## 8. Materiales / bloqueantes
+
+Bloqueantes materiales:
+
+- documentación;
+- medida preventiva;
+- rodado.
+
+Regla central:
+
+- documento resolutorio firmado no elimina el bloqueante por sí solo;
+- se requiere cumplimiento material efectivo.
+
+Separar siempre:
+
+- resolución/documento;
+- cumplimiento material.
+
+RODADO:
+
+- pertenece a Tránsito;
+- la entrega/liberación real será de app externa de corralón;
+- mientras no exista esa app, la acción visual debe indicar:
+  - `Registrar retiro (app)`
+
+## 9. Fallo, apelación y condena firme
+
+Fallo condenatorio:
+
+- requiere firma si genera documento;
+- requiere notificación;
+- positiva deja `CONDENADO`;
+- vencimiento de plazo, consentimiento o apelación rechazada deja `CONDENA_FIRME`.
+
+Apelación:
+
+- suspende avance directo a condena firme;
+- aceptada puede absolver;
+- rechazada confirma condena firme.
+
+Fallo absolutorio:
+
+- no requiere pago;
+- no habilita pago de condena;
+- si no hay bloqueantes, puede habilitar cierre explícito.
+
+## 10. Cierre
+
+Cerrar acta debe ser acción explícita.
+
+No cerrar automáticamente por:
+
+- notificar;
+- firmar;
+- informar pago;
+- confirmar pago si hay materiales;
+- generar documentos.
+
+Cierre requiere:
+
+- resultado final cerrable;
+- sin bloqueantes;
+- no estar en estado suspendido/externo;
+- acción explícita de cierre.
+
+## 11. Controllers y stores
+
+No agrandar innecesariamente `PrototipoApiController`.
+
+Si se agregan endpoints nuevos, evaluar si corresponden a controller separado por área:
+
+- admin/reset/health;
+- bandejas;
+- actas/detalle;
+- portal infractor;
+- pagos;
+- notificaciones;
+- correo postal;
+- fallo/apelación;
+- materiales;
+- gestión externa;
+- archivo/paralización.
+
+Si se separan controllers, mantener exactamente las mismas rutas públicas salvo pedido explícito.
+
+No agrandar innecesariamente `PrototipoStore`.
+
+Evitar agregar nuevos enums, records o clases internas a `PrototipoStore` si pueden vivir como tipo propio, helper, support o service del área correspondiente.
+
+Si una regla pertenece a un área específica, preferir support/service/helper de esa área antes que sumar más lógica al store central.
+
+## 12. Refactors
+
+No hacer refactors masivos sin pedido explícito.
+
+Cada slice debe tener objetivo único y verificable.
+
+Si se detecta deuda grande:
+
+- documentarla;
+- mencionarla en el resumen;
+- no resolverla mezclada con el cambio actual.
+
+## 13. Encoding
+
+Mantener archivos en UTF-8 limpio.
+
+No introducir mojibake.
+
+Revisar patrones:
+
+- `Ã`
+- `Â`
+- `ï»¿`
+- `â`
+- `�`
+- `&#65533;`
+
+Existe un carácter `║` preexistente en `MatrizSanidadActasDemoIT.java`; no tocarlo salvo que se modifique ese archivo por necesidad real.
+
+## 14. Validaciones antes de cerrar
+
+Ejecutar como mínimo:
+
+- `git diff --check`
+- `npm run check:mojibake`
+
+Si se toca Java/backend:
+
+- ejecutar tests puntuales relacionados;
+- si el cambio es transversal, ejecutar suite backend razonable.
+
+Si se toca Angular:
+
+- `npm run build`
+
+Si solo se crea o modifica esta regla `.mdc`, no tocar código funcional.

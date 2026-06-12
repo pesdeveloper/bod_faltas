@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_CERRADAS;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 
@@ -34,7 +35,6 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_
  */
 final class CierreSupport {
 
-    private static final String BANDEJA_CERRADAS = "CERRADAS";
     private static final String BLOQUE_CERRADA = "CERRADA";
 
     private final Map<String, ActaMock> actas;

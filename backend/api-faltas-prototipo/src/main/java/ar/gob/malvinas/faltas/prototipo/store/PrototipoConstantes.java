@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.prototipo.store;
 
+import ar.gob.malvinas.faltas.prototipo.domain.PrototipoReglasOperabilidad;
+
 /**
  * Constantes del prototipo compartidas dentro del package {@code store}.
  *
@@ -34,6 +36,12 @@ final class PrototipoConstantes {
 
     /** Estado agregador usado al entrar a análisis. */
     static final String ESTADO_PENDIENTE_REVISION = "PENDIENTE_REVISION";
+
+    /**
+     * Bandeja operativa donde el acta espera firma de sus piezas resolutorias.
+     * Es paso intermedio entre producción documental y notificación.
+     */
+    static final String BANDEJA_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
 
     /**
      * Bandeja operativa de notificación pendiente de envío. Punto de
@@ -184,6 +192,39 @@ final class PrototipoConstantes {
     static final String TIPO_DOC_FALLO_CONDENATORIO = "FALLO_CONDENATORIO";
 
     /**
+     * {@code true} si la bandeja está suspendida o es externa y por ello no
+     * admite acciones internas normales: {@link #BANDEJA_PARALIZADAS} o
+     * {@link #BANDEJA_GESTION_EXTERNA}.
+     *
+     * <p>Delega en {@link PrototipoReglasOperabilidad}: fuente única de la
+     * regla de operabilidad de bandejas.
+     */
+    static boolean esBandejaSuspendidaOExterna(String bandeja) {
+        return PrototipoReglasOperabilidad.esBandejaSuspendidaOExterna(bandeja);
+    }
+
+    /**
+     * {@code true} si la bandeja es terminal: {@link #BANDEJA_CERRADAS} o
+     * {@link #BANDEJA_ARCHIVO}.
+     *
+     * <p>Delega en {@link PrototipoReglasOperabilidad}.
+     */
+    static boolean esBandejaTerminal(String bandeja) {
+        return PrototipoReglasOperabilidad.esBandejaTerminal(bandeja);
+    }
+
+    /**
+     * {@code true} si la bandeja no admite acciones internas normales:
+     * agrupa {@link #esBandejaTerminal(String)} y
+     * {@link #esBandejaSuspendidaOExterna(String)}.
+     *
+     * <p>Delega en {@link PrototipoReglasOperabilidad}.
+     */
+    static boolean esBandejaSinAccionesInternas(String bandeja) {
+        return PrototipoReglasOperabilidad.esBandejaSinAccionesInternas(bandeja);
+    }
+
+    /**
      * @return {@code true} si {@code tipoDocumento} corresponde a uno de los
      *     dos tipos de fallo dictados en análisis (absolutorio o
      *     condenatorio). Usado por el circuito jurídico para distinguir
@@ -207,13 +248,7 @@ final class PrototipoConstantes {
         if (bandejaActual == null) {
             return false;
         }
-        if (BANDEJA_GESTION_EXTERNA.equals(bandejaActual)
-                || BANDEJA_ARCHIVO.equals(bandejaActual)
-                || BANDEJA_PARALIZADAS.equals(bandejaActual)
-                || BANDEJA_CERRADAS.equals(bandejaActual)) {
-            return false;
-        }
-        return true;
+        return !esBandejaSinAccionesInternas(bandejaActual);
     }
 
     /**
@@ -240,13 +275,7 @@ final class PrototipoConstantes {
         if (bandejaActual == null) {
             return false;
         }
-        if (BANDEJA_GESTION_EXTERNA.equals(bandejaActual)
-                || BANDEJA_ARCHIVO.equals(bandejaActual)
-                || BANDEJA_PARALIZADAS.equals(bandejaActual)
-                || BANDEJA_CERRADAS.equals(bandejaActual)) {
-            return false;
-        }
-        return true;
+        return !esBandejaSinAccionesInternas(bandejaActual);
     }
 
     static boolean esResolutorioBloqueoCierreCircuitoFirmaYNotif(String tipoDocumento) {

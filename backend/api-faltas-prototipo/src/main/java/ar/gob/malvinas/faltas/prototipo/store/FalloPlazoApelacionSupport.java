@@ -24,6 +24,8 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_REVISION;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_FALLO_ABSOLUTORIO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_EN_NOTIFICACION;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esBandejaSinAccionesInternas;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esFallo;
 
 /**
@@ -318,7 +320,7 @@ final class FalloPlazoApelacionSupport {
                     PrototipoStore.RegistrarNotificacionPositivaEstado.NOT_FOUND, null, null, null);
         }
         String bandeja = actual.bandejaActual();
-        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !"EN_NOTIFICACION".equals(bandeja)) {
+        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !BANDEJA_EN_NOTIFICACION.equals(bandeja)) {
             return new PrototipoStore.RegistrarNotificacionPositivaResultado(
                     PrototipoStore.RegistrarNotificacionPositivaEstado.CONFLICT, null, null, null);
         }
@@ -370,7 +372,7 @@ final class FalloPlazoApelacionSupport {
                     PrototipoStore.RegistrarNotificacionPositivaEstado.NOT_FOUND, null, null, null);
         }
         String bandeja = actual.bandejaActual();
-        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !"EN_NOTIFICACION".equals(bandeja)) {
+        if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(bandeja) && !BANDEJA_EN_NOTIFICACION.equals(bandeja)) {
             return new PrototipoStore.RegistrarNotificacionPositivaResultado(
                     PrototipoStore.RegistrarNotificacionPositivaEstado.CONFLICT, null, null, null);
         }
@@ -419,7 +421,7 @@ final class FalloPlazoApelacionSupport {
             return new PrototipoStore.RegistrarVencimientoPlazoApelacionResultado(
                     PrototipoStore.RegistrarVencimientoPlazoApelacionEstado.NOT_FOUND, null, null, null, null);
         }
-        if (actual.estaCerrada()) {
+        if (actual.estaCerrada() || esBandejaSinAccionesInternas(actual.bandejaActual())) {
             return new PrototipoStore.RegistrarVencimientoPlazoApelacionResultado(
                     PrototipoStore.RegistrarVencimientoPlazoApelacionEstado.CONFLICT, null, null, null, null);
         }
@@ -471,11 +473,7 @@ final class FalloPlazoApelacionSupport {
                     null,
                     null);
         }
-        if (actual.estaCerrada()) {
-            return conflictApelacion();
-        }
-        String bandeja = actual.bandejaActual();
-        if ("CERRADAS".equals(bandeja) || "ARCHIVO".equals(bandeja) || "GESTION_EXTERNA".equals(bandeja)) {
+        if (actual.estaCerrada() || esBandejaSinAccionesInternas(actual.bandejaActual())) {
             return conflictApelacion();
         }
         if (cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {
@@ -532,11 +530,7 @@ final class FalloPlazoApelacionSupport {
                     null,
                     null);
         }
-        if (actual.estaCerrada()) {
-            return conflictResolverApelacion();
-        }
-        String bandeja = actual.bandejaActual();
-        if ("CERRADAS".equals(bandeja) || "ARCHIVO".equals(bandeja) || "GESTION_EXTERNA".equals(bandeja)) {
+        if (actual.estaCerrada() || esBandejaSinAccionesInternas(actual.bandejaActual())) {
             return conflictResolverApelacion();
         }
         if (cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {
@@ -637,11 +631,7 @@ final class FalloPlazoApelacionSupport {
             return new PrototipoStore.ConsentirCondenaResultado(
                     PrototipoStore.ConsentirCondenaEstado.NOT_FOUND, null, null, null);
         }
-        if (actual.estaCerrada()) {
-            return conflictConsentir();
-        }
-        String b = actual.bandejaActual();
-        if ("CERRADAS".equals(b) || "ARCHIVO".equals(b) || "GESTION_EXTERNA".equals(b)) {
+        if (actual.estaCerrada() || esBandejaSinAccionesInternas(actual.bandejaActual())) {
             return conflictConsentir();
         }
         if (cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {
@@ -721,11 +711,7 @@ final class FalloPlazoApelacionSupport {
             return new PrototipoStore.ConsentirCondenaYRegistrarPagoResultado(
                     PrototipoStore.ConsentirCondenaYRegistrarPagoEstado.NOT_FOUND, null, null, null);
         }
-        if (actual.estaCerrada()) {
-            return conflictConsentirYPagar();
-        }
-        String b = actual.bandejaActual();
-        if ("CERRADAS".equals(b) || "ARCHIVO".equals(b) || "GESTION_EXTERNA".equals(b)) {
+        if (actual.estaCerrada() || esBandejaSinAccionesInternas(actual.bandejaActual())) {
             return conflictConsentirYPagar();
         }
 
@@ -820,11 +806,7 @@ final class FalloPlazoApelacionSupport {
      */
     boolean puedePresentarApelacion(String actaId) {
         ActaMock acta = actas.get(actaId);
-        if (acta == null || acta.estaCerrada()) {
-            return false;
-        }
-        String b = acta.bandejaActual();
-        if ("CERRADAS".equals(b) || "ARCHIVO".equals(b) || "GESTION_EXTERNA".equals(b)) {
+        if (acta == null || acta.estaCerrada() || esBandejaSinAccionesInternas(acta.bandejaActual())) {
             return false;
         }
         if (cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENADO) {

@@ -14,7 +14,9 @@ import java.util.Map;
 import java.util.Set;
 
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_ARCHIVO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_FIRMA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D1_CAPTURA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D2_ENRIQUECIMIENTO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
@@ -71,8 +73,6 @@ final class CerrabilidadSupport {
 
     private static final String TIPO_EVENTO_MEDIDA_PREVENTIVA_POSTERIOR_AL_LABRADO =
             "MEDIDA_PREVENTIVA_POSTERIOR_A_LABRADO";
-
-    private static final String BANDEJA_ARCHIVO = "ARCHIVO";
 
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
@@ -741,7 +741,6 @@ final class CerrabilidadSupport {
                 vista.motivoNoCerrable());
     }
 
-    private static final String BANDEJA_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
     private static final String ESTADO_PENDIENTE_FIRMA_RESOLUTORIO = "PENDIENTE_FIRMA_PIEZAS";
 
     private ActaMock moverAPendienteFirmaResolutorio(ActaMock actual) {

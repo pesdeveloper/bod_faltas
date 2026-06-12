@@ -13,11 +13,15 @@ import java.util.Map;
 import java.util.Optional;
 
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaHabilitaResolucionBloqueoCierre;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_CERRADAS;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_FIRMA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_NOTIFICACION;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D4;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D5;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_EMITIDO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_FIRMADO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_PENDIENTE_FIRMA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_PENDIENTE_ENVIO;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esResolutorioBloqueoCierreCircuitoFirmaYNotif;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esResolutorioBloqueoCierreParaFirmaDirecta;
@@ -54,8 +58,6 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esResol
  */
 final class PiezasFirmaSupport {
 
-    private static final String BANDEJA_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
-    private static final String BANDEJA_CERRADAS = "CERRADAS";
     private static final String BLOQUE_CERRADA = "CERRADA";
     private static final String BANDEJA_PENDIENTES_RESOLUCION_REDACCION = "PENDIENTES_RESOLUCION_REDACCION";
     private static final String PIEZA_MEDIDA_PREVENTIVA = "MEDIDA_PREVENTIVA";
@@ -63,9 +65,6 @@ final class PiezasFirmaSupport {
     private static final String PIEZA_NULIDAD = "NULIDAD";
     private static final String ESTADO_PENDIENTE_FIRMA_PIEZAS = "PENDIENTE_FIRMA_PIEZAS";
     private static final String ESTADO_PENDIENTE_PRODUCCION_PIEZAS = "PENDIENTE_PRODUCCION_PIEZAS";
-    private static final String ESTADO_DOC_PENDIENTE_FIRMA = "PENDIENTE_FIRMA";
-    private static final String ESTADO_DOC_FIRMADO = "FIRMADO";
-
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
     private final Map<String, List<ActaDocumentoMock>> documentosPorActa;

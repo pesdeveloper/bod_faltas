@@ -4,6 +4,8 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 
 import java.math.BigDecimal;
+
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.esBandejaSinAccionesInternas;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -125,6 +127,7 @@ final class PagoCondenaSupport {
                     PrototipoStore.SituacionPagoCondena.NO_APLICA);
         }
         if (acta.estaCerrada()
+                || esBandejaSinAccionesInternas(acta.bandejaActual())
                 || cerrabilidad.getResultadoFinal(actaId) != PrototipoStore.ResultadoFinalCierreMock.CONDENA_FIRME) {
             return new PrototipoStore.PagoCondenaPrecondicion(
                     PrototipoStore.PagoCondenaEstado.CONFLICT,

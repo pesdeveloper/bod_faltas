@@ -30,6 +30,9 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_ACTAS_EN_ENRIQUECIMIENTO;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_EN_NOTIFICACION;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS;
+import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BANDEJA_PENDIENTE_NOTIFICACION;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_D1_CAPTURA;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.bandejaPermitePagoVoluntario;
 import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.ESTADO_DOC_ADJUNTO;
@@ -1906,7 +1909,7 @@ public class PrototipoStore {
 
     public List<String> getAccionesPagoCondenaDisponibles(String actaId) {
         ActaMock acta = actas.get(actaId);
-        if (acta == null || acta.estaCerrada() || !"PENDIENTE_ANALISIS".equals(acta.bandejaActual())) {
+        if (acta == null || acta.estaCerrada() || !BANDEJA_PENDIENTE_ANALISIS.equals(acta.bandejaActual())) {
             return List.of();
         }
         if (ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(getAccionPendiente(actaId))) {
@@ -1925,7 +1928,7 @@ public class PrototipoStore {
 
     public List<String> getAccionesGestionExternaDisponibles(String actaId) {
         ActaMock acta = actas.get(actaId);
-        if (acta == null || acta.estaCerrada() || !"PENDIENTE_ANALISIS".equals(acta.bandejaActual())) {
+        if (acta == null || acta.estaCerrada() || !BANDEJA_PENDIENTE_ANALISIS.equals(acta.bandejaActual())) {
             return List.of();
         }
         if (ACCION_DICTAR_FALLO_POST_GESTION_EXTERNA.equals(getAccionPendiente(actaId))) {
@@ -2497,8 +2500,8 @@ public class PrototipoStore {
 
         ActaNotificacionMock notificacionPortal = pendiente.get();
         if (notificacionPortal.tipo() == TipoNotificacion.ACTA_INFRACCION) {
-            if (!"PENDIENTE_NOTIFICACION".equals(actual.bandejaActual())
-                    && !"EN_NOTIFICACION".equals(actual.bandejaActual())) {
+            if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(actual.bandejaActual())
+                    && !BANDEJA_EN_NOTIFICACION.equals(actual.bandejaActual())) {
                 return new ConfirmarVisualizacionNotificacionPortalResultado(
                         ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT,
                         actaId,
@@ -2617,8 +2620,8 @@ public class PrototipoStore {
         if (docs.isEmpty()) {
             return List.of();
         }
-        boolean enEtapaNotificacion = "PENDIENTE_NOTIFICACION".equals(acta.bandejaActual())
-                || "EN_NOTIFICACION".equals(acta.bandejaActual());
+        boolean enEtapaNotificacion = BANDEJA_PENDIENTE_NOTIFICACION.equals(acta.bandejaActual())
+                || BANDEJA_EN_NOTIFICACION.equals(acta.bandejaActual());
         List<DocumentoPortalVista> visibles = new ArrayList<>();
         for (ActaDocumentoMock d : docs) {
             TipoNotificacion tipo = tipoNotificacionDeDocumentoPortal(d.tipoDocumento());
@@ -2668,8 +2671,8 @@ public class PrototipoStore {
 
         TipoNotificacion tipo = tipoNotificacionDeDocumentoPortal(tipoDocumento);
         if (tipo == TipoNotificacion.ACTA_INFRACCION) {
-            if (!"PENDIENTE_NOTIFICACION".equals(actual.bandejaActual())
-                    && !"EN_NOTIFICACION".equals(actual.bandejaActual())) {
+            if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(actual.bandejaActual())
+                    && !BANDEJA_EN_NOTIFICACION.equals(actual.bandejaActual())) {
                 return new VerDocumentoPortalResultado(
                         VerDocumentoPortalEstado.CONFLICT, actaId, tipoDocumento);
             }
@@ -2951,8 +2954,8 @@ public class PrototipoStore {
                 actual.id(),
                 actual.numeroActa(),
                 actual.dominioReferencia(),
-                "D5_ANALISIS",
-                "PENDIENTE_REVISION",
+                PrototipoConstantes.BLOQUE_D5,
+                PrototipoConstantes.ESTADO_PENDIENTE_REVISION,
                 actual.situacionAdministrativaActual(),
                 actual.estaCerrada(),
                 actual.permiteReingreso(),
@@ -2963,7 +2966,7 @@ public class PrototipoStore {
                 actual.infractorDocumento(),
                 actual.inspectorNombre(),
                 actual.resumenHecho(),
-                "PENDIENTE_ANALISIS");
+                BANDEJA_PENDIENTE_ANALISIS);
     }
 
     private void reemplazarNotificacion(ActaNotificacionMock actualizada) {
