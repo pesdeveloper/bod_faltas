@@ -34,18 +34,21 @@ El stack debe privilegiar:
 ## Base de datos transaccional
 
 ### Tecnología
-- Informix 12.10
+- MySQL 8.x
 
 ### Criterio
-La base transaccional del sistema se apoya en Informix, respetando las restricciones, convenciones y posibilidades reales del entorno municipal existente.
+La base transaccional del sistema se apoyará en MySQL.
 
-La persistencia debe modelarse con especial cuidado en:
+La persistencia se diseñará con SQL explícito, priorizando:
 
-- trazabilidad
-- consultas explícitas
-- operaciones transaccionales
-- compatibilidad con SQL controlado
-- performance razonable para bandejas, snapshots y búsquedas operativas
+- transacciones claras
+- índices bien definidos
+- consultas eficientes para bandejas, snapshots y búsquedas operativas
+- compatibilidad con implementación incremental
+- evitar dependencia de features específicas de un motor salvo decisión explícita
+
+### Nota de transición
+Cualquier diseño previo o documento de persistencia preparado para Informix debe considerarse referencia conceptual/histórica. Antes de implementar dominio real, las tablas, tipos de datos, scripts y queries deben revisarse y adaptarse a MySQL.
 
 ---
 
