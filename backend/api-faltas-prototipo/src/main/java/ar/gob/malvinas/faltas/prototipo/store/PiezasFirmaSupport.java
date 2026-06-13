@@ -325,7 +325,7 @@ final class PiezasFirmaSupport {
                 piezas.piezasRequeridas(),
                 generadasActuales));
 
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
 
         if (PIEZA_MEDIDA_PREVENTIVA.equals(pieza)) {
             if (!reutilizarMedidaPreventivaConAnclaTempranaSiCorresponde(
@@ -645,7 +645,7 @@ final class PiezasFirmaSupport {
             String bloqueDestino,
             String descripcion) {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
         LocalDateTime fechaEvento = eventos.stream()
@@ -661,10 +661,6 @@ final class PiezasFirmaSupport {
                 bloqueOrigen,
                 bloqueDestino,
                 descripcion));
-    }
-
-    private static String sufijoActa(String actaId) {
-        return actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
     }
 
     /**

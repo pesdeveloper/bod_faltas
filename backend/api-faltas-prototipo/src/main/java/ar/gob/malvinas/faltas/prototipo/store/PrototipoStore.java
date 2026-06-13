@@ -7,13 +7,9 @@ import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaTransitoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaPiezasRequeridasMock;
-import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
-import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
 import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
-import ar.gob.malvinas.faltas.prototipo.domain.TipoNotificacion;
 import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaAsignacion;
 import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaClasificador;
-import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaCodigo;
 import ar.gob.malvinas.faltas.prototipo.bandeja.SubBandejaContexto;
 import ar.gob.malvinas.faltas.prototipo.web.dto.CrearActaMockDemoRequest;
 import org.springframework.stereotype.Component;
@@ -22,7 +18,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1643,6 +1638,20 @@ public class PrototipoStore {
                     accionPendientePorActa,
                     this::registrarNotificacionPositiva);
 
+    /**
+     * Soporte funcional del área paralización/reactivación: paralización
+     * administrativa transversal, reactivación explícita desde PARALIZADAS,
+     * predicado de elegibilidad y eventos asociados. Extraído del store para
+     * reducir su tamaño/acoplamiento sin cambiar comportamiento observable.
+     * El store mantiene una fachada pública que delega aquí.
+     */
+    private final ParalizacionReactivacionSupport paralizacionReactivacion =
+            new ParalizacionReactivacionSupport(
+                    actas,
+                    eventosPorActa,
+                    accionPendientePorActa,
+                    observacionParalizacionPorActa);
+
     private final SubBandejaClasificador subBandejaClasificador = new SubBandejaClasificador();
 
     private final NotificadorMunicipalSupport notificadorMunicipal =
@@ -1652,6 +1661,45 @@ public class PrototipoStore {
                     notificacionesPorActa,
                     accionPendientePorActa,
                     this::registrarNotificacionPositiva);
+
+    /**
+     * Soporte funcional del área portal infractor: predicado de revisión,
+     * búsqueda de notificación pendiente, listado de documentos visibles,
+     * visualización de documento notificable y confirmación de notificación
+     * por portal. Extraído del store para reducir su tamaño/acoplamiento sin
+     * cambiar comportamiento observable. El store mantiene una fachada pública
+     * que delega aquí.
+     */
+    private final PortalInfractorSupport portalInfractor =
+            new PortalInfractorSupport(
+                    actas,
+                    eventosPorActa,
+                    notificacionesPorActa,
+                    accionPendientePorActa,
+                    piezasFirma,
+                    falloPlazoApelacion);
+
+    /**
+     * Soporte funcional del área consulta/listado de bandejas: resumen con
+     * conteos, sub-bandejas dinámicas, clasificación de sub-bandeja y listado
+     * filtrable de actas por bandeja. Extraído del store para reducir su
+     * tamaño/acoplamiento sin cambiar comportamiento observable. El store
+     * mantiene una fachada pública que delega aquí.
+     */
+    private final BandejaConsultaSupport bandejaConsulta =
+            new BandejaConsultaSupport(
+                    actas,
+                    accionPendientePorActa,
+                    situacionPagoPorActa,
+                    situacionPagoCondenaPorActa,
+                    piezasRequeridasPorActa,
+                    notificacionesPorActa,
+                    cerrabilidad,
+                    archivoReingreso,
+                    gestionExterna,
+                    piezasFirma,
+                    subBandejaClasificador,
+                    ORDEN_BANDEJAS_DEMO);
 
     public Map<String, ActaMock> getActas() {
         return actas;
@@ -2222,125 +2270,75 @@ public class PrototipoStore {
         situacionPagoCondenaPorActa.put(actaId, situacion);
     }
 
+    /**
+     * Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
+     */
     public List<BandejaConteo> listarBandejasConConteoOrdenadas() {
-        return listarBandejasConResumenOperativo().stream()
-                .map(r -> new BandejaConteo(r.codigo(), r.cantidadActas()))
-                .toList();
+        return bandejaConsulta.listarBandejasConConteoOrdenadas();
     }
 
     /**
-     * Resumen de bandejas con conteo total y sub-bandejas dinámicas (solo cantidad &gt; 0).
+     * Resumen de bandejas con conteo total y sub-bandejas dinámicas (solo
+     * cantidad &gt; 0). Fachada pública; la lógica vive en
+     * {@link BandejaConsultaSupport}.
      */
     public List<BandejaResumenOperativo> listarBandejasConResumenOperativo() {
-        Map<String, Integer> conteoBandejas = new HashMap<>();
-        Map<String, Map<String, Integer>> conteoSubBandejas = new HashMap<>();
-        for (ActaMock acta : new ArrayList<>(actas.values())) {
-            String bandeja = acta.bandejaActual();
-            conteoBandejas.put(bandeja, conteoBandejas.getOrDefault(bandeja, 0) + 1);
-            SubBandejaAsignacion asignacion = clasificarSubBandeja(acta.id());
-            conteoSubBandejas
-                    .computeIfAbsent(bandeja, k -> new HashMap<>())
-                    .merge(asignacion.subBandeja(), 1, Integer::sum);
-        }
-        if (conteoBandejas.isEmpty()) {
-            return List.of();
-        }
-        List<BandejaResumenOperativo> resultado = new ArrayList<>();
-        for (String codigo : ORDEN_BANDEJAS_DEMO) {
-            Integer n = conteoBandejas.remove(codigo);
-            if (n != null) {
-                resultado.add(new BandejaResumenOperativo(codigo, n, construirSubBandejasVisibles(codigo, conteoSubBandejas)));
-            }
-        }
-        conteoBandejas.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(e -> resultado.add(new BandejaResumenOperativo(
-                        e.getKey(),
-                        e.getValue(),
-                        construirSubBandejasVisibles(e.getKey(), conteoSubBandejas))));
-        return resultado;
-    }
-
-    public SubBandejaContexto construirContextoSubBandeja(String actaId) {
-        ActaMock acta = actas.get(actaId);
-        if (acta == null) {
-            return null;
-        }
-        CerrabilidadActaVista cerrabilidadVista = getCerrabilidadActa(actaId);
-        ResultadoFinalCierreMock resultadoFinal = cerrabilidadVista != null
-                ? cerrabilidadVista.resultadoFinal()
-                : ResultadoFinalCierreMock.SIN_RESULTADO_FINAL;
-        boolean cerrable = cerrabilidadVista != null && cerrabilidadVista.cerrable();
-        List<String> pendientes = cerrabilidadVista != null && cerrabilidadVista.pendientesBloqueantes() != null
-                ? cerrabilidadVista.pendientesBloqueantes().stream().map(Enum::name).toList()
-                : List.of();
-        ActaPiezasRequeridasMock piezas = piezasRequeridasPorActa.get(actaId);
-        return new SubBandejaContexto(
-                acta,
-                getAccionPendiente(actaId),
-                getSituacionPago(actaId),
-                getSituacionPagoCondena(actaId),
-                getMotivoArchivo(actaId),
-                getTipoGestionExterna(actaId),
-                resultadoFinal,
-                cerrable,
-                pendientes,
-                listarDocumentosPorActa(actaId),
-                listarNotificacionesPorActa(actaId),
-                piezas != null ? piezas.piezasRequeridas() : List.of(),
-                piezas != null ? piezas.piezasGeneradas() : List.of());
-    }
-
-    public SubBandejaAsignacion clasificarSubBandeja(String actaId) {
-        SubBandejaContexto ctx = construirContextoSubBandeja(actaId);
-        if (ctx == null) {
-            return SubBandejaAsignacion.de(SubBandejaCodigo.ANALISIS_REVISION_GENERAL);
-        }
-        return subBandejaClasificador.clasificar(ctx);
-    }
-
-    public boolean esSubBandejaValidaParaBandeja(String codigoBandeja, String subBandeja) {
-        return SubBandejaCodigo.perteneceABandeja(codigoBandeja, subBandeja);
-    }
-
-    private List<SubBandejaConteo> construirSubBandejasVisibles(
-            String bandeja, Map<String, Map<String, Integer>> conteoSubBandejas) {
-        Map<String, Integer> conteos = conteoSubBandejas.getOrDefault(bandeja, Map.of());
-        return SubBandejaCodigo.deBandeja(bandeja).stream()
-                .map(SubBandejaCodigo::codigo)
-                .filter(c -> conteos.getOrDefault(c, 0) > 0)
-                .map(c -> new SubBandejaConteo(c, conteos.get(c)))
-                .toList();
-    }
-
-    public List<ActaMock> listarActasPorBandeja(String codigoBandeja) {
-        return listarActasPorBandeja(codigoBandeja, null);
+        return bandejaConsulta.listarBandejasConResumenOperativo();
     }
 
     /**
-     * Listado de la bandeja con filtro opcional por acci��n pendiente. Si
+     * Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
+     */
+    public SubBandejaContexto construirContextoSubBandeja(String actaId) {
+        return bandejaConsulta.construirContextoSubBandeja(actaId);
+    }
+
+    /**
+     * Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
+     */
+    public SubBandejaAsignacion clasificarSubBandeja(String actaId) {
+        return bandejaConsulta.clasificarSubBandeja(actaId);
+    }
+
+    /**
+     * Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
+     */
+    public boolean esSubBandejaValidaParaBandeja(String codigoBandeja, String subBandeja) {
+        return bandejaConsulta.esSubBandejaValidaParaBandeja(codigoBandeja, subBandeja);
+    }
+
+    /**
+     * Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
+     */
+    public List<ActaMock> listarActasPorBandeja(String codigoBandeja) {
+        return bandejaConsulta.listarActasPorBandeja(codigoBandeja);
+    }
+
+    /**
+     * Listado de la bandeja con filtro opcional por acción pendiente. Si
      * {@code accionPendiente} es {@code null} o en blanco, no se filtra.
+     * Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
      */
     public List<ActaMock> listarActasPorBandeja(String codigoBandeja, String accionPendiente) {
-        return listarActasPorBandeja(codigoBandeja, accionPendiente, null);
+        return bandejaConsulta.listarActasPorBandeja(codigoBandeja, accionPendiente);
     }
 
     /**
      * Listado de la bandeja con filtros opcionales por acción pendiente y por
      * situación de pago mock. Si un filtro es {@code null} o en blanco, no se
-     * aplica.
+     * aplica. Fachada pública; la lógica vive en {@link BandejaConsultaSupport}.
      */
     public List<ActaMock> listarActasPorBandeja(
             String codigoBandeja,
             String accionPendiente,
             SituacionPagoMock situacionPago) {
-        return listarActasPorBandeja(
-                codigoBandeja, accionPendiente, situacionPago, null, null, null);
+        return bandejaConsulta.listarActasPorBandeja(codigoBandeja, accionPendiente, situacionPago);
     }
 
     /**
      * Filtros opcionales de cerrabilidad (además de bandeja, acción y pago). Si
-     * un filtro es {@code null}, no aplica.
+     * un filtro es {@code null}, no aplica. Fachada pública; la lógica vive en
+     * {@link BandejaConsultaSupport}.
      */
     public List<ActaMock> listarActasPorBandeja(
             String codigoBandeja,
@@ -2349,19 +2347,16 @@ public class PrototipoStore {
             ResultadoFinalCierreMock filtroResultadoFinal,
             Boolean filtroCerrable,
             PendienteBloqueanteCierreMock filtroPendienteBloqueante) {
-        return listarActasPorBandeja(
-                codigoBandeja,
-                accionPendiente,
-                situacionPago,
-                filtroResultadoFinal,
-                filtroCerrable,
-                filtroPendienteBloqueante,
-                null);
+        return bandejaConsulta.listarActasPorBandeja(
+                codigoBandeja, accionPendiente, situacionPago,
+                filtroResultadoFinal, filtroCerrable, filtroPendienteBloqueante);
     }
 
     /**
-     * Listado de bandeja con filtros existentes y filtro opcional por sub-bandeja operativa.
-     * Si {@code subBandeja} no es válida para la bandeja, devuelve lista vacía.
+     * Listado de bandeja con filtros existentes y filtro opcional por
+     * sub-bandeja operativa. Si {@code subBandeja} no es válida para la
+     * bandeja, devuelve lista vacía. Fachada pública; la lógica vive en
+     * {@link BandejaConsultaSupport}.
      */
     public List<ActaMock> listarActasPorBandeja(
             String codigoBandeja,
@@ -2371,28 +2366,9 @@ public class PrototipoStore {
             Boolean filtroCerrable,
             PendienteBloqueanteCierreMock filtroPendienteBloqueante,
             String subBandeja) {
-        if (codigoBandeja == null) {
-            return List.of();
-        }
-        String subBandejaFiltro = (subBandeja != null && !subBandeja.isBlank()) ? subBandeja.trim() : null;
-        if (subBandejaFiltro != null && !esSubBandejaValidaParaBandeja(codigoBandeja, subBandejaFiltro)) {
-            return List.of();
-        }
-        String accionFiltro = (accionPendiente != null && !accionPendiente.isBlank()) ? accionPendiente : null;
-        return new ArrayList<>(actas.values()).stream()
-                .filter(a -> codigoBandeja.equals(a.bandejaActual()))
-                .filter(a -> accionFiltro == null || accionFiltro.equals(accionPendientePorActa.get(a.id())))
-                .filter(a -> situacionPago == null || situacionPago.equals(getSituacionPago(a.id())))
-                .filter(a -> filtroResultadoFinal == null
-                        || filtroResultadoFinal.equals(cerrabilidad.getResultadoFinal(a.id())))
-                .filter(a -> filtroCerrable == null
-                        || cerrabilidad.coincideFiltroCerrable(a, filtroCerrable))
-                .filter(a -> filtroPendienteBloqueante == null
-                        || cerrabilidad.coincideFiltroPendiente(a, filtroPendienteBloqueante))
-                .filter(a -> subBandejaFiltro == null
-                        || subBandejaFiltro.equals(clasificarSubBandeja(a.id()).subBandeja()))
-                .sorted(Comparator.comparing(ActaMock::id))
-                .toList();
+        return bandejaConsulta.listarActasPorBandeja(
+                codigoBandeja, accionPendiente, situacionPago,
+                filtroResultadoFinal, filtroCerrable, filtroPendienteBloqueante, subBandeja);
     }
 
     public Optional<ActaMock> findActa(String id) {
@@ -2470,80 +2446,19 @@ public class PrototipoStore {
         return List.copyOf(lista);
     }
 
+    /**
+     * Fachada pública; la lógica vive en {@link PortalInfractorSupport}.
+     */
     public Optional<ActaNotificacionMock> findNotificacionPortalPendiente(String actaId) {
-        List<ActaNotificacionMock> lista = notificacionesPorActa.get(actaId);
-        if (lista == null || lista.isEmpty()) {
-            return Optional.empty();
-        }
-        return lista.stream()
-                .filter(this::esNotificacionPortalPendiente)
-                .sorted(Comparator.comparingInt((ActaNotificacionMock n) -> prioridadNotificacionPortal(n.tipo()))
-                        .thenComparing(ActaNotificacionMock::id))
-                .findFirst();
+        return portalInfractor.findNotificacionPortalPendiente(actaId);
     }
 
-    public ConfirmarVisualizacionNotificacionPortalResultado confirmarVisualizacionNotificacionPortal(String actaId) {
-        ActaMock actual = actas.get(actaId);
-        if (actual == null) {
-            return new ConfirmarVisualizacionNotificacionPortalResultado(
-                    ConfirmarVisualizacionNotificacionPortalEstado.NOT_FOUND, null, null, null, null);
-        }
-        Optional<ActaNotificacionMock> pendiente = findNotificacionPortalPendiente(actaId);
-        if (pendiente.isEmpty()) {
-            return new ConfirmarVisualizacionNotificacionPortalResultado(
-                    ConfirmarVisualizacionNotificacionPortalEstado.SIN_NOTIFICACION_PENDIENTE,
-                    actaId,
-                    actual.bandejaActual(),
-                    actual.estadoProcesoActual(),
-                    null);
-        }
-
-        ActaNotificacionMock notificacionPortal = pendiente.get();
-        if (notificacionPortal.tipo() == TipoNotificacion.ACTA_INFRACCION) {
-            if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(actual.bandejaActual())
-                    && !BANDEJA_EN_NOTIFICACION.equals(actual.bandejaActual())) {
-                return new ConfirmarVisualizacionNotificacionPortalResultado(
-                        ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT,
-                        actaId,
-                        actual.bandejaActual(),
-                        actual.estadoProcesoActual(),
-                        null);
-            }
-            ActaMock actualizada = moverAAnalisisPorVisualizacionPortal(actual);
-            actas.put(actaId, actualizada);
-            accionPendientePorActa.remove(actaId);
-        } else {
-            RegistrarNotificacionPositivaResultado juridico =
-                    falloPlazoApelacion.registrarNotificacionPositivaDeFalloTipificada(
-                            actaId, notificacionPortal.tipo());
-            if (juridico.estado() == RegistrarNotificacionPositivaEstado.NOT_FOUND) {
-                return new ConfirmarVisualizacionNotificacionPortalResultado(
-                        ConfirmarVisualizacionNotificacionPortalEstado.NOT_FOUND, null, null, null, null);
-            }
-            if (juridico.estado() == RegistrarNotificacionPositivaEstado.CONFLICT) {
-                return new ConfirmarVisualizacionNotificacionPortalResultado(
-                        ConfirmarVisualizacionNotificacionPortalEstado.CONFLICT,
-                        actaId,
-                        actual.bandejaActual(),
-                        actual.estadoProcesoActual(),
-                        null);
-            }
-        }
-
-        LocalDateTime fechaResultado = LocalDateTime.now();
-        ActaNotificacionMock actualizada = notificacionPortal.conVisualizacionPortal(
-                fechaResultado, "Visualización confirmada desde portal infractor");
-        reemplazarNotificacion(actualizada);
-        ActaMock actaActualizada = actas.get(actaId);
-        registrarEventoVisualizacionPortal(actaId, notificacionPortal.tipo());
-        marcarNotificacionesAlternativasSuperadasPorPortal(actaId, notificacionPortal.tipo());
-
-        return new ConfirmarVisualizacionNotificacionPortalResultado(
-                ConfirmarVisualizacionNotificacionPortalEstado.OK,
-                actaId,
-                actaActualizada != null ? actaActualizada.bandejaActual() : actual.bandejaActual(),
-                actaActualizada != null ? actaActualizada.estadoProcesoActual() : actual.estadoProcesoActual(),
-                actualizada);
+    /**
+     * Fachada pública; la lógica vive en {@link PortalInfractorSupport}.
+     */
+    public ConfirmarVisualizacionNotificacionPortalResultado confirmarVisualizacionNotificacionPortal(
+            String actaId) {
+        return portalInfractor.confirmarVisualizacionNotificacionPortal(actaId);
     }
 
     /**
@@ -2551,10 +2466,10 @@ public class PrototipoStore {
      * notificable (D1/D2, bandeja {@code ACTAS_EN_ENRIQUECIMIENTO}). En ese
      * estado el portal solo reconoce el número de acta y muestra el mensaje
      * de revisión; no expone detalle, documentos ni acciones operativas.
+     * Fachada pública; la lógica vive en {@link PortalInfractorSupport}.
      */
     public boolean actaEnRevisionParaPortal(String actaId) {
-        ActaMock a = actas.get(actaId);
-        return a != null && BANDEJA_ACTAS_EN_ENRIQUECIMIENTO.equals(a.bandejaActual());
+        return portalInfractor.actaEnRevisionParaPortal(actaId);
     }
 
     /**
@@ -2605,231 +2520,21 @@ public class PrototipoStore {
     }
 
     /**
-     * Documentos del expediente formalmente visibles para el infractor:
-     * firmados y en etapa de notificación (bandeja
-     * {@code PENDIENTE_NOTIFICACION}/{@code EN_NOTIFICACION}) o ya
-     * notificados positivamente. Si el acta está en revisión (D1/D2) no se
-     * expone ningún documento.
+     * Documentos del expediente formalmente visibles para el infractor.
+     * Fachada pública; la lógica vive en {@link PortalInfractorSupport}.
      */
     public List<DocumentoPortalVista> listarDocumentosVisiblesPortal(String actaId) {
-        ActaMock acta = actas.get(actaId);
-        if (acta == null || actaEnRevisionParaPortal(actaId)) {
-            return List.of();
-        }
-        List<ActaDocumentoMock> docs = piezasFirma.listarDocumentosPorActa(actaId);
-        if (docs.isEmpty()) {
-            return List.of();
-        }
-        boolean enEtapaNotificacion = BANDEJA_PENDIENTE_NOTIFICACION.equals(acta.bandejaActual())
-                || BANDEJA_EN_NOTIFICACION.equals(acta.bandejaActual());
-        List<DocumentoPortalVista> visibles = new ArrayList<>();
-        for (ActaDocumentoMock d : docs) {
-            TipoNotificacion tipo = tipoNotificacionDeDocumentoPortal(d.tipoDocumento());
-            if (tipo == null || !PrototipoConstantes.ESTADO_DOC_FIRMADO.equals(d.estadoDocumento())) {
-                continue;
-            }
-            boolean notificado = tipoNotificadoPositivamentePortal(actaId, tipo);
-            boolean pendiente = !notificado && enEtapaNotificacion;
-            if (!notificado && !pendiente) {
-                continue;
-            }
-            visibles.add(new DocumentoPortalVista(
-                    d.tipoDocumento(),
-                    tituloDocumentoPortal(d.tipoDocumento()),
-                    d.estadoDocumento(),
-                    notificado,
-                    pendiente));
-        }
-        return visibles;
+        return portalInfractor.listarDocumentosVisiblesPortal(actaId);
     }
 
     /**
      * Apertura/visualización de un documento notificable desde el portal.
-     * Si el documento estaba pendiente de notificación, registra
-     * notificación positiva por canal {@code PORTAL_INFRACTOR} y aplica los
-     * efectos jurídicos correspondientes (acta inicial → análisis; fallo →
-     * {@code resultadoFinal} y plazo de apelación). Idempotente: si el
-     * documento ya estaba notificado devuelve {@code OK_YA_NOTIFICADO} sin
-     * efectos.
+     * Idempotente: si el documento ya estaba notificado devuelve
+     * {@code OK_YA_NOTIFICADO} sin efectos. Fachada pública; la lógica vive
+     * en {@link PortalInfractorSupport}.
      */
     public VerDocumentoPortalResultado verDocumentoPortal(String actaId, String tipoDocumento) {
-        ActaMock actual = actas.get(actaId);
-        if (actual == null) {
-            return new VerDocumentoPortalResultado(VerDocumentoPortalEstado.NOT_FOUND, null, null);
-        }
-        DocumentoPortalVista vista = listarDocumentosVisiblesPortal(actaId).stream()
-                .filter(d -> d.tipoDocumento().equals(tipoDocumento))
-                .findFirst()
-                .orElse(null);
-        if (vista == null) {
-            return new VerDocumentoPortalResultado(VerDocumentoPortalEstado.NOT_FOUND, null, null);
-        }
-        if (vista.notificado()) {
-            return new VerDocumentoPortalResultado(
-                    VerDocumentoPortalEstado.OK_YA_NOTIFICADO, actaId, tipoDocumento);
-        }
-
-        TipoNotificacion tipo = tipoNotificacionDeDocumentoPortal(tipoDocumento);
-        if (tipo == TipoNotificacion.ACTA_INFRACCION) {
-            if (!BANDEJA_PENDIENTE_NOTIFICACION.equals(actual.bandejaActual())
-                    && !BANDEJA_EN_NOTIFICACION.equals(actual.bandejaActual())) {
-                return new VerDocumentoPortalResultado(
-                        VerDocumentoPortalEstado.CONFLICT, actaId, tipoDocumento);
-            }
-            actas.put(actaId, moverAAnalisisPorVisualizacionPortal(actual));
-            accionPendientePorActa.remove(actaId);
-        } else {
-            RegistrarNotificacionPositivaResultado juridico =
-                    falloPlazoApelacion.registrarNotificacionPositivaDeFalloTipificada(actaId, tipo);
-            if (juridico.estado() == RegistrarNotificacionPositivaEstado.NOT_FOUND) {
-                return new VerDocumentoPortalResultado(VerDocumentoPortalEstado.NOT_FOUND, null, null);
-            }
-            if (juridico.estado() == RegistrarNotificacionPositivaEstado.CONFLICT) {
-                return new VerDocumentoPortalResultado(
-                        VerDocumentoPortalEstado.CONFLICT, actaId, tipoDocumento);
-            }
-        }
-
-        registrarNotificacionPositivaPortalPorVisualizacion(actaId, actual, tipo);
-        registrarEventoVisualizacionPortal(actaId, tipo);
-        marcarNotificacionesAlternativasSuperadasPorPortal(actaId, tipo);
-        return new VerDocumentoPortalResultado(
-                VerDocumentoPortalEstado.OK_NOTIFICADO, actaId, tipoDocumento);
-    }
-
-    private TipoNotificacion tipoNotificacionDeDocumentoPortal(String tipoDocumento) {
-        if (PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO.equals(tipoDocumento)) {
-            return TipoNotificacion.FALLO_CONDENATORIO;
-        }
-        if (PrototipoConstantes.TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumento)) {
-            return TipoNotificacion.FALLO_ABSOLUTORIO;
-        }
-        // Pieza firmada del acta inicial (tipoDocumento de los mocks demo).
-        if ("ACTA_FIRMADA".equals(tipoDocumento)) {
-            return TipoNotificacion.ACTA_INFRACCION;
-        }
-        return null;
-    }
-
-    private String tituloDocumentoPortal(String tipoDocumento) {
-        if (PrototipoConstantes.TIPO_DOC_FALLO_CONDENATORIO.equals(tipoDocumento)) {
-            return "Fallo condenatorio";
-        }
-        if (PrototipoConstantes.TIPO_DOC_FALLO_ABSOLUTORIO.equals(tipoDocumento)) {
-            return "Fallo absolutorio";
-        }
-        return "Acta de infracción";
-    }
-
-    private boolean tipoNotificadoPositivamentePortal(String actaId, TipoNotificacion tipo) {
-        List<ActaNotificacionMock> notifs = notificacionesPorActa.get(actaId);
-        boolean notifPositiva = notifs != null && notifs.stream()
-                .anyMatch(n -> n.tipo() == tipo && n.resultado() == ResultadoNotificacion.POSITIVA);
-        if (notifPositiva) {
-            return true;
-        }
-        if (tipo == TipoNotificacion.ACTA_INFRACCION) {
-            return false;
-        }
-        String evento = tipo == TipoNotificacion.FALLO_ABSOLUTORIO
-                ? "FALLO_ABSOLUTORIO_NOTIFICADO"
-                : "FALLO_CONDENATORIO_NOTIFICADO";
-        List<ActaEventoMock> evs = eventosPorActa.get(actaId);
-        return evs != null && evs.stream().anyMatch(e -> evento.equals(e.tipoEvento()));
-    }
-
-    /**
-     * Registra la notificación positiva derivada de la visualización del
-     * documento en el portal. Si existe una notificación de portal pendiente
-     * del mismo tipo, se confirma esa (sin duplicar); si no, se agrega una
-     * nueva notificación {@code ENTREGADA}/{@code POSITIVA} por canal
-     * {@code PORTAL_INFRACTOR}.
-     */
-    private void registrarNotificacionPositivaPortalPorVisualizacion(
-            String actaId, ActaMock acta, TipoNotificacion tipo) {
-        List<ActaNotificacionMock> notifs =
-                notificacionesPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        LocalDateTime fecha = LocalDateTime.now();
-        for (int i = 0; i < notifs.size(); i++) {
-            ActaNotificacionMock n = notifs.get(i);
-            if (n.tipo() == tipo && esNotificacionPortalPendiente(n)) {
-                notifs.set(i, n.conVisualizacionPortal(
-                        fecha, "Documento visualizado desde portal infractor"));
-                return;
-            }
-        }
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        String idNotif = "NOT-" + sufijoActa + "-" + String.format("%02d", notifs.size() + 1);
-        String descripcion = acta.infractorNombre()
-                + " — notificación positiva por visualización en portal (" + tipo.name() + ")";
-        notifs.add(new ActaNotificacionMock(
-                idNotif,
-                actaId,
-                CanalNotificacion.PORTAL_INFRACTOR.name(),
-                "ENTREGADA",
-                descripcion,
-                tipo,
-                CanalNotificacion.PORTAL_INFRACTOR,
-                EstadoNotificacion.ENTREGADA,
-                ResultadoNotificacion.POSITIVA,
-                descripcion,
-                "DOCUMENTO_VISUALIZADO_PORTAL",
-                null,
-                null,
-                null,
-                null,
-                fecha,
-                "Documento visualizado desde portal infractor",
-                acta.infractorNombre(),
-                null,
-                null,
-                null,
-                null));
-    }
-
-    /**
-     * Regla transversal de notificación: cuando una pieza/documento queda
-     * notificada positivamente por canal {@code PORTAL_INFRACTOR}, toda
-     * notificación alternativa de la misma pieza que siga pendiente
-     * (resultado {@code SIN_RESULTADO}, p. ej. correo postal preparado y
-     * nunca enviado) queda formalmente {@code SUPERADA_POR_PORTAL} /
-     * {@code SIN_EFECTO}: sale de los circuitos operativos (lotes de
-     * correo, acuses, pendientes por resolver) pero conserva trazabilidad.
-     * Registra un evento de auditoría por cada notificación superada.
-     */
-    private void marcarNotificacionesAlternativasSuperadasPorPortal(
-            String actaId, TipoNotificacion tipo) {
-        List<ActaNotificacionMock> notifs = notificacionesPorActa.get(actaId);
-        if (notifs == null || notifs.isEmpty()) {
-            return;
-        }
-        LocalDateTime fecha = LocalDateTime.now();
-        for (int i = 0; i < notifs.size(); i++) {
-            ActaNotificacionMock n = notifs.get(i);
-            if (n.tipo() != tipo || n.resultado() != ResultadoNotificacion.SIN_RESULTADO) {
-                continue;
-            }
-            notifs.set(i, n.conSuperadaPorPortal(fecha));
-            registrarEventoNotificacionSuperadaPorPortal(actaId, n, tipo);
-        }
-    }
-
-    private void registrarEventoNotificacionSuperadaPorPortal(
-            String actaId, ActaNotificacionMock superada, TipoNotificacion tipo) {
-        ActaMock acta = actas.get(actaId);
-        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        String bloque = acta != null ? acta.bloqueActual() : "D5_ANALISIS";
-        eventos.add(new ActaEventoMock(
-                "EVT-" + sufijoActa + "-" + String.format("%02d", eventos.size() + 1),
-                actaId,
-                LocalDateTime.now(),
-                "NOTIFICACION_SUPERADA_POR_PORTAL",
-                bloque,
-                bloque,
-                "Notificación " + superada.id() + " (" + superada.canalTipificado().name()
-                        + ") de " + tipo.name()
-                        + " queda sin efecto: la pieza ya fue notificada positivamente por portal infractor."));
+        return portalInfractor.verDocumentoPortal(actaId, tipoDocumento);
     }
 
     public List<NotificacionMunicipalVista> listarNotificacionesNotificadorMunicipal() {
@@ -2931,71 +2636,6 @@ public class PrototipoStore {
             ResultadoNotificacion resultado,
             String observacion) {
         return notificadorMunicipal.registrarAcuse(notificacionId, resultado, observacion);
-    }
-
-    private boolean esNotificacionPortalPendiente(ActaNotificacionMock n) {
-        return n.canalTipificado() == CanalNotificacion.DOMICILIO_ELECTRONICO
-                && n.resultado() == ResultadoNotificacion.SIN_RESULTADO
-                && (n.estado() == EstadoNotificacion.PENDIENTE_PREPARACION
-                        || n.estado() == EstadoNotificacion.LISTA_PARA_ENVIO
-                        || n.estado() == EstadoNotificacion.ENVIADA);
-    }
-
-    private int prioridadNotificacionPortal(TipoNotificacion tipo) {
-        return switch (tipo) {
-            case FALLO_CONDENATORIO -> 1;
-            case FALLO_ABSOLUTORIO -> 2;
-            case ACTA_INFRACCION -> 3;
-        };
-    }
-
-    private ActaMock moverAAnalisisPorVisualizacionPortal(ActaMock actual) {
-        return new ActaMock(
-                actual.id(),
-                actual.numeroActa(),
-                actual.dominioReferencia(),
-                PrototipoConstantes.BLOQUE_D5,
-                PrototipoConstantes.ESTADO_PENDIENTE_REVISION,
-                actual.situacionAdministrativaActual(),
-                actual.estaCerrada(),
-                actual.permiteReingreso(),
-                actual.tieneDocumentos(),
-                true,
-                actual.fechaCreacion(),
-                actual.infractorNombre(),
-                actual.infractorDocumento(),
-                actual.inspectorNombre(),
-                actual.resumenHecho(),
-                BANDEJA_PENDIENTE_ANALISIS);
-    }
-
-    private void reemplazarNotificacion(ActaNotificacionMock actualizada) {
-        List<ActaNotificacionMock> lista = notificacionesPorActa.get(actualizada.actaId());
-        if (lista == null) {
-            return;
-        }
-        for (int i = 0; i < lista.size(); i++) {
-            if (actualizada.id().equals(lista.get(i).id())) {
-                lista.set(i, actualizada);
-                return;
-            }
-        }
-    }
-
-    private void registrarEventoVisualizacionPortal(String actaId, TipoNotificacion tipo) {
-        ActaMock acta = actas.get(actaId);
-        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        int siguiente = eventos.size() + 1;
-        String bloque = acta != null ? acta.bloqueActual() : "D5_ANALISIS";
-        eventos.add(new ActaEventoMock(
-                "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente),
-                actaId,
-                LocalDateTime.now(),
-                "NOTIFICACION_PORTAL_VISUALIZADA",
-                bloque,
-                bloque,
-                "Visualización confirmada desde portal infractor para " + tipo.name() + "."));
     }
 
     /**
@@ -3320,70 +2960,25 @@ public class PrototipoStore {
         return archivoReingreso.anularActaPorNulidad(actaId);
     }
 
+    /**
+     * Demo: predicado de elegibilidad para paralización administrativa.
+     * Fachada pública; la lógica vive en
+     * {@link ParalizacionReactivacionSupport}.
+     */
     public boolean puedeParalizarActa(String actaId) {
-        return puedeParalizarActa(actas.get(actaId));
+        return paralizacionReactivacion.puedeParalizarActa(actaId);
     }
 
     /**
      * Demo: paralización administrativa transversal desde cualquier bandeja
      * interna operativa activa. Conserva expediente, pagos, montos y resultado
      * de fondo; sólo cambia la proyección operativa agregadora y deja el motivo
-     * como acción pendiente trazable.
+     * como acción pendiente trazable. Fachada pública; la lógica vive en
+     * {@link ParalizacionReactivacionSupport}.
      */
     public ParalizarActaResultado paralizarActa(
             String actaId, MotivoParalizacionActa motivo, String observacion) {
-        ActaMock actual = actas.get(actaId);
-        if (actual == null) {
-            return new ParalizarActaResultado(
-                    ParalizarActaEstado.NOT_FOUND, null, null, null, null, null);
-        }
-        if (!puedeParalizarActa(actual)) {
-            return new ParalizarActaResultado(
-                    ParalizarActaEstado.CONFLICT, null, null, null, null, null);
-        }
-
-        MotivoParalizacionActa motivoVigente =
-                motivo != null ? motivo : MotivoParalizacionActa.ESPERA_DOCUMENTAL;
-        String accionPendiente = accionPendienteParalizacion(motivoVigente);
-        String bloqueAnterior = actual.bloqueActual();
-
-        ActaMock actualizada = new ActaMock(
-                actual.id(),
-                actual.numeroActa(),
-                actual.dominioReferencia(),
-                actual.bloqueActual(),
-                "PARALIZADA",
-                "PARALIZADA",
-                actual.estaCerrada(),
-                actual.permiteReingreso(),
-                actual.tieneDocumentos(),
-                actual.tieneNotificaciones(),
-                actual.fechaCreacion(),
-                actual.infractorNombre(),
-                actual.infractorDocumento(),
-                actual.inspectorNombre(),
-                actual.resumenHecho(),
-                PrototipoConstantes.BANDEJA_PARALIZADAS);
-        actas.put(actaId, actualizada);
-        accionPendientePorActa.put(actaId, accionPendiente);
-        String observacionNormalizada = (observacion == null || observacion.isBlank())
-                ? null
-                : observacion.trim();
-        if (observacionNormalizada != null) {
-            observacionParalizacionPorActa.put(actaId, observacionNormalizada);
-        } else {
-            observacionParalizacionPorActa.remove(actaId);
-        }
-
-        registrarEventoParalizacion(actaId, bloqueAnterior, accionPendiente, observacion);
-
-        return new ParalizarActaResultado(
-                ParalizarActaEstado.OK,
-                actualizada.id(),
-                actualizada.bandejaActual(),
-                actualizada.estadoProcesoActual(),
-                actualizada.situacionAdministrativaActual(),
-                accionPendiente);
+        return paralizacionReactivacion.paralizarActa(actaId, motivo, observacion);
     }
 
     /**
@@ -3393,119 +2988,11 @@ public class PrototipoStore {
      * {@link #ACCION_REVISION_POST_REACTIVACION}. La información histórica
      * de la paralización queda en el log de eventos; no bloquea acciones
      * luego de reactivar. Solo aplica a actas cuya bandejaActual sea
-     * {@code PARALIZADAS}.
+     * {@code PARALIZADAS}. Fachada pública; la lógica vive en
+     * {@link ParalizacionReactivacionSupport}.
      */
     public ReactivarActaResultado reactivarActa(String actaId) {
-        ActaMock actual = actas.get(actaId);
-        if (actual == null) {
-            return new ReactivarActaResultado(
-                    ReactivarActaEstado.NOT_FOUND, null, null, null, null);
-        }
-        if (!PrototipoConstantes.BANDEJA_PARALIZADAS.equals(actual.bandejaActual())) {
-            return new ReactivarActaResultado(
-                    ReactivarActaEstado.CONFLICT, null, null, null, null);
-        }
-
-        String accionParalizacionPrevia = accionPendientePorActa.get(actaId);
-
-        ActaMock actualizada = new ActaMock(
-                actual.id(),
-                actual.numeroActa(),
-                actual.dominioReferencia(),
-                PrototipoConstantes.BLOQUE_D5,
-                PrototipoConstantes.ESTADO_PENDIENTE_REVISION,
-                "ACTIVA",
-                actual.estaCerrada(),
-                actual.permiteReingreso(),
-                actual.tieneDocumentos(),
-                actual.tieneNotificaciones(),
-                actual.fechaCreacion(),
-                actual.infractorNombre(),
-                actual.infractorDocumento(),
-                actual.inspectorNombre(),
-                actual.resumenHecho(),
-                PrototipoConstantes.BANDEJA_PENDIENTE_ANALISIS);
-        actas.put(actaId, actualizada);
-
-        accionPendientePorActa.put(actaId, ACCION_REVISION_POST_REACTIVACION);
-
-        String descripcion = accionParalizacionPrevia == null
-                ? "Acta reactivada desde PARALIZADAS; vuelve a análisis con acción pendiente "
-                        + ACCION_REVISION_POST_REACTIVACION + "."
-                : "Acta reactivada desde PARALIZADAS (motivo previo " + accionParalizacionPrevia
-                        + "); vuelve a análisis con acción pendiente "
-                        + ACCION_REVISION_POST_REACTIVACION + ".";
-
-        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new java.util.ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        int siguiente = eventos.size() + 1;
-        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
-        java.time.LocalDateTime fechaEvento = eventos.stream()
-                .max(java.util.Comparator.comparing(ActaEventoMock::fechaHora))
-                .map(e -> e.fechaHora().plusMinutes(1))
-                .orElse(java.time.LocalDateTime.now());
-        eventos.add(new ActaEventoMock(
-                idEvento,
-                actaId,
-                fechaEvento,
-                "ACTA_REACTIVADA_DESDE_PARALIZADAS",
-                PrototipoConstantes.BANDEJA_PARALIZADAS,
-                PrototipoConstantes.BLOQUE_D5,
-                descripcion));
-
-        return new ReactivarActaResultado(
-                ReactivarActaEstado.OK,
-                actualizada.id(),
-                actualizada.bandejaActual(),
-                actualizada.estadoProcesoActual(),
-                ACCION_REVISION_POST_REACTIVACION);
-    }
-
-    private boolean puedeParalizarActa(ActaMock acta) {
-        if (acta == null || acta.estaCerrada()) {
-            return false;
-        }
-        if (!"ACTIVA".equals(acta.situacionAdministrativaActual())) {
-            return false;
-        }
-        String bandeja = acta.bandejaActual();
-        return !PrototipoConstantes.BANDEJA_CERRADAS.equals(bandeja)
-                && !PrototipoConstantes.BANDEJA_ARCHIVO.equals(bandeja)
-                && !PrototipoConstantes.BANDEJA_GESTION_EXTERNA.equals(bandeja)
-                && !PrototipoConstantes.BANDEJA_PARALIZADAS.equals(bandeja);
-    }
-
-    private String accionPendienteParalizacion(MotivoParalizacionActa motivo) {
-        return switch (motivo) {
-            case ESPERA_DOCUMENTAL -> ACCION_PARALIZACION_ESPERA_DOCUMENTAL;
-            case ESPERA_INFORME_EXTERNO -> ACCION_PARALIZACION_ESPERA_INFORME_EXTERNO;
-            case ESPERA_OTRA_DEPENDENCIA -> ACCION_PARALIZACION_ESPERA_OTRA_DEPENDENCIA;
-            case ESPERA_RESOLUCION_RELACIONADA -> ACCION_PARALIZACION_ESPERA_RESOLUCION_RELACIONADA;
-            case OTRO -> ACCION_PARALIZACION_OTRO;
-        };
-    }
-
-    private void registrarEventoParalizacion(
-            String actaId, String bloqueAnterior, String accionPendiente, String observacion) {
-        List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-        int siguiente = eventos.size() + 1;
-        String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
-        LocalDateTime fechaEvento = eventos.stream()
-                .max(Comparator.comparing(ActaEventoMock::fechaHora))
-                .map(e -> e.fechaHora().plusMinutes(1))
-                .orElse(LocalDateTime.now());
-        String detalleObservacion = observacion == null || observacion.isBlank()
-                ? ""
-                : " Observacion: " + observacion.trim();
-        eventos.add(new ActaEventoMock(
-                idEvento,
-                actaId,
-                fechaEvento,
-                "PARALIZACION",
-                bloqueAnterior,
-                PrototipoConstantes.BANDEJA_PARALIZADAS,
-                "Acta paralizada; accionPendiente " + accionPendiente + "." + detalleObservacion));
+        return paralizacionReactivacion.reactivarActa(actaId);
     }
 
     /**

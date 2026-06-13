@@ -351,7 +351,7 @@ final class NotificacionSupport {
                 && notifs.stream().anyMatch(n -> n.tipo() == TipoNotificacion.ACTA_INFRACCION)) {
             return;
         }
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         String idNotif = "NOT-" + sufijoActa + "-" + String.format("%02d", notifs.size() + 1);
         String descripcion = switch (tipo) {
             case ACTA_INFRACCION -> resumenDestinatarioDemo(acta);
@@ -377,7 +377,7 @@ final class NotificacionSupport {
         if (!notifs.isEmpty()) {
             return;
         }
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         String idNotif = "NOT-" + sufijoActa + "-01";
         notifs.add(ActaNotificacionMock.preparada(
                 idNotif,
@@ -463,7 +463,7 @@ final class NotificacionSupport {
                     null));
             return;
         }
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         String idNotif = "NOT-" + sufijoActa + "-01";
         String resumen = resumenSiNueva.apply(acta);
         notifs.add(new ActaNotificacionMock(
@@ -508,7 +508,7 @@ final class NotificacionSupport {
             String bloqueDestino,
             String descripcion) {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
         LocalDateTime fechaEvento = eventos.stream()
@@ -524,10 +524,6 @@ final class NotificacionSupport {
                 bloqueOrigen,
                 bloqueDestino,
                 descripcion));
-    }
-
-    private static String sufijoActa(String actaId) {
-        return actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
     }
 
     private static String resumenDestinatarioDemo(ActaMock a) {

@@ -174,7 +174,7 @@ final class NotificadorMunicipalSupport {
                 n.canalTipificado().name(),
                 n.estado().name(),
                 n.resultado().name(),
-                primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
+                PrototipoStoreUtil.primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
                 n.domicilioTexto(),
                 n.observacion(),
                 qrNotificacionDemo(n.id()),
@@ -236,7 +236,7 @@ final class NotificadorMunicipalSupport {
             String bloqueDestino,
             String descripcion) {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new java.util.ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente),
@@ -248,10 +248,4 @@ final class NotificadorMunicipalSupport {
                 descripcion));
     }
 
-    private static String primerNoVacio(String primero, String segundo) {
-        if (primero != null && !primero.isBlank()) {
-            return primero;
-        }
-        return segundo;
-    }
 }

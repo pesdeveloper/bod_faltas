@@ -157,7 +157,7 @@ final class PagoCondenaSupport {
         ActaMock acta = actas.get(actaId);
         String bloque = acta != null ? acta.bloqueActual() : null;
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
         LocalDateTime fechaEvento = eventos.stream()

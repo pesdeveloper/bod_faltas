@@ -136,7 +136,7 @@ final class CorreoPostalNotificacionSupport {
                     actaNumero,
                     n.tipo().name(),
                     n.canalTipificado().name(),
-                    primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
+                    PrototipoStoreUtil.primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
                     n.domicilioTexto(),
                     referenciaExterna,
                     CSV_TS.format(ahora)));
@@ -668,7 +668,7 @@ final class CorreoPostalNotificacionSupport {
                 n.canalTipificado().name(),
                 n.estado().name(),
                 n.resultado().name(),
-                primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
+                PrototipoStoreUtil.primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
                 n.domicilioTexto(),
                 n.observacion());
     }
@@ -724,7 +724,7 @@ final class CorreoPostalNotificacionSupport {
                 n.referenciaExterna(),
                 n.estado().name(),
                 n.resultado().name(),
-                primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
+                PrototipoStoreUtil.primerNoVacio(n.destinatarioNombre(), n.destinatarioResumen()),
                 n.domicilioTexto(),
                 n.observacion());
     }
@@ -997,7 +997,7 @@ final class CorreoPostalNotificacionSupport {
             String bloqueDestino,
             String descripcion) {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         LocalDateTime fechaEvento = eventos.stream()
                 .map(ActaEventoMock::fechaHora)
@@ -1113,7 +1113,4 @@ final class CorreoPostalNotificacionSupport {
         return quote ? "\"" + escaped + "\"" : escaped;
     }
 
-    private static String primerNoVacio(String a, String b) {
-        return a != null && !a.isBlank() ? a : b;
-    }
 }

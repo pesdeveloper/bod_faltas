@@ -234,7 +234,7 @@ final class FalloPlazoApelacionSupport {
 
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguiente = docs.size() + 1;
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         String idDoc = "DOC-" + sufijoActa + "-" + String.format("%02d", siguiente);
         String nombreArchivo = prefijoArchivo + sufijoActa.toLowerCase() + ".pdf";
         docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDocumentoFallo, ESTADO_DOC_PENDIENTE_FIRMA, nombreArchivo));
@@ -945,7 +945,7 @@ final class FalloPlazoApelacionSupport {
                 return;
             }
         }
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = notifs.size() + 1;
         String idNotif = "NOT-" + sufijoActa + "-" + String.format("%02d", siguiente);
         notifs.add(new ActaNotificacionMock(
@@ -988,7 +988,7 @@ final class FalloPlazoApelacionSupport {
             String bloqueDestino,
             String descripcion) {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = sufijoActa(actaId);
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
         LocalDateTime fechaEvento = fechaSiguienteEvento(actaId);
@@ -1011,7 +1011,4 @@ final class FalloPlazoApelacionSupport {
                 .orElse(LocalDateTime.now());
     }
 
-    private static String sufijoActa(String actaId) {
-        return actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
-    }
 }

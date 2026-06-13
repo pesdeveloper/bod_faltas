@@ -705,7 +705,7 @@ final class CerrabilidadSupport {
         String tipoDoc = tipoDocumentoResolutorioSegunOrigen(origen);
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguienteDoc = docs.size() + 1;
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         String idDoc = "DOC-" + sufijoActa + "-" + String.format("%02d", siguienteDoc);
         String nombreArchivo = prefijoArchivoResolutorio(origen) + sufijoActa + ".pdf";
         docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDoc, ESTADO_DOC_PENDIENTE_FIRMA, nombreArchivo));
@@ -1143,7 +1143,7 @@ final class CerrabilidadSupport {
 
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguiente = docs.size() + 1;
-        String sufijo = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijo = PrototipoStoreUtil.sufijoActa(actaId);
         String idDoc = "DOC-" + sufijo + "-" + String.format("%02d", siguiente);
         String nombreArchivo = "medida_preventiva_posterior_tramite_" + sufijo.toLowerCase() + ".pdf";
         docs.add(
@@ -1319,7 +1319,7 @@ final class CerrabilidadSupport {
         }
         List<ActaDocumentoMock> docs = documentosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         int siguiente = docs.size() + 1;
-        String sufijo = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijo = PrototipoStoreUtil.sufijoActa(actaId);
         String idDoc = "DOC-" + sufijo + "-" + String.format("%02d", siguiente);
         String nombreArchivo = prefijoArchivo + sufijo.toLowerCase() + ".pdf";
         docs.add(new ActaDocumentoMock(idDoc, actaId, tipoDoc, estadoDoc, nombreArchivo));
@@ -1406,7 +1406,7 @@ final class CerrabilidadSupport {
             String bloqueDestino,
             String descripcion) {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
-        String sufijoActa = actaId.startsWith("ACTA-") ? actaId.substring("ACTA-".length()) : actaId;
+        String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
         String idEvento = "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente);
         LocalDateTime fechaEvento = eventos.stream()
