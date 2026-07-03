@@ -1,0 +1,25 @@
+﻿# Perfil JDBC: persistencia real con MariaDB.
+# Activar con: --spring.profiles.active=jdbc
+# Variables de entorno requeridas:
+#   FALTAS_DB_URL      - URL de conexion MariaDB (ej: jdbc:mariadb://localhost:3306/faltas_db)
+#   FALTAS_DB_USER     - Usuario de la base de datos
+#   FALTAS_DB_PASSWORD - Password de la base de datos
+spring:
+  autoconfigure:
+    exclude: []
+  datasource:
+    url: ${FALTAS_DB_URL:jdbc:mariadb://localhost:3306/faltas_db}
+    username: ${FALTAS_DB_USER:faltas}
+    password: ${FALTAS_DB_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 2
+  sql:
+    init:
+      mode: never
+
+app:
+  persistence:
+    mode: jdbc

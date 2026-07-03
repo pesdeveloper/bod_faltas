@@ -1,0 +1,11 @@
+﻿# Perfil por defecto: persistencia en memoria.
+# DataSourceAutoConfiguration se excluye para no requerir base de datos real.
+# Para activar JDBC real: --spring.profiles.active=jdbc
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+app:
+  persistence:
+    mode: memory
