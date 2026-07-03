@@ -2,6 +2,7 @@ package ar.gob.malvinas.faltas.prototipo.store;
 
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
+import ar.gob.malvinas.faltas.prototipo.domain.BloqueActa;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,7 +36,7 @@ import static ar.gob.malvinas.faltas.prototipo.store.PrototipoConstantes.BLOQUE_
  */
 final class CierreSupport {
 
-    private static final String BLOQUE_CERRADA = "CERRADA";
+    private static final String BLOQUE_CERRADA = BloqueActa.CERR.codigo();
 
     private final Map<String, ActaMock> actas;
     private final Map<String, List<ActaEventoMock>> eventosPorActa;
@@ -59,7 +60,7 @@ final class CierreSupport {
      * análisis jurídico. Deja el acta con bloque/estado/situación
      * {@code CERRADA}, sin reingreso habilitado, y limpia la marca
      * operativa vigente en análisis (si hubiera). Genera un evento
-     * {@code CIERRE_ANALISIS} con origen D5_ANALISIS y destino CERRADA.
+     * {@code CIERRE_ANALISIS} con origen {@code ANAL} y destino {@code CERR}.
      */
     PrototipoStore.CerrarActaResultado cerrarActaDesdeAnalisis(String actaId) {
         ActaMock actual = actas.get(actaId);

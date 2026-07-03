@@ -7,11 +7,11 @@ CERRADO
 Describir el comportamiento puntual que este slice incorporó, corrigió o refactorizó en el prototipo backend.
 
 ## Fuente de verdad utilizada
-Tomar nota de las partes exactas de `spec/` que guiaron este slice.
+Tomar nota de las partes exactas de las fuentes vivas que guiaron este slice.
 
-- `spec/...`
-- `spec/...`
-- `spec/...`
+- `backend/api-faltas-core/docs/spec-as-source/...`
+- `backend/api-faltas-core/docs/spec-as-source/...`
+- `backend/api-faltas-core/docs/spec-as-source/...`
 
 ## Alcance técnico
 Listar solo los archivos o zonas del prototipo efectivamente involucrados.

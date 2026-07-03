@@ -81,7 +81,7 @@ final class PagoVoluntarioSupport {
      *
      * <p>Lleva al acta a {@code PENDIENTE_ANALISIS} con marca operativa
      * {@link PrototipoStore#ACCION_EVALUAR_PAGO_VOLUNTARIO}, dentro del
-     * bloque {@code D5_ANALISIS} y estado {@code PENDIENTE_REVISION}.
+     * bloque {@code ANAL} y estado {@code PENDIENTE_REVISION}.
      * Persiste {@code montoPagoVoluntario} y genera evento
      * {@code PAGO_VOLUNTARIO_SOLICITADO} (se reutiliza el tipo existente
      * para no impactar otros consumidores; la descripción aclara que

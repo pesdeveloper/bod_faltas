@@ -154,8 +154,8 @@ final class GestionExternaSupport {
      * Deja el acta con bloque/estado/situación {@code GESTION_EXTERNA},
      * reingreso habilitado para habilitar el retorno efectivo, y limpia la
      * marca operativa previa. Genera un evento
-     * {@code DERIVACION_GESTION_EXTERNA} con origen D5_ANALISIS y destino
-     * GESTION_EXTERNA, explicitando el tipo asignado y, si corresponde, el
+     * {@code DERIVACION_GESTION_EXTERNA} con origen {@code ANAL} y destino
+     * {@code GEXT}, explicitando el tipo asignado y, si corresponde, el
      * tipo previo preservado como trazabilidad de la gestión externa de la
      * que venía el expediente.
      */
@@ -257,7 +257,7 @@ final class GestionExternaSupport {
      * al circuito operativo. Solo aplica si la acta está en
      * {@code GESTION_EXTERNA} y el modelo declara
      * {@code permiteReingreso = true}. Destino único en este slice:
-     * {@code PENDIENTE_ANALISIS} con bloque {@code D5_ANALISIS}, estado
+     * {@code PENDIENTE_ANALISIS} con bloque {@code ANAL}, estado
      * {@code PENDIENTE_REVISION} y situación {@code ACTIVA}; el reingreso
      * no se consume: {@code permiteReingreso} se preserva en {@code true}
      * porque la bandera representa la naturaleza reingresable del
@@ -268,7 +268,7 @@ final class GestionExternaSupport {
      * caso retorne, pero siga siendo visible de qué tipo de gestión externa
      * venía. Genera un evento
      * {@code ACTA_REINGRESADA_DESDE_GESTION_EXTERNA} con origen
-     * {@code GESTION_EXTERNA} y destino {@code D5_ANALISIS}, explicitando
+     * {@code GEXT} y destino {@code ANAL}, explicitando
      * el tipo previo como trazabilidad.
      */
     PrototipoStore.ReingresarDesdeGestionExternaResultado reingresarActaDesdeGestionExterna(String actaId) {

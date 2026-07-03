@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.prototipo.store;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaEventoMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaMock;
 import ar.gob.malvinas.faltas.prototipo.domain.ActaNotificacionMock;
+import ar.gob.malvinas.faltas.prototipo.domain.BloqueActa;
 import ar.gob.malvinas.faltas.prototipo.domain.CanalNotificacion;
 import ar.gob.malvinas.faltas.prototipo.domain.EstadoNotificacion;
 import ar.gob.malvinas.faltas.prototipo.domain.ResultadoNotificacion;
@@ -39,8 +40,8 @@ final class CorreoPostalNotificacionSupport {
     private static final String BANDEJA_PENDIENTE_ANALISIS = "PENDIENTE_ANALISIS";
     private static final String BANDEJA_PENDIENTE_NOTIFICACION = "PENDIENTE_NOTIFICACION";
     private static final String BANDEJA_EN_NOTIFICACION = "EN_NOTIFICACION";
-    private static final String BLOQUE_D4 = "D4_NOTIFICACION";
-    private static final String BLOQUE_D5 = "D5_ANALISIS";
+    private static final String BLOQUE_D4 = BloqueActa.NOTI.codigo();
+    private static final String BLOQUE_D5 = BloqueActa.ANAL.codigo();
     private static final String ESTADO_PENDIENTE_REVISION = "PENDIENTE_REVISION";
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter CSV_TS = DateTimeFormatter.ISO_LOCAL_DATE_TIME;

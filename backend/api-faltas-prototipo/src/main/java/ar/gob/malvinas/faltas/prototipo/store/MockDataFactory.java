@@ -111,7 +111,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0001",
                 "TRANSITO_URBANO",
-                "D3_DOCUMENTAL",
+                "ENRI",
                 "PENDIENTE_PRODUCCION_PIEZAS",
                 "ACTIVA",
                 false,
@@ -134,32 +134,32 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 1, 10, 9, 20),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada y asignada a enriquecimiento."));
         eventos.add(new ActaEventoMock(
                 "EVT-0001-02",
                 id,
                 LocalDateTime.of(2026, 1, 11, 14, 30),
                 "ASIGNACION",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "Operador asignado para completar datos del infractor."));
         eventos.add(new ActaEventoMock(
                 "EVT-0001-03",
                 id,
                 LocalDateTime.of(2026, 1, 12, 11, 5),
                 "ACTUALIZACION_DATOS",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "Verificado domicilio y contacto del infractor."));
         eventos.add(new ActaEventoMock(
                 "EVT-0001-04",
                 id,
                 LocalDateTime.of(2026, 1, 13, 9, 0),
                 "PASE_BANDEJA",
-                "D2_ENRIQUECIMIENTO",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "Enriquecimiento completo; pendiente produccion de notificacion del acta."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -185,7 +185,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0002",
                 "SEGURIDAD_VIAL",
-                "D3_DOCUMENTAL",
+                "ENRI",
                 "PENDIENTE_GENERACION",
                 "ACTIVA",
                 false,
@@ -206,16 +206,16 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 1, 8, 16, 45),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta registrada en campo."));
         eventos.add(new ActaEventoMock(
                 "EVT-0002-02",
                 id,
                 LocalDateTime.of(2026, 1, 9, 10, 0),
                 "PASE_BANDEJA",
-                "D2_ENRIQUECIMIENTO",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "Enriquecimiento cerrado; pasa a preparación documental."));
         store.getEventosPorActa().put(id, eventos);
         store.setAccionPendiente(id, "GENERAR_BORRADOR_ACTA");
@@ -228,7 +228,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0003",
                 "TRANSITO_URBANO",
-                "D3_DOCUMENTAL",
+                "ENRI",
                 "PENDIENTE_FIRMA",
                 "ACTIVA",
                 false,
@@ -249,32 +249,32 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 1, 5, 11, 10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta cargada con lectura de dominio."));
         eventos.add(new ActaEventoMock(
                 "EVT-0003-02",
                 id,
                 LocalDateTime.of(2026, 1, 6, 9, 0),
                 "PASE_BANDEJA",
-                "D2_ENRIQUECIMIENTO",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "Datos completos; generación de borrador acta."));
         eventos.add(new ActaEventoMock(
                 "EVT-0003-03",
                 id,
                 LocalDateTime.of(2026, 1, 7, 15, 20),
                 "DOCUMENTO_GENERADO",
-                "D3_DOCUMENTAL",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "Borrador PDF generado y listo para firma."));
         eventos.add(new ActaEventoMock(
                 "EVT-0003-04",
                 id,
                 LocalDateTime.of(2026, 1, 8, 8, 30),
                 "PENDIENTE_FIRMA",
-                "D3_DOCUMENTAL",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "En cola de firma del inspector titular."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -301,7 +301,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0004",
                 "ESTACIONAMIENTO",
-                "D4_NOTIFICACION",
+                "NOTI",
                 "PENDIENTE_ENVIO",
                 "ACTIVA",
                 false,
@@ -322,24 +322,24 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 1, 3, 13, 30),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta iniciada en dispositivo móvil."));
         eventos.add(new ActaEventoMock(
                 "EVT-0004-02",
                 id,
                 LocalDateTime.of(2026, 1, 4, 10, 15),
                 "FIRMA_COMPLETADA",
-                "D3_DOCUMENTAL",
-                "D4_NOTIFICACION",
+                "ENRI",
+                "NOTI",
                 "Acta firmada; pasa a notificación."));
         eventos.add(new ActaEventoMock(
                 "EVT-0004-03",
                 id,
                 LocalDateTime.of(2026, 1, 5, 16, 0),
                 "PENDIENTE_NOTIFICACION",
-                "D4_NOTIFICACION",
-                "D4_NOTIFICACION",
+                "NOTI",
+                "NOTI",
                 "Pendiente armado de lote de notificación postal."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -369,7 +369,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0005",
                 "TRANSITO_URBANO",
-                "D4_NOTIFICACION",
+                "NOTI",
                 "EN_ENVIO",
                 "ACTIVA",
                 false,
@@ -390,32 +390,32 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 12, 20, 9, 0),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta labrada en intersección Av. Libertad / Sarmiento."));
         eventos.add(new ActaEventoMock(
                 "EVT-0005-02",
                 id,
                 LocalDateTime.of(2025, 12, 22, 12, 0),
                 "FIRMA_COMPLETADA",
-                "D3_DOCUMENTAL",
-                "D4_NOTIFICACION",
+                "ENRI",
+                "NOTI",
                 "Documentación formalizada."));
         eventos.add(new ActaEventoMock(
                 "EVT-0005-03",
                 id,
                 LocalDateTime.of(2026, 1, 2, 9, 45),
                 "NOTIFICACION_EN_CURSO",
-                "D4_NOTIFICACION",
-                "D4_NOTIFICACION",
+                "NOTI",
+                "NOTI",
                 "Carta documento en trámite en correo oficial."));
         eventos.add(new ActaEventoMock(
                 "EVT-0005-04",
                 id,
                 LocalDateTime.of(2026, 1, 6, 14, 10),
                 "SEGUIMIENTO",
-                "D4_NOTIFICACION",
-                "D4_NOTIFICACION",
+                "NOTI",
+                "NOTI",
                 "Primer intento de entrega programado para el 08/01."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -445,7 +445,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0006",
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -466,24 +466,24 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 11, 28, 17, 20),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Retención de licencia registrada."));
         eventos.add(new ActaEventoMock(
                 "EVT-0006-02",
                 id,
                 LocalDateTime.of(2025, 12, 10, 11, 30),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación fehaciente; acta pasa a análisis jurídico."));
         eventos.add(new ActaEventoMock(
                 "EVT-0006-03",
                 id,
                 LocalDateTime.of(2026, 1, 4, 9, 0),
                 "ASIGNACION_ANALISTA",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Asignada a analista para dictamen preliminar."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -540,15 +540,15 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 10, 15, 12, 10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta generada desde cámara fija."));
         eventos.add(new ActaEventoMock(
                 "EVT-0007-02",
                 id,
                 LocalDateTime.of(2025, 11, 1, 10, 0),
                 "RESOLUCION",
-                "D5_ANALISIS",
+                "ANAL",
                 "ARCHIVO",
                 "Resolución administrativa de archivo por prescripción operativa."));
         store.getEventosPorActa().put(id, eventos);
@@ -604,15 +604,15 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 9, 5, 7, 45),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta labrada con testigos identificados."));
         eventos.add(new ActaEventoMock(
                 "EVT-0008-02",
                 id,
                 LocalDateTime.of(2025, 10, 12, 16, 0),
                 "CIERRE",
-                "D5_ANALISIS",
+                "ANAL",
                 "CERRADA",
                 "Cierre administrativo por pago y conformidad."));
         eventos.add(new ActaEventoMock(
@@ -655,7 +655,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0009",
                 "TRANSITO_URBANO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -677,32 +677,32 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 1, 14, 15, 50),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada; falta domicilio legal del infractor."));
         eventos.add(new ActaEventoMock(
                 "EVT-0009-02",
                 id,
                 LocalDateTime.of(2026, 1, 15, 9, 10),
                 "OBSERVACION",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "Solicitud de cédula verde para cruzar titularidad."));
         eventos.add(new ActaEventoMock(
                 "EVT-0009-03",
                 id,
                 LocalDateTime.of(2026, 1, 16, 11, 25),
                 "SEGUIMIENTO",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "A la espera de respuesta del registro automotor."));
         eventos.add(new ActaEventoMock(
                 "EVT-0009-04",
                 id,
                 LocalDateTime.of(2026, 1, 17, 8, 0),
                 "RECORDATORIO",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "Recordatorio interno: vencer SLA enriquecimiento 5 días."));
         store.getEventosPorActa().put(id, eventos);
     }
@@ -735,15 +735,15 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 12, 1, 10, 30),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta generada desde control móvil."));
         eventos.add(new ActaEventoMock(
                 "EVT-0010-02",
                 id,
                 LocalDateTime.of(2025, 12, 18, 13, 0),
                 "ARCHIVO_OPERATIVO",
-                "D5_ANALISIS",
+                "ANAL",
                 "ARCHIVO",
                 "Archivo por duplicidad de expediente (acta previa ACTA-2025-8891)."));
         store.getEventosPorActa().put(id, eventos);
@@ -769,7 +769,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0011",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_RESOLUCION",
                 "ACTIVA",
                 false,
@@ -790,24 +790,24 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 12, 5, 10, 25),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta labrada en control vehicular."));
         eventos.add(new ActaEventoMock(
                 "EVT-0011-02",
                 id,
                 LocalDateTime.of(2025, 12, 20, 9, 0),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación cumplida; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-0011-03",
                 id,
                 LocalDateTime.of(2026, 1, 12, 11, 30),
                 "DERIVACION_RESOLUCION",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Analista deriva a redacción de resolución; pieza no-fallo aún no producida."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -842,7 +842,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0012",
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_NULIDAD",
                 "ACTIVA",
                 false,
@@ -863,24 +863,24 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 11, 18, 15, 0),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada desde control móvil."));
         eventos.add(new ActaEventoMock(
                 "EVT-0012-02",
                 id,
                 LocalDateTime.of(2025, 12, 10, 10, 20),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación fehaciente registrada."));
         eventos.add(new ActaEventoMock(
                 "EVT-0012-03",
                 id,
                 LocalDateTime.of(2026, 1, 8, 16, 45),
                 "DERIVACION_NULIDAD",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Analista detecta vicio formal; deriva a redacción de nulidad."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -915,7 +915,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0013",
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_MEDIDA_PREVENTIVA",
                 "ACTIVA",
                 false,
@@ -936,24 +936,24 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 1, 6, 22, 20),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada con retención preventiva del vehículo."));
         eventos.add(new ActaEventoMock(
                 "EVT-0013-02",
                 id,
                 LocalDateTime.of(2026, 1, 7, 9, 30),
                 "OBSERVACION",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "Revisión inicial identifica necesidad de medida preventiva formal."));
         eventos.add(new ActaEventoMock(
                 "EVT-0013-03",
                 id,
                 LocalDateTime.of(2026, 1, 8, 11, 0),
                 "DERIVACION_MEDIDA_PREVENTIVA",
-                "D2_ENRIQUECIMIENTO",
-                "D5_ANALISIS",
+                "ENRI",
+                "ANAL",
                 "Expediente derivado a redacción de medida preventiva; pieza no-fallo aún no producida."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -982,7 +982,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0014",
                 "ESTACIONAMIENTO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_RECTIFICACION",
                 "ACTIVA",
                 false,
@@ -1003,24 +1003,24 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 12, 22, 8, 50),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta cargada desde dispositivo móvil."));
         eventos.add(new ActaEventoMock(
                 "EVT-0014-02",
                 id,
                 LocalDateTime.of(2026, 1, 5, 12, 15),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación entregada; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-0014-03",
                 id,
                 LocalDateTime.of(2026, 1, 14, 10, 5),
                 "DERIVACION_RECTIFICACION",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Analista detecta error material; deriva a redacción de rectificación."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1065,7 +1065,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0015",
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -1086,40 +1086,40 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 10, 2, 9, 15),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada desde control de ruta."));
         eventos.add(new ActaEventoMock(
                 "EVT-0015-02",
                 id,
                 LocalDateTime.of(2025, 11, 10, 10, 30),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación fehaciente del acta; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-0015-03",
                 id,
                 LocalDateTime.of(2025, 12, 5, 11, 0),
                 "FALLO_EMITIDO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo dictado por autoridad competente."));
         eventos.add(new ActaEventoMock(
                 "EVT-0015-04",
                 id,
                 LocalDateTime.of(2025, 12, 12, 15, 45),
                 "NOTIFICACION_FALLO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo notificado al infractor; inicia ventana de espera de 5 días."));
         eventos.add(new ActaEventoMock(
                 "EVT-0015-05",
                 id,
                 LocalDateTime.of(2025, 12, 18, 9, 0),
                 "SEGUIMIENTO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Ventana de espera post notificación de fallo cumplida sin novedad; "
                         + "caso en condición de derivación a gestión externa."));
         store.getEventosPorActa().put(id, eventos);
@@ -1173,7 +1173,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0016",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -1194,32 +1194,32 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 11, 20, 10, 10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada desde control vehicular."));
         eventos.add(new ActaEventoMock(
                 "EVT-0016-02",
                 id,
                 LocalDateTime.of(2025, 12, 15, 11, 0),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación del acta entregada; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-0016-03",
                 id,
                 LocalDateTime.of(2026, 1, 10, 9, 30),
                 "FALLO_EMITIDO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo dictado por autoridad competente."));
         eventos.add(new ActaEventoMock(
                 "EVT-0016-04",
                 id,
                 LocalDateTime.of(2026, 1, 16, 14, 20),
                 "NOTIFICACION_FALLO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo notificado al infractor; ventana de espera de 5 días en curso."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1294,40 +1294,40 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 8, 18, 10, 45),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada desde control vehicular."));
         eventos.add(new ActaEventoMock(
                 "EVT-0017-02",
                 id,
                 LocalDateTime.of(2025, 9, 25, 11, 15),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación fehaciente del acta; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-0017-03",
                 id,
                 LocalDateTime.of(2025, 10, 20, 9, 30),
                 "FALLO_EMITIDO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo dictado por autoridad competente."));
         eventos.add(new ActaEventoMock(
                 "EVT-0017-04",
                 id,
                 LocalDateTime.of(2025, 10, 28, 14, 0),
                 "NOTIFICACION_FALLO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo notificado al infractor; inicia ventana de espera de 5 días."));
         eventos.add(new ActaEventoMock(
                 "EVT-0017-05",
                 id,
                 LocalDateTime.of(2025, 11, 5, 9, 0),
                 "SEGUIMIENTO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Ventana de espera post notificación de fallo cumplida sin novedad; "
                         + "caso en condición de derivación a gestión externa."));
         eventos.add(new ActaEventoMock(
@@ -1335,7 +1335,7 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2025, 11, 6, 10, 30),
                 "DERIVACION_GESTION_EXTERNA",
-                "D5_ANALISIS",
+                "ANAL",
                 "GESTION_EXTERNA",
                 "Análisis jurídico deriva efectivamente el caso a gestión externa; tipo "
                         + PrototipoStore.TIPO_GESTION_EXTERNA_JUZGADO_DE_PAZ + "."));
@@ -1409,27 +1409,27 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0130-01", id,
                 java.time.LocalDateTime.of(2026, 1, 10, 9, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta ingresada."));
         eventos.add(new ActaEventoMock(
                 "EVT-0130-02", id,
                 java.time.LocalDateTime.of(2026, 1, 18, 11, 0),
-                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "NOTIFICACION_ENTREGADA", "NOTI", "ANAL",
                 "Notificación fehaciente."));
         eventos.add(new ActaEventoMock(
                 "EVT-0130-03", id,
                 java.time.LocalDateTime.of(2026, 2, 5, 10, 0),
-                "FALLO_CONDENATORIO_DICTADO", "D5_ANALISIS", "D5_ANALISIS",
+                "FALLO_CONDENATORIO_DICTADO", "ANAL", "ANAL",
                 "Fallo condenatorio dictado."));
         eventos.add(new ActaEventoMock(
                 "EVT-0130-04", id,
                 java.time.LocalDateTime.of(2026, 2, 10, 14, 0),
-                "CONDENA_FIRME", "D5_ANALISIS", "D5_ANALISIS",
+                "CONDENA_FIRME", "ANAL", "ANAL",
                 "Condena firme establecida; plazo de apelación vencido."));
         eventos.add(new ActaEventoMock(
                 "EVT-0130-05", id,
                 java.time.LocalDateTime.of(2026, 2, 12, 9, 0),
-                "DERIVACION_GESTION_EXTERNA", "D5_ANALISIS", "GESTION_EXTERNA",
+                "DERIVACION_GESTION_EXTERNA", "ANAL", "GESTION_EXTERNA",
                 "Derivado a gestión externa tipo "
                         + PrototipoStore.TIPO_GESTION_EXTERNA_APREMIO + "."));
         store.getEventosPorActa().put(id, eventos);
@@ -1471,7 +1471,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0018",
                 "TRANSITO_URBANO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -1492,8 +1492,8 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 2, 3, 10, 15),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo creada para circuito de pago voluntario."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1525,7 +1525,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0019",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_CIERRE_MATERIAL",
                 "ACTIVA",
                 false,
@@ -1546,8 +1546,8 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 3, 1, 9, 30),
                 "ALTA_DEMO_CERRABILIDAD",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Precarga demo: resultado ABSUELTO. Dos orígenes vía reconocimiento (rodado + documentación); sin medida preventiva."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1600,7 +1600,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0020",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_PRODUCCION_PIEZAS",
                 "ACTIVA",
                 false,
@@ -1622,8 +1622,8 @@ public class MockDataFactory {
                         id,
                         LocalDateTime.of(2026, 3, 2, 10, 5),
                         "ALTA_DEMO_MEDIDA",
-                        "D5_ANALISIS",
-                        "D5_ANALISIS",
+                        "ANAL",
+                        "ANAL",
                         "Acta mínima para invocar generarMedidaPreventiva al cargar datos."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1658,7 +1658,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0021",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_CIERRE_MATERIAL",
                 "ACTIVA",
                 false,
@@ -1681,8 +1681,8 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 3, 2, 9, 30),
                 "ALTA_DEMO_CERRABILIDAD_PAGO_CONFIRMADO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Precarga demo: resultado PAGO_CONFIRMADO. Dos orígenes vía reconocimiento: rodado retenido y documentación retenida (mock)."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1754,7 +1754,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0022",
                 "TRANSITO_URBANO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -1776,40 +1776,40 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 3, 4, 8, 50),
                 "ALTA",
-                "D1_CAPTURA",
-                "D1_CAPTURA",
+                "CAPT",
+                "CAPT",
                 "Alta: infracción y acta; inspección en sitio (mock)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0022-02",
                 id,
                 LocalDateTime.of(2026, 3, 4, 8, 52),
                 "CONSTATACION_RODADO",
-                "D1_CAPTURA",
-                "D1_CAPTURA",
+                "CAPT",
+                "CAPT",
                 "Acta/constatación: rodado bajo retención o secuestro; refuerza ancla de expediente (mock)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0022-03",
                 id,
                 LocalDateTime.of(2026, 3, 4, 8, 53),
                 "CONSTATACION_DOCUMENTACION",
-                "D1_CAPTURA",
-                "D1_CAPTURA",
+                "CAPT",
+                "CAPT",
                 "Documentación retenida en la intervención; constatación vinculada a expediente (mock)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0022-04",
                 id,
                 LocalDateTime.of(2026, 3, 4, 8, 54),
                 "MEDIDA_PREVENTIVA_APLICABLE",
-                "D1_CAPTURA",
-                "D1_CAPTURA",
+                "CAPT",
+                "CAPT",
                 "Situación de medida preventiva aplicable según criterio de campo; ancla al circuito (mock)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0022-05",
                 id,
                 LocalDateTime.of(2026, 3, 4, 9, 15),
                 "PASE_DEMO",
-                "D2_ENRIQUECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
+                "ENRI",
                 "Precarga: anclas en expediente; PAGO_CONFIRMADO y etapa de cierre vía API."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1865,7 +1865,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0023",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_CIERRE_MATERIAL",
                 "ACTIVA",
                 false,
@@ -1886,8 +1886,8 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 3, 5, 9, 20),
                 "ALTA_DEMO_HECHO_MATERIAL",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Demo: ancla y levantamiento documental precargados; cierre operativo requiere capa material."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -1957,7 +1957,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0024",
                 "TRANSITO_URBANO",
-                "D1_CAPTURA",
+                "CAPT",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -1978,8 +1978,8 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 3, 6, 8, 32),
                 "ALTA",
-                "D1_CAPTURA",
-                "D1_CAPTURA",
+                "CAPT",
+                "CAPT",
                 "Alta en sitio: condiciones de tránsito y anclas de material coherente con dato (mock)."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2030,7 +2030,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0025",
                 "TRANSITO_URBANO",
-                "D1_CAPTURA",
+                "CAPT",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -2051,8 +2051,8 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 3, 6, 8, 32),
                 "ALTA",
-                "D1_CAPTURA",
-                "D1_CAPTURA",
+                "CAPT",
+                "CAPT",
                 "Alta en sitio: expediente sin anclas de material (mock, regresión API)."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2077,7 +2077,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0026",
                 "ESTABLECIMIENTO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -2099,16 +2099,16 @@ public class MockDataFactory {
                 id,
                 LocalDateTime.of(2026, 2, 1, 10, 5),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Alta: contravención sin retención documental, sin rodado, sin medida preventiva inicial (mock)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0026-02",
                 id,
                 LocalDateTime.of(2026, 3, 1, 9, 0),
                 "PASE_BANDEJA",
-                "D2_ENRIQUECIMIENTO",
-                "D5_ANALISIS",
+                "ENRI",
+                "ANAL",
                 "Trámite administrativo: acta en análisis, susceptibles de novedades posteriores (mock)."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2139,7 +2139,7 @@ public class MockDataFactory {
                 id,
                 numeroActa,
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -2161,24 +2161,24 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(15),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada; expediente en análisis jurídico (demo fallo/apelación)."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + n + "-02",
                 id,
                 fechaCreacion.plusDays(5),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificación fehaciente del acta; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + n + "-03",
                 id,
                 fechaCreacion.plusDays(12),
                 "ASIGNACION_ANALISTA",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Asignada a analista para dictamen preliminar."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2296,7 +2296,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "DEMO_NOTIFICADOR_MUNICIPAL",
-                "D4_NOTIFICACION",
+                "NOTI",
                 "PENDIENTE_ENVIO",
                 "ACTIVA",
                 false,
@@ -2317,16 +2317,16 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo preparada para validación de notificador municipal."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(1),
                 "PENDIENTE_NOTIFICACION_MUNICIPAL",
-                "D4_NOTIFICACION",
-                "D4_NOTIFICACION",
+                "NOTI",
+                "NOTI",
                 "Notificación tipificada asignada al canal NOTIFICADOR_MUNICIPAL."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2410,7 +2410,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "DEMO_PORTAL_INFRACTOR",
-                "D4_NOTIFICACION",
+                "NOTI",
                 "PENDIENTE_ENVIO",
                 "ACTIVA",
                 false,
@@ -2431,16 +2431,16 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo preparada para validación de domicilio electrónico en portal."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(1),
                 "NOTIFICACION_PORTAL_PENDIENTE",
-                "D4_NOTIFICACION",
-                "D4_NOTIFICACION",
+                "NOTI",
+                "NOTI",
                 "Notificación tipificada puesta a disposición por DOMICILIO_ELECTRONICO."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2549,7 +2549,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "DEMO_CORREO_POSTAL",
-                "D4_NOTIFICACION",
+                "NOTI",
                 "PENDIENTE_ENVIO",
                 "ACTIVA",
                 false,
@@ -2570,16 +2570,16 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo preparada para validación de correo postal."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(1),
                 "PENDIENTE_NOTIFICACION",
-                "D4_NOTIFICACION",
-                "D4_NOTIFICACION",
+                "NOTI",
+                "NOTI",
                 "Notificación tipificada lista para armado de lote postal."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2633,7 +2633,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "DEMO_CORREO_POSTAL",
-                "D4_NOTIFICACION",
+                "NOTI",
                 "EN_ENVIO",
                 "ACTIVA",
                 false,
@@ -2654,8 +2654,8 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo de trazabilidad postal fuera de listas para lote."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -2717,7 +2717,7 @@ public class MockDataFactory {
                 store,
                 "ACTA-0046",
                 "A-2026-0046",
-                "D1_CAPTURA",
+                "CAPT",
                 "EN_CURSO",
                 "TRANSITO_URBANO",
                 "Rossi, Camila",
@@ -2729,7 +2729,7 @@ public class MockDataFactory {
                 store,
                 "ACTA-0047",
                 "A-2026-0047",
-                "D1_CAPTURA",
+                "CAPT",
                 "EN_CURSO",
                 "SEGURIDAD_VIAL",
                 "Ponce, Esteban",
@@ -2741,7 +2741,7 @@ public class MockDataFactory {
                 store,
                 "ACTA-0048",
                 "A-2026-0048",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ESTACIONAMIENTO",
                 "Salinas, Nora",
@@ -2753,7 +2753,7 @@ public class MockDataFactory {
                 store,
                 "ACTA-0049",
                 "A-2026-0049",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "TRANSITO_URBANO",
                 "Vega, Tomas",
@@ -2787,7 +2787,7 @@ public class MockDataFactory {
                 "ACTIVA",
                 false,
                 true,
-                "D1_CAPTURA".equals(bloque),
+                "CAPT".equals(bloque),
                 false,
                 fechaCreacion,
                 infractorNombre,
@@ -2806,7 +2806,7 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
+                "CAPT",
                 bloque,
                 "Acta volumen demo ingresada a enriquecimiento."));
         store.getEventosPorActa().put(id, eventos);
@@ -2931,7 +2931,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 dominio,
-                "D3_DOCUMENTAL",
+                "ENRI",
                 estado,
                 "ACTIVA",
                 false,
@@ -2952,16 +2952,16 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(5),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta volumen demo en preparacion documental."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(1),
                 "PASE_BANDEJA",
-                "D2_ENRIQUECIMIENTO",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "Enriquecimiento cerrado; pasa a preparacion documental."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -3072,7 +3072,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "SEGURIDAD_VIAL",
-                "D3_DOCUMENTAL",
+                "ENRI",
                 "PENDIENTE_FIRMA",
                 "ACTIVA",
                 false,
@@ -3093,8 +3093,8 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "DOCUMENTO_GENERADO",
-                "D3_DOCUMENTAL",
-                "D3_DOCUMENTAL",
+                "ENRI",
+                "ENRI",
                 "Documento generado y en cola de firma (volumen demo)."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -3266,7 +3266,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 estado,
                 "ACTIVA",
                 false,
@@ -3287,8 +3287,8 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "DERIVACION_REDACCION",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Derivado a redaccion de pieza " + pieza + " (volumen demo)."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -3445,7 +3445,7 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "DERIVACION_GESTION_EXTERNA",
-                "D5_ANALISIS",
+                "ANAL",
                 "GESTION_EXTERNA",
                 "Derivado a gestion externa tipo " + tipoGestion + " (volumen demo)."));
         store.getEventosPorActa().put(id, eventos);
@@ -3572,7 +3572,7 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ARCHIVO_OPERATIVO",
-                "D5_ANALISIS",
+                "ANAL",
                 "ARCHIVO",
                 "Archivo volumen demo."));
         store.getEventosPorActa().put(id, eventos);
@@ -3708,7 +3708,7 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "CIERRE",
-                "D5_ANALISIS",
+                "ANAL",
                 "CERRADA",
                 "Cierre volumen demo."));
         store.getEventosPorActa().put(id, eventos);
@@ -3780,7 +3780,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -3802,24 +3802,24 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(15),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta ingresada; expediente en condicion de fallo (demo UX)."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(5),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificacion fehaciente del acta; pasa a pendientes de fallo."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-03",
                 id,
                 fechaCreacion.plusDays(8),
                 "DERIVACION_PENDIENTE_FALLO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 perfilAbsolutorio
                         ? "Expediente habilitado para fallo absolutorio."
                         : "Expediente habilitado para fallo condenatorio."));
@@ -3904,7 +3904,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "SEGURIDAD_VIAL",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -3927,32 +3927,32 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo con fallo condenatorio notificado."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(3),
                 "FALLO_CONDENATORIO_DICTADO",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Fallo condenatorio dictado (precarga demo)."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-03",
                 id,
                 fechaCreacion.plusDays(10),
                 "NOTIFICACION_FALLO_POSITIVA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificacion positiva del fallo condenatorio."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-04",
                 id,
                 fechaCreacion.plusDays(15),
                 "APELACION_PRESENTADA",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Apelacion presentada por portal infractor (precarga demo)."));
         if (apelacionResuelta && resultadoResolucion != null) {
             eventos.add(new ActaEventoMock(
@@ -3960,8 +3960,8 @@ public class MockDataFactory {
                     id,
                     fechaCreacion.plusDays(25),
                     "APELACION_ACEPTADA_ABSUELVE",
-                    "D5_ANALISIS",
-                    "D5_ANALISIS",
+                    "ANAL",
+                    "ANAL",
                     "Resolucion de apelacion: ACEPTADA_ABSUELVE (precarga demo)."));
         }
         store.getEventosPorActa().put(id, eventos);
@@ -4028,7 +4028,7 @@ public class MockDataFactory {
                 id,
                 numero,
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PARALIZADA",
                 "PARALIZADA",
                 false,
@@ -4051,24 +4051,24 @@ public class MockDataFactory {
                 id,
                 fechaCreacion.plusMinutes(10),
                 "ALTA",
-                "D1_CAPTURA",
-                "D2_ENRIQUECIMIENTO",
+                "CAPT",
+                "ENRI",
                 "Acta demo ingresada."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-02",
                 id,
                 fechaCreacion.plusDays(2),
                 "NOTIFICACION_ENTREGADA",
-                "D4_NOTIFICACION",
-                "D5_ANALISIS",
+                "NOTI",
+                "ANAL",
                 "Notificacion del acta cumplida."));
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijo + "-03",
                 id,
                 fechaCreacion.plusDays(5),
                 "PARALIZACION",
-                "D5_ANALISIS",
-                "D5_ANALISIS",
+                "ANAL",
+                "ANAL",
                 "Paralizacion vigente: " + motivoParalizacion + "."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4164,7 +4164,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0120",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -4184,17 +4184,17 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0120-01", id,
                 LocalDateTime.of(2026, 7, 1, 9, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta ingresada; datos completos."));
         eventos.add(new ActaEventoMock(
                 "EVT-0120-02", id,
                 LocalDateTime.of(2026, 7, 6, 10, 0),
-                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "NOTIFICACION_ENTREGADA", "NOTI", "ANAL",
                 "Notificación fehaciente del acta; pasa a análisis."));
         eventos.add(new ActaEventoMock(
                 "EVT-0120-03", id,
                 LocalDateTime.of(2026, 7, 10, 11, 0),
-                "PAGO_INFORMADO", "D5_ANALISIS", "D5_ANALISIS",
+                "PAGO_INFORMADO", "ANAL", "ANAL",
                 "Infractor informa pago voluntario; comprobante adjunto pendiente de verificación."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4232,7 +4232,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0121",
                 "SEGURIDAD_VIAL",
-                "D3_DOCUMENTAL",
+                "ENRI",
                 "PENDIENTE_FIRMA",
                 "ACTIVA",
                 false,
@@ -4252,22 +4252,22 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0121-01", id,
                 LocalDateTime.of(2026, 7, 2, 10, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta ingresada; datos completos."));
         eventos.add(new ActaEventoMock(
                 "EVT-0121-02", id,
                 LocalDateTime.of(2026, 7, 7, 14, 0),
-                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "NOTIFICACION_ENTREGADA", "NOTI", "ANAL",
                 "Notificación fehaciente del acta."));
         eventos.add(new ActaEventoMock(
                 "EVT-0121-03", id,
                 LocalDateTime.of(2026, 7, 15, 9, 0),
-                "FALLO_CONDENATORIO_DICTADO", "D5_ANALISIS", "D5_ANALISIS",
+                "FALLO_CONDENATORIO_DICTADO", "ANAL", "ANAL",
                 "Fallo condenatorio dictado; pendiente firma de autoridad competente."));
         eventos.add(new ActaEventoMock(
                 "EVT-0121-04", id,
                 LocalDateTime.of(2026, 7, 15, 9, 30),
-                "DERIVACION_FIRMA", "D5_ANALISIS", "D3_DOCUMENTAL",
+                "DERIVACION_FIRMA", "ANAL", "ENRI",
                 "Fallo derivado a firma; queda en bandeja PENDIENTE_FIRMA."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4293,7 +4293,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0122",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -4314,27 +4314,27 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0122-01", id,
                 LocalDateTime.of(2026, 7, 3, 8, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta ingresada."));
         eventos.add(new ActaEventoMock(
                 "EVT-0122-02", id,
                 LocalDateTime.of(2026, 7, 8, 11, 0),
-                "NOTIFICACION_ENTREGADA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "NOTIFICACION_ENTREGADA", "NOTI", "ANAL",
                 "Notificación fehaciente del acta."));
         eventos.add(new ActaEventoMock(
                 "EVT-0122-03", id,
                 LocalDateTime.of(2026, 7, 16, 10, 0),
-                "FALLO_CONDENATORIO_DICTADO", "D5_ANALISIS", "D5_ANALISIS",
+                "FALLO_CONDENATORIO_DICTADO", "ANAL", "ANAL",
                 "Fallo condenatorio dictado."));
         eventos.add(new ActaEventoMock(
                 "EVT-0122-04", id,
                 LocalDateTime.of(2026, 7, 20, 14, 0),
-                "NOTIFICACION_FALLO_POSITIVA", "D4_NOTIFICACION", "D5_ANALISIS",
+                "NOTIFICACION_FALLO_POSITIVA", "NOTI", "ANAL",
                 "Fallo notificado positivamente; inicia plazo de apelación."));
         eventos.add(new ActaEventoMock(
                 "EVT-0122-05", id,
                 LocalDateTime.of(2026, 7, 30, 9, 0),
-                "CONDENA_FIRME", "D5_ANALISIS", "D5_ANALISIS",
+                "CONDENA_FIRME", "ANAL", "ANAL",
                 "Plazo de apelación vencido sin presentación; condena firme establecida."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4365,7 +4365,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0123",
                 "TRANSITO_URBANO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -4385,7 +4385,7 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0123-01", id,
                 LocalDateTime.of(2026, 7, 4, 10, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta de inspección ingresada; pendiente completar datos del establecimiento."));
         store.getEventosPorActa().put(id, eventos);
         store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
@@ -4398,7 +4398,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0124",
                 "TRANSITO_URBANO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -4418,7 +4418,7 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0124-01", id,
                 LocalDateTime.of(2026, 7, 5, 9, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta de fiscalización ingresada; pendiente datos del local."));
         store.getEventosPorActa().put(id, eventos);
         store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
@@ -4431,7 +4431,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0125",
                 "ESTABLECIMIENTO",
-                "D2_ENRIQUECIMIENTO",
+                "ENRI",
                 "EN_CURSO",
                 "ACTIVA",
                 false,
@@ -4451,7 +4451,7 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0125-01", id,
                 LocalDateTime.of(2026, 7, 6, 8, 40),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta de bromatología ingresada; pendiente identificación del establecimiento."));
         store.getEventosPorActa().put(id, eventos);
         store.setAccionPendiente(id, "COMPLETAR_ENRIQUECIMIENTO");
@@ -4487,7 +4487,7 @@ public class MockDataFactory {
                 "EVT-0131-01", id,
                 LocalDateTime.of(2026, 5, 1, 9, 10),
                 "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
-                "D5_ANALISIS", "ARCHIVO",
+                "ANAL", "ARCHIVO",
                 "Archivado manualmente para demo de continuidad post-reingreso."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4532,7 +4532,7 @@ public class MockDataFactory {
                 "EVT-0132-01", id,
                 LocalDateTime.of(2026, 5, 10, 10, 10),
                 "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
-                "D5_ANALISIS", "ARCHIVO",
+                "ANAL", "ARCHIVO",
                 "Archivado manualmente para demo de continuidad post-reingreso."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4582,7 +4582,7 @@ public class MockDataFactory {
                 "EVT-0133-01", id,
                 LocalDateTime.of(2026, 5, 12, 10, 10),
                 "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
-                "D5_ANALISIS", "ARCHIVO",
+                "ANAL", "ARCHIVO",
                 "Archivado manualmente para demo de continuidad post-reingreso."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4631,7 +4631,7 @@ public class MockDataFactory {
                 "EVT-0134-01", id,
                 LocalDateTime.of(2026, 5, 14, 11, 10),
                 "ARCHIVADO_DESDE_ANALISIS_DIRECTO",
-                "D5_ANALISIS", "ARCHIVO",
+                "ANAL", "ARCHIVO",
                 "Archivado manualmente para demo de continuidad post-reingreso."));
         store.getEventosPorActa().put(id, eventos);
 
@@ -4663,7 +4663,7 @@ public class MockDataFactory {
                 id,
                 "A-2026-0140",
                 "TRANSITO_URBANO",
-                "D5_ANALISIS",
+                "ANAL",
                 "PENDIENTE_REVISION",
                 "ACTIVA",
                 false,
@@ -4683,17 +4683,17 @@ public class MockDataFactory {
         eventos.add(new ActaEventoMock(
                 "EVT-0140-01", id,
                 LocalDateTime.of(2026, 4, 1, 9, 10),
-                "ALTA", "D1_CAPTURA", "D2_ENRIQUECIMIENTO",
+                "ALTA", "CAPT", "ENRI",
                 "Acta ingresada: rodado retenido y documentacion retenida (mock)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0140-02", id,
                 LocalDateTime.of(2026, 4, 10, 10, 0),
-                "CONDENA_FIRME", "D5_ANALISIS", "D5_ANALISIS",
+                "CONDENA_FIRME", "ANAL", "ANAL",
                 "Condena firme (plazo vencido sin apelacion)."));
         eventos.add(new ActaEventoMock(
                 "EVT-0140-03", id,
                 LocalDateTime.of(2026, 4, 20, 9, 0),
-                "REINGRESO_POST_GESTION_EXTERNA", "GESTION_EXTERNA", "D5_ANALISIS",
+                "REINGRESO_POST_GESTION_EXTERNA", "GESTION_EXTERNA", "ANAL",
                 "Reingreso desde gestion externa sin pago: materiales pendientes de resolucion."));
         store.getEventosPorActa().put(id, eventos);
 

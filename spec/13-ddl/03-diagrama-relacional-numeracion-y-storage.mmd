@@ -1,8 +1,0 @@
-erDiagram
-    PoliticaNumeracion ||--o{ Talonario : define
-    TipoDocumento ||--o{ Talonario : aplica_a
-    Talonario ||--o{ TalonarioMovimiento : registra
-
-    StorageBackend ||--o{ StoragePolitica : soporta
-    StoragePolitica ||--o{ StorageObjeto : resuelve
-    Documento ||--o| StorageObjeto : usa

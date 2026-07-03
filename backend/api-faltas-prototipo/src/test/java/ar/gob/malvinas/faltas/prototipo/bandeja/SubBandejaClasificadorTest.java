@@ -20,15 +20,15 @@ class SubBandejaClasificadorTest {
     private final SubBandejaClasificador clasificador = new SubBandejaClasificador();
 
     @Test
-    void clasificaCapturaInicialEnD1() {
-        ActaMock acta = actaBase("ACTA-X", "ACTAS_EN_ENRIQUECIMIENTO", "D1_CAPTURA", "EN_CURSO");
+    void clasificaCapturaInicialEnCaptura() {
+        ActaMock acta = actaBase("ACTA-X", "ACTAS_EN_ENRIQUECIMIENTO", "CAPT", "EN_CURSO");
         SubBandejaContexto ctx = contexto(acta, null, PrototipoStore.SituacionPagoMock.SIN_PAGO);
         assertEquals("CAPTURA_INICIAL", clasificador.clasificar(ctx).subBandeja());
     }
 
     @Test
     void clasificaNotificacionPositivaEnAnalisis() {
-        ActaMock acta = actaBase("ACTA-X", "PENDIENTE_ANALISIS", "D5_ANALISIS", "PENDIENTE_REVISION");
+        ActaMock acta = actaBase("ACTA-X", "PENDIENTE_ANALISIS", "ANAL", "PENDIENTE_REVISION");
         ActaNotificacionMock notif = new ActaNotificacionMock(
                 "N-1",
                 "ACTA-X",
@@ -91,7 +91,7 @@ class SubBandejaClasificadorTest {
 
     @Test
     void clasificaCorreoPostalNegativaEnNotificacionComoNegativaPendienteDecision() {
-        ActaMock acta = actaBase("ACTA-0044", "EN_NOTIFICACION", "D4_NOTIFICACION", "EN_ENVIO");
+        ActaMock acta = actaBase("ACTA-0044", "EN_NOTIFICACION", "NOTI", "EN_ENVIO");
         ActaNotificacionMock notif = new ActaNotificacionMock(
                 "NOT-0044-01",
                 "ACTA-0044",
@@ -134,7 +134,7 @@ class SubBandejaClasificadorTest {
 
     @Test
     void clasificaCorreoPostalPositivaEnNotificacionComoCorreoPostal() {
-        ActaMock acta = actaBase("ACTA-0043", "EN_NOTIFICACION", "D4_NOTIFICACION", "EN_ENVIO");
+        ActaMock acta = actaBase("ACTA-0043", "EN_NOTIFICACION", "NOTI", "EN_ENVIO");
         ActaNotificacionMock notif = new ActaNotificacionMock(
                 "NOT-0043-01",
                 "ACTA-0043",
@@ -177,7 +177,7 @@ class SubBandejaClasificadorTest {
 
     @Test
     void clasificaFirmaFalloCondenatorioPendiente() {
-        ActaMock acta = actaBase("ACTA-X", "PENDIENTE_FIRMA", "D3_DOCUMENTAL", "PENDIENTE_FIRMA");
+        ActaMock acta = actaBase("ACTA-X", "PENDIENTE_FIRMA", "ENRI", "PENDIENTE_FIRMA");
         ActaDocumentoMock doc = new ActaDocumentoMock(
                 "D-1", "ACTA-X", "FALLO_CONDENATORIO", "PENDIENTE_FIRMA", "fallo.pdf");
         SubBandejaContexto ctx = new SubBandejaContexto(

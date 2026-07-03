@@ -81,7 +81,7 @@ public final class SubBandejaClasificador {
     }
 
     private static void evaluarEnriquecimiento(SubBandejaContexto ctx, List<SubBandejaCodigo> out) {
-        if ("D1_CAPTURA".equals(ctx.acta().bloqueActual())) {
+        if ("CAPT".equals(ctx.acta().bloqueActual())) {
             out.add(SubBandejaCodigo.CAPTURA_INICIAL);
         }
         if (PAGO_VOLUNTARIO_EN_CURSO.contains(ctx.situacionPago())

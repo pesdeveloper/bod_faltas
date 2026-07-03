@@ -386,7 +386,7 @@ final class PortalInfractorSupport {
         ActaMock acta = actas.get(actaId);
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
-        String bloque = acta != null ? acta.bloqueActual() : "D5_ANALISIS";
+        String bloque = acta != null ? acta.bloqueActual() : "ANAL";
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijoActa + "-" + String.format("%02d", eventos.size() + 1),
                 actaId,
@@ -453,7 +453,7 @@ final class PortalInfractorSupport {
         List<ActaEventoMock> eventos = eventosPorActa.computeIfAbsent(actaId, k -> new ArrayList<>());
         String sufijoActa = PrototipoStoreUtil.sufijoActa(actaId);
         int siguiente = eventos.size() + 1;
-        String bloque = acta != null ? acta.bloqueActual() : "D5_ANALISIS";
+        String bloque = acta != null ? acta.bloqueActual() : "ANAL";
         eventos.add(new ActaEventoMock(
                 "EVT-" + sufijoActa + "-" + String.format("%02d", siguiente),
                 actaId,

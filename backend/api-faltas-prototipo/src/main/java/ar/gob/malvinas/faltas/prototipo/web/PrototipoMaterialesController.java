@@ -44,9 +44,9 @@ public class PrototipoMaterialesController {
      * {@code MEDIDA_PREVENTIVA}. Parámetro {@code tipo}:
      * {@code SECUESTRO_RODADO}, {@code RETENCION_DOCUMENTAL},
      * {@code MEDIDA_PREVENTIVA_APLICABLE}. Requiere
-     * {@code ACTAS_EN_ENRIQUECIMIENTO} y bloque {@code D1_CAPTURA} o
-     * {@code D2_ENRIQUECIMIENTO}, y al menos un evento de trazabilidad previo
-     * en el expediente (p. ej. {@code ALTA} en D1).
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} y bloque {@code CAPT} o
+     * {@code ENRI}, y al menos un evento de trazabilidad previo
+     * en el expediente (p. ej. {@code ALTA} en captura).
      */
     @PostMapping("/actas/{id}/acciones/registrar-constatacion-material-temprana")
     public RegistrarConstatacionMaterialTempranaAccionResponse registrarConstatacionMaterialTemprana(

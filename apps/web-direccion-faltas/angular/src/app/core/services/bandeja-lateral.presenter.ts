@@ -51,9 +51,9 @@ export function codigosBandejaEnResumen(bandejasBackend: readonly BandejaRespons
 export function actaCoincideFiltroEnriquecimiento(acta: ActaBandejaItem, filtro: string): boolean {
   switch (filtro) {
     case 'LABRADAS':
-      return acta.bandejaActual === 'LABRADAS' || (acta.bloqueActual === 'D1_CAPTURA' && acta.estadoProcesoActual !== 'PENDIENTE_REVISION');
+      return acta.bandejaActual === 'LABRADAS' || (acta.bloqueActual === 'CAPT' && acta.estadoProcesoActual !== 'PENDIENTE_REVISION');
     case 'CAPTURA_INICIAL':
-      return acta.subBandeja === 'CAPTURA_INICIAL' || acta.bloqueActual === 'D1_CAPTURA';
+      return acta.subBandeja === 'CAPTURA_INICIAL' || acta.bloqueActual === 'CAPT';
     case 'REVISION_INICIAL':
       return acta.estadoProcesoActual === 'PENDIENTE_REVISION';
     case 'COMPLETITUD_DOCUMENTAL':

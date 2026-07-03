@@ -6,11 +6,11 @@ Implementar o corregir {{comportamiento puntual}} en el prototipo backend, mante
 ## Fuente de verdad
 Tomar como fuente principal solo:
 
-- `spec/...`
-- `spec/...`
-- `spec/...`
+- `backend/api-faltas-core/docs/spec-as-source/...`
+- `backend/api-faltas-core/docs/spec-as-source/...`
+- `docs/faltas/...`
 
-Usar otras partes de la spec solo si resulta estrictamente necesario.
+Usar otras partes de las fuentes vivas solo si resulta estrictamente necesario.
 
 ## Alcance técnico
 Trabajar solo sobre:

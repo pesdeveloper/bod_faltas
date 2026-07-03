@@ -250,7 +250,7 @@ final class ArchivoReingresoSupport {
                 "ACTA_ENVIADA_A_NOTIFICACION",
                 BLOQUE_D2_ENRIQUECIMIENTO,
                 BLOQUE_D4,
-                "Dirección envía el acta a notificación; D2_ENRIQUECIMIENTO -> D4_NOTIFICACION.");
+                "Dirección envía el acta a notificación; ENRI -> NOTI.");
 
         return new PrototipoStore.EnviarActaANotificacionResultado(
                 PrototipoStore.EnviarActaANotificacionEstado.OK,

@@ -125,7 +125,7 @@ final class ParalizacionReactivacionSupport {
 
     /**
      * Demo: reactivación explícita desde la macro-bandeja PARALIZADAS →
-     * vuelve a PENDIENTE_ANALISIS con bloque D5_ANALISIS, estado
+     * vuelve a PENDIENTE_ANALISIS con bloque {@code ANAL}, estado
      * PENDIENTE_REVISION, situación ACTIVA y marca operativa
      * {@link PrototipoStore#ACCION_REVISION_POST_REACTIVACION}. La información
      * histórica de la paralización queda en el log de eventos; no bloquea

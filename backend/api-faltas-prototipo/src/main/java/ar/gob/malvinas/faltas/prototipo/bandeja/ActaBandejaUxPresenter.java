@@ -108,19 +108,25 @@ public final class ActaBandejaUxPresenter {
             return null;
         }
         return switch (bloque) {
-            case "D1_CAPTURA" -> "Captura inicial";
+            // Valores productivos
+            case "CAPT" -> "Captura";
+            case "ENRI" -> "Enriquecimiento";
+            case "NOTI" -> "Notificación";
+            case "ANAL" -> "Análisis";
+            case "GEXT" -> "Gestión externa";
+            case "ARCH" -> "Archivo";
+            case "CERR" -> "Cerrada";
+            // Legacy/prototipo — compatibilidad de lectura únicamente
+            case "D1_CAPTURA"         -> "Captura";
             case "D2_ENRIQUECIMIENTO" -> "Enriquecimiento";
-            case "D3_PREPARACION_DOCUMENTAL", "D3_DOCUMENTAL", "D3" -> "Completitud documental";
-            case "D5_ANALISIS", "D5" -> "Análisis";
-            default -> {
-                if (bloque.startsWith("D5")) {
-                    yield "Análisis";
-                }
-                if (bloque.contains("PREPARACION") || bloque.contains("DOCUMENTAL")) {
-                    yield "Completitud documental";
-                }
-                yield null;
-            }
+            case "D4_NOTIFICACION"    -> "Notificación";
+            case "D5_ANALISIS", "D5"  -> "Análisis";
+            case "GESTION_EXTERNA"    -> "Gestión externa";
+            case "ARCHIVO"            -> "Archivo";
+            case "CERRADA"            -> "Cerrada";
+            // D3 no es bloque: no mostrar chip documental basado en bloque
+            case "D3_PREPARACION_DOCUMENTAL", "D3_DOCUMENTAL", "D3" -> null;
+            default -> null;
         };
     }
 

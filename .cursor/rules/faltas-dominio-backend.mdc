@@ -1,7 +1,8 @@
 ---
 description: Reglas backend y dominio para Faltas / Dirección de Faltas
 globs:
-  - "apps/api-faltas-java/**/*.java"
+  - "backend/api-faltas-core/**/*.java"
+  - "backend/api-faltas-prototipo/**/*.java"
   - "docs/MATRIZ_REGLAS_ACTA.md"
   - "docs/VALIDACION_FUNCIONAL.md"
   - "docs/guia_qa/**/*.md"

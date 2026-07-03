@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.prototipo.store;
 
+import ar.gob.malvinas.faltas.prototipo.domain.BloqueActa;
 import ar.gob.malvinas.faltas.prototipo.domain.PrototipoReglasOperabilidad;
 
 /**
@@ -20,19 +21,27 @@ final class PrototipoConstantes {
     static final String BANDEJA_PENDIENTE_ANALISIS = "PENDIENTE_ANALISIS";
 
     /**
-     * Bandeja de actas aún en labrado o enriquecimiento (D1/D2 en el
-     * recorrido mock).
+     * Bandeja de actas aún en labrado o enriquecimiento (bloques CAPT/ENRI).
      */
     static final String BANDEJA_ACTAS_EN_ENRIQUECIMIENTO = "ACTAS_EN_ENRIQUECIMIENTO";
 
-    /** Bloque de captura en sitio (D1), previo a enriquecimiento. */
-    static final String BLOQUE_D1_CAPTURA = "D1_CAPTURA";
+    /**
+     * Bloque productivo de captura (era D1_CAPTURA en el prototipo — legacy).
+     * Valor persistible: {@code "CAPT"}.
+     */
+    static final String BLOQUE_D1_CAPTURA = BloqueActa.CAPT.codigo();
 
-    /** Bloque de enriquecimiento (D2). */
-    static final String BLOQUE_D2_ENRIQUECIMIENTO = "D2_ENRIQUECIMIENTO";
+    /**
+     * Bloque productivo de enriquecimiento (era D2_ENRIQUECIMIENTO — legacy).
+     * Valor persistible: {@code "ENRI"}.
+     */
+    static final String BLOQUE_D2_ENRIQUECIMIENTO = BloqueActa.ENRI.codigo();
 
-    /** Bloque de proceso correspondiente al análisis jurídico (D5). */
-    static final String BLOQUE_D5 = "D5_ANALISIS";
+    /**
+     * Bloque productivo de análisis (era D5_ANALISIS — legacy).
+     * Valor persistible: {@code "ANAL"}.
+     */
+    static final String BLOQUE_D5 = BloqueActa.ANAL.codigo();
 
     /** Estado agregador usado al entrar a análisis. */
     static final String ESTADO_PENDIENTE_REVISION = "PENDIENTE_REVISION";
@@ -56,8 +65,11 @@ final class PrototipoConstantes {
      */
     static final String BANDEJA_EN_NOTIFICACION = "EN_NOTIFICACION";
 
-    /** Bloque de proceso correspondiente a notificación (D4). */
-    static final String BLOQUE_D4 = "D4_NOTIFICACION";
+    /**
+     * Bloque productivo de notificación (era D4_NOTIFICACION — legacy).
+     * Valor persistible: {@code "NOTI"}.
+     */
+    static final String BLOQUE_D4 = BloqueActa.NOTI.codigo();
 
     /**
      * Estado agregador de una notificación que todavía no fue despachada al
@@ -93,11 +105,10 @@ final class PrototipoConstantes {
     static final String BANDEJA_CERRADAS = "CERRADAS";
 
     /**
-     * Bloque de proceso correspondiente a gestión externa. Se usa como
-     * bloque, estado agregador y situación administrativa coherentes para
-     * que el caso quede claramente identificado una vez derivado.
+     * Bloque productivo de gestión externa (era literal "GESTION_EXTERNA" — legacy).
+     * Valor persistible: {@code "GEXT"}.
      */
-    static final String BLOQUE_GESTION_EXTERNA = "GESTION_EXTERNA";
+    static final String BLOQUE_GESTION_EXTERNA = BloqueActa.GEXT.codigo();
 
     /**
      * Estado agregador que usa una acta una vez derivada efectivamente a

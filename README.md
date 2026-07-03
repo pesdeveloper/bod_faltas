@@ -13,7 +13,8 @@ El sistema se entiende como un **gestor documental orientado al expediente**:
 
 ## Qué incluye
 
-- `spec/` → fuente de verdad canónica vigente
+- `backend/api-faltas-core/docs/spec-as-source/` → spec viva operativa (estados, eventos, comandos, bandejas, API, tests)
+- `docs/faltas/` → modelo MariaDB final, matriz de proceso y delta
 - `apps/` → aplicaciones por superficie operativa
 - `backend/` → backend y procesos compartidos
 - `shared/` → contratos y recursos compartidos
@@ -37,7 +38,7 @@ Este repositorio se organiza como **repo multiproyecto** con:
 - núcleo común de dominio y reglas
 - varias aplicaciones consumidoras
 - backend compartido
-- spec fragmentada en archivos chicos
+- spec viva fragmentada en archivos chicos bajo `backend/api-faltas-core/docs/spec-as-source/`
 
 No se modela como un conjunto de soluciones inconexas.
 
@@ -56,11 +57,16 @@ En este repositorio solo se modela:
 
 ## Regla de precedencia
 
-La fuente de verdad vigente del proyecto vive en:
+Las fuentes de verdad vigentes del proyecto son:
 
-- `spec/`
+- `backend/api-faltas-core/docs/spec-as-source/` → spec viva: estados, bloques, eventos, comandos, bandejas, API, tests
+- `docs/faltas/MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md` → modelo de datos MariaDB final
+- `docs/faltas/MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md` → matriz de proceso completa
+- `docs/faltas/DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md` → delta in-memory → MariaDB
+- `AGENTS.md` → instrucciones para agentes
+- `.cursor/rules/` → reglas de dominio y arquitectura
 
-Todo desarrollo, tasklist o generación asistida debe tomar `spec/` como base principal.
+Todo desarrollo, tasklist o generación asistida debe tomar estas fuentes como base principal.
 
 ---
 
@@ -72,19 +78,19 @@ Todo desarrollo, tasklist o generación asistida debe tomar `spec/` como base pr
 ---
 ## Cómo empezar a leer
 
-1. [spec/README.md](spec/README.md)
-2. [Proyecto y objetivo](spec/00-overview/00-proyecto-y-objetivo.md)
-3. [Stack tecnológico](spec/00-overview/01-stack-tecnologico.md)
-4. [Decisiones arquitectónicas](spec/00-overview/02-decisiones-arquitectonicas.md)
-5. [Mapa de dominio](spec/01-dominio/00-mapa-dominio.md)
-6. [Índice maestro de bandejas](spec/03-bandejas/00-indice-maestro-bandejas.md)
+1. [AGENTS.md](AGENTS.md)
+2. [Spec viva — estados, bloques, eventos](backend/api-faltas-core/docs/spec-as-source/02-estados-bloques-eventos.md)
+3. [Spec viva — comandos, precondiciones, efectos](backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md)
+4. [Spec viva — snapshot, bandejas, acciones](backend/api-faltas-core/docs/spec-as-source/04-snapshot-bandejas-acciones.md)
+5. [Modelo MariaDB final](docs/faltas/MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md)
+6. [Matriz de proceso completa](docs/faltas/MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md)
 
 ## Continuidad rápida
 
 Para recuperar rápidamente el estado actual del trabajo:
 
-- [Estado actual y próximo paso](spec/00-overview/99-estado-actual-y-proximo-paso.md)
-- [Contexto mínimo para agentes](spec/11-prompts-y-skills/prompts/00-contexto-minimo-para-agentes.md)
+- [Slices pendientes](backend/api-faltas-core/docs/spec-as-source/99-pendientes-siguientes-slices.md)
+- [Índice de documentación de trabajo](docs-trabajo/README.md)
 
 ### Direccion de Faltas - demo funcional completa lista 2026-06-01
 

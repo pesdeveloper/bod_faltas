@@ -1204,9 +1204,9 @@ final class CerrabilidadSupport {
      * incluía el {@code tipoDocumento} de esa constatación, devuelve CONFLICT
      * (API 409) sin añadir documento ni evento, evitando doble ancla, doble
      * origen y lecturas duplicadas. Si el acta no está en bandeja
-     * {@code ACTAS_EN_ENRIQUECIMIENTO} con bloque {@code D1_CAPTURA} o
-     * {@code D2_ENRIQUECIMIENTO}, el rechazo no modifica el expediente
-     * (criterio de etapa D1/D2 en el prototipo). No reemplaza a {@code
+     * {@code ACTAS_EN_ENRIQUECIMIENTO} con bloque {@code CAPT} o
+     * {@code ENRI}, el rechazo no modifica el expediente
+     * (criterio de etapa captura/enriquecimiento). No reemplaza a {@code
      * reconocerOrigenBloqueante*}; el reconocimiento sigue siendo opcional.
      */
     PrototipoStore.RegistrarConstatacionMaterialTempranaResultado registrarConstatacionMaterialTemprana(

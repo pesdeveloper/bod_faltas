@@ -61,8 +61,8 @@ class ConstatacionMaterialTempranaEtapaIT {
         mvc.perform(post(B + "/reset"))
                 .andExpect(status().isOk());
 
-        // ACTA-0025: en ACTAS_EN_ENRIQUECIMIENTO / D1_CAPTURA, 1 evento inicial, sin documentos.
-        // Disenada especificamente para esta regresion: constatacion temprana admitida en D1/D2,
+        // ACTA-0025: en ACTAS_EN_ENRIQUECIMIENTO / CAPT (captura), 1 evento inicial, sin documentos.
+        // Disenada especificamente para esta regresion: constatacion temprana admitida en CAPT/ENRI,
         // luego pago voluntario mueve el acta a PENDIENTE_ANALISIS donde una segunda constatacion
         // de tipo distinto es rechazada.
         String id = "ACTA-0025";

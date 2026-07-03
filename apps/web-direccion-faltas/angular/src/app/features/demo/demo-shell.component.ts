@@ -3116,7 +3116,20 @@ export class DemoShellComponent implements OnInit {
     const texto = JSON.stringify(snapshot, null, 2);
 
     try {
-      await navigator.clipboard.writeText(texto);
+      if (window.isSecureContext && navigator.clipboard) {
+        await navigator.clipboard.writeText(texto);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = texto;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (!ok) throw new Error('execCommand failed');
+      }
       this.copiaEstadoMensaje.set('Estado copiado.');
     } catch {
       this.copiaEstadoError.set('No se pudo copiar el estado.');
