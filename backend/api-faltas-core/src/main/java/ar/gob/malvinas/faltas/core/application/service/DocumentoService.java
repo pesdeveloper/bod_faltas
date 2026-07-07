@@ -18,6 +18,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.MomentoNumeracionDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFirma;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoNoEncontradoException;
@@ -131,7 +133,7 @@ public class DocumentoService {
         );
         documentoRepository.guardar(doc);
 
-        registrarEvento(acta.getId(), TipoEventoActa.DOCGEN, String.valueOf(idDoc), null,
+        registrarEvento(acta.getId(), TipoEventoActa.DOCGEN, idDoc, null,
                 null, "Documento generado: " + cmd.tipoDocumento());
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
@@ -191,7 +193,7 @@ public class DocumentoService {
 
         documentoRepository.guardar(doc);
 
-        registrarEvento(cmd.idActa(), TipoEventoActa.DOCGEN, String.valueOf(idDoc), null,
+        registrarEvento(cmd.idActa(), TipoEventoActa.DOCGEN, idDoc, null,
                 cmd.idUserAlta(), "Documento generado desde plantilla: " + plantilla.getCodigo());
 
         actaRepository.buscarPorId(cmd.idActa()).ifPresent(acta -> {
@@ -251,7 +253,7 @@ public class DocumentoService {
         FalActa acta = actaRepository.buscarPorId(doc.getIdActa())
                 .orElseThrow(() -> new ActaNoEncontradaException(doc.getIdActa()));
 
-        FalDependencia dependencia = dependenciaRepository.findByCodDep(acta.getIdDependencia())
+        FalDependencia dependencia = dependenciaRepository.findById(acta.getIdDependencia())
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "No se encontro dependencia con codDep='" + acta.getIdDependencia()
                         + "'. No se puede determinar idDep para numeracion documental."));
@@ -419,7 +421,7 @@ public class DocumentoService {
             }
         });
 
-        registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, String.valueOf(doc.getId()), null,
+        registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, doc.getId(), null,
                 firmante, "Documento firmado por: " + firmante);
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
@@ -558,7 +560,7 @@ public class DocumentoService {
                     }
                 });
 
-                registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, String.valueOf(doc.getId()), null,
+                registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, doc.getId(), null,
                         cmd.idUserFirma(), "Documento firmado por: " + firmante.getNomFirmante());
 
                 FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
@@ -655,7 +657,7 @@ public class DocumentoService {
         doc.marcarEmitido(cmd.storageKey(), cmd.hashDocu(), ahora);
         documentoRepository.guardar(doc);
 
-        registrarEvento(doc.getIdActa(), TipoEventoActa.DOCEMI, String.valueOf(doc.getId()), null,
+        registrarEvento(doc.getIdActa(), TipoEventoActa.DOCEMI, doc.getId(), null,
                 cmd.idUserOperacion(), "Documento emitido formalmente.");
 
         return doc;
@@ -707,7 +709,7 @@ public class DocumentoService {
 
         documentoRepository.guardar(doc);
 
-        registrarEvento(cmd.idActa(), TipoEventoActa.DOCADJ, String.valueOf(idDoc),
+        registrarEvento(cmd.idActa(), TipoEventoActa.DOCADJ, idDoc,
                 null, cmd.idUserAlta(), "Documento escaneado incorporado. Tipo: " + cmd.tipoDocu());
 
         actaRepository.buscarPorId(cmd.idActa()).ifPresent(acta -> {
@@ -766,7 +768,7 @@ public class DocumentoService {
         if (cmd.seqFirmaReq() == null) {
             // Convalidacion simple: trazabilidad sin cumplir requisito.
             // No se crea FalDocumentoFirma (seqFirmaReq es primitivo, no puede ser null ni 0).
-            registrarEvento(doc.getIdActa(), TipoEventoActa.DOCFIR, String.valueOf(doc.getId()),
+            registrarEvento(doc.getIdActa(), TipoEventoActa.DOCFIR, doc.getId(),
                     null, cmd.idUserFirma(),
                     "Convalidacion simple de firma escaneada por: " + firmante.getNomFirmante()
                     + " (sin requisito). Documento permanece en ADJUNTO.");
@@ -834,7 +836,7 @@ public class DocumentoService {
             documentoRepository.guardar(doc);
         }
 
-        registrarEvento(doc.getIdActa(), TipoEventoActa.DOCFIR, String.valueOf(doc.getId()),
+        registrarEvento(doc.getIdActa(), TipoEventoActa.DOCFIR, doc.getId(),
                 null, cmd.idUserFirma(),
                 "Firma escaneada convalidada (OLOGRAFA) por: " + firmante.getNomFirmante()
                 + ". Requisito seq=" + cmd.seqFirmaReq() + " marcado FIRMADO.");
@@ -916,21 +918,19 @@ public class DocumentoService {
     // -------------------------------------------------------------------------
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 }

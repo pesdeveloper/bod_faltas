@@ -7,11 +7,18 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
 public class InMemoryBloqueanteMaterialRepository implements BloqueanteMaterialRepository {
 
+    private final AtomicLong idGen = new AtomicLong(1);
     private final List<FalBloqueanteMaterial> store = new CopyOnWriteArrayList<>();
+
+    @Override
+    public Long nextId() {
+        return idGen.getAndIncrement();
+    }
 
     @Override
     public FalBloqueanteMaterial guardar(FalBloqueanteMaterial bloqueante) {
@@ -21,7 +28,7 @@ public class InMemoryBloqueanteMaterialRepository implements BloqueanteMaterialR
     }
 
     @Override
-    public Optional<FalBloqueanteMaterial> findById(String id) {
+    public Optional<FalBloqueanteMaterial> findById(Long id) {
         return store.stream()
                 .filter(b -> id.equals(b.getId()))
                 .findFirst();

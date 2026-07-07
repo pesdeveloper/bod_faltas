@@ -2,17 +2,25 @@ package ar.gob.malvinas.faltas.core.domain.enums;
 
 /**
  * Catalogo productivo de tipos de acta.
- *
- * Refleja el catalogo real de fal_dependencia_version.tipo_acta en MariaDB.
  * Cada dependencia versionada define un unico tipo_acta que puede labrar.
- *
- * ALCOHOLEMIA no es un tipo de acta: es un satelite eventual de un acta de transito.
- *
- * Slice 8A-1: implementacion in-memory. Slice 9: persiste como columna enum MariaDB.
  */
 public enum TipoActa {
-    TRANSITO,
-    CONTRAVENCION,
-    SUSTANCIAS_ALIMENTICIAS,
-    COMERCIO
+
+    TRANSITO((short) 1),
+    CONTRAVENCION((short) 2),
+    SUSTANCIAS_ALIMENTICIAS((short) 3),
+    COMERCIO((short) 4);
+
+    private final short codigo;
+
+    TipoActa(short codigo) { this.codigo = codigo; }
+
+    public short codigo() { return codigo; }
+
+    public static TipoActa fromCodigo(short codigo) {
+        for (TipoActa v : values()) {
+            if (v.codigo == codigo) return v;
+        }
+        throw new IllegalArgumentException("TipoActa sin codigo: " + codigo);
+    }
 }

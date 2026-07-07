@@ -1,76 +1,194 @@
 package ar.gob.malvinas.faltas.core.domain.model;
 
+import ar.gob.malvinas.faltas.core.domain.enums.CanalApelacion;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoApelacionActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ResultadoResolucionApelacion;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoPresentacion;
 
 import java.time.LocalDateTime;
 
 /**
- * Apelacion sobre el fallo condenatorio de un acta.
- *
- * Una apelacion activa (siActiva=true) es el recurso presentado por el infractor
- * contra el fallo condenatorio notificado.
- *
- * Solo puede existir una apelacion por acta (activa o resuelta).
- * El fallo al que aplica se referencia por falloId.
- *
- * Slice 3C: agrega campos de resolucion (fechaResolucion, fundamentosResolucion,
- * observacionesResolucion) usados en APERAZ y APEABS.
+ * Tramite de apelacion sobre un fallo del acta (fal_acta_apelacion).
+ * Los documentos presentados viven en FalActaApelacionDocumento.
  */
 public class FalActaApelacion {
 
-    private final String id;
+    private final Long id;
+    private int versionRow;
     private final Long actaId;
-    private final String falloId;
+    private final Long falloId;
+    private CanalApelacion canalApelacion;
+    private TipoPresentacion tipoPresentacion;
+    private String textoApelacion;
+    private final LocalDateTime fhRegistro;
+    private String idUserRegistro;
     private EstadoApelacionActa estadoApelacion;
-    private final LocalDateTime fechaPresentacion;
-    private String presentante;
-    private String fundamentos;
-    private String observaciones;
-    private boolean siActiva;
-    private LocalDateTime fechaResolucion;
+    private ResultadoResolucionApelacion resultadoResolucion;
+    private LocalDateTime fhResolucion;
+    private String idUserResolucion;
+    private Long documentoResolucionId;
     private String fundamentosResolucion;
     private String observacionesResolucion;
+    private final LocalDateTime fhAlta;
+    private final String idUserAlta;
+    private LocalDateTime fhUltMod;
+    private String idUserUltMod;
 
     public FalActaApelacion(
-            String id,
+            Long id,
             Long actaId,
-            String falloId,
+            Long falloId,
+            CanalApelacion canalApelacion,
+            TipoPresentacion tipoPresentacion,
+            String textoApelacion,
+            LocalDateTime fhRegistro,
+            String idUserRegistro,
+            LocalDateTime fhAlta,
+            String idUserAlta) {
+        this.id = id;
+        this.actaId = actaId;
+        this.falloId = falloId;
+        this.canalApelacion = canalApelacion;
+        this.tipoPresentacion = tipoPresentacion;
+        this.textoApelacion = textoApelacion;
+        this.fhRegistro = fhRegistro;
+        this.idUserRegistro = idUserRegistro;
+        this.fhAlta = fhAlta;
+        this.idUserAlta = idUserAlta;
+        this.estadoApelacion = EstadoApelacionActa.PRESENTADA;
+        this.versionRow = 0;
+    }
+
+    /**
+     * @deprecated Constructor legacy Slice 3. Usar el constructor canonico con CanalApelacion/TipoPresentacion.
+     * Parametros: id, actaId, falloId, estadoApelacion, fechaPresentacion, presentante, fundamentos, observaciones, siActiva, fhAlta, idUserAlta.
+     */
+    @Deprecated
+    @SuppressWarnings("unused")
+    public FalActaApelacion(
+            Long id,
+            Long actaId,
+            Long falloId,
             EstadoApelacionActa estadoApelacion,
             LocalDateTime fechaPresentacion,
             String presentante,
             String fundamentos,
             String observaciones,
-            boolean siActiva) {
-        this.id = id;
-        this.actaId = actaId;
-        this.falloId = falloId;
+            boolean siActiva,
+            LocalDateTime fhAlta,
+            String idUserAlta) {
+        this(id, actaId, falloId, null, null, fundamentos, fechaPresentacion, presentante, fhAlta, idUserAlta);
         this.estadoApelacion = estadoApelacion;
-        this.fechaPresentacion = fechaPresentacion;
-        this.presentante = presentante;
-        this.fundamentos = fundamentos;
-        this.observaciones = observaciones;
-        this.siActiva = siActiva;
     }
 
-    public String getId() { return id; }
-    public Long getActaId() { return actaId; }
-    public String getFalloId() { return falloId; }
-    public EstadoApelacionActa getEstadoApelacion() { return estadoApelacion; }
-    public void setEstadoApelacion(EstadoApelacionActa estadoApelacion) { this.estadoApelacion = estadoApelacion; }
-    public LocalDateTime getFechaPresentacion() { return fechaPresentacion; }
-    public String getPresentante() { return presentante; }
-    public void setPresentante(String presentante) { this.presentante = presentante; }
-    public String getFundamentos() { return fundamentos; }
-    public void setFundamentos(String fundamentos) { this.fundamentos = fundamentos; }
-    public String getObservaciones() { return observaciones; }
-    public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
-    public boolean isSiActiva() { return siActiva; }
-    public void setSiActiva(boolean siActiva) { this.siActiva = siActiva; }
-    public LocalDateTime getFechaResolucion() { return fechaResolucion; }
-    public void setFechaResolucion(LocalDateTime fechaResolucion) { this.fechaResolucion = fechaResolucion; }
-    public String getFundamentosResolucion() { return fundamentosResolucion; }
-    public void setFundamentosResolucion(String fundamentosResolucion) { this.fundamentosResolucion = fundamentosResolucion; }
-    public String getObservacionesResolucion() { return observacionesResolucion; }
-    public void setObservacionesResolucion(String observacionesResolucion) { this.observacionesResolucion = observacionesResolucion; }
-}
+    // -----------------------------------------------------------------------
+    // Getters y setters
+    // -----------------------------------------------------------------------
 
+    public Long getId() { return id; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int v) { this.versionRow = v; }
+    public Long getActaId() { return actaId; }
+    public Long getFalloId() { return falloId; }
+    public CanalApelacion getCanalApelacion() { return canalApelacion; }
+    public void setCanalApelacion(CanalApelacion c) { this.canalApelacion = c; }
+    public TipoPresentacion getTipoPresentacion() { return tipoPresentacion; }
+    public void setTipoPresentacion(TipoPresentacion t) { this.tipoPresentacion = t; }
+    public String getTextoApelacion() { return textoApelacion; }
+    public void setTextoApelacion(String t) { this.textoApelacion = t; }
+    public LocalDateTime getFhRegistro() { return fhRegistro; }
+    public String getIdUserRegistro() { return idUserRegistro; }
+    public void setIdUserRegistro(String u) { this.idUserRegistro = u; }
+    public EstadoApelacionActa getEstadoApelacion() { return estadoApelacion; }
+    public void setEstadoApelacion(EstadoApelacionActa e) { this.estadoApelacion = e; }
+    public ResultadoResolucionApelacion getResultadoResolucion() { return resultadoResolucion; }
+    public void setResultadoResolucion(ResultadoResolucionApelacion r) { this.resultadoResolucion = r; }
+    public LocalDateTime getFhResolucion() { return fhResolucion; }
+    public void setFhResolucion(LocalDateTime f) { this.fhResolucion = f; }
+    public String getIdUserResolucion() { return idUserResolucion; }
+    public void setIdUserResolucion(String u) { this.idUserResolucion = u; }
+    public Long getDocumentoResolucionId() { return documentoResolucionId; }
+    public void setDocumentoResolucionId(Long d) { this.documentoResolucionId = d; }
+    public LocalDateTime getFhAlta() { return fhAlta; }
+    public String getIdUserAlta() { return idUserAlta; }
+    public LocalDateTime getFhUltMod() { return fhUltMod; }
+    public void setFhUltMod(LocalDateTime f) { this.fhUltMod = f; }
+    public String getIdUserUltMod() { return idUserUltMod; }
+    public void setIdUserUltMod(String u) { this.idUserUltMod = u; }
+
+    // -----------------------------------------------------------------------
+    // Compatibilidad backward (campos anteriores delegados a los canonicos)
+    // -----------------------------------------------------------------------
+
+    /** @deprecated Usar getFhRegistro() */
+    @Deprecated public LocalDateTime getFechaPresentacion() { return fhRegistro; }
+    /** @deprecated Usar getTextoApelacion() */
+    @Deprecated public String getFundamentos() { return textoApelacion; }
+    /** @deprecated Usar setTextoApelacion() */
+    @Deprecated public void setFundamentos(String f) { this.textoApelacion = f; }
+    /** @deprecated Usar getIdUserRegistro() */
+    @Deprecated public String getPresentante() { return idUserRegistro; }
+    /** @deprecated Usar setIdUserRegistro() */
+    @Deprecated public void setPresentante(String p) { this.idUserRegistro = p; }
+    /** @deprecated campo eliminado del modelo */
+    @Deprecated public String getObservaciones() { return null; }
+    /** @deprecated campo eliminado del modelo */
+    @Deprecated public void setObservaciones(String o) { }
+    /** @deprecated Usar getFhResolucion() */
+    @Deprecated public LocalDateTime getFechaResolucion() { return fhResolucion; }
+    /** @deprecated Usar setFhResolucion() */
+    @Deprecated public void setFechaResolucion(LocalDateTime f) { this.fhResolucion = f; }
+    public String getFundamentosResolucion() { return fundamentosResolucion; }
+    public void setFundamentosResolucion(String f) { this.fundamentosResolucion = f; }
+    public String getObservacionesResolucion() { return observacionesResolucion; }
+    public void setObservacionesResolucion(String o) { this.observacionesResolucion = o; }
+    /**
+     * @deprecated Usar EstadoApelacionActa.RESUELTA + getResultadoResolucion()
+     * Esta propiedad se mantiene para compatibilidad con SnapshotRecalculador y tests del Slice 3.
+     */
+    @Deprecated public boolean isSiActiva() {
+        return estadoApelacion == EstadoApelacionActa.PRESENTADA
+                || estadoApelacion == EstadoApelacionActa.EN_ANALISIS;
+    }
+    /** @deprecated campo obsoleto; ignorado */
+    @Deprecated public void setSiActiva(boolean v) { }
+
+    // -----------------------------------------------------------------------
+    // Operaciones de dominio
+    // -----------------------------------------------------------------------
+
+    /** Resolucion atomica: establece RESUELTA, resultado, fecha, usuario y doc opcional. */
+    public void resolver(ResultadoResolucionApelacion resultado, LocalDateTime fhResolucion,
+                         String idUserResolucion, Long documentoResolucionId) {
+        if (resultado == null) throw new IllegalArgumentException("resultado requerido");
+        if (fhResolucion == null) throw new IllegalArgumentException("fhResolucion requerida");
+        this.estadoApelacion = EstadoApelacionActa.RESUELTA;
+        this.resultadoResolucion = resultado;
+        this.fhResolucion = fhResolucion;
+        this.idUserResolucion = idUserResolucion;
+        this.documentoResolucionId = documentoResolucionId;
+        this.fhUltMod = fhResolucion;
+        this.idUserUltMod = idUserResolucion;
+    }
+
+    // -----------------------------------------------------------------------
+    // Copia defensiva
+    // -----------------------------------------------------------------------
+
+    public FalActaApelacion copia() {
+        FalActaApelacion c = new FalActaApelacion(
+                id, actaId, falloId, canalApelacion, tipoPresentacion,
+                textoApelacion, fhRegistro, idUserRegistro, fhAlta, idUserAlta);
+        c.versionRow = this.versionRow;
+        c.estadoApelacion = this.estadoApelacion;
+        c.resultadoResolucion = this.resultadoResolucion;
+        c.fhResolucion = this.fhResolucion;
+        c.idUserResolucion = this.idUserResolucion;
+        c.documentoResolucionId = this.documentoResolucionId;
+        c.fundamentosResolucion = this.fundamentosResolucion;
+        c.observacionesResolucion = this.observacionesResolucion;
+        c.fhUltMod = this.fhUltMod;
+        c.idUserUltMod = this.idUserUltMod;
+        return c;
+    }
+}

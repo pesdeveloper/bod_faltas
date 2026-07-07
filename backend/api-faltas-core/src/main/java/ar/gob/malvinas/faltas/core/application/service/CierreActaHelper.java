@@ -3,6 +3,8 @@ package ar.gob.malvinas.faltas.core.application.service;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
@@ -14,7 +16,6 @@ import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 /**
  * Helper de cierre diferido (Slice 7C).
@@ -31,7 +32,7 @@ import java.util.UUID;
  * NotificacionService ni GestionExternaService. Solo agrega el camino diferido.
  *
  * Cerrables reconocidos:
- *   PAGO_VOLUNTARIO_CONFIRMADO, ABSUELTO, CONDENA_FIRME_PAGADA.
+ *   PAGO_VOLUNTARIO_PAGADO, ABSUELTO, CONDENA_FIRME_PAGADA.
  *
  * Slice 9: reemplazable por implementacion JDBC sin tocar dominio.
  */
@@ -62,7 +63,7 @@ public class CierreActaHelper {
      * requiere pago o gestion externa adicional.
      */
     public boolean esResultadoCerrable(ResultadoFinalActa resultado) {
-        return resultado == ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO
+        return resultado == ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO
                 || resultado == ResultadoFinalActa.ABSUELTO
                 || resultado == ResultadoFinalActa.CONDENA_FIRME_PAGADA;
     }
@@ -85,23 +86,18 @@ public class CierreActaHelper {
         acta.setBloqueActual(BloqueActual.CERR);
         actaRepository.guardar(acta);
 
-        int orden = eventoRepository.proximoOrdenLogico(acta.getId());
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                acta.getId(),
-                TipoEventoActa.CIERRA,
-                LocalDateTime.now(),
-                orden,
-                null,
-                null,
-                null,
-                motivo,
-                null
-        );
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(acta.getId())
+                .tipoEvt(TipoEventoActa.CIERRA)
+                .origenEvt(OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .actorTipo(ActorTipoEvento.SISTEMA)
+                .siEvtCierre(true)
+                .descripcionLegible(motivo)
+                .build();
         eventoRepository.registrar(evento);
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
     }
 }
-

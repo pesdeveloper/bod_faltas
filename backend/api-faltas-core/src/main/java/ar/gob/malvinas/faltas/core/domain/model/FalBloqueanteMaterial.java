@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * Bloqueante material registrado sobre un acta.
  *
  * Un bloqueante activo (siActivo == true) impide el cierre administrativo del acta,
- * incluso cuando el resultado final es cerrable (CONDENA_FIRME_PAGADA, ABSUELTO, etc.).
+ * incluso cuando el resultado final es cerrable (CONDENA_FIRME, ABSUELTO, etc.).
  *
  * El cierre del acta queda pendiente hasta que todos los bloqueantes se resuelvan
  * (CUMPLIDO o ANULADO) y siActivo pase a false.
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  */
 public class FalBloqueanteMaterial {
 
-    private final String id;
+    private final Long id;
     private final Long actaId;
     private OrigenBloqueanteMaterial origen;
     private EstadoBloqueanteMaterial estado;
@@ -27,7 +27,7 @@ public class FalBloqueanteMaterial {
     private LocalDateTime fechaAlta;
     private LocalDateTime fechaCierre;
 
-    public FalBloqueanteMaterial(String id, Long actaId) {
+    public FalBloqueanteMaterial(Long id, Long actaId) {
         this.id = id;
         this.actaId = actaId;
         this.estado = EstadoBloqueanteMaterial.PENDIENTE;
@@ -35,7 +35,7 @@ public class FalBloqueanteMaterial {
         this.fechaAlta = LocalDateTime.now();
     }
 
-    public String getId() { return id; }
+    public Long getId() { return id; }
     public Long getActaId() { return actaId; }
 
     public OrigenBloqueanteMaterial getOrigen() { return origen; }

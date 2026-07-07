@@ -11,6 +11,8 @@ import java.util.Optional;
  */
 public interface ApelacionActaRepository {
 
+    Long nextId();
+
     void guardar(FalActaApelacion apelacion);
 
     Optional<FalActaApelacion> buscarActiva(Long actaId);
@@ -20,5 +22,6 @@ public interface ApelacionActaRepository {
      * Permite al snapshot detectar el estado post-resolucion (RECHAZADA / ACEPTADA_ABSUELVE).
      */
     Optional<FalActaApelacion> buscarUltima(Long actaId);
-}
 
+    Optional<FalActaApelacion> findById(Long id);
+}

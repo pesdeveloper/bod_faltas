@@ -12,7 +12,7 @@ package ar.gob.malvinas.faltas.core.domain.enums;
  * No son eventos demo ni de proyeccion.
  *
  * APELAC NO EXISTE como evento productivo.
- * Eventos productivos de apelacion: APEPRE (presentada), APERAZ (rechazada), APEABS (aceptada-absuelve).
+ * Eventos productivos de apelacion: APEPRE (presentada), APEANL (en analisis), APERAZ (rechazada), APEABS (aceptada-absuelve), APEMCO (modifica condena), APENUL (nulidad), FALRMP (fallo reemplazado).
  * PLAVNC y CONFIR son eventos productivos de firmeza de condena (Slice 4).
  *
  * PAGCON NO EXISTE como evento productivo.
@@ -58,8 +58,41 @@ public enum TipoEventoActa {
     EXTDER("EXTDER", "Derivar a gestion externa - apremio/juzgado de paz (Slice 6)"),
     EXTRET("EXTRET", "Reingresar desde gestion externa (Slice 6)"),
     PAGAPR("PAGAPR", "Pago externo por apremio registrado (Slice 6)"),
-    DOCADJ("DOCADJ", "Documento adjuntado/incorporado al expediente"),
-    CIERRA("CIERRA", "Acta cerrada definitivamente");
+    APEANL("APEANL", "Apelacion pasada a EN_ANALISIS"),
+    APEMCO("APEMCO", "Apelacion aceptada - condena modificada"),
+    APENUL("APENUL", "Apelacion resuelta - nulidad declarada"),
+    FALRMP("FALRMP", "Fallo reemplazado por decision en apelacion"),    DOCADJ("DOCADJ", "Documento adjuntado/incorporado al expediente"),
+    CIERRA("CIERRA", "Acta cerrada definitivamente"),
+    // Slice 8F-11H: eventos del nuevo modelo de pagos (obligacion, forma, plan, movimiento)
+    OBLDET("OBLDET", "Obligacion de pago determinada (nueva)"),
+    OBLAUL("OBLAUL", "Obligacion de pago anulada"),
+    DEBEMI("DEBEMI", "Deuda emitida en Ingresos"),
+    FPCGEN("FPCGEN", "Forma de pago contado generada"),
+    FPPGEN("FPPGEN", "Forma de pago plan generada"),
+    FPREFN("FPREFN", "Refinanciacion de plan de pago generada"),
+    PAGPRC("PAGPRC", "Pago procesado por Ingresos"),
+    PAGCFT("PAGCFT", "Pago confirmado por Tesoreria"),
+    PAGANU("PAGANU", "Pago anulado"),
+    MOVPAG("MOVPAG", "Movimiento de pago registrado"),
+    PLNCAI("PLNCAI", "Plan de pago caido"),
+    NOTINT("NOTINT", "Intento de notificacion registrado"),
+    NOTREI("NOTREI", "Reintento de notificacion registrado"),
+    NOTRVE("NOTRVE", "Reintento de notificacion post vencimiento"),
+    ACUGEN("ACUGEN", "Acuse de notificacion registrado"),
+    ACUVAL("ACUVAL", "Acuse de notificacion validado"),
+    LOTGEN("LOTGEN", "Lote de correo generado"),
+    LOTEM("LOTEMI", "Lote de correo emitido"),
+    LOTPRC("LOTPRC", "Lote de correo procesado"),
+    LOTANU("LOTANU", "Lote de correo anulado"),
+    PORPOS("PORPOS", "Notificacion positiva por portal infractor"),
+    NOTSUP("NOTSUP", "Intento de notificacion superado por portal"),
+    PLNCAN("PLNCAN", "Plan de pago cancelado"),
+
+    DOCAMP("DOCAMP", "Documento adjuntado a apelacion"),
+
+    // Slice 8F-11K: eventos de acceso via QR
+    QRGEN("QRGENA", "Codigo QR de acceso generado para el acta"),
+    QRACC("QRACCA", "Acceso valido al acta registrado via codigo QR");
 
     private final String codigo;
     private final String descripcion;
@@ -79,3 +112,5 @@ public enum TipoEventoActa {
         throw new IllegalArgumentException("TipoEventoActa no reconocido: '" + codigo + "'");
     }
 }
+
+

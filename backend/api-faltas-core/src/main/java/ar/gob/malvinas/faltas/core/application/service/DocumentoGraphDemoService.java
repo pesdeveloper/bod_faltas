@@ -102,7 +102,7 @@ public class DocumentoGraphDemoService {
 
         FalActa acta = actaRepository.guardar(
                 GraphDemoActaFactory.crearActaDemo(actaRepository.nextId()));
-        falloRepository.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(acta.getId()));
+        falloRepository.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(acta.getId(), falloRepository.nextId()));
         pagoRepository.guardar(GraphDemoActaFactory.crearPagoVoluntarioDemo(acta.getId()));
 
         List<DocumentoGraphDemoCasoResultado> resultados = new ArrayList<>();

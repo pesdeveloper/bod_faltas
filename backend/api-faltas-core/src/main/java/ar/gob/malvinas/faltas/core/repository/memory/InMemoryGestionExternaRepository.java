@@ -5,12 +5,14 @@ import ar.gob.malvinas.faltas.core.repository.GestionExternaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
 public class InMemoryGestionExternaRepository implements GestionExternaRepository {
 
+    private final AtomicLong idGen = new AtomicLong(1);
     private final Map<Long, FalGestionExterna> store = new ConcurrentHashMap<>();
 
     @Override
@@ -34,5 +36,10 @@ public class InMemoryGestionExternaRepository implements GestionExternaRepositor
     @Override
     public Optional<FalGestionExterna> buscarPorHistorico(Long actaId) {
         return Optional.ofNullable(store.get(actaId));
+    }
+
+    @Override
+    public Long nextId() {
+        return idGen.getAndIncrement();
     }
 }

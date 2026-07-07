@@ -13,7 +13,7 @@ import ar.gob.malvinas.faltas.core.repository.BloqueanteMaterialRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+
 
 /**
  * Gestion minima in-memory de bloqueantes materiales (Slice 7B).
@@ -57,7 +57,7 @@ public class BloqueanteMaterialService {
         if (cmd.origen() == null) {
             throw new PrecondicionVioladaException("El origen es obligatorio para registrar un bloqueante material.");
         }
-        FalBloqueanteMaterial b = new FalBloqueanteMaterial(UUID.randomUUID().toString(), cmd.actaId());
+        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepository.nextId(), cmd.actaId());
         b.setOrigen(cmd.origen());
         return bloqueanteMaterialRepository.guardar(b);
     }

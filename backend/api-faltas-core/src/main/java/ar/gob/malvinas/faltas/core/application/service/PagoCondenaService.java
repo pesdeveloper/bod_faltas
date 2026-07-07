@@ -10,6 +10,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoCondena;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
@@ -275,21 +277,19 @@ public class PagoCondenaService {
     }
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 
@@ -297,7 +297,6 @@ public class PagoCondenaService {
         return s != null ? s : "";
     }
 }
-
 
 
 

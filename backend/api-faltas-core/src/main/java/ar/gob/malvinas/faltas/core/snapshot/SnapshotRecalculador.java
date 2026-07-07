@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.snapshot;
 
+import ar.gob.malvinas.faltas.core.application.service.ValorizacionService;
 import ar.gob.malvinas.faltas.core.domain.enums.AccionPendiente;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
@@ -12,10 +13,12 @@ import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaParalizacion;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaApelacion;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaValorizacion;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
 import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
 import ar.gob.malvinas.faltas.core.domain.model.FalPagoCondena;
@@ -27,6 +30,22 @@ import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaContravencion;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaTransito;
+import ar.gob.malvinas.faltas.core.repository.ActaParalizacionRepository;
+import ar.gob.malvinas.faltas.core.repository.ActaContravencionRepository;
+import ar.gob.malvinas.faltas.core.repository.ActaTransitoRepository;
+import ar.gob.malvinas.faltas.core.repository.ActaDocumentoRepository;
+import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
+import ar.gob.malvinas.faltas.core.repository.ObligacionPagoRepository;
+import ar.gob.malvinas.faltas.core.repository.FormaPagoRepository;
+import ar.gob.malvinas.faltas.core.repository.PlanPagoRefRepository;
+import ar.gob.malvinas.faltas.core.repository.PagoMovimientoRepository;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaObligacionPago;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaFormaPago;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaPlanPagoRef;
+import ar.gob.malvinas.faltas.core.application.service.PagoMovimientoReducer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -38,7 +57,7 @@ import java.util.Optional;
  *
  * Deriva bandeja, sub-bandeja, accion pendiente y flags operativos
  * a partir del estado actual del acta, sus documentos, notificaciones, pago voluntario,
- * pago condena, fallo activo y apelacion (activa o resuelta).
+ * pago condena, fallo activo, apelacion y valorizacion operativa vigente.
  *
  * El snapshot no es fuente de verdad. Puede regenerarse en cualquier momento.
  *
@@ -46,9 +65,6 @@ import java.util.Optional;
  *   1. Situacion administrativa transversal (CERRADA, ANULADA, ARCHIVADA, PARALIZADA, EN_GESTION_EXTERNA).
  *   2. ResultadoFinal ABSUELTO con acta aun ACTIVA: PENDIENTE_ANALISIS / NINGUNA.
  *   2b. ResultadoFinal CONDENA_FIRME con acta ACTIVA: routing por estado pago condena.
- *       - sin pago: PENDIENTE_PAGO_CONDENA / GESTIONAR_PAGO_CONDENA
- *       - INFORMADO: PENDIENTE_CONFIRMACION_PAGO_CONDENA / CONFIRMAR_PAGO_CONDENA
- *       - OBSERVADO: PENDIENTE_PAGO_CONDENA / CORREGIR_PAGO_CONDENA
  *   3. Bloque CERR, ARCH, GEXT.
  *   4. Bloque ANAL: evalua en orden pago voluntario, apelacion, fallo.
  *   5. Bloque NOTI: evalua notificaciones.
@@ -64,7 +80,62 @@ public class SnapshotRecalculador {
     private final FalloActaRepository falloActaRepository;
     private final ApelacionActaRepository apelacionActaRepository;
     private final PagoCondenaRepository pagoCondenaRepository;
+    private ValorizacionService valorizacionService;
 
+    // Repositorios de satelites - 8F-11E (optional, no rompen tests anteriores)
+    @Autowired(required = false)
+    private ActaTransitoRepository actaTransitoRepository;
+    @Autowired(required = false)
+    private ActaParalizacionRepository actaParalizacionRepository;
+
+    @Autowired(required = false)
+    private ActaContravencionRepository actaContravencionRepository;
+
+    // Pivot acta-documento - 8F-11J (optional, no rompen tests anteriores)
+    @Autowired(required = false)
+    private ActaDocumentoRepository actaDocumentoRepository;
+
+    // Repositorios de pagos - 8F-11H (optional, no rompen tests anteriores)
+    @Autowired(required = false)
+    private ObligacionPagoRepository obligacionPagoRepository;
+    @Autowired(required = false)
+    private FormaPagoRepository formaPagoRepository;
+    @Autowired(required = false)
+    private PlanPagoRefRepository planPagoRefRepository;
+    @Autowired(required = false)
+    private PagoMovimientoRepository pagoMovimientoRepository;
+    @Autowired(required = false)
+    private PagoMovimientoReducer pagoMovimientoReducer;
+
+    /**
+     * Constructor usado por Spring (inyecta ValorizacionService).
+     * El @Autowired en este constructor garantiza que Spring lo use cuando el bean
+     * ValorizacionService esta disponible (contexto completo).
+     */
+    @Autowired
+    public SnapshotRecalculador(
+            ActaEventoRepository eventoRepository,
+            DocumentoRepository documentoRepository,
+            NotificacionRepository notificacionRepository,
+            PagoVoluntarioRepository pagoVoluntarioRepository,
+            FalloActaRepository falloActaRepository,
+            ApelacionActaRepository apelacionActaRepository,
+            PagoCondenaRepository pagoCondenaRepository,
+            ValorizacionService valorizacionService) {
+        this.eventoRepository = eventoRepository;
+        this.documentoRepository = documentoRepository;
+        this.notificacionRepository = notificacionRepository;
+        this.pagoVoluntarioRepository = pagoVoluntarioRepository;
+        this.falloActaRepository = falloActaRepository;
+        this.apelacionActaRepository = apelacionActaRepository;
+        this.pagoCondenaRepository = pagoCondenaRepository;
+        this.valorizacionService = valorizacionService;
+    }
+
+    /**
+     * Constructor de compatibilidad hacia atras para tests que no prueban valorizacion en snapshot.
+     * Cuando valorizacionService=null, los cinco campos de valorizacion quedan en null/false.
+     */
     public SnapshotRecalculador(
             ActaEventoRepository eventoRepository,
             DocumentoRepository documentoRepository,
@@ -73,13 +144,9 @@ public class SnapshotRecalculador {
             FalloActaRepository falloActaRepository,
             ApelacionActaRepository apelacionActaRepository,
             PagoCondenaRepository pagoCondenaRepository) {
-        this.eventoRepository = eventoRepository;
-        this.documentoRepository = documentoRepository;
-        this.notificacionRepository = notificacionRepository;
-        this.pagoVoluntarioRepository = pagoVoluntarioRepository;
-        this.falloActaRepository = falloActaRepository;
-        this.apelacionActaRepository = apelacionActaRepository;
-        this.pagoCondenaRepository = pagoCondenaRepository;
+        this(eventoRepository, documentoRepository, notificacionRepository,
+                pagoVoluntarioRepository, falloActaRepository, apelacionActaRepository,
+                pagoCondenaRepository, null);
     }
 
     public FalActaSnapshot recalcular(FalActa acta) {
@@ -125,22 +192,63 @@ public class SnapshotRecalculador {
         }
 
         // REINGRESO_PARA_REVISION emite EXTRET igual que REINGRESO_SIN_PAGO.
-        // Para distinguirlos se verifica la descripcion del ultimo evento EXTRET.
         boolean esReingresoParaRevision = snap.getUltimoEventoTipo() == TipoEventoActa.EXTRET
                 && eventos.stream()
                         .filter(e -> e.tipoEvt() == TipoEventoActa.EXTRET)
                         .reduce((a, b) -> b)
-                        .map(e -> e.descripcion() != null
-                                && e.descripcion().contains("REINGRESO_PARA_REVISION"))
+                        .map(e -> e.descripcionLegible() != null
+                                && e.descripcionLegible().contains("REINGRESO_PARA_REVISION"))
                         .orElse(false);
+
+        boolean tuvoPagoExterno = eventos.stream()
+                .anyMatch(e -> e.tipoEvt() == TipoEventoActa.PAGAPR);
+
+        // Proyectar valorizaciÃƒÂ³n operativa (solo cuando el servicio esta disponible)
+        proyectarValorizacion(snap, acta.getId());
 
         derivarBandejaYAccion(snap, acta, pagoOpt, falloOpt, ultimaApelacionOpt,
                 pagoCondenaOpt,
                 tieneDocumentos, tieneDocsPendientesFirma,
                 todosDocsFirmados, tieneDocsFirmados, tieneNotificaciones,
-                notificacionEnCurso, tieneNotificacionPositiva, esReingresoParaRevision);
+                notificacionEnCurso, tieneNotificacionPositiva, esReingresoParaRevision,
+                tuvoPagoExterno);
+
+        proyectarSatelites(snap, acta.getId());
+        proyectarPagos(snap, acta.getId());
+        proyectarParalizacion(snap, acta.getId());
+        proyectarPivot(snap, acta.getId());
 
         return snap;
+    }
+
+    /**
+     * Proyecta los cinco campos de valorizacion operativa en el snapshot.
+     * Si no hay servicio disponible o no hay vigente, deja los campos en null/false.
+     */
+    private void proyectarValorizacion(FalActaSnapshot snap, Long actaId) {
+        if (valorizacionService == null) {
+            snap.setValorizacionOperativaId(null);
+            snap.setEstadoValorizacionOperativa(null);
+            snap.setTipoValorizacionOperativa(null);
+            snap.setMontoOperativoVigente(null);
+            snap.setSiMontoConfirmado(false);
+            return;
+        }
+        Optional<FalActaValorizacion> operativaOpt = valorizacionService.seleccionarOperativa(actaId);
+        if (operativaOpt.isPresent()) {
+            FalActaValorizacion op = operativaOpt.get();
+            snap.setValorizacionOperativaId(op.getId());
+            snap.setEstadoValorizacionOperativa(op.getEstadoValorizacion());
+            snap.setTipoValorizacionOperativa(op.getTipoValorizacionActa());
+            snap.setMontoOperativoVigente(op.getMontoFinal());
+            snap.setSiMontoConfirmado(true);
+        } else {
+            snap.setValorizacionOperativaId(null);
+            snap.setEstadoValorizacionOperativa(null);
+            snap.setTipoValorizacionOperativa(null);
+            snap.setMontoOperativoVigente(null);
+            snap.setSiMontoConfirmado(false);
+        }
     }
 
     private void derivarBandejaYAccion(
@@ -157,7 +265,8 @@ public class SnapshotRecalculador {
             boolean tieneNotificaciones,
             boolean notificacionEnCurso,
             boolean tieneNotificacionPositiva,
-            boolean esReingresoParaRevision) {
+            boolean esReingresoParaRevision,
+            boolean tuvoPagoExterno) {
 
         switch (acta.getSituacionAdministrativa()) {
             case CERRADA, ANULADA -> {
@@ -183,26 +292,22 @@ public class SnapshotRecalculador {
             default -> { /* ACTIVA: continuar */ }
         }
 
-        // Resultado final ABSUELTO pero acta aun no cerrada: bloqueantes materiales activos.
         if (acta.getResultadoFinal() == ResultadoFinalActa.ABSUELTO) {
             snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
             snap.setAccionPendiente(AccionPendiente.NINGUNA);
             return;
         }
 
-        // Condena firme pagada pero acta aun no cerrada: hay bloqueantes materiales activos (Slice 7A).
-        // Aplica tanto al pago externo (PAGAPR) como al pago de condena (PCOCNF) con bloqueantes.
-        if (acta.getResultadoFinal() == ResultadoFinalActa.CONDENA_FIRME_PAGADA
-                && acta.getSituacionAdministrativa() == SituacionAdministrativaActa.ACTIVA) {
+        if (acta.getResultadoFinal() == ResultadoFinalActa.CONDENA_FIRME
+                && acta.getSituacionAdministrativa() == SituacionAdministrativaActa.ACTIVA
+                && pagoCondenaOpt.isPresent()
+                && pagoCondenaOpt.get().getEstadoPagoCondena() == EstadoPagoCondena.CONFIRMADO) {
             snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
             snap.setAccionPendiente(AccionPendiente.NINGUNA);
             return;
         }
 
-        // Condena firme: routing por estado de pago condena.
         if (acta.getResultadoFinal() == ResultadoFinalActa.CONDENA_FIRME) {
-            // Solo REINGRESO_PARA_REVISION vuelve a PENDIENTE_ANALISIS.
-            // REINGRESO_SIN_PAGO mantiene el routing normal a PENDIENTE_PAGO_CONDENA.
             if (esReingresoParaRevision) {
                 snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
                 snap.setAccionPendiente(AccionPendiente.DICTAR_FALLO);
@@ -221,9 +326,19 @@ public class SnapshotRecalculador {
                     return;
                 }
             }
-            // Sin pago condena o PENDIENTE
+            if (tuvoPagoExterno) {
+                snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
+                snap.setAccionPendiente(AccionPendiente.NINGUNA);
+                return;
+            }
             snap.setCodBandeja(CodigoBandeja.PENDIENTE_PAGO_CONDENA);
             snap.setAccionPendiente(AccionPendiente.GESTIONAR_PAGO_CONDENA);
+            return;
+        }
+
+        if (acta.getResultadoFinal() == ResultadoFinalActa.CONDENA_FIRME_PAGADA) {
+            snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
+            snap.setAccionPendiente(AccionPendiente.NINGUNA);
             return;
         }
 
@@ -267,7 +382,10 @@ public class SnapshotRecalculador {
                     snap.setAccionPendiente(AccionPendiente.RESOLVER_APELACION);
                     return;
                 }
-                if (estadoAp == EstadoApelacionActa.RECHAZADA) {
+                if (estadoAp == EstadoApelacionActa.RECHAZADA
+                        || (estadoAp == EstadoApelacionActa.RESUELTA
+                            && ultimaApelacionOpt.get().getResultadoResolucion()
+                               == ar.gob.malvinas.faltas.core.domain.enums.ResultadoResolucionApelacion.RECHAZADA)) {
                     snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
                     snap.setAccionPendiente(AccionPendiente.DECLARAR_CONDENA_FIRME);
                     return;
@@ -350,6 +468,97 @@ public class SnapshotRecalculador {
         snap.setCodBandeja(CodigoBandeja.PENDIENTE_PREPARACION_DOCUMENTAL);
         snap.setAccionPendiente(AccionPendiente.GENERAR_DOCUMENTO);
     }
+
+    /**
+     * Proyecta campos satelite en el snapshot: transito y contravencion.
+     * Requiere actaTransitoRepository y actaContravencionRepository inyectados (optional).
+     * Si no estan disponibles, no hace nada (compatibilidad hacia atras).
+     */
+    /**
+     * Proyecta idDocuUlt en el snapshot desde el pivot acta-documento.
+     * Prioridad: FALLO > NOTIFICACION > ACTA_PRINCIPAL.
+     * Si actaDocumentoRepository no esta disponible, no hace nada.
+     */
+    private void proyectarPivot(FalActaSnapshot snap, Long actaId) {
+        if (actaDocumentoRepository == null) return;
+        for (RolDocuActa rol : new RolDocuActa[]{RolDocuActa.FALLO, RolDocuActa.NOTIFICACION, RolDocuActa.ACTA_PRINCIPAL}) {
+            java.util.Optional<ar.gob.malvinas.faltas.core.domain.model.FalActaDocumento> principal =
+                    actaDocumentoRepository.buscarPrincipalPorActaYRol(actaId, rol);
+            if (principal.isPresent()) {
+                snap.setIdDocuUlt(principal.get().getDocumentoId());
+                return;
+            }
+        }
+    }
+
+    private void proyectarSatelites(FalActaSnapshot snap, Long actaId) {
+        if (actaTransitoRepository != null) {
+            actaTransitoRepository.findByActaId(actaId).ifPresent(t -> {
+                if (t.getIdProvLic() != null) {
+                    snap.setLicenciaProvinciaTxt("Prov-" + t.getIdProvLic());
+                }
+                if (t.getUnidadTerritorialLicTipo() != null) {
+                    snap.setLicenciaUnidadTxt(t.getUnidadTerritorialLicTipo().name());
+                }
+            });
+        }
+        if (actaContravencionRepository != null) {
+            actaContravencionRepository.findByActaId(actaId).ifPresent(ctv -> {
+                snap.setNomenclaturaResumen(ctv.generarNomenclaturaResumen());
+                snap.setIdBieI(ctv.getIdBieI());
+                snap.setIdBieC(ctv.getIdBieC());
+            });
+        }
+    }
+    /**
+     * Proyecta motivoParalizacionAct desde el ciclo activo de paralizacion.
+     * NULL cuando no hay paralizacion activa.
+     */
+    private void proyectarParalizacion(FalActaSnapshot snap, Long actaId) {
+        if (actaParalizacionRepository != null) {
+            actaParalizacionRepository.buscarActivaPorActa(actaId).ifPresent(ciclo ->
+                    snap.setMotivoParalizacionAct(ciclo.getMotivoParalizacion()));
+        }
+    }
+    /**
+     * Proyecta campos de pagos en el snapshot desde el nuevo modelo de obligacion/forma/plan.
+     * Solo actua cuando los repositorios de pagos estan disponibles (Spring context completo).
+     * Tests sin estos repositorios no se ven afectados.
+     */
+    private void proyectarPagos(FalActaSnapshot snap, Long actaId) {
+        if (obligacionPagoRepository == null) return;
+        obligacionPagoRepository.findVigenteByActaId(actaId).ifPresent(obligacion -> {
+            snap.setTipoObligacionPago(obligacion.getTipoObligacion());
+            snap.setEstadoObligacionPago(obligacion.getEstadoObligacion());
+            snap.setMontoObligacionPago(obligacion.getMontoOriginal());
+            snap.setSiAptaIntimacion(obligacion.isSiAptaIntimacion());
+            snap.setMotivoAptaIntimacion(obligacion.getMotivoAptaIntimacion());
+            snap.setCantDiasMora(obligacion.getCantDiasMora());
+            snap.setCantCuotasMora(obligacion.getCantCuotasMora());
+            snap.setCantCuotasMoraConsec(obligacion.getCantCuotasMoraConsec());
+            snap.setFhUltSyncIngresos(obligacion.getFhUltSyncIngresos());
+
+            if (formaPagoRepository != null && obligacion.getFormaPagoVigenteId() != null) {
+                formaPagoRepository.findById(obligacion.getFormaPagoVigenteId()).ifPresent(forma -> {
+                    snap.setTipoFormaPagoVigente(forma.getTipoFormaPago());
+                    snap.setEstadoFormaPagoVigente(forma.getEstadoFormaPago());
+                    if (pagoMovimientoRepository != null && pagoMovimientoReducer != null) {
+                        var movimientos = pagoMovimientoRepository.findByObligacionPagoId(obligacion.getId());
+                        snap.setSiPagoProcesado(pagoMovimientoReducer.hayPagoProcesadoActivo(movimientos));
+                        snap.setSiPagoConfirmado(pagoMovimientoReducer.hayPagoConfirmadoActivo(movimientos));
+                    }
+                });
+            }
+
+            if (planPagoRefRepository != null) {
+                planPagoRefRepository.findVigenteByObligacionPagoId(obligacion.getId()).ifPresent(plan -> {
+                    snap.setSiPlanPago(true);
+                    snap.setEstadoPlanPago(plan.getEstadoPlan());
+                    snap.setCantCuotasPlan(plan.getCantidadCuotas());
+                    snap.setValorCuotaPlan(plan.getImporteCuotaRegular());
+                    snap.setCantCuotasPagadas(plan.getCantidadCuotasPagadas());
+                });
+            }
+        });
+    }
 }
-
-

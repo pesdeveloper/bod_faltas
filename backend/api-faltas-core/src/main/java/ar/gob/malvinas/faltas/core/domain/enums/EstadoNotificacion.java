@@ -9,5 +9,6 @@ public enum EstadoNotificacion {
     CON_ACUSE_POSITIVO,
     CON_ACUSE_NEGATIVO,
     VENCIDA,
-    REQUIERE_DECISION
+    REQUIERE_DECISION,
+    SIN_EFECTO
 }

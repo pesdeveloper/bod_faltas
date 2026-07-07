@@ -6,5 +6,6 @@ package ar.gob.malvinas.faltas.core.domain.enums;
 public enum ResultadoNotificacion {
     POSITIVO,
     NEGATIVO,
-    VENCIDO
+    VENCIDO,
+    SUPERADA_POR_PORTAL
 }

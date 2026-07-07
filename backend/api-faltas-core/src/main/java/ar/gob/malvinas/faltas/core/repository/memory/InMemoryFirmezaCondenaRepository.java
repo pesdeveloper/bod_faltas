@@ -6,16 +6,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Implementacion en memoria de FirmezaCondenaRepository.
- * Almacena registros de firmeza por id tecnico.
- * Reemplazable por JdbcClient/MariaDB sin tocar servicios.
- */
 @Repository
 public class InMemoryFirmezaCondenaRepository implements FirmezaCondenaRepository {
 
-    private final ConcurrentHashMap<String, FalActaFirmezaCondena> store = new ConcurrentHashMap<>();
+    private final AtomicLong idGen = new AtomicLong(1);
+    private final ConcurrentHashMap<Long, FalActaFirmezaCondena> store = new ConcurrentHashMap<>();
+
+    @Override
+    public Long nextId() {
+        return idGen.getAndIncrement();
+    }
 
     @Override
     public void guardar(FalActaFirmezaCondena firmeza) {

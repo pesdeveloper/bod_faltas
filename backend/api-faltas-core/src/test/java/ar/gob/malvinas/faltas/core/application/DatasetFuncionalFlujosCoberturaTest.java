@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 8F-4C -- Cobertura total de pruebas funcionales.
  *
  * Valida que:
- * - Las 31 actas del dataset tienen prueba funcional asociada.
+ * - Las 37 actas del dataset tienen prueba funcional asociada.
  * - Todos los codigos ACT-* aparecen cubiertos en las suites de este slice.
  * - No hay actas sin runner.
  * - No hay casos funcionales marcados como "noEjecutado" por falta de servicio.
@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DatasetFuncionalFlujosCoberturaTest {
 
     /**
-     * Los 31 codigos canonicos del dataset funcional.
+     * Los 37 codigos canonicos del dataset funcional.
      * Si el dataset crece, actualizar esta lista aqui Y en la suite correspondiente.
      */
     private static final Set<String> CODIGOS_CUBIERTOS_EN_SUITES = Set.of(
@@ -72,6 +72,12 @@ class DatasetFuncionalFlujosCoberturaTest {
             "ACT-017-CONDENA-FIRME-PAGADA",
             "ACT-030-PAGO-CONDENA-OBSERVADO",
             "ACT-031-PAGO-CONDENA-CON-DESCUENTO",
+            "ACT-032-APELACION-CON-DOCUMENTOS",
+            "ACT-033-APELACION-MIXTA",
+            "ACT-034-APELACION-RECHAZADA",
+            "ACT-035-APELACION-ABSOLUTORIA",
+            "ACT-036-APELACION-MODIFICA-CONDENA",
+            "ACT-037-APELACION-NULIDAD",
             // Suite: ActaFlujoGestionExternaFuncionalTest
             "ACT-018-GESTION-EXTERNA",
             "ACT-019-GESTION-EXTERNA-PAGO-EXTERNO",
@@ -93,14 +99,14 @@ class DatasetFuncionalFlujosCoberturaTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Dataset contiene exactamente 31 actas funcionales")
+    @DisplayName("Dataset contiene exactamente 37 actas funcionales")
     void dataset_contiene_31_actas() {
         List<ActaMockFuncionalDefinicion> todas = DatasetFuncionalDominioCatalog.obtenerTodasLasDefiniciones();
-        assertThat(todas).hasSize(31);
+        assertThat(todas).hasSize(37);
     }
 
     @Test
-    @DisplayName("Todos los 31 codigos del dataset estan cubiertos en alguna suite funcional")
+    @DisplayName("Todos los 37 codigos del dataset estan cubiertos en alguna suite funcional")
     void todos_los_codigos_tienen_suite_funcional() {
         List<ActaMockFuncionalDefinicion> todas = DatasetFuncionalDominioCatalog.obtenerTodasLasDefiniciones();
         List<String> codigos = todas.stream().map(ActaMockFuncionalDefinicion::codigo).collect(Collectors.toList());
@@ -131,9 +137,9 @@ class DatasetFuncionalFlujosCoberturaTest {
     }
 
     @Test
-    @DisplayName("Cobertura es exactamente 31/31 (sin actas huerfanas)")
+    @DisplayName("Cobertura es exactamente 37/37 (sin actas huerfanas)")
     void cobertura_31_de_31() {
-        assertThat(CODIGOS_CUBIERTOS_EN_SUITES).hasSize(31);
+        assertThat(CODIGOS_CUBIERTOS_EN_SUITES).hasSize(37);
     }
 
     // =========================================================================

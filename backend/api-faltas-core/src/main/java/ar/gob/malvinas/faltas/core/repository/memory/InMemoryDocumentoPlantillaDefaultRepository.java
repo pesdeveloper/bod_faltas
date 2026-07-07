@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-public class InMemoryDocumentoPlantillaDefaultRepository implements DocumentoPlantillaDefaultRepository {
+public class InMemoryDocumentoPlantillaDefaultRepository implements DocumentoPlantillaDefaultRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalDocumentoPlantillaDefault> store = new ConcurrentHashMap<>();
     private final AtomicLong counter = new AtomicLong(1);
@@ -53,4 +53,13 @@ public class InMemoryDocumentoPlantillaDefaultRepository implements DocumentoPla
     public List<FalDocumentoPlantillaDefault> listar() {
         return List.copyOf(store.values());
     }
+
+    @Override
+    public void reset() { store.clear(); }
+
+    @Override
+    public String nombre() { return "DocumentoPlantillaDefault"; }
+
+    @Override
+    public int size() { return store.size(); }
 }

@@ -49,7 +49,7 @@ public class NotificacionController {
 
     @PostMapping("/notificaciones/{id}/positiva")
     public ResponseEntity<ComandoResultado> positiva(
-            @PathVariable String id,
+            @PathVariable Long id,
             @RequestBody(required = false) RegistrarResultadoNotificacionRequest req) {
         RegistrarNotificacionPositivaCommand cmd = new RegistrarNotificacionPositivaCommand(
                 id, req != null ? req.observaciones() : null);
@@ -58,7 +58,7 @@ public class NotificacionController {
 
     @PostMapping("/notificaciones/{id}/negativa")
     public ResponseEntity<ComandoResultado> negativa(
-            @PathVariable String id,
+            @PathVariable Long id,
             @RequestBody(required = false) RegistrarResultadoNotificacionRequest req) {
         RegistrarNotificacionNegativaCommand cmd = new RegistrarNotificacionNegativaCommand(
                 id, req != null ? req.observaciones() : null);
@@ -67,7 +67,7 @@ public class NotificacionController {
 
     @PostMapping("/notificaciones/{id}/vencida")
     public ResponseEntity<ComandoResultado> vencida(
-            @PathVariable String id,
+            @PathVariable Long id,
             @RequestBody(required = false) RegistrarResultadoNotificacionRequest req) {
         RegistrarNotificacionVencidaCommand cmd = new RegistrarNotificacionVencidaCommand(
                 id, req != null ? req.observaciones() : null);

@@ -1,36 +1,31 @@
 package ar.gob.malvinas.faltas.core.domain.enums;
 
 /**
- * Resultado final del circuito del acta, una vez concluido.
- *
- * SIN_RESULTADO_FINAL es el valor inicial: toda acta comienza sin resultado.
- * Los demas valores solo se asignan cuando el acta llega a un cierre con
- * resultado juridico claro (CERR o ARCH con causa determinada).
- *
- * No mezcla forma de pago, estado de obligacion ni situacion administrativa.
- * El resultado refleja la disposicion juridica final del expediente.
- *
- * ABSUELTO: fallo absolutorio notificado, acta cerrada (sin bloqueantes).
- * CONDENA_FIRME: condena firme declarada por vencimiento de plazo (PLAVNC+CONFIR) o apelacion rechazada (CONFIR).
- * CONDENA_FIRME_PAGADA: condena firme pagada y confirmada (PCOCNF+CIERRA). Slice 5.
+ * Resultado final del circuito del acta.
  */
 public enum ResultadoFinalActa {
 
-    SIN_RESULTADO_FINAL,
+    SIN_RESULTADO_FINAL((short) 0),
+    PAGO_VOLUNTARIO_PAGADO((short) 1),
+    ABSUELTO((short) 2),
+    CONDENA_FIRME((short) 3),
+    CONDENA_FIRME_PAGADA((short) 4),
+    FALLO_CONDENATORIO_PAGADO((short) 5),
+    FALLO_CONDENATORIO_GESTION_EXTERNA((short) 6),
+    PRESCRIPTO((short) 7),
+    ANULADO((short) 8),
+    NULIDAD((short) 9);
 
-    PAGO_VOLUNTARIO_CONFIRMADO,
+    private final short codigo;
 
-    ABSUELTO,
+    ResultadoFinalActa(short codigo) { this.codigo = codigo; }
 
-    CONDENA_FIRME,
+    public short codigo() { return codigo; }
 
-    CONDENA_FIRME_PAGADA,
-
-    FALLO_CONDENATORIO_PAGADO,
-
-    FALLO_CONDENATORIO_GESTION_EXTERNA,
-
-    PRESCRIPTO,
-
-    ANULADO
+    public static ResultadoFinalActa fromCodigo(short codigo) {
+        for (ResultadoFinalActa v : values()) {
+            if (v.codigo == codigo) return v;
+        }
+        throw new IllegalArgumentException("ResultadoFinalActa sin codigo: " + codigo);
+    }
 }

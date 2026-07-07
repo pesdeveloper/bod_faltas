@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-public class InMemoryDocumentoPlantillaRepository implements DocumentoPlantillaRepository {
+public class InMemoryDocumentoPlantillaRepository implements DocumentoPlantillaRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalDocumentoPlantilla> plantillas = new ConcurrentHashMap<>();
     private final Map<Long, FalDocumentoPlantillaFirmaReq> firmaReqs = new ConcurrentHashMap<>();
@@ -84,4 +84,13 @@ public class InMemoryDocumentoPlantillaRepository implements DocumentoPlantillaR
     public Optional<FalDocumentoPlantillaFirmaReq> buscarFirmaReqPorId(Long id) {
         return Optional.ofNullable(firmaReqs.get(id));
     }
+
+    @Override
+    public void reset() { plantillas.clear(); firmaReqs.clear(); }
+
+    @Override
+    public String nombre() { return "plantillas"; }
+
+    @Override
+    public int size() { return plantillas.size(); }
 }

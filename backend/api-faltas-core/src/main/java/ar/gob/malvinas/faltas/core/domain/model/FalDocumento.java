@@ -45,6 +45,7 @@ public class FalDocumento {
     private String descripcion;
     private TipoFirmaReq tipoFirmaReq;
     private Long plantillaId;
+    private String idUserAlta;
     private Long idTalonario;
     private Integer nroTalonarioUsado;
 
@@ -80,6 +81,20 @@ public class FalDocumento {
         this.estadoDocu = estadoDocu;
         this.tipoFirmaReq = tipoFirmaReq;
         this.plantillaId = plantillaId;
+    }
+
+    public FalDocumento(
+            Long id,
+            Long idActa,
+            TipoDocu tipoDocu,
+            LocalDateTime fechaGeneracion,
+            String descripcion,
+            EstadoDocu estadoDocu,
+            TipoFirmaReq tipoFirmaReq,
+            Long plantillaId,
+            String idUserAlta) {
+        this(id, idActa, tipoDocu, fechaGeneracion, descripcion, estadoDocu, tipoFirmaReq, plantillaId);
+        this.idUserAlta = idUserAlta;
     }
 
     /**
@@ -192,6 +207,8 @@ public class FalDocumento {
     public Integer getNroTalonarioUsado() { return nroTalonarioUsado; }
     public void setNroTalonarioUsado(Integer nroTalonarioUsado) { this.nroTalonarioUsado = nroTalonarioUsado; }
 
+    public String getIdUserAlta() { return idUserAlta; }
+    public void setIdUserAlta(String idUserAlta) { this.idUserAlta = idUserAlta; }
     public boolean esBorrador() { return estadoDocu == EstadoDocu.BORRADOR; }
     public String getHashDocu() { return hashDocu; }
     public void setHashDocu(String hashDocu) { this.hashDocu = hashDocu; }

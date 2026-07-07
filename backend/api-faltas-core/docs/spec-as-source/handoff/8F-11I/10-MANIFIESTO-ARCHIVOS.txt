@@ -1,0 +1,49 @@
+HANDOFF 8F-11I - MANIFIESTO DE ARCHIVOS
+========================================
+Fecha: 2026-07-06
+Build: 2247 tests, 0 failures, BUILD SUCCESS
+
+=== README Y ESTADO ===
+00-README-CONTINUIDAD.md
+01-ESTADO-BUILD.md
+02-REPORTE-8F-11I.md
+
+=== ENUMS ===
+files/ENUM_CanalNotificacion.java
+files/ENUM_TipoNotificacion.java
+files/ENUM_TipoAcuse.java
+files/ENUM_EstadoAcuse.java
+files/ENUM_EstadoLote.java
+
+=== ENTIDADES ===
+files/ENTITY_FalNotificacionIntento.java
+files/ENTITY_FalNotificacionAcuse.java
+files/ENTITY_FalLoteCorreo.java
+
+=== REPOSITORIOS (interfaces) ===
+files/REPOSITORY_NotificacionIntentoRepository.java
+files/REPOSITORY_NotificacionAcuseRepository.java
+files/REPOSITORY_LoteCorreoRepository.java
+
+=== REPOSITORIOS (InMemory) ===
+files/INMEMORY_InMemoryNotificacionIntentoRepository.java
+files/INMEMORY_InMemoryNotificacionAcuseRepository.java
+files/INMEMORY_InMemoryLoteCorreoRepository.java
+
+=== SERVICIOS ===
+files/SERVICE_NotificacionIntentoService.java
+files/SERVICE_NotificacionAcuseService.java
+files/SERVICE_LoteCorreoService.java
+
+=== TESTS ===
+files/TEST_NotificacionCatalogosCodigosTest.java
+files/TEST_NotificacionIntentoServiceTest.java
+files/TEST_NotificacionAcuseLoteServiceTest.java
+files/TEST_NotificacionIntentoConcurrenciaTest.java
+
+=== MODIFICADOS (no en files/) ===
+domain/enums/EstadoNotificacion.java    (+SIN_EFECTO)
+domain/enums/ResultadoNotificacion.java (+SUPERADA_POR_PORTAL)
+domain/enums/TipoEventoActa.java        (+11 eventos: NOTINT NOTREI NOTRVE ACUGEN ACUVAL LOTGEN LOTEMI LOTPRC LOTANU PORPOS NOTSUP)
+docs/spec-as-source/110-*.md            (55 ALINEADO, 1 FALTA_EN_INMEMORY)
+docs/spec-as-source/99-*.md             (8F-11I CERRADO)

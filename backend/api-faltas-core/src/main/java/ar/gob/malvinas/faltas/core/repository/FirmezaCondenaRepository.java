@@ -11,6 +11,8 @@ import java.util.Optional;
  */
 public interface FirmezaCondenaRepository {
 
+    Long nextId();
+
     void guardar(FalActaFirmezaCondena firmeza);
 
     /**

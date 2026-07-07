@@ -39,9 +39,9 @@ public final class DatasetFuncionalDominioCatalog {
 
     private static final LocalDate FECHA_ACTA = LocalDate.of(2024, 3, 15);
     private static final LocalDateTime FH_LABRADO = LocalDateTime.of(2024, 3, 15, 10, 30);
-    private static final String TIPO_ACTA = "TRANSITO";
-    private static final String DEPENDENCIA = "DEP-01";
-    private static final String INSPECTOR = "INS-001";
+    private static final ar.gob.malvinas.faltas.core.domain.enums.TipoActa TIPO_ACTA = ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO;
+    private static final Long DEPENDENCIA = 1L;
+    private static final Long INSPECTOR = 1L;
     private static final String DOM_HECHO = "Avenida Pioneros 2345, Malvinas Argentinas";
     private static final String DOM_INFRACTOR = "Belgrano 200, Malvinas Argentinas";
     private static final String OBSERVACIONES = "Conduccion sin revision tecnica obligatoria vigente";
@@ -272,13 +272,13 @@ public final class DatasetFuncionalDominioCatalog {
             "ACT-009-PAGVOL-CONFIRMADO",
             "Acta cerrada por pago voluntario confirmado",
             "Pago voluntario confirmado por el organismo. Acta cerrada definitivamente.",
-            "Slice 2 - ConfirmarPagoVoluntario -> PAGO_VOLUNTARIO_CONFIRMADO -> CERRADA",
+            "Slice 2 - ConfirmarPagoVoluntario -> PAGO_VOLUNTARIO_PAGADO -> CERRADA",
             List.of("Slice 2 - ConfirmarPagoVoluntario",
-                    "ResultadoFinal.PAGO_VOLUNTARIO_CONFIRMADO",
+                    "ResultadoFinal.PAGO_VOLUNTARIO_PAGADO",
                     "Bandeja CERRADAS", "Bloque CERR", "SituacionAdministrativa.CERRADA"),
             BloqueActual.CERR,
             SituacionAdministrativaActa.CERRADA,
-            ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO,
+            ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO,
             CodigoBandeja.CERRADAS,
             true, false, false, true, false, false, false, false, false,
             List.of(
@@ -290,7 +290,7 @@ public final class DatasetFuncionalDominioCatalog {
             List.of(TipoEventoActa.PAGVSO, TipoEventoActa.PAGVMF, TipoEventoActa.PAGINF,
                     TipoEventoActa.PAGCNF, TipoEventoActa.CIERRA),
             List.of("POST /api/faltas/actas/{id}/pago-voluntario/confirmar"),
-            List.of("ResultadoFinal: PAGO_VOLUNTARIO_CONFIRMADO. SituacionAdministrativa: CERRADA. Bloque: CERR.")
+            List.of("ResultadoFinal: PAGO_VOLUNTARIO_PAGADO. SituacionAdministrativa: CERRADA. Bloque: CERR.")
         ),
 
         // =====================================================================
@@ -981,6 +981,157 @@ public final class DatasetFuncionalDominioCatalog {
             List.of("POST /api/faltas/actas/{id}/pago-condena/confirmar", "PagoCondenaService"),
             List.of("GAP: PCOCNF no distingue descuento en dominio actual. Variante documentada para 8F-4C.",
                     "ResultadoFinal: CONDENA_FIRME_PAGADA. Cierre definitivo.")
+        ),
+
+        // =====================================================================
+        // ACT-032 - Slice 8F-11F: Apelacion presentada con documento adjunto
+        // =====================================================================
+        new ActaMockFuncionalDefinicion(
+            "ACT-032-APELACION-CON-DOCUMENTOS",
+            "Acta con apelacion presentada con escrito adjunto",
+            "Infractor presento recurso de apelacion con ESCRITO_APELACION adjunto.",
+            "Slice 8F-11F - RegistrarDocumentoApelacion",
+            List.of("Slice 8F-11F - RegistrarDocumentoApelacion", "TipoDocumentoApelacion.ESCRITO_APELACION",
+                    "Bandeja CON_APELACION"),
+            BloqueActual.ANAL,
+            SituacionAdministrativaActa.ACTIVA,
+            ResultadoFinalActa.SIN_RESULTADO_FINAL,
+            CodigoBandeja.CON_APELACION,
+            false, false, true, false, false, false, false, false, false,
+            List.of(
+                DocumentoEsperadoPorActaMock.obligatorio(
+                    AccionDocumental.EMITIR_FALLO, TipoDocu.ACTO_ADMINISTRATIVO,
+                    true, true, true, true, false,
+                    "ANAL", "Fallo condenatorio ya emitido")
+            ),
+            List.of(TipoEventoActa.FALCON, TipoEventoActa.NOTPOS, TipoEventoActa.APEPRE),
+            List.of("POST /api/faltas/apelacion/{id}/documentos", "ApelacionActaService.registrarDocumento()"),
+            List.of("Apelacion PRESENTADA con ESCRITO_APELACION adjunto. Bandeja CON_APELACION.")
+        ),
+
+        // =====================================================================
+        // ACT-033 - Slice 8F-11F: Apelacion mixta (texto + documentacion respaldatoria)
+        // =====================================================================
+        new ActaMockFuncionalDefinicion(
+            "ACT-033-APELACION-MIXTA",
+            "Acta con apelacion mixta: texto y documentacion respaldatoria",
+            "Infractor presento recurso con texto de fundamentos y DOCUMENTACION_RESPALDATORIA adjunta.",
+            "Slice 8F-11F - RegistrarDocumentoApelacion (mixta)",
+            List.of("Slice 8F-11F - RegistrarDocumentoApelacion", "TipoDocumentoApelacion.DOCUMENTACION_RESPALDATORIA",
+                    "Bandeja CON_APELACION"),
+            BloqueActual.ANAL,
+            SituacionAdministrativaActa.ACTIVA,
+            ResultadoFinalActa.SIN_RESULTADO_FINAL,
+            CodigoBandeja.CON_APELACION,
+            false, false, true, false, false, false, false, false, false,
+            List.of(
+                DocumentoEsperadoPorActaMock.obligatorio(
+                    AccionDocumental.EMITIR_FALLO, TipoDocu.ACTO_ADMINISTRATIVO,
+                    true, true, true, true, false,
+                    "ANAL", "Fallo condenatorio ya emitido")
+            ),
+            List.of(TipoEventoActa.FALCON, TipoEventoActa.NOTPOS, TipoEventoActa.APEPRE),
+            List.of("POST /api/faltas/apelacion/{id}/documentos", "ApelacionActaService.registrarDocumento()"),
+            List.of("Apelacion PRESENTADA con ESCRITO_APELACION + DOCUMENTACION_RESPALDATORIA. Bandeja CON_APELACION.")
+        ),
+
+        // =====================================================================
+        // ACT-034 - Slice 8F-11F: Apelacion rechazada (APERAZ)
+        // =====================================================================
+        new ActaMockFuncionalDefinicion(
+            "ACT-034-APELACION-RECHAZADA",
+            "Acta con apelacion rechazada, condena pendiente de firmeza",
+            "Apelacion resuelta con resultado RECHAZADA (APERAZ). Condena original queda pendiente de firmeza.",
+            "Slice 8F-11F - ResolverApelacionRechazada",
+            List.of("Slice 8F-11F - ResolverApelacionRechazada", "EstadoApelacionActa.RECHAZADA",
+                    "Bandeja PENDIENTE_ANALISIS (declarar firmeza)"),
+            BloqueActual.ANAL,
+            SituacionAdministrativaActa.ACTIVA,
+            ResultadoFinalActa.SIN_RESULTADO_FINAL,
+            CodigoBandeja.PENDIENTE_ANALISIS,
+            false, false, true, false, false, false, false, false, false,
+            List.of(
+                DocumentoEsperadoPorActaMock.obligatorio(
+                    AccionDocumental.EMITIR_FALLO, TipoDocu.ACTO_ADMINISTRATIVO,
+                    true, true, true, true, false,
+                    "ANAL", "Fallo condenatorio original subsiste")
+            ),
+            List.of(TipoEventoActa.FALCON, TipoEventoActa.NOTPOS, TipoEventoActa.APEPRE, TipoEventoActa.APERAZ),
+            List.of("POST /api/faltas/apelacion/rechazar", "ApelacionActaService.resolverRechazada()"),
+            List.of("Apelacion RECHAZADA. Condena original subsiste. Pendiente declarar firmeza.")
+        ),
+
+        // =====================================================================
+        // ACT-035 - Slice 8F-11F: Apelacion absolutoria aceptada (APEABS)
+        // =====================================================================
+        new ActaMockFuncionalDefinicion(
+            "ACT-035-APELACION-ABSOLUTORIA",
+            "Acta cerrada por absolucion en apelacion",
+            "Apelacion aceptada con resultado ACEPTADA_ABSUELVE (APEABS). Infractor absuelto. Acta CERRADA.",
+            "Slice 8F-11F - ResolverApelacionAceptaAbsuelve",
+            List.of("Slice 8F-11F - ResolverApelacionAceptaAbsuelve", "EstadoApelacionActa.ACEPTADA_ABSUELVE",
+                    "ResultadoFinal.ABSUELTO", "Bandeja CERRADAS"),
+            BloqueActual.CERR,
+            SituacionAdministrativaActa.CERRADA,
+            ResultadoFinalActa.ABSUELTO,
+            CodigoBandeja.CERRADAS,
+            true, false, true, false, false, false, false, false, false,
+            List.of(
+                DocumentoEsperadoPorActaMock.obligatorio(
+                    AccionDocumental.EMITIR_FALLO, TipoDocu.ACTO_ADMINISTRATIVO,
+                    true, true, true, true, false,
+                    "ANAL", "Fallo condenatorio previo a la absolucion")
+            ),
+            List.of(TipoEventoActa.FALCON, TipoEventoActa.NOTPOS, TipoEventoActa.APEPRE, TipoEventoActa.APEABS, TipoEventoActa.CIERRA),
+            List.of("POST /api/faltas/apelacion/absolver", "ApelacionActaService.resolverAceptaAbsuelve()"),
+            List.of("ACEPTADA_ABSUELVE. Acta CERRADA. ResultadoFinal: ABSUELTO.")
+        ),
+
+        // =====================================================================
+        // ACT-036 - Slice 8F-11F: Apelacion que modifica la condena (APEMCO)
+        // =====================================================================
+        new ActaMockFuncionalDefinicion(
+            "ACT-036-APELACION-MODIFICA-CONDENA",
+            "Acta con apelacion que modifica el monto de la condena",
+            "Apelacion resuelta con MODIFICA_CONDENA (APEMCO). Nuevo fallo vigente con monto 2500.",
+            "Slice 8F-11F - ResolverApelacionModificaCondena",
+            List.of("Slice 8F-11F - ResolverApelacionModificaCondena", "ResultadoResolucionApelacion.MODIFICA_CONDENA",
+                    "Nuevo fallo vigente 2500", "Bandeja PENDIENTES_FALLO"),
+            BloqueActual.ANAL,
+            SituacionAdministrativaActa.ACTIVA,
+            ResultadoFinalActa.SIN_RESULTADO_FINAL,
+            CodigoBandeja.PENDIENTES_FALLO,
+            false, false, true, false, false, false, false, false, false,
+            List.of(
+                DocumentoEsperadoPorActaMock.obligatorio(
+                    AccionDocumental.EMITIR_FALLO, TipoDocu.ACTO_ADMINISTRATIVO,
+                    true, true, true, true, false,
+                    "ANAL", "Fallo original reemplazado por nuevo fallo con monto modificado")
+            ),
+            List.of(TipoEventoActa.FALCON, TipoEventoActa.NOTPOS, TipoEventoActa.APEPRE, TipoEventoActa.FALRMP, TipoEventoActa.APEMCO),
+            List.of("POST /api/faltas/apelacion/modificar-condena", "ApelacionActaService.resolverModificaCondena()"),
+            List.of("MODIFICA_CONDENA. Nuevo fallo NOTIFICADO con monto 2500. Bandeja PENDIENTES_FALLO.")
+        ),
+
+        // =====================================================================
+        // ACT-037 - Slice 8F-11F: Apelacion con resultado nulidad (APENUL)
+        // =====================================================================
+        new ActaMockFuncionalDefinicion(
+            "ACT-037-APELACION-NULIDAD",
+            "Acta con nulidad declarada en apelacion",
+            "Apelacion resuelta con NULIDAD (APENUL). Fallo desactivado. Acta activa pendiente nuevo fallo.",
+            "Slice 8F-11F - ResolverApelacionNulidad",
+            List.of("Slice 8F-11F - ResolverApelacionNulidad", "ResultadoResolucionApelacion.NULIDAD",
+                    "Fallo desactivado", "Bandeja PENDIENTE_ANALISIS"),
+            BloqueActual.ANAL,
+            SituacionAdministrativaActa.ACTIVA,
+            ResultadoFinalActa.NULIDAD,
+            CodigoBandeja.PENDIENTE_ANALISIS,
+            false, false, false, false, false, false, false, false, false,
+            List.of(),
+            List.of(TipoEventoActa.FALCON, TipoEventoActa.NOTPOS, TipoEventoActa.APEPRE, TipoEventoActa.APENUL),
+            List.of("POST /api/faltas/apelacion/nulidad", "ApelacionActaService.resolverNulidad()"),
+            List.of("NULIDAD declarada. Fallo desactivado. Acta activa. ResultadoFinal: NULIDAD. Bandeja PENDIENTE_ANALISIS.")
         )
     );
 
@@ -1030,12 +1181,14 @@ public final class DatasetFuncionalDominioCatalog {
                 FH_LABRADO,
                 DOM_HECHO,
                 DOM_INFRACTOR,
-                OBSERVACIONES,
                 -34.5678,
                 -58.1234,
-                INFRACTOR_NOMBRE,
-                INFRACTOR_DOC,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                null,
+                null,
+                null);
+        acta.setInfractorNombre(INFRACTOR_NOMBRE);
+        acta.setInfractorDocumento(INFRACTOR_DOC);
         acta.setNroActa("ACT-MOCK-" + def.codigo());
         acta.setBloqueActual(def.bloqueEsperado());
         acta.setSituacionAdministrativa(def.situacionEsperada());
@@ -1080,4 +1233,3 @@ public final class DatasetFuncionalDominioCatalog {
         );
     }
 }
-

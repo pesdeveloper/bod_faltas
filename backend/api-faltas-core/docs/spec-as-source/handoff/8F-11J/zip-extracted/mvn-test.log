@@ -1,0 +1,1049 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------< ar.gob.malvinas.faltas:api-faltas-core >---------------
+[INFO] Building api-faltas-core 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ api-faltas-core ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.0:compile (default-compile) @ api-faltas-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ api-faltas-core ---
+[INFO] skip non existing resourceDirectory S:\Source\Repos\Bod-Faltas\backend\api-faltas-core\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.14.0:testCompile (default-testCompile) @ api-faltas-core ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.3:test (default-test) @ api-faltas-core ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaDocumentoConcurrenciaTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.175 s -- in ar.gob.malvinas.faltas.core.application.ActaDocumentoConcurrenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaDocumentoPivotIntegracionTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.118 s -- in ar.gob.malvinas.faltas.core.application.ActaDocumentoPivotIntegracionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaDocumentoServiceTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.028 s -- in ar.gob.malvinas.faltas.core.application.ActaDocumentoServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoApelacionFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoApelacionFuncionalTest$Act014
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.043 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoApelacionFuncionalTest$Act014
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoApelacionFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoBloqueanteFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoBloqueanteFuncionalTest$Act022
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoBloqueanteFuncionalTest$Act022
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoBloqueanteFuncionalTest$Act021
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoBloqueanteFuncionalTest$Act021
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoBloqueanteFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest$Act004
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest$Act004
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest$Act002
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest$Act002
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest$Act001
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest$Act001
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoCapturaFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act027
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act027
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act025
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act025
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act024
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act024
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act023
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act023
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act003
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest$Act003
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.048 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoDocumentalFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act028
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act028
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act015
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act015
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act012
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act012
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act011
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act011
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act010
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest$Act010
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoFalloFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoGestionExternaFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoGestionExternaFuncionalTest$Act019
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoGestionExternaFuncionalTest$Act019
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoGestionExternaFuncionalTest$Act018
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoGestionExternaFuncionalTest$Act018
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoGestionExternaFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act026
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act026
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act013
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act013
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act006
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act006
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act005
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest$Act005
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoNotificacionFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act031
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act031
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act030
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act030
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act017
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act017
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act016
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest$Act016
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoCondenaFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest$Act009
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest$Act009
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest$Act008
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest$Act008
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest$Act007
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest$Act007
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoPagoVoluntarioFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoParalizacionFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoParalizacionFuncionalTest$Act020
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoParalizacionFuncionalTest$Act020
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoParalizacionFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoReingresoFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaFlujoReingresoFuncionalTest$Act029
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoReingresoFuncionalTest$Act029
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.ActaFlujoReingresoFuncionalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest$Guardrails
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest$ResultadoFirmada
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest$ResultadoFirmada
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest$ResultadoObligatorio
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest$ResultadoObligatorio
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in ar.gob.malvinas.faltas.core.application.ActaResultadoFirmaInfractorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ActasMockFuncionalesFactoryTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.ActasMockFuncionalesFactoryTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest$CasosInvalidosRegistrar
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest$CasosInvalidosRegistrar
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest$CasosInvalidosResolucion
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest$CasosInvalidosResolucion
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest$AceptarApelacionAbsuelve
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest$AceptarApelacionAbsuelve
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest$RechazarApelacion
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest$RechazarApelacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest$RegistrarApelacion
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest$RegistrarApelacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionActaTest$CorreccionEventoApelacion
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest$CorreccionEventoApelacion
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.053 s -- in ar.gob.malvinas.faltas.core.application.ApelacionActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest$Enums
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest$Enums
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest$RepositorioValidaciones
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest$RepositorioValidaciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest$GuardarConsultar
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest$GuardarConsultar
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ar.gob.malvinas.faltas.core.application.ApelacionDocumentoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ArchivoActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ArchivoActaTest$ConcurrenciaTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.ArchivoActaTest$ConcurrenciaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.ArchivoActaTest$ReingresarInvariantes
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ArchivoActaTest$ReingresarInvariantes
+[INFO] Running ar.gob.malvinas.faltas.core.application.ArchivoActaTest$ArchivarInvariantes
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.ArchivoActaTest$ArchivarInvariantes
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.025 s -- in ar.gob.malvinas.faltas.core.application.ArchivoActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest$DocumentoAuditoria
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest$DocumentoAuditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest$GestionAuditoria
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest$GestionAuditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest$NotificacionAuditoria
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest$NotificacionAuditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest$ApelacionAuditoria
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest$ApelacionAuditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest$FalloAuditoria
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest$FalloAuditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.AuditoriaTest$ActaAuditoria
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest$ActaAuditoria
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.AuditoriaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$CierreDiferido
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$CierreDiferido
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$GuardrailsSlice7B
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$GuardrailsSlice7B
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$CierreConBloqueantesResueltos
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$CierreConBloqueantesResueltos
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$AnularBloqueante
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$AnularBloqueante
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$CumplirBloqueante
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$CumplirBloqueante
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$RegistrarBloqueante
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$RegistrarBloqueante
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$GuardrailsSlice7A
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$GuardrailsSlice7A
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$PagoExternoConBloqueantesReales
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$PagoExternoConBloqueantesReales
+[INFO] Running ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$PagoCondenaConBloqueantesReales
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest$PagoCondenaConBloqueantesReales
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in ar.gob.malvinas.faltas.core.application.BloqueantesMaterialesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DatasetFuncionalCoberturaTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.DatasetFuncionalCoberturaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DatasetFuncionalDocumentosEsperadosTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ar.gob.malvinas.faltas.core.application.DatasetFuncionalDocumentosEsperadosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DatasetFuncionalDominioCatalogTest
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in ar.gob.malvinas.faltas.core.application.DatasetFuncionalDominioCatalogTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DatasetFuncionalFlujosCoberturaTest
+[INFO] Tests run: 233, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.251 s -- in ar.gob.malvinas.faltas.core.application.DatasetFuncionalFlujosCoberturaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$VersionarInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$VersionarInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$CatalogoProductivoTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$CatalogoProductivoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$AlcoholemiaNoEsTipoActaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$AlcoholemiaNoEsTipoActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$VersionarConservaHistorialTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$VersionarConservaHistorialTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$VersionarIncrementaVerDepTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$VersionarIncrementaVerDepTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$HijaPadreInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$HijaPadreInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$DependenciaHijaCongelaPadreTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$DependenciaHijaCongelaPadreTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$CodDepDuplicadoTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$CodDepDuplicadoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$CrearSinTipoActaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$CrearSinTipoActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$CrearSinNombreTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$CrearSinNombreTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$DependenciaActivaConsultableTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$DependenciaActivaConsultableTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DependenciaTest$CrearDependenciaValidaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest$CrearDependenciaValidaTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in ar.gob.malvinas.faltas.core.application.DependenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DevInMemoryResetServiceTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.DevInMemoryResetServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DevResetGuardrailTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.DevResetGuardrailTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$GuardrailTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$GuardrailTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$ValidacionesConReqTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$ValidacionesConReqTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$ConvalidacionConReqTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$ConvalidacionConReqTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$ConvalidacionSimpleTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$ConvalidacionSimpleTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$IncorporarEscaneadoTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest$IncorporarEscaneadoTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in ar.gob.malvinas.faltas.core.application.DocumentoAdjuntoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$Guardrails
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$FormatoValores
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$FormatoValores
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$DiagnosticoVariables
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$DiagnosticoVariables
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$ReemplazosExitosos
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest$ReemplazosExitosos
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.DocumentoCombinacionServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$Guardrails
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EventoDocemi
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EventoDocemi
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EstadosInvalidos
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EstadosInvalidos
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$ValidacionesStorageHash
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$ValidacionesStorageHash
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$OtrosMomentos
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$OtrosMomentos
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$NumeracionAlEmitir
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$NumeracionAlEmitir
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EmisionConFirma
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EmisionConFirma
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EmisionSinFirma
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest$EmisionSinFirma
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.037 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEmisionFormalTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$Guardrails
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$ValidacionesPrecondicion
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$ValidacionesPrecondicion
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$ValidacionesEntrada
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$ValidacionesEntrada
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$CasosValidos
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest$CasosValidos
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.DocumentoEnvioFirmaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$Guardrails
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$FirmaDigital
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$FirmaDigital
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$NumeracionAlFirmar
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$NumeracionAlFirmar
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$OrdenFirma
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$OrdenFirma
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$FirmanteHabilitacion
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$FirmanteHabilitacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$ValidacionesDocReq
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$ValidacionesDocReq
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$CierreDocumento
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$CierreDocumento
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$FirmaValida
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest$FirmaValida
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.025 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaRealTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$Guardrails
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$ValidacionesEntrada
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$ValidacionesEntrada
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$NoRequiere
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$NoRequiere
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$MaterializacionValida
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest$MaterializacionValida
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.DocumentoFirmaReqTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$Guardrails
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$FirmaFueraDeAlcance
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$FirmaFueraDeAlcance
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$NumeracionFueraDeAlcance
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$NumeracionFueraDeAlcance
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$Validaciones
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$Validaciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$GeneracionValida
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest$GeneracionValida
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionDesdePlantillaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockGraphDemoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockGraphDemoTest$VerificacionesTransversales
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockGraphDemoTest$VerificacionesTransversales
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockGraphDemoTest$GeneracionPorCaso
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockGraphDemoTest$GeneracionPorCaso
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockGraphDemoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$ErroresGeneracion
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$ErroresGeneracion
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$Guardrails
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$ReintentoTecnicoDesdeConfirmada
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$ReintentoTecnicoDesdeConfirmada
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$FlujoNominalDesdeBorrador
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest$FlujoNominalDesdeBorrador
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGeneracionMockServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoGraphDemoServiceTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.031 s -- in ar.gob.malvinas.faltas.core.application.DocumentoGraphDemoServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$AlCrear
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$AlCrear
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$Guardrails
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$Validaciones
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$Validaciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$NumeracionValida
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest$NumeracionValida
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in ar.gob.malvinas.faltas.core.application.DocumentoNumeracionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPdfMockRendererTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPdfMockRendererTest$Guardrails
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPdfMockRendererTest$Guardrails
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPdfMockRendererTest$RenderizadoExitoso
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPdfMockRendererTest$RenderizadoExitoso
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPdfMockRendererTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest$Errores
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest$Errores
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest$VigenciaActivo
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest$VigenciaActivo
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest$ResolucionExitosa
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest$ResolucionExitosa
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaDefaultTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillasMockTest
+[INFO] Tests run: 45, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.028 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillasMockTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$GuardrailsTests
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$GuardrailsTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$ListadoTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$ListadoTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$ActivacionTests
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$ActivacionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$RequisitosFiremaTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$RequisitosFiremaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$ValidacionesNumeracionTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$ValidacionesNumeracionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$CreacionValidaTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest$CreacionValidaTests
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in ar.gob.malvinas.faltas.core.application.DocumentoPlantillaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$RevisionInicial
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$RevisionInicial
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$HelpersEstado
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$HelpersEstado
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$Anulacion
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$Anulacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$ErroresConfirmacion
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$ErroresConfirmacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$InmutabilidadConfirmada
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$InmutabilidadConfirmada
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$ConfirmacionDesdeBorrador
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest$ConfirmacionDesdeBorrador
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionConfirmacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest$ContenidoCombinado
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest$ContenidoCombinado
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest$GuardrailsPdf
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest$GuardrailsPdf
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest$OchoCasos
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest$OchoCasos
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionGraphDemoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest$Errores
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest$Errores
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest$GuardrailPdf
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest$GuardrailPdf
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest$CreacionBorrador
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest$CreacionBorrador
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.DocumentoRedaccionServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$VariablesNotificacion
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$VariablesNotificacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$VariablesPago
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$VariablesPago
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$VariablesFallo
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$VariablesFallo
+[INFO] Running ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$ContextoBase
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest$ContextoBase
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in ar.gob.malvinas.faltas.core.application.DocumentoVariableContextBuilderTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$CatalogosDocumentalesTests
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$CatalogosDocumentalesTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$AccionPendienteGuardrailTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$AccionPendienteGuardrailTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$GestionExternaGuardrailTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$GestionExternaGuardrailTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$EventosObligatoriosTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$EventosObligatoriosTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$EventosProhibidosTests
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$EventosProhibidosTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$BloqueActualGuardrailTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$BloqueActualGuardrailTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$PagoCondenaEventosTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest$PagoCondenaEventosTests
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in ar.gob.malvinas.faltas.core.application.EnumGuardrailTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloActaTest$CasosInvalidos
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.FalloActaTest$CasosInvalidos
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloActaTest$CondenatoriosCasosFelices
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.FalloActaTest$CondenatoriosCasosFelices
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloActaTest$AbsolutorioCasosFelices
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalloActaTest$AbsolutorioCasosFelices
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in ar.gob.malvinas.faltas.core.application.FalloActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloApelacionConcurrenciaTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in ar.gob.malvinas.faltas.core.application.FalloApelacionConcurrenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloInvariantesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$CamposNuevos
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$CamposNuevos
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$OL
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$OL
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$FirmezaInline
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$FirmezaInline
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$Historial
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$Historial
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$UnSoloVigente
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalloInvariantesTest$UnSoloVigente
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.FalloInvariantesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$SecuenciaLong
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$SecuenciaLong
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$AislamientoCopias
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$AislamientoCopias
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$Auditoria
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$Auditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$BajaLogica
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$BajaLogica
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$CorreccionHistorica
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$CorreccionHistorica
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$Notificabilidad
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$Notificabilidad
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$PrincipalidadUnica
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$PrincipalidadUnica
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$ReglaCoordenadas
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$ReglaCoordenadas
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$ReglaAltura
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$ReglaAltura
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$DomicilioExterno
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$DomicilioExterno
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$DomicilioMalvinasLocal
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$DomicilioMalvinasLocal
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$EnumsDomicilio
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest$EnumsDomicilio
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaDomicilioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$SecuenciaLong
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$SecuenciaLong
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$AislamientoCopias
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$AislamientoCopias
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$BusquedaPorDocumento
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$BusquedaPorDocumento
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$Auditoria
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$Auditoria
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$VinculoIngresos
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$VinculoIngresos
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$DocumentoIdentidad
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$DocumentoIdentidad
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$PersonaJuridicaValida
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$PersonaJuridicaValida
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$PersonaFisicaValida
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$PersonaFisicaValida
+[INFO] Running ar.gob.malvinas.faltas.core.application.FalPersonaTest$EnumsPersona
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest$EnumsPersona
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in ar.gob.malvinas.faltas.core.application.FalPersonaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailEnumsDocumentalesTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailEnumsDocumentalesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionConMecanismoTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionConMecanismoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailEstadoFirmanteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailEstadoFirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailTipoFirmaEnVersionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailTipoFirmaEnVersionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailTipoFirmanteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailTipoFirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailFalDocumentoFirmaReqTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$GuardrailFalDocumentoFirmaReqTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$ListarActivosTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$ListarActivosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$FirmanteInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$FirmanteInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$BuscarPorIdTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$BuscarPorIdTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$AutorizacionViaHabilitacionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$AutorizacionViaHabilitacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$RolFirmanteNoAutorizaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$RolFirmanteNoAutorizaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$MultiplesHabilitacionesTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$MultiplesHabilitacionesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionDesactivadaNoActivaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionDesactivadaNoActivaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$DesactivarHabilitacionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$DesactivarHabilitacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$ListarHabilitacionesTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$ListarHabilitacionesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionDuplicadaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionDuplicadaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionSinMecanismoTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionSinMecanismoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionSinRolFirmaReqTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionSinRolFirmaReqTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionSinTipoDocuTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionSinTipoDocuTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionVersionInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionVersionInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionFirmanteInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$HabilitacionFirmanteInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$AgregarHabilitacionValidaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$AgregarHabilitacionValidaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$NuevaVersionSinHabilitacionesTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$NuevaVersionSinHabilitacionesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarCongelaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarCongelaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarCierraAnteriorTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarCierraAnteriorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarIncrementaVerTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionarIncrementaVerTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VerFirmanteInicialTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VerFirmanteInicialTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionDepInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VersionDepInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$DependenciaInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$DependenciaInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$VerDepSinIdDepTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$VerDepSinIdDepTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$IdDepSinVerDepTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$IdDepSinVerDepTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$SinFhVigDesdeTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$SinFhVigDesdeTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$SinCargoFirmanteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$SinCargoFirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$SinRolFirmanteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$SinRolFirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$SinNombreFirmanteTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$SinNombreFirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$IdUserDuplicadoTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$IdUserDuplicadoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$SinIdUserTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$SinIdUserTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$CrearFirmanteConDepTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$CrearFirmanteConDepTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmanteTest$CrearFirmanteValidoSinDepTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest$CrearFirmanteValidoSinDepTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.039 s -- in ar.gob.malvinas.faltas.core.application.FirmanteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$CasosInvalidos
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$CasosInvalidos
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$FirmezaPorApelacionRechazadaCasoFeliz
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$FirmezaPorApelacionRechazadaCasoFeliz
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$VencimientoPlazoCasoFeliz
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$VencimientoPlazoCasoFeliz
+[INFO] Running ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$EnumsYEventos
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest$EnumsYEventos
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in ar.gob.malvinas.faltas.core.application.FirmezaCondenaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$SeparacionEnumsTests
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$SeparacionEnumsTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$TimelineTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$TimelineTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$ErroresTests
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$ErroresTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$RegistrarResultadoNotificacionTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$RegistrarResultadoNotificacionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$EnviarNotificacionTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$EnviarNotificacionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$FirmarDocumentoTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$FirmarDocumentoTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$GenerarDocumentoTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$GenerarDocumentoTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$CompletarCapturaTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$CompletarCapturaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$LabrarActaTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest$LabrarActaTests
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ar.gob.malvinas.faltas.core.application.FlujoCompletoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FormaPagoMovimientoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FormaPagoMovimientoTest$MovimientoTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.FormaPagoMovimientoTest$MovimientoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.FormaPagoMovimientoTest$FormaPagoValidacionTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.FormaPagoMovimientoTest$FormaPagoValidacionTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in ar.gob.malvinas.faltas.core.application.FormaPagoMovimientoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$Slice6D2
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$Slice6D2
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$Slice6D1
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$Slice6D1
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$GuardrailsCatalogos6D0
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$GuardrailsCatalogos6D0
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$GuardrailsSlice6C
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$GuardrailsSlice6C
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$PrecondicionesPagoExterno
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$PrecondicionesPagoExterno
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$InteraccionFalPagoCondena
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$InteraccionFalPagoCondena
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$MutacionActaPagoExterno
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$MutacionActaPagoExterno
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$CamposCierreGestionExterna
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$CamposCierreGestionExterna
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$EventosPagoExterno
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$EventosPagoExterno
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$GuardrailsSlice6B
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$GuardrailsSlice6B
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$PrecondicionesReingreso
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$PrecondicionesReingreso
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$MutacionActaReingreso
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$MutacionActaReingreso
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$EstadoGestionExternaTrasReingreso
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$EstadoGestionExternaTrasReingreso
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$EventosReingreso
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$EventosReingreso
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$ReingresoFeliz
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$ReingresoFeliz
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$CasosInvalidos
+[INFO] Tests run: 17, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$CasosInvalidos
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$OrigenDeterminista
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$OrigenDeterminista
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$DerivacionFeliz
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$DerivacionFeliz
+[INFO] Running ar.gob.malvinas.faltas.core.application.GestionExternaTest$EventosGuardrails
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest$EventosGuardrails
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.135 s -- in ar.gob.malvinas.faltas.core.application.GestionExternaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$SecuenciasNoReutilizan
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$SecuenciasNoReutilizan
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$GestionIdentidades
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$GestionIdentidades
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$BlocanteIdentidades
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$BlocanteIdentidades
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$NotificacionIdentidades
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$NotificacionIdentidades
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$ApelacionIdentidades
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$ApelacionIdentidades
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$FalloIdentidades
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$FalloIdentidades
+[INFO] Running ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$ActaIdentidades
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest$ActaIdentidades
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in ar.gob.malvinas.faltas.core.application.IdentidadesLongTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$AmbitoViaDepVersionTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$AmbitoViaDepVersionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$SinTipoActaPropioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$SinTipoActaPropioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$InspectorNoEncontradoTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$InspectorNoEncontradoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$ListarActivosTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$ListarActivosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$ObtenerPorIdTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$ObtenerPorIdTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$VersionarCongelaDependenciaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$VersionarCongelaDependenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$VersionarCierraAnteriorTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$VersionarCierraAnteriorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$VersionarIncrementaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$VersionarIncrementaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$VersionDepInactivaTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$VersionDepInactivaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$VersionDepInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$VersionDepInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$DependenciaInexistenteTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$DependenciaInexistenteTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$SinDependenciaTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$SinDependenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$SinNombreTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$SinNombreTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$SinLegajoTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$SinLegajoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$IdUserDuplicadoTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$IdUserDuplicadoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$SinIdUserTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$SinIdUserTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.InspectorTest$CrearInspectorValidoTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest$CrearInspectorValidoTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.025 s -- in ar.gob.malvinas.faltas.core.application.InspectorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.MotivoArchivoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.MotivoArchivoTest$ConcurrenciaTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.MotivoArchivoTest$ConcurrenciaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.MotivoArchivoTest$ServicioOperaciones
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.MotivoArchivoTest$ServicioOperaciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.MotivoArchivoTest$ModeloValidaciones
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.MotivoArchivoTest$ModeloValidaciones
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in ar.gob.malvinas.faltas.core.application.MotivoArchivoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$GuardrailScopeTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$GuardrailScopeTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$VincularDependenciaNormativaTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$VincularDependenciaNormativaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$ValidacionesArticuloTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$ValidacionesArticuloTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$CrearArticuloValidoTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$CrearArticuloValidoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$BuscarNormativaTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$BuscarNormativaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$ValidacionesNormativaTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$ValidacionesNormativaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$CrearNormativaValidaTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$CrearNormativaValidaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NormativaTest$TipoUnidadGuardrailTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest$TipoUnidadGuardrailTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in ar.gob.malvinas.faltas.core.application.NormativaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteRepoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteRepoTest$LoteEntidad
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteRepoTest$LoteEntidad
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteRepoTest$AcuseEntidad
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteRepoTest$AcuseEntidad
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteRepoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteServiceTest$LoteServiceTests
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteServiceTest$LoteServiceTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteServiceTest$AcuseServiceTests
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteServiceTest$AcuseServiceTests
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in ar.gob.malvinas.faltas.core.application.NotificacionAcuseLoteServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionCatalogosCodigosTest
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.NotificacionCatalogosCodigosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoConcurrenciaTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoConcurrenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest$CorrelativoAtomico
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest$CorrelativoAtomico
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest$RepoBasico
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest$RepoBasico
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest$EntidadValidaciones
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest$EntidadValidaciones
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoRepoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$PortalAutonotificacion
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$PortalAutonotificacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$ReintentoPostVencimiento
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$ReintentoPostVencimiento
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$RegistrarResultado
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$RegistrarResultado
+[INFO] Running ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$RegistrarIntento
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest$RegistrarIntento
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in ar.gob.malvinas.faltas.core.application.NotificacionIntentoServiceTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObligacionPagoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$RepositoryTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$RepositoryTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$CancelacionTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$CancelacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$TiposTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$TiposTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$ConstructorTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ObligacionPagoTest$ConstructorTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.ObligacionPagoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObservacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObservacionTest$ServicioOperaciones
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.ObservacionTest$ServicioOperaciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObservacionTest$ModeloValidaciones
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ObservacionTest$ModeloValidaciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.ObservacionTest$CodigosEnum
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ObservacionTest$CodigosEnum
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in ar.gob.malvinas.faltas.core.application.ObservacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.OptimisticLockingTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.OptimisticLockingTest$FalloOCC
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.OptimisticLockingTest$FalloOCC
+[INFO] Running ar.gob.malvinas.faltas.core.application.OptimisticLockingTest$ActaOCC
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.OptimisticLockingTest$ActaOCC
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.OptimisticLockingTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.OrigenFirmezaCondenaCodigoTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.OrigenFirmezaCondenaCodigoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest$SnapshotRouting
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest$SnapshotRouting
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest$Precondiciones
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest$Precondiciones
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest$ObservarPagoCondenaTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest$ObservarPagoCondenaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest$ConfirmarPagoCondenaTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest$ConfirmarPagoCondenaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest$InformarPagoCondenaTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest$InformarPagoCondenaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoCondenaTest$GuardrailEventos
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest$GuardrailEventos
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in ar.gob.malvinas.faltas.core.application.PagoCondenaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoMovimientoReducerTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.PagoMovimientoReducerTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoVoluntarioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoVoluntarioTest$CasosInvalidos
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.PagoVoluntarioTest$CasosInvalidos
+[INFO] Running ar.gob.malvinas.faltas.core.application.PagoVoluntarioTest$CasosFelices
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.PagoVoluntarioTest$CasosFelices
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in ar.gob.malvinas.faltas.core.application.PagoVoluntarioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest$ConcurrenciaTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest$ConcurrenciaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest$ReactivarInvariantes
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest$ReactivarInvariantes
+[INFO] Running ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest$ParalizarInvariantes
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest$ParalizarInvariantes
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in ar.gob.malvinas.faltas.core.application.ParalizacionActaInvariantesTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$CasosSeeder
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$CasosSeeder
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$DocumentoRedaccionWiring
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$DocumentoRedaccionWiring
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$ContextoDocumentalPersonaDomicilio
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$ContextoDocumentalPersonaDomicilio
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$DomicilioNotificable
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$DomicilioNotificable
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$DomiciliosPertenecenAPersona
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$DomiciliosPertenecenAPersona
+[INFO] Running ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$ActaConPersona
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest$ActaConPersona
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in ar.gob.malvinas.faltas.core.application.PersonaIntegracionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest$IdempotenciaFueraDeOrden
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest$IdempotenciaFueraDeOrden
+[INFO] Running ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest$OccConcurrente
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest$OccConcurrente
+[INFO] Running ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest$PlanPagoRefTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest$PlanPagoRefTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.PlanPagoMovimientoConcurrenciaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$EnAnalisis
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$EnAnalisis
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$Nulidad
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$Nulidad
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$ModificaCondena
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$ModificaCondena
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$AceptaAbsuelve
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$AceptaAbsuelve
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$Rechazada
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest$Rechazada
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in ar.gob.malvinas.faltas.core.application.ResolucionApelacionEfectosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ResultadoFinalActaCodigoTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ResultadoFinalActaCodigoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$SnapshotProyeccionTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$SnapshotProyeccionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaMedidaPreventivaTests
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaMedidaPreventivaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaSustanciasTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaSustanciasTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaContravencionTests
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaContravencionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaVehiculoTests
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaVehiculoTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaTransitoAlcoholemiaTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaTransitoAlcoholemiaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaTransitoTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ActaTransitoTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$RubroVersionTests
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$RubroVersionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$VehiculoModeloTests
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$VehiculoModeloTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$VehiculoMarcaTests
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$VehiculoMarcaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$EstadoMedidaAplicadaTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$EstadoMedidaAplicadaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$AmbitoCtvTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$AmbitoCtvTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$MotivoNomenclaturaManualTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$MotivoNomenclaturaManualTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$OrigenNomenclaturaTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$OrigenNomenclaturaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$EstadoGeneralVehiculoTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$EstadoGeneralVehiculoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$TipoVehiculoTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$TipoVehiculoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$UnidadMedidaAlcoholemiaTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$UnidadMedidaAlcoholemiaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ResultadoCualitativoAlcoholemiaTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$ResultadoCualitativoAlcoholemiaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$TipoPruebaAlcoholemiaTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest$TipoPruebaAlcoholemiaTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.131 s -- in ar.gob.malvinas.faltas.core.application.SatelitesCatalogosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$GuardrailFueraDeScope8B6
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$GuardrailFueraDeScope8B6
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$NumerosFaltantes
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$NumerosFaltantes
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$CierreAsignacion
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$CierreAsignacion
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$DevolucionSinUsar
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$DevolucionSinUsar
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$JustificacionNumero
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$JustificacionNumero
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$AnulacionNumero
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest$AnulacionNumero
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.038 s -- in ar.gob.malvinas.faltas.core.application.TalonarioManualFisicoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$GuardrailFueraDeScope8B4
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$GuardrailFueraDeScope8B4
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$FalActaCamposProductivos
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$FalActaCamposProductivos
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$EmisionNumeroActa
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$EmisionNumeroActa
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$MovimientoNumeracion
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$MovimientoNumeracion
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$EnumsNumeracionTalonario
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$EnumsNumeracionTalonario
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$GuardrailFueraDeScope
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$GuardrailFueraDeScope
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$DevolucionTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$DevolucionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$AsignacionInspectorTest
+[INFO] Tests run: 22, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$AsignacionInspectorTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$EstadoAsignacionTalonarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$EstadoAsignacionTalonarioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$AmbitosTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$AmbitosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$TalonariosTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$TalonariosTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$PoliticasTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$PoliticasTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TalonarioTest$CatalogosProductivos
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest$CatalogosProductivos
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.065 s -- in ar.gob.malvinas.faltas.core.application.TalonarioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$GuardrailsTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$GuardrailsTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$SnapshotValorizacionTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$SnapshotValorizacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$ValorizacionTests
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$ValorizacionTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$ArticuloImputadoTests
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$ArticuloImputadoTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$ArticuloMedidaTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$ArticuloMedidaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$MedidaPreventivaTests
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$MedidaPreventivaTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TarifarioTests
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TarifarioTests
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$MotivoManualizacionTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$MotivoManualizacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$MotivoBajaTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$MotivoBajaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TipoValorizacionItemTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TipoValorizacionItemTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$OrigenValorizacionTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$OrigenValorizacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$CriterioTarifarioTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$CriterioTarifarioTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TipoValorizacionActaTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TipoValorizacionActaTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$EstadoValorizacionTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$EstadoValorizacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TipoUnidadFaltasTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest$TipoUnidadFaltasTest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.069 s -- in ar.gob.malvinas.faltas.core.application.TarifarioValorizacionTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.TipoActaCodigoTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.TipoActaCodigoTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ArticuloMedidaReactivacionR1DTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ArticuloMedidaReactivacionR1DTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ActaArticuloInfringidoUKR1DTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ActaArticuloInfringidoUKR1DTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$MedidaPreventivaVersionAtomicaR1DTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$MedidaPreventivaVersionAtomicaR1DTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$TarifarioSuperposicionR1DTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$TarifarioSuperposicionR1DTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ItemInmutabilidadR1CTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ItemInmutabilidadR1CTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ConfirmarVigenteAtomicoR1BTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$ConfirmarVigenteAtomicoR1BTest
+[INFO] Running ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$SnapshotProyeccionR1ATest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test$SnapshotProyeccionR1ATest
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in ar.gob.malvinas.faltas.core.application.ValorizacionInvariantesR1Test
+[INFO] Running ar.gob.malvinas.faltas.core.web.DemoActaDetalleContractTest
+22:57:11.875 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [ar.gob.malvinas.faltas.core.web.DemoActaDetalleContractTest]: DemoActaDetalleContractTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:57:12.080 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration ar.gob.malvinas.faltas.core.ApiFaltasCoreApplication for test class ar.gob.malvinas.faltas.core.web.DemoActaDetalleContractTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.3)
+
+2026-07-06T22:57:12.459-03:00  INFO 90028 --- [           main] a.g.m.f.c.w.DemoActaDetalleContractTest  : Starting DemoActaDetalleContractTest using Java 21.0.8 with PID 90028 (started by pablito in S:\Source\Repos\Bod-Faltas\backend\api-faltas-core)
+2026-07-06T22:57:12.460-03:00  INFO 90028 --- [           main] a.g.m.f.c.w.DemoActaDetalleContractTest  : No active profile set, falling back to 1 default profile: "default"
+2026-07-06T22:57:14.704-03:00  INFO 90028 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-07-06T22:57:14.704-03:00  INFO 90028 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-07-06T22:57:14.709-03:00  INFO 90028 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-07-06T22:57:14.719-03:00  INFO 90028 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 15 ms
+2026-07-06T22:57:14.769-03:00  INFO 90028 --- [           main] a.g.m.f.c.w.DemoActaDetalleContractTest  : Started DemoActaDetalleContractTest in 2.562 seconds (process running for 6.554)
+mvn : Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases 
+of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: 
+https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+En C:\Users\pablito\AppData\Local\Temp\ps-script-1fec2baf-b1b7-49cc-9408-d1ff68bf1f31.ps1: 99 Carácter: 56
++ ... ource\Repos\Bod-Faltas\backend\api-faltas-core; mvn test 2>&1 | Out-F ...
++                                                     ~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Mockito is curr...ockito.html#0.3:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+WARNING: A Java agent has been loaded dynamically 
+(C:\Users\pablito\.m2\repository\net\bytebuddy\byte-buddy-agent\1.17.6\byte-buddy-agent-1.17.6.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[INFO] Tests run: 35, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.041 s -- in ar.gob.malvinas.faltas.core.web.DemoActaDetalleContractTest
+[INFO] Running ar.gob.malvinas.faltas.core.web.DemoContractTest
+2026-07-06T22:57:15.839-03:00  INFO 90028 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [ar.gob.malvinas.faltas.core.web.DemoContractTest]: DemoContractTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-06T22:57:15.842-03:00  INFO 90028 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration ar.gob.malvinas.faltas.core.ApiFaltasCoreApplication for test class ar.gob.malvinas.faltas.core.web.DemoContractTest
+2026-07-06T22:57:15.955-03:00  WARN 90028 --- [           main] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported]
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.129 s -- in ar.gob.malvinas.faltas.core.web.DemoContractTest
+[INFO] Running ar.gob.malvinas.faltas.core.web.DemoHealthContractTest
+2026-07-06T22:57:15.969-03:00  INFO 90028 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [ar.gob.malvinas.faltas.core.web.DemoHealthContractTest]: DemoHealthContractTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-07-06T22:57:15.971-03:00  INFO 90028 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration ar.gob.malvinas.faltas.core.ApiFaltasCoreApplication for test class ar.gob.malvinas.faltas.core.web.DemoHealthContractTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.073 s -- in ar.gob.malvinas.faltas.core.web.DemoHealthContractTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2280, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  9.447 s
+[INFO] Finished at: 2026-07-06T22:57:16-03:00
+[INFO] ------------------------------------------------------------------------

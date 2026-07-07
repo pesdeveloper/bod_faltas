@@ -8,6 +8,8 @@ import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEvidenciaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
@@ -15,7 +17,10 @@ import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvidencia;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoPersona;
+import ar.gob.malvinas.faltas.core.domain.model.FalPersona;
 import ar.gob.malvinas.faltas.core.repository.ActaEvidenciaRepository;
+import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
@@ -35,6 +40,7 @@ public class ActaService {
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final ActaEvidenciaRepository evidenciaRepository;
+    private PersonaRepository personaRepository;
 
     public ActaService(
             ActaRepository actaRepository,
@@ -47,6 +53,18 @@ public class ActaService {
         this.snapshotRepository = snapshotRepository;
         this.snapshotRecalculador = snapshotRecalculador;
         this.evidenciaRepository = evidenciaRepository;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ActaService(
+            ActaRepository actaRepository,
+            ActaEventoRepository eventoRepository,
+            ActaSnapshotRepository snapshotRepository,
+            SnapshotRecalculador snapshotRecalculador,
+            ActaEvidenciaRepository evidenciaRepository,
+            PersonaRepository personaRepository) {
+        this(actaRepository, eventoRepository, snapshotRepository, snapshotRecalculador, evidenciaRepository);
+        this.personaRepository = personaRepository;
     }
 
     public ComandoResultado labrar(LabrarActaCommand cmd) {
@@ -71,19 +89,27 @@ public class ActaService {
                 id,
                 uuidTecnico,
                 cmd.tipoActa(),
-                cmd.idDependencia(),
-                cmd.idInspector(),
-                cmd.fechaActa() != null ? cmd.fechaActa() : LocalDate.now(),
+                cmd.idDependencia() != null ? cmd.idDependencia() : 1L,
+                cmd.idInspector() != null ? cmd.idInspector() : 1L,
+                cmd.fechaActa() != null ? cmd.fechaActa() : java.time.LocalDate.now(),
                 LocalDateTime.now(),
                 cmd.domicilioHecho(),
-                cmd.domicilioInfractor(),
                 cmd.observaciones(),
                 cmd.latInfr(),
-                cmd.lonInfr(),
-                cmd.infractorNombre(),
-                cmd.infractorDocumento(),
-                cmd.resultadoFirmaInfractor()
+                null,
+                cmd.resultadoFirmaInfractor(),
+                cmd.idPersonaInfractor(),
+                LocalDateTime.now(),
+                null
         );
+        if (cmd.infractorDocumento() != null) acta.setInfractorDocumento(cmd.infractorDocumento());
+        if (cmd.infractorNombre() != null) acta.setInfractorNombre(cmd.infractorNombre());
+        if (cmd.idPersonaInfractor() == null && cmd.infractorNombre() != null
+                && personaRepository != null) {
+            FalPersona personaMinimal = crearPersonaMinimal(
+                    cmd.infractorDocumento(), cmd.infractorNombre());
+            acta.setIdPersonaInfractor(personaMinimal.getId());
+        }
         actaRepository.guardar(acta);
 
         if (cmd.evidenciasActa() != null) {
@@ -101,7 +127,7 @@ public class ActaService {
         }
 
         registrarEvento(acta.getId(), TipoEventoActa.ACTLAB, null, null,
-                cmd.idInspector(), "Acta labrada - tipo: " + cmd.tipoActa());
+                String.valueOf(cmd.idInspector()), "Acta labrada - tipo: " + cmd.tipoActa().name());
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
@@ -175,22 +201,35 @@ public class ActaService {
         return evidenciaRepository.listarPorActa(idActa);
     }
 
+    private FalPersona crearPersonaMinimal(String nroDoc, String nombreMostrar) {
+        Long id = personaRepository.nextId();
+        FalPersona persona = new FalPersona(id, TipoPersona.FISICA, LocalDateTime.now(), "SYS");
+        if (nroDoc != null && !nroDoc.isBlank()) {
+            String nroDocNorm = nroDoc.strip().replaceAll("[^0-9a-zA-Z\\\\-]", "");
+            if (nroDocNorm.length() > 20) nroDocNorm = nroDocNorm.substring(0, 20);
+            persona.setNroDoc(nroDocNorm.isBlank() ? null : nroDocNorm);
+        }
+        if (nombreMostrar != null && !nombreMostrar.isBlank()) {
+            String nm = nombreMostrar.strip();
+            persona.setNombreMostrar(nm.length() > 64 ? nm.substring(0, 64) : nm);
+        }
+        return personaRepository.guardar(persona);
+    }
+
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 }

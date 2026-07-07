@@ -421,13 +421,7 @@ class NormativaTest {
     @Nested
     @DisplayName("8A4-08: Guardrails - conceptos NO implementados en 8A-4")
     class GuardrailScopeTest {
-        @Test
-        @DisplayName("No existe clase FalTarifarioUnidadFaltas en el classpath")
-        void no_existe_tarifario() {
-            assertThatThrownBy(() ->
-                    Class.forName("ar.gob.malvinas.faltas.core.domain.model.FalTarifarioUnidadFaltas"))
-                    .isInstanceOf(ClassNotFoundException.class);
-        }
+
         @Test
         @DisplayName("No existe enum RolFirmaReq en el classpath")
         void no_existe_RolFirmaReq() {

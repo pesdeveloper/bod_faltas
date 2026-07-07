@@ -213,14 +213,14 @@ class BloqueantesMaterialesTest {
     }
 
     private void registrarBloqueante(Long actaId) {
-        FalBloqueanteMaterial b = new FalBloqueanteMaterial(UUID.randomUUID().toString(), actaId);
+        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepo.nextId(), actaId);
         b.setOrigen(OrigenBloqueanteMaterial.RODADO);
         b.setDescripcion("Rodado retenido en deposito");
         bloqueanteMaterialRepo.guardar(b);
     }
 
     private void registrarBloqueanteCumplido(Long actaId) {
-        FalBloqueanteMaterial b = new FalBloqueanteMaterial(UUID.randomUUID().toString(), actaId);
+        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepo.nextId(), actaId);
         b.setOrigen(OrigenBloqueanteMaterial.RODADO);
         b.setEstado(EstadoBloqueanteMaterial.CUMPLIDO);
         b.setSiActivo(false);
@@ -403,7 +403,7 @@ class BloqueantesMaterialesTest {
     class RegistrarBloqueante {
 
         @Test
-        @DisplayName("Test 7B-01: Registrar bloqueante ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â PENDIENTE, siActivo=true, fechaAlta not null, fechaCierre null, existsActivo=true")
+        @DisplayName("Test 7B-01: Registrar bloqueante ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ó├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇª├é┬í├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¼├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Ø PENDIENTE, siActivo=true, fechaAlta not null, fechaCierre null, existsActivo=true")
         void registrar_bloqueante_estado_inicial() {
             Long actaId = 7001L;
             RegistrarBloqueanteMaterialCommand cmd = new RegistrarBloqueanteMaterialCommand(
@@ -441,7 +441,7 @@ class BloqueantesMaterialesTest {
     class CumplirBloqueante {
 
         @Test
-        @DisplayName("Test 7B-04: Cumplir bloqueante ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â CUMPLIDO, siActivo=false, fechaCierre not null, existsActivo=false")
+        @DisplayName("Test 7B-04: Cumplir bloqueante ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ó├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇª├é┬í├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¼├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Ø CUMPLIDO, siActivo=false, fechaCierre not null, existsActivo=false")
         void cumplir_bloqueante_estado_cumplido() {
             Long actaId = 7004L;
             FalBloqueanteMaterial b = bloqueanteMaterialService.registrar(
@@ -490,7 +490,7 @@ class BloqueantesMaterialesTest {
     class AnularBloqueante {
 
         @Test
-        @DisplayName("Test 7B-07: Anular bloqueante ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ANULADO, siActivo=false, fechaCierre not null, existsActivo=false")
+        @DisplayName("Test 7B-07: Anular bloqueante ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ó├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇª├é┬í├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¼├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Ø ANULADO, siActivo=false, fechaCierre not null, existsActivo=false")
         void anular_bloqueante_estado_anulado() {
             Long actaId = 7007L;
             FalBloqueanteMaterial b = bloqueanteMaterialService.registrar(
@@ -669,7 +669,7 @@ class BloqueantesMaterialesTest {
         void cumplir_ultimo_bloqueante_condena_firme_pagada_cierra() {
             Object[] par = crearActaCondenaFirmePagadaConBloqueante("7C00001");
             Long actaId = (Long) par[0];
-            String bloqueanteId = (String) par[1];
+            Long bloqueanteId = (Long) par[1];
 
             // Estado previo: ACTIVA/ANAL, sin CIERRA
             FalActa actaAntes = actaRepo.buscarPorId(actaId).orElseThrow();
@@ -696,7 +696,7 @@ class BloqueantesMaterialesTest {
         void anular_ultimo_bloqueante_condena_firme_pagada_cierra() {
             Object[] par = crearActaCondenaFirmePagadaConBloqueante("7C00002");
             Long actaId = (Long) par[0];
-            String bloqueanteId = (String) par[1];
+            Long bloqueanteId = (Long) par[1];
 
             // Estado previo: ACTIVA/ANAL, sin CIERRA
             assertThat(actaRepo.buscarPorId(actaId).orElseThrow().getSituacionAdministrativa())
@@ -790,7 +790,7 @@ class BloqueantesMaterialesTest {
         void cumplir_idempotente_no_duplica_cierra() {
             Object[] par = crearActaCondenaFirmePagadaConBloqueante("7C00006");
             Long actaId = (Long) par[0];
-            String bloqueanteId = (String) par[1];
+            Long bloqueanteId = (Long) par[1];
 
             // Primera vez: cumplir -> CIERRA diferido
             bloqueanteMaterialService.cumplir(new CumplirBloqueanteMaterialCommand(bloqueanteId));
@@ -810,7 +810,7 @@ class BloqueantesMaterialesTest {
         void anular_idempotente_no_duplica_cierra() {
             Object[] par = crearActaCondenaFirmePagadaConBloqueante("7C00007");
             Long actaId = (Long) par[0];
-            String bloqueanteId = (String) par[1];
+            Long bloqueanteId = (Long) par[1];
 
             // Primera vez: anular -> CIERRA diferido
             bloqueanteMaterialService.anular(new AnularBloqueanteMaterialCommand(bloqueanteId));
@@ -830,7 +830,7 @@ class BloqueantesMaterialesTest {
         void sin_nuevos_eventos_bloques_estados_centrales_7c() {
             Object[] par = crearActaCondenaFirmePagadaConBloqueante("7C00008");
             Long actaId = (Long) par[0];
-            String bloqueanteId = (String) par[1];
+            Long bloqueanteId = (Long) par[1];
 
             bloqueanteMaterialService.cumplir(new CumplirBloqueanteMaterialCommand(bloqueanteId));
 
@@ -849,6 +849,5 @@ class BloqueantesMaterialesTest {
         }
     }
 }
-
 
 

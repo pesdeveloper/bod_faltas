@@ -11,9 +11,11 @@ import java.util.Optional;
  */
 public interface BloqueanteMaterialRepository {
 
+    Long nextId();
+
     FalBloqueanteMaterial guardar(FalBloqueanteMaterial bloqueante);
 
-    Optional<FalBloqueanteMaterial> findById(String id);
+    Optional<FalBloqueanteMaterial> findById(Long id);
 
     List<FalBloqueanteMaterial> findByActaId(Long actaId);
 

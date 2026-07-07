@@ -1,0 +1,43 @@
+# 10-MANIFIESTO-ARCHIVOS — 8F-11J
+
+## Archivos nuevos
+
+- main\java\ar\gob\malvinas\faltas\core\domain\model\ActaDocumentoId.java
+  SHA256: 1E619665C8615E4E6945DA45FF588DA48302E3CD57D9EF1B50D7BFA71DF011A5
+- main\java\ar\gob\malvinas\faltas\core\domain\model\FalActaDocumento.java
+  SHA256: 6DF24FB8F633E05BAB2DA22105081CED749AB36576F9D53A09F1DD6DC83157A2
+- main\java\ar\gob\malvinas\faltas\core\domain\enums\RolDocuActa.java
+  SHA256: B5D270A251C4C914DC07AB96F5F41480F9DC72EB71D6EB792C631BDAFE91B232
+- main\java\ar\gob\malvinas\faltas\core\domain\exception\ActaDocumentoYaExisteException.java
+  SHA256: EFC3F656508195A4B5251EF45857AB07807997F582BD414679D49741E5AC40A5
+- main\java\ar\gob\malvinas\faltas\core\domain\exception\ActaDocumentoNoEncontradaException.java
+  SHA256: 7E0F58F71649AD7A61A905A3BB821AA197E94DA5153B8493E01DA0BAAD7F5BF6
+- main\java\ar\gob\malvinas\faltas\core\repository\ActaDocumentoRepository.java
+  SHA256: 786DD5EE080C99E1439EF838331D818648ABBA78541A3F6FCB34617B5E1C703E
+- main\java\ar\gob\malvinas\faltas\core\repository\memory\InMemoryActaDocumentoRepository.java
+  SHA256: 294C2241EDFD7C42FB0B179A91D318D7C40ED32C373C50A3B12E920B0A9FBF00
+- main\java\ar\gob\malvinas\faltas\core\application\service\ActaDocumentoService.java
+  SHA256: CA4D917C460FB26F6FF5FC16D78F665DA4F961858C54E53BEEC33DEFD6170A28
+- test\java\ar\gob\malvinas\faltas\core\application\ActaDocumentoServiceTest.java
+  SHA256: 6E992284292B7A5A2921A16E6BC55DDADD9F4D8F01E33D878891AC4F31F7EB09
+- test\java\ar\gob\malvinas\faltas\core\application\ActaDocumentoConcurrenciaTest.java
+  SHA256: 30A178C7408C737584306E1033716734FA4332BC0F579EE4A1E3C84BEDCD32C0
+- test\java\ar\gob\malvinas\faltas\core\application\ActaDocumentoPivotIntegracionTest.java
+  SHA256: 088EF9DFD891C36AA54FF52822B723EA6157C583CDD82647152DB0051F7909F1
+
+## Archivos modificados
+
+- main\java\ar\gob\malvinas\faltas\core\domain\model\FalActaSnapshot.java
+  SHA256: D7141983C22551928F8D52A1086807188D558807D35AAA4483E54FAF84D9FB7B
+- main\java\ar\gob\malvinas\faltas\core\snapshot\SnapshotRecalculador.java
+  SHA256: 0109E6E2156C22CAB888E9DF91C448F67428D3076F7D3304EB320C8EEC98432F
+- main\java\ar\gob\malvinas\faltas\core\application\service\DocumentoService.java
+  SHA256: 2C062FF37972993F45DE535AE0B15160169F7594206C0CCF0761C7927E56AA84
+- main\java\ar\gob\malvinas\faltas\core\application\service\FalloActaService.java
+  SHA256: 6D2533772142DFA5D5B7F0ED3FEE99DF014C77AC42CC218A8BE7DC369CE921DE
+- main\java\ar\gob\malvinas\faltas\core\application\service\NotificacionService.java
+  SHA256: 62536F07093BA5DA62A39463B980C07C25DD93C4E22E379CB939D2FCECD618D2
+- main\java\ar\gob\malvinas\faltas\core\application\service\DocumentoGraphDemoService.java
+  SHA256: 29D8321B7214F42BC5DE796FB09E006F9FFD542AB2F79A4E18936B8E054D1D91
+- main\java\ar\gob\malvinas\faltas\core\application\service\LoteCorreoService.java
+  SHA256: 37CAFA2A2419625EF8CBD24AC11C9526F8E59F16743CE81C29557E7B62E8C122

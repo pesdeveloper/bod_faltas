@@ -2,6 +2,7 @@ package ar.gob.malvinas.faltas.core.application.demo;
 
 import ar.gob.malvinas.faltas.core.application.command.*;
 import ar.gob.malvinas.faltas.core.application.result.CasoUsoFuncionalEjecucionResultado;
+import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
@@ -36,6 +37,7 @@ public class CasoUsoFuncionalRunner {
     private final PagoCondenaRepository pagoCondRepo;
     private final FalloActaRepository falloRepo;
     private final ApelacionActaRepository apelacionRepo;
+    private final ApelacionDocumentoRepository apelacionDocRepo;
     private final FirmezaCondenaRepository firmezaRepo;
     private final GestionExternaRepository gestionExtRepo;
     private final BloqueanteMaterialRepository bloqueanteMaterialRepo;
@@ -64,6 +66,7 @@ public class CasoUsoFuncionalRunner {
         pagoCondRepo = new InMemoryPagoCondenaRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
+        apelacionDocRepo = new InMemoryApelacionDocumentoRepository();
         firmezaRepo = new InMemoryFirmezaCondenaRepository();
         gestionExtRepo = new InMemoryGestionExternaRepository();
         bloqueanteMaterialRepo = new InMemoryBloqueanteMaterialRepository();
@@ -98,7 +101,7 @@ public class CasoUsoFuncionalRunner {
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc);
 
         apelacionService = new ApelacionActaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc,
+                actaRepo, falloRepo, apelacionRepo, apelacionDocRepo, eventoRepo, snapshotRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker());
 
         firmezaService = new FirmezaCondenaService(
@@ -220,6 +223,18 @@ public class CasoUsoFuncionalRunner {
                 return ejecutarAct030(def, pasos);
             case "ACT-031-PAGO-CONDENA-CON-DESCUENTO":
                 return ejecutarAct031(def, pasos, advertencias);
+            case "ACT-032-APELACION-CON-DOCUMENTOS":
+                return ejecutarAct032(def, pasos);
+            case "ACT-033-APELACION-MIXTA":
+                return ejecutarAct033(def, pasos);
+            case "ACT-034-APELACION-RECHAZADA":
+                return ejecutarAct034(def, pasos);
+            case "ACT-035-APELACION-ABSOLUTORIA":
+                return ejecutarAct035(def, pasos);
+            case "ACT-036-APELACION-MODIFICA-CONDENA":
+                return ejecutarAct036(def, pasos);
+            case "ACT-037-APELACION-NULIDAD":
+                return ejecutarAct037(def, pasos);
             default:
                 return CasoUsoFuncionalEjecucionResultado.noEjecutado(
                         codigo, def.casoUsoPrincipal(),
@@ -272,7 +287,7 @@ public class CasoUsoFuncionalRunner {
     }
 
     private void registrarPositiva(String notifId) {
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(notifId, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), null));
     }
 
     private Long llegarAAnalisis(List<String> pasos) {
@@ -289,6 +304,91 @@ public class CasoUsoFuncionalRunner {
         return actaId;
     }
 
+
+    private CasoUsoFuncionalEjecucionResultado ejecutarAct032(
+            ActaMockFuncionalDefinicion def, List<String> pasos) {
+        Long id = ejecutarAct013(def, pasos).actaId();
+        ComandoResultado apRes = apelacionService.registrarApelacion(
+                new RegistrarApelacionCommand(id, "Infractor", "Fundamentos apelacion con escrito", null));
+        pasos.add("registrarApelacion -> APEPRE");
+        Long apelacionId = Long.parseLong(apRes.idEntidadAfectada());
+        apelacionService.registrarDocumento(new RegistrarDocumentoApelacionCommand(
+                apelacionId, TipoDocumentoApelacion.ESCRITO_APELACION,
+                OrigenPresentacion.INFRACTOR, null, "storage://ape-escrito.pdf",
+                "escrito_apelacion.pdf", null, null, "SYS"));
+        pasos.add("registrarDocumentoApelacion(ESCRITO_APELACION) -> CON_APELACION");
+        return buildResultado(def, id, pasos);
+    }
+
+    private CasoUsoFuncionalEjecucionResultado ejecutarAct033(
+            ActaMockFuncionalDefinicion def, List<String> pasos) {
+        Long id = ejecutarAct013(def, pasos).actaId();
+        ComandoResultado apRes = apelacionService.registrarApelacion(
+                new RegistrarApelacionCommand(id, "Infractor", "Fundamentos apelacion mixta", null));
+        pasos.add("registrarApelacion -> APEPRE");
+        Long apelacionId = Long.parseLong(apRes.idEntidadAfectada());
+        apelacionService.registrarDocumento(new RegistrarDocumentoApelacionCommand(
+                apelacionId, TipoDocumentoApelacion.ESCRITO_APELACION,
+                OrigenPresentacion.INFRACTOR, null, "storage://ape-escrito.pdf",
+                "escrito_apelacion.pdf", null, null, "SYS"));
+        apelacionService.registrarDocumento(new RegistrarDocumentoApelacionCommand(
+                apelacionId, TipoDocumentoApelacion.DOCUMENTACION_RESPALDATORIA,
+                OrigenPresentacion.INFRACTOR, null, "storage://ape-respaldo.pdf",
+                "documentacion_respaldatoria.pdf", null, null, "SYS"));
+        pasos.add("registrarDocumentoApelacion(ESCRITO + RESPALDATORIA) -> CON_APELACION");
+        return buildResultado(def, id, pasos);
+    }
+
+    private CasoUsoFuncionalEjecucionResultado ejecutarAct034(
+            ActaMockFuncionalDefinicion def, List<String> pasos) {
+        Long id = ejecutarAct013(def, pasos).actaId();
+        apelacionService.registrarApelacion(
+                new RegistrarApelacionCommand(id, "Infractor", "Fundamentos apelacion", null));
+        pasos.add("registrarApelacion -> APEPRE");
+        apelacionService.resolverRechazada(
+                new ResolverApelacionRechazadaCommand(id, "Apelacion sin fundamentos validos", null));
+        pasos.add("resolverRechazada -> APERAZ/PENDIENTE_ANALISIS");
+        return buildResultado(def, id, pasos);
+    }
+
+    private CasoUsoFuncionalEjecucionResultado ejecutarAct035(
+            ActaMockFuncionalDefinicion def, List<String> pasos) {
+        Long id = ejecutarAct013(def, pasos).actaId();
+        apelacionService.registrarApelacion(
+                new RegistrarApelacionCommand(id, "Infractor", "Fundamentos apelacion absolutoria", null));
+        pasos.add("registrarApelacion -> APEPRE");
+        apelacionService.resolverAceptaAbsuelve(
+                new ResolverApelacionAceptaAbsuelveCommand(id, "Infractor absuelto en segunda instancia", null));
+        pasos.add("resolverAceptaAbsuelve -> APEABS/CERRADAS");
+        return buildResultado(def, id, pasos);
+    }
+
+    private CasoUsoFuncionalEjecucionResultado ejecutarAct036(
+            ActaMockFuncionalDefinicion def, List<String> pasos) {
+        Long id = ejecutarAct013(def, pasos).actaId();
+        ComandoResultado apRes = apelacionService.registrarApelacion(
+                new RegistrarApelacionCommand(id, "Infractor", "Fundamentos apelacion condena alta", null));
+        pasos.add("registrarApelacion -> APEPRE");
+        Long apelacionId = Long.parseLong(apRes.idEntidadAfectada());
+        apelacionService.resolverModificaCondena(
+                new ResolverApelacionModificaCondenaCommand(apelacionId, new BigDecimal("2500.00"),
+                        "Condena reducida a 2500 por apelacion", null));
+        pasos.add("resolverModificaCondena -> APEMCO/PENDIENTES_FALLO");
+        return buildResultado(def, id, pasos);
+    }
+
+    private CasoUsoFuncionalEjecucionResultado ejecutarAct037(
+            ActaMockFuncionalDefinicion def, List<String> pasos) {
+        Long id = ejecutarAct013(def, pasos).actaId();
+        ComandoResultado apRes = apelacionService.registrarApelacion(
+                new RegistrarApelacionCommand(id, "Infractor", "Fundamentos apelacion nulidad", null));
+        pasos.add("registrarApelacion -> APEPRE");
+        Long apelacionId = Long.parseLong(apRes.idEntidadAfectada());
+        apelacionService.resolverNulidad(
+                new ResolverApelacionNulidadCommand(apelacionId, "Nulidad por defecto de forma", null));
+        pasos.add("resolverNulidad -> APENUL/PENDIENTE_ANALISIS");
+        return buildResultado(def, id, pasos);
+    }
     private Long llegarACondenaFirme(List<String> pasos) {
         Long actaId = llegarAAnalisis(pasos);
         falloService.dictarCondenatorio(
@@ -538,7 +638,7 @@ public class CasoUsoFuncionalRunner {
     private CasoUsoFuncionalEjecucionResultado ejecutarAct020(
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarAAnalisis(pasos);
-        paralizacionService.paralizar(new ParalizarActaCommand(id, "Causa administrativa", null));
+        paralizacionService.paralizar(new ParalizarActaCommand(id, MotivoParalizacion.ESPERA_DOCUMENTAL, null, null));
         pasos.add("paralizar -> ACTPAR/PARALIZADAS/bloque=ANAL");
         return buildResultado(def, id, pasos);
     }
@@ -617,7 +717,7 @@ public class CasoUsoFuncionalRunner {
         pasos.add("firmarDocumento");
         String notifId = enviarNotificacion(id, docId);
         pasos.add("enviarNotificacion");
-        notifService.registrarNegativa(new RegistrarNotificacionNegativaCommand(notifId, null));
+        notifService.registrarNegativa(new RegistrarNotificacionNegativaCommand(Long.parseLong(notifId), null));
         pasos.add("registrarNotificacionNegativa -> NOTNEG/PENDIENTE_ANALISIS");
         return buildResultado(def, id, pasos);
     }
@@ -686,6 +786,7 @@ public class CasoUsoFuncionalRunner {
     // =========================================================================
 
     public ActaRepository getActaRepo() { return actaRepo; }
+    public DocumentoRepository getDocRepo() { return docRepo; }
     public ActaEventoRepository getEventoRepo() { return eventoRepo; }
     public ActaSnapshotRepository getSnapshotRepo() { return snapshotRepo; }
     public FalloActaRepository getFalloRepo() { return falloRepo; }

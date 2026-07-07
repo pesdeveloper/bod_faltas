@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application.demo;
 
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFalloActa;
@@ -28,8 +29,8 @@ public final class GraphDemoActaFactory {
 
     public static final Long ACTA_DEMO_ID = 1L;
     public static final String NRO_ACTA_DEMO = "ACT-2024-00001";
-    public static final String INSPECTOR_DEMO = "INS-001";
-    public static final String DEPENDENCIA_DEMO = "DEP-01";
+    public static final Long INSPECTOR_DEMO = 1L;
+    public static final Long DEPENDENCIA_DEMO = 1L;
 
     private static final LocalDate FECHA_ACTA_DEMO = LocalDate.of(2024, 3, 15);
     private static final LocalDateTime FH_LABRADO_DEMO = LocalDateTime.of(2024, 3, 15, 10, 30);
@@ -45,20 +46,23 @@ public final class GraphDemoActaFactory {
         FalActa acta = new FalActa(
                 id,
                 "uuid-demo-" + id,
-                "TRANSITO",
+                TipoActa.TRANSITO,
                 DEPENDENCIA_DEMO,
                 INSPECTOR_DEMO,
                 FECHA_ACTA_DEMO,
                 FH_LABRADO_DEMO,
                 "Avenida Pioneros 2345, Malvinas Argentinas",
-                "Belgrano 200, Malvinas Argentinas",
                 "Conduccion sin revision tecnica obligatoria vigente",
                 -34.5678,
                 -58.1234,
-                "Juan Carlos Perez",
-                "12345678",
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                null,
+                FH_LABRADO_DEMO,
+                "SYS"
+        );
         acta.setNroActa(NRO_ACTA_DEMO);
+        acta.setInfractorNombre("Juan Carlos Perez");
+        acta.setInfractorDocumento("12345678");
         return acta;
     }
 
@@ -66,11 +70,7 @@ public final class GraphDemoActaFactory {
      * Crea un fallo absolutorio demo.
      */
     public static FalActaFallo crearFalloAbsolutorioDemo(Long actaId) {
-        FalActaFallo fallo = new FalActaFallo(
-                "FALLO-ABS-DEMO-" + actaId,
-                actaId,
-                TipoFalloActa.ABSOLUTORIO,
-                FH_FALLO_DEMO);
+        FalActaFallo fallo = new FalActaFallo(1L, actaId, TipoFalloActa.ABSOLUTORIO, FH_FALLO_DEMO, FH_FALLO_DEMO, "SYS");
         fallo.setFundamentos("Se resuelve absolver al infractor por falta de merito suficiente.");
         return fallo;
     }
@@ -79,11 +79,11 @@ public final class GraphDemoActaFactory {
      * Crea un fallo condenatorio demo con monto de condena.
      */
     public static FalActaFallo crearFalloCondenatorioDemo(Long actaId) {
-        FalActaFallo fallo = new FalActaFallo(
-                "FALLO-COND-DEMO-" + actaId,
-                actaId,
-                TipoFalloActa.CONDENATORIO,
-                FH_FALLO_DEMO);
+        return crearFalloCondenatorioDemo(actaId, 2L);
+    }
+
+    public static FalActaFallo crearFalloCondenatorioDemo(Long actaId, Long id) {
+        FalActaFallo fallo = new FalActaFallo(id, actaId, TipoFalloActa.CONDENATORIO, FH_FALLO_DEMO, FH_FALLO_DEMO, "SYS");
         fallo.setMontoCondena(BigDecimal.valueOf(15000));
         fallo.setFundamentos("Se resuelve condenar al infractor al pago de multa de pesos quince mil.");
         return fallo;
@@ -105,7 +105,7 @@ public final class GraphDemoActaFactory {
      */
     public static FalNotificacion crearNotificacionDemo(Long actaId, Long idDocumento, TipoDocu tipoDocu) {
         return new FalNotificacion(
-                "NOTIF-DEMO-" + actaId,
+                1L,
                 actaId,
                 idDocumento,
                 tipoDocu,

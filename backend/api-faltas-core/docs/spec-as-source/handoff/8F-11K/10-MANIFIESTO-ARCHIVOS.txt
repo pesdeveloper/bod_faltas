@@ -1,0 +1,81 @@
+# MANIFIESTO ARCHIVOS — 8F-11K
+
+## Metadata del handoff
+
+- Slice: 8F-11K
+- Fecha: 2026-07-06
+- Tests: 2323 / Failures: 0 / Errors: 0 / Skipped: 0 / BUILD SUCCESS
+- Paridad: 57 ALINEADO / 0 FALTA_EN_INMEMORY / 2 PARCIAL / 62 total
+
+## Archivos en files/
+
+  COMBINACION_DocumentoVariableContextBuilder.java (7522 bytes)
+  ENTITY_FalActa_modified.java (8374 bytes)
+  ENTITY_FalActaQrAcceso.java (4146 bytes)
+  ENTITY_FalGestionExterna.java (7363 bytes)
+  ENUM_CanalAccesoQr.java (712 bytes)
+  ENUM_ResultadoAccesoQr.java (755 bytes)
+  ENUM_TipoEventoActa_modified.java (5728 bytes)
+  EXCEPTION_QrTokenInvalidoException.java (724 bytes)
+  INFRA_AesGcmQrTokenProtector.java (7695 bytes)
+  INFRA_QrConfig.java (1209 bytes)
+  INMEMORY_InMemoryActaRepository_modified.java (2432 bytes)
+  INMEMORY_InMemoryApelacionActaRepository.java (2319 bytes)
+  INMEMORY_InMemoryQrAccesoRepository.java (2177 bytes)
+  PORT_QrTokenProtector.java (1643 bytes)
+  REPOSITORY_ActaRepository_modified.java (517 bytes)
+  REPOSITORY_QrAccesoRepository.java (671 bytes)
+  SERVICE_ActaService.java (10713 bytes)
+  SERVICE_ApelacionActaService.java (21530 bytes)
+  SERVICE_FirmezaCondenaService.java (13945 bytes)
+  SERVICE_GestionExternaService.java (32691 bytes)
+  SERVICE_QrActaService.java (10897 bytes)
+  TEST_ApelacionActaTest.java (35070 bytes)
+  TEST_FirmezaCondenaTest.java (29665 bytes)
+  TEST_GestionExternaTest.java (166579 bytes)
+  TEST_QrActaServiceTest.java (28929 bytes)
+
+## Documentos del handoff
+
+  00-README-CONTINUIDAD.md
+  01-ESTADO-BUILD.md
+  10-MANIFIESTO-ARCHIVOS.txt
+  mvn-test.log
+
+## Archivos fuente modificados (principales)
+
+### Nuevos (QR)
+  src/main/java/.../domain/model/FalActaQrAcceso.java
+  src/main/java/.../domain/enums/CanalAccesoQr.java
+  src/main/java/.../domain/enums/ResultadoAccesoQr.java
+  src/main/java/.../domain/exception/QrTokenInvalidoException.java
+  src/main/java/.../repository/QrAccesoRepository.java
+  src/main/java/.../repository/memory/InMemoryQrAccesoRepository.java
+  src/main/java/.../application/port/QrTokenProtector.java
+  src/main/java/.../application/service/QrActaService.java
+  src/main/java/.../infrastructure/qr/AesGcmQrTokenProtector.java
+  src/main/java/.../infrastructure/qr/QrConfig.java
+  src/test/java/.../application/QrActaServiceTest.java
+
+### Modificados (QR)
+  src/main/java/.../domain/model/FalActa.java  (+codigoQr)
+  src/main/java/.../domain/enums/TipoEventoActa.java  (+QRGEN, +QRACC)
+  src/main/java/.../repository/ActaRepository.java  (+buscarPorUuidTecnico)
+  src/main/java/.../repository/memory/InMemoryActaRepository.java
+
+### Modificados (pre-QR fixes)
+  src/main/java/.../domain/model/FalGestionExterna.java  (Long id)
+  src/main/java/.../application/service/GestionExternaService.java  (nextId)
+  src/main/java/.../repository/memory/InMemoryApelacionActaRepository.java  (OCC)
+  src/main/java/.../application/service/ApelacionActaService.java  (RESUELTA)
+  src/main/java/.../application/service/FirmezaCondenaService.java  (RESUELTA check)
+  src/main/java/.../application/service/ActaService.java  (persona minimal)
+  src/main/java/.../application/combinacion/DocumentoVariableContextBuilder.java
+  src/main/java/.../application/service/FalloActaService.java
+  src/main/java/.../application/demo/ActaMockFuncionalDefinicion.java
+
+### Tests modificados
+  src/test/java/.../application/GestionExternaTest.java
+  src/test/java/.../application/ApelacionActaTest.java
+  src/test/java/.../application/FirmezaCondenaTest.java
+  src/test/java/.../application/NormativaTest.java  (guardrail eliminado)

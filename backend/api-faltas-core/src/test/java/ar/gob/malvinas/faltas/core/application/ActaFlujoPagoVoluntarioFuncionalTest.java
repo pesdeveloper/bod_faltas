@@ -85,7 +85,7 @@ class ActaFlujoPagoVoluntarioFuncionalTest {
             FalActa acta = runner.getActaRepo().buscarPorId(res.actaId()).orElseThrow();
             assertThat(acta.estaCerrada()).isTrue();
             assertThat(acta.getSituacionAdministrativa()).isEqualTo(SituacionAdministrativaActa.CERRADA);
-            assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO);
+            assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO);
             assertThat(acta.getBloqueActual()).isEqualTo(BloqueActual.CERR);
 
             FalActaSnapshot snap = runner.getSnapshotRepo().buscarPorActa(res.actaId()).orElseThrow();
@@ -103,7 +103,7 @@ class ActaFlujoPagoVoluntarioFuncionalTest {
             CasoUsoFuncionalEjecucionResultado res = runner.ejecutar("ACT-009-PAGVOL-CONFIRMADO");
 
             assertThat(res.resultadoFinal())
-                    .isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO.name());
+                    .isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO.name());
         }
     }
 }

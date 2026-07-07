@@ -1,4 +1,4 @@
-﻿# Auditoria pre-JDBC/MariaDB - Micro-slice 8C-6E
+# Auditoria pre-JDBC/MariaDB - Micro-slice 8C-6E
 
 Fecha: 2026-07-02
 Tipo: Auditoria y documentacion. Sin cambios funcionales Java.
@@ -266,7 +266,7 @@ Bloques legacy (D1_CAPTURA, etc.) rechazados: Guardrails en tests
 version_row ausente en FalDocumento: Locking optimista para JDBC; no critico in-memory
 num_politica DDL fh_alta, id_user_alta: Java tiene estos campos; DDL productivo debe incluirlos
 fal_acta.resultado_firma_infractor SMALLINT NOT NULL: Java alineado; DDL debe agregar la columna
-fal_inspector_version: firma_storage_key, firma_hash, fh_firma_registrada: Java no implementa aun; para JDBC
+fal_inspector_version: firma_storage_key, firma_hash, fh_firma_registrada ELIMINADOS del modelo (decision 8F-11B).
 fal_acta_evidencia: seed tipo_evid=6: DDL debe incluir valor FIRMA_OLOGRAFA_INFRACTOR
 fal_documento DDL: nro_docu VARCHAR(30); renombrar requisito_firma->tipo_firma_req; agregar plantilla_id
 fal_documento_plantilla y fal_documento_plantilla_firma_req: Tablas nuevas por crear en DDL

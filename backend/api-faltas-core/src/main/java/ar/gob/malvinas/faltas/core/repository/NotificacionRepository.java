@@ -9,9 +9,9 @@ import java.util.Optional;
  * Contrato de persistencia de notificaciones del expediente.
  */
 public interface NotificacionRepository {
+    Long nextId();
     FalNotificacion guardar(FalNotificacion notificacion);
-    Optional<FalNotificacion> buscarPorId(String id);
+    Optional<FalNotificacion> buscarPorId(Long id);
     List<FalNotificacion> buscarPorActa(Long idActa);
-    List<FalNotificacion> buscarPorDocumento(String idDocumento);
+    List<FalNotificacion> buscarPorDocumento(Long idDocumento);
 }
-

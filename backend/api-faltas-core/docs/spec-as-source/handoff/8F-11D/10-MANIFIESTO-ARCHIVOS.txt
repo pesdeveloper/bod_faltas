@@ -1,0 +1,55 @@
+﻿TIPO | RUTA_ORIGINAL | RUTA_EN_PAQUETE | SHA256 | MOTIVO
+------------------------------------------------------------------------------------------------------------------------
+DOC | handoff/8F-11D/files/DOC_109-delta-modelo-mariadb-inmemory.md | files/DOC_109-delta-modelo-mariadb-inmemory.md | D36227B08C80B6C65BAF883DD405142D0B38F767BC663A7518BE8C5CCAFBDAD0 | Incluido en handoff 8F-11D
+DOC | handoff/8F-11D/files/DOC_110-matriz-maestra-paridad-mariadb-inmemory.md | files/DOC_110-matriz-maestra-paridad-mariadb-inmemory.md | 6C1239B083F10D21508FF7FB934FECFDB4CFD7F6F611BBDC0DECC3BF6113970B | Incluido en handoff 8F-11D
+DOC | handoff/8F-11D/files/DOC_99-pendientes-siguientes-slices.md | files/DOC_99-pendientes-siguientes-slices.md | 20A07F41AB6B67F4C8C421F5C207455FFAF17FF671AC3B25567C5E9B36EBBCCB | Incluido en handoff 8F-11D
+DOC | handoff/8F-11D/files/DOC_DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md | files/DOC_DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md | 44FB7C6C8E43CC56B006D4B5343EDAE5E78304B7EFC1684756E7705DAE08157F | Incluido en handoff 8F-11D
+DOC | handoff/8F-11D/files/DOC_MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md | files/DOC_MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md | FF0B14B1FCEAE6511528C649E54D880F98A39B3F87720FF69DE0D2ABDF0B0E92 | Incluido en handoff 8F-11D
+DOC | handoff/8F-11D/files/DOC_MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md | files/DOC_MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md | 9C30EB6329F613CD4C7DBD2AB7522120FEFA981931D6DFEBC2BC8F836D056EB4 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_ActaArticuloInfringidoNoEncontradoException.java | files/ENTITY_ActaArticuloInfringidoNoEncontradoException.java | 996AEF628A4E34B19D3CD4ACFDB217D812014BEC4395343955D47FA2496C4AA5 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_ArticuloMedidaPreventivaId.java | files/ENTITY_ArticuloMedidaPreventivaId.java | 2F4ADDDB9FC93343B2C53491B202D285ADB9DD930472F7FE1A6D979789A10EED | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_ConcurrenciaConflictoException.java | files/ENTITY_ConcurrenciaConflictoException.java | 3DA7F51367B48A5C00E0419E13823693D5C27D09222601AEFC7DF093FFE84947 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalActaArticuloInfringido.java | files/ENTITY_FalActaArticuloInfringido.java | 4072015127B3FE87BEB1B423F247F8975B3B5DD15A2BF9D0E1B2BEAAB1B5BD0D | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalActaSnapshot.java | files/ENTITY_FalActaSnapshot.java | EC0FE901A1C85B51BC41C976AC6DD5E3D6F4D3F32AE0D6DE33D5E7D4E056081D | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalActaValorizacion.java | files/ENTITY_FalActaValorizacion.java | 7CB803E6AC74D33D81531B80261517130C00FD84729AB01ABC1558A113BEFB11 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalActaValorizacionItem.java | files/ENTITY_FalActaValorizacionItem.java | A9E2CBC4399F227E507C71F34A6BA82279FA35CFA6606A216D61D15AD032B7D0 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalArticuloMedidaPreventiva.java | files/ENTITY_FalArticuloMedidaPreventiva.java | D8414A275100248724FA9A646DA203ECCF6E5E49E553B2EDFF54517D09758B2D | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalMedidaPreventiva.java | files/ENTITY_FalMedidaPreventiva.java | 86084D58A1E46E6E09E86CA8DE94B10ECD5E487542269F2072236F2D23F6883E | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_FalTarifarioUnidadFaltas.java | files/ENTITY_FalTarifarioUnidadFaltas.java | FEDC5B58C1D4142F8C8CA386001D4EE6204CC618938C7CB40DA367F1667EE126 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_MedidaPreventivaNoEncontradaException.java | files/ENTITY_MedidaPreventivaNoEncontradaException.java | 7527FEE87E09374CB095602F22E935C66227152A4535E762BB65911AED888365 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_TarifarioNoEncontradoException.java | files/ENTITY_TarifarioNoEncontradoException.java | 46B888AFBBFD24D04016AAE39282C722EAB46BF5593A6CF2FC6BB9BCC1CA8277 | Incluido en handoff 8F-11D
+ENTITY | handoff/8F-11D/files/ENTITY_ValorizacionNoEncontradaException.java | files/ENTITY_ValorizacionNoEncontradaException.java | 6478EA48398A5ACF86BFBA546B6E2AFF113B013563178DBC9AFBFB25A21D57A4 | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_CriterioTarifario.java | files/ENUM_CriterioTarifario.java | D5CCDE8AA611AEA5A05FD45471384CE4A4F5AA1021B4C44B15393668484A2E43 | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_EstadoValorizacion.java | files/ENUM_EstadoValorizacion.java | A4F68E88FB7B2D871A15CCEBD8A7D81C96A66688E670549E732891BDBC104BD5 | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_MotivoBajaArticuloInfringido.java | files/ENUM_MotivoBajaArticuloInfringido.java | BF743380AA51E8D6BA2612D9111DD60DEB1BA89106DCDC52ACB597350F87BC06 | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_MotivoManualizacionValorizacion.java | files/ENUM_MotivoManualizacionValorizacion.java | E42DBE2D7A18FC2421048A84ACC8A45D579328B5734EE6E7C663BF76D483320E | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_OrigenValorizacion.java | files/ENUM_OrigenValorizacion.java | 90A8D29248E1D51AEA5C9BC6C76499C3E5B93B1548C0F41F01D3F37445EF9AB1 | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_TipoUnidadFaltas.java | files/ENUM_TipoUnidadFaltas.java | FFD64C98C4819D1B71FA996D7F929D85980BB8C299F4B8C7C4F3F267B2460E89 | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_TipoValorizacionActa.java | files/ENUM_TipoValorizacionActa.java | F4547871E26199F568A6C166A2D0E24EAC47E2E4A927D79EE78E97570EC3D66E | Incluido en handoff 8F-11D
+ENUM | handoff/8F-11D/files/ENUM_TipoValorizacionItem.java | files/ENUM_TipoValorizacionItem.java | 0301D8F5787056EE6565485C87B125174BDA116A0518DB0DC81033C19ABA5BE9 | Incluido en handoff 8F-11D
+INMEMORY | handoff/8F-11D/files/INMEMORY_InMemoryActaArticuloInfringidoRepository.java | files/INMEMORY_InMemoryActaArticuloInfringidoRepository.java | 0CBB90DCBB9AB481A0C725A999CA872C3689E2E05117D1575A03ADDA8D0CDF95 | Incluido en handoff 8F-11D
+INMEMORY | handoff/8F-11D/files/INMEMORY_InMemoryActaValorizacionItemRepository.java | files/INMEMORY_InMemoryActaValorizacionItemRepository.java | CB0B92B0F70996C546D974D2A5C62818D16846EB4D0835D56064BF47E962D271 | Incluido en handoff 8F-11D
+INMEMORY | handoff/8F-11D/files/INMEMORY_InMemoryActaValorizacionRepository.java | files/INMEMORY_InMemoryActaValorizacionRepository.java | F13CFF30BACA2A638FF4DB2B06DC5459A7CAA73D802E524E0C786766B26E8A13 | Incluido en handoff 8F-11D
+INMEMORY | handoff/8F-11D/files/INMEMORY_InMemoryArticuloMedidaPreventivaRepository.java | files/INMEMORY_InMemoryArticuloMedidaPreventivaRepository.java | AF9D6A1101E706CE72E15DD5D370D3144D45F233DD65C7944D51CEB251340F83 | Incluido en handoff 8F-11D
+INMEMORY | handoff/8F-11D/files/INMEMORY_InMemoryMedidaPreventivaRepository.java | files/INMEMORY_InMemoryMedidaPreventivaRepository.java | 7A71751F2CB8A0D4FC1B069AEBED4AF7EFF416096C5A70829501F2A4727E1091 | Incluido en handoff 8F-11D
+INMEMORY | handoff/8F-11D/files/INMEMORY_InMemoryTarifarioUnidadFaltasRepository.java | files/INMEMORY_InMemoryTarifarioUnidadFaltasRepository.java | 90A8A58EA771A2FBF6F7B6E75F79FA6735292EF063F0341D2EFCDD50206184FD | Incluido en handoff 8F-11D
+LOG | handoff/8F-11D/files/mvn-test.log | files/mvn-test.log | 142620F9438361D7113A25A692C0DF51049948A901FCD233962DD52D25097B7E | Incluido en handoff 8F-11D
+REPOSITORY | handoff/8F-11D/files/REPOSITORY_ActaArticuloInfringidoRepository.java | files/REPOSITORY_ActaArticuloInfringidoRepository.java | CD638D0C710FC224E080D677569002EDBAA732734A4E7C40A759E0FE9D033914 | Incluido en handoff 8F-11D
+REPOSITORY | handoff/8F-11D/files/REPOSITORY_ActaValorizacionItemRepository.java | files/REPOSITORY_ActaValorizacionItemRepository.java | 14C7EA53C184F112CCC951399E370C5CF7C5E4785E90F6D68FA37A3705C0D9C3 | Incluido en handoff 8F-11D
+REPOSITORY | handoff/8F-11D/files/REPOSITORY_ActaValorizacionRepository.java | files/REPOSITORY_ActaValorizacionRepository.java | 69380E3BE8E9C44DFD61A1C39B940A9153DD5E5FA6F2DB6C4D6ED5CF9CB9CC20 | Incluido en handoff 8F-11D
+REPOSITORY | handoff/8F-11D/files/REPOSITORY_ArticuloMedidaPreventivaRepository.java | files/REPOSITORY_ArticuloMedidaPreventivaRepository.java | 54B0013CC118519E0E828FB9AF401C8CABEC4A9018E3A5F3C5F05D843376C6CB | Incluido en handoff 8F-11D
+REPOSITORY | handoff/8F-11D/files/REPOSITORY_MedidaPreventivaRepository.java | files/REPOSITORY_MedidaPreventivaRepository.java | 299E2C3C422E3C24A4F319ABCA504D40893350D9496CE2437491CF8956C0DA28 | Incluido en handoff 8F-11D
+REPOSITORY | handoff/8F-11D/files/REPOSITORY_TarifarioUnidadFaltasRepository.java | files/REPOSITORY_TarifarioUnidadFaltasRepository.java | C4EFF25D9CB91CB726ADB6C47F0383604EC9187D04DFD47DA2BD4E139DA9D80E | Incluido en handoff 8F-11D
+SEEDER | handoff/8F-11D/files/SEEDER_TarifarioMedidaMockSeeder.java | files/SEEDER_TarifarioMedidaMockSeeder.java | F06C5B1E1F70DDC3EDB41EBA54FC7E5785305FB8DCF2EE9386EA6C53C5CB891C | Incluido en handoff 8F-11D
+SERVICE | handoff/8F-11D/files/SERVICE_ActaArticuloInfringidoService.java | files/SERVICE_ActaArticuloInfringidoService.java | C088614399FB5C0A814425368AE6214A355B79413EAE1DE6133880BD35BC8528 | Incluido en handoff 8F-11D
+SERVICE | handoff/8F-11D/files/SERVICE_MedidaPreventivaService.java | files/SERVICE_MedidaPreventivaService.java | 09CD1F39299C2BE77347693DE7356DD2685D25450ADFF7351EA849867718D80D | Incluido en handoff 8F-11D
+SERVICE | handoff/8F-11D/files/SERVICE_TarifarioService.java | files/SERVICE_TarifarioService.java | C3D2BFF32354F3968D4C6D41FD51300592C5D00EF9735C23EFF2EA87646EDE4E | Incluido en handoff 8F-11D
+SERVICE | handoff/8F-11D/files/SERVICE_ValorizacionService.java | files/SERVICE_ValorizacionService.java | 71C1CBD824877CD5CB64A685693EFAC5037180C3645ECC7C21DAE8746EAD38A4 | Incluido en handoff 8F-11D
+SNAPSHOT | handoff/8F-11D/files/SNAPSHOT_SnapshotRecalculador.java | files/SNAPSHOT_SnapshotRecalculador.java | B37399392A3BEEB8510DE0FAD2D04F11FF732FF810D35402479E05C5B41D0A6D | Incluido en handoff 8F-11D
+TEST | handoff/8F-11D/files/TEST_OptimisticLockingTest.java | files/TEST_OptimisticLockingTest.java | DE55186769AC8F879562EBADF9F2707C49842FCC2471F9396FA2356DDFCB1ACA | Incluido en handoff 8F-11D
+TEST | handoff/8F-11D/files/TEST_TarifarioValorizacionTest.java | files/TEST_TarifarioValorizacionTest.java | 24052F47038F47DB9C19B945E8BBDFE319A4FB243229B61E4A93C297B4A7848D | Incluido en handoff 8F-11D
+
+TOTAL_ARCHIVOS=48
+TOTAL_BYTES=1115141
+ARCHIVOS_OMITIDOS=0
+FECHA_GENERACION=2026-07-05T18:30 UTC-3

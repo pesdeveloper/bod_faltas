@@ -12,6 +12,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoVoluntario;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
@@ -223,7 +225,7 @@ public class PagoVoluntarioService {
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
-        acta.setResultadoFinal(ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO);
+        acta.setResultadoFinal(ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO);
         acta.setSituacionAdministrativa(SituacionAdministrativaActa.CERRADA);
         acta.setBloqueActual(BloqueActual.CERR);
         actaRepository.guardar(acta);
@@ -239,7 +241,7 @@ public class PagoVoluntarioService {
 
         return ComandoResultado.de(acta.getId(), pago.getId(),
                 TipoEventoActa.PAGCNF.codigo(),
-                "Pago voluntario confirmado. Acta cerrada. Resultado: PAGO_VOLUNTARIO_CONFIRMADO.");
+                "Pago voluntario confirmado. Acta cerrada. Resultado: PAGO_VOLUNTARIO_PAGADO.");
     }
 
     // -------------------------------------------------------------------------
@@ -363,21 +365,19 @@ public class PagoVoluntarioService {
     }
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 

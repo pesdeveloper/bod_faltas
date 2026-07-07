@@ -179,7 +179,7 @@ class PagoVoluntarioTest {
             FalActa acta = actaRepo.buscarPorId(idActa).orElseThrow();
             assertThat(acta.getBloqueActual()).isEqualTo(BloqueActual.CERR);
             assertThat(acta.getSituacionAdministrativa()).isEqualTo(SituacionAdministrativaActa.CERRADA);
-            assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO);
+            assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO);
             assertThat(acta.estaCerrada()).isTrue();
 
             List<FalActaEvento> eventos = eventoRepo.buscarPorActa(idActa);
@@ -261,7 +261,7 @@ class PagoVoluntarioTest {
             pagoService.confirmar(new ConfirmarPagoVoluntarioCommand(idActa, null));
 
             FalActa acta = actaRepo.buscarPorId(idActa).orElseThrow();
-            assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO);
+            assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO);
             assertThat(acta.getSituacionAdministrativa()).isEqualTo(SituacionAdministrativaActa.CERRADA);
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(idActa)
@@ -436,7 +436,7 @@ class PagoVoluntarioTest {
                     .collect(Collectors.toSet());
             assertThat(nombres).doesNotContain("PAGO_INFORMADO");
             assertThat(nombres).doesNotContain("PAGO_VOLUNTARIO");
-            assertThat(nombres).contains("PAGO_VOLUNTARIO_CONFIRMADO");
+            assertThat(nombres).contains("PAGO_VOLUNTARIO_PAGADO");
             assertThat(nombres).contains("SIN_RESULTADO_FINAL");
         }
 
@@ -521,6 +521,5 @@ class PagoVoluntarioTest {
         return idActa;
     }
 }
-
 
 

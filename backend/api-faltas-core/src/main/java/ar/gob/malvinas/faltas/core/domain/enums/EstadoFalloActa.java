@@ -16,5 +16,7 @@ public enum EstadoFalloActa {
     FIRMADO,
     PENDIENTE_NOTIFICACION,
     NOTIFICADO,
+    FIRME,
+    REEMPLAZADO,
     SIN_EFECTO
 }

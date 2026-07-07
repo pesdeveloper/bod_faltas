@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  */
 public class FalNotificacion {
 
-    private final String id;
+    private final Long id;
     private final Long idActa;
     private final Long idDocumento;
     private final TipoDocu tipoDocumentoNotificado;
@@ -26,9 +26,13 @@ public class FalNotificacion {
     private LocalDateTime fechaResultado;
     private int intentos;
     private String observaciones;
+    private LocalDateTime fhUltMod;
+    private String idUserUltMod;
+    private LocalDateTime fhAlta;
+    private String idUserAlta;
 
     public FalNotificacion(
-            String id,
+            Long id,
             Long idActa,
             Long idDocumento,
             TipoDocu tipoDocumentoNotificado,
@@ -44,7 +48,21 @@ public class FalNotificacion {
         this.intentos = 1;
     }
 
-    public String getId() { return id; }
+    public FalNotificacion(
+            Long id,
+            Long idActa,
+            Long idDocumento,
+            TipoDocu tipoDocumentoNotificado,
+            String canal,
+            LocalDateTime fechaEnvio,
+            LocalDateTime fhAlta,
+            String idUserAlta) {
+        this(id, idActa, idDocumento, tipoDocumentoNotificado, canal, fechaEnvio);
+        this.fhAlta = fhAlta;
+        this.idUserAlta = idUserAlta;
+    }
+
+    public Long getId() { return id; }
     public Long getIdActa() { return idActa; }
     public Long getIdDocumento() { return idDocumento; }
     public TipoDocu getTipoDocumentoNotificado() { return tipoDocumentoNotificado; }
@@ -65,6 +83,14 @@ public class FalNotificacion {
 
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+
+    public LocalDateTime getFhUltMod() { return fhUltMod; }
+    public void setFhUltMod(LocalDateTime fhUltMod) { this.fhUltMod = fhUltMod; }
+
+    public String getIdUserUltMod() { return idUserUltMod; }
+    public void setIdUserUltMod(String idUserUltMod) { this.idUserUltMod = idUserUltMod; }
+    public LocalDateTime getFhAlta() { return fhAlta; }
+    public String getIdUserAlta() { return idUserAlta; }
 
     public boolean tieneResultadoPositivo() {
         return resultado == ResultadoNotificacion.POSITIVO;

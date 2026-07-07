@@ -1,6 +1,13 @@
 package ar.gob.malvinas.faltas.core.application.service;
 
+import ar.gob.malvinas.faltas.core.application.command.PasarApelacionAAnalisisCommand;
 import ar.gob.malvinas.faltas.core.application.command.RegistrarApelacionCommand;
+import ar.gob.malvinas.faltas.core.application.command.ResolverApelacionModificaCondenaCommand;
+import ar.gob.malvinas.faltas.core.application.command.ResolverApelacionNulidadCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.ResultadoResolucionApelacion;
+import ar.gob.malvinas.faltas.core.application.command.RegistrarDocumentoApelacionCommand;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaApelacionDocumento;
+import ar.gob.malvinas.faltas.core.repository.ApelacionDocumentoRepository;
 import ar.gob.malvinas.faltas.core.application.command.ResolverApelacionAceptaAbsuelveCommand;
 import ar.gob.malvinas.faltas.core.application.command.ResolverApelacionRechazadaCommand;
 import ar.gob.malvinas.faltas.core.application.port.BloqueantesMaterialesChecker;
@@ -11,6 +18,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoProcesalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
@@ -28,7 +37,10 @@ import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,6 +68,7 @@ public class ApelacionActaService {
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final BloqueantesMaterialesChecker bloqueantesChecker;
+    private ApelacionDocumentoRepository apelacionDocumentoRepository;
 
     public ApelacionActaService(
             ActaRepository actaRepository,
@@ -72,6 +85,41 @@ public class ApelacionActaService {
         this.snapshotRepository = snapshotRepository;
         this.snapshotRecalculador = snapshotRecalculador;
         this.bloqueantesChecker = bloqueantesChecker;
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    // 8-arg constructor with ApelacionDocumentoRepository
+    public ApelacionActaService(
+            ActaRepository actaRepository,
+            FalloActaRepository falloActaRepository,
+            ApelacionActaRepository apelacionActaRepository,
+            ApelacionDocumentoRepository apelacionDocumentoRepository,
+            ActaEventoRepository eventoRepository,
+            ActaSnapshotRepository snapshotRepository,
+            SnapshotRecalculador snapshotRecalculador,
+            BloqueantesMaterialesChecker bloqueantesChecker) {
+        this(actaRepository, falloActaRepository, apelacionActaRepository,
+                eventoRepository, snapshotRepository, snapshotRecalculador, bloqueantesChecker);
+        this.apelacionDocumentoRepository = apelacionDocumentoRepository;
+    }
+
+    public ComandoResultado registrarDocumento(RegistrarDocumentoApelacionCommand cmd) {
+        if (apelacionDocumentoRepository == null) {
+            throw new IllegalStateException("ApelacionDocumentoRepository no configurado");
+        }
+        Long docId = apelacionDocumentoRepository.nextId();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        FalActaApelacionDocumento doc = new FalActaApelacionDocumento(
+                docId, cmd.apelacionId(), cmd.tipoDocApelacion(), cmd.origenPresentacion(),
+                cmd.documentoId(), cmd.storageKey(), cmd.nombreArchivo(), cmd.mimeType(),
+                cmd.tamanioBytes(), now, now, cmd.idUserAlta());
+        apelacionDocumentoRepository.guardar(doc);
+        return ComandoResultado.de(null, docId.toString(), TipoEventoActa.DOCAMP.codigo(),
+                "Documento registrado en apelacion " + cmd.apelacionId() + ".");
+    }
+
+    public List<FalActaApelacionDocumento> listarDocumentosApelacion(Long apelacionId) {
+        if (apelacionDocumentoRepository == null) return Collections.emptyList();
+        return apelacionDocumentoRepository.findByApelacionId(apelacionId);
     }
 
     // -------------------------------------------------------------------------
@@ -91,7 +139,7 @@ public class ApelacionActaService {
                     "Ya existe una apelacion activa para esta acta. No se puede registrar otra.");
         }
 
-        String idApelacion = UUID.randomUUID().toString();
+        Long idApelacion = apelacionActaRepository.nextId();
         FalActaApelacion apelacion = new FalActaApelacion(
                 idApelacion,
                 cmd.actaId(),
@@ -101,7 +149,9 @@ public class ApelacionActaService {
                 cmd.presentante(),
                 cmd.fundamentos(),
                 cmd.observaciones(),
-                true
+                true,
+                LocalDateTime.now(),
+                "SYS"
         );
         apelacionActaRepository.guardar(apelacion);
 
@@ -112,7 +162,7 @@ public class ApelacionActaService {
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(cmd.actaId(), idApelacion,
+        return ComandoResultado.de(cmd.actaId(), String.valueOf(idApelacion),
                 TipoEventoActa.APEPRE.codigo(),
                 "Apelacion registrada. Pendiente resolucion.");
     }
@@ -138,7 +188,8 @@ public class ApelacionActaService {
                             + apelacion.getEstadoApelacion());
         }
 
-        apelacion.setEstadoApelacion(EstadoApelacionActa.RECHAZADA);
+        apelacion.setEstadoApelacion(EstadoApelacionActa.RESUELTA);
+        apelacion.setResultadoResolucion(ResultadoResolucionApelacion.RECHAZADA);
         apelacion.setFechaResolucion(LocalDateTime.now());
         apelacion.setFundamentosResolucion(cmd.fundamentosResolucion());
         apelacion.setObservacionesResolucion(cmd.observaciones());
@@ -151,7 +202,7 @@ public class ApelacionActaService {
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(cmd.actaId(), apelacion.getId(),
+        return ComandoResultado.de(cmd.actaId(), String.valueOf(apelacion.getId()),
                 TipoEventoActa.APERAZ.codigo(),
                 "Apelacion rechazada. Pendiente declaracion de firmeza de condena (Slice futuro).");
     }
@@ -207,7 +258,7 @@ public class ApelacionActaService {
         String mensaje = cerrar
                 ? "Apelacion aceptada. Infractor absuelto. Acta cerrada."
                 : "Apelacion aceptada. Infractor absuelto. Cierre pendiente por bloqueantes materiales activos.";
-        return ComandoResultado.de(cmd.actaId(), apelacion.getId(),
+        return ComandoResultado.de(cmd.actaId(), String.valueOf(apelacion.getId()),
                 TipoEventoActa.APEABS.codigo(), mensaje);
     }
 
@@ -224,6 +275,99 @@ public class ApelacionActaService {
     // -------------------------------------------------------------------------
     // Internos
     // -------------------------------------------------------------------------
+
+    public ComandoResultado pasarAAnalisis(PasarApelacionAAnalisisCommand cmd) {
+        FalActaApelacion apelacion = apelacionActaRepository.findById(cmd.apelacionId())
+                .orElseThrow(() -> new PrecondicionVioladaException("Apelacion no encontrada: " + cmd.apelacionId()));
+        FalActa acta = actaRepository.buscarPorId(apelacion.getActaId())
+                .orElseThrow(() -> new ActaNoEncontradaException(apelacion.getActaId()));
+
+        apelacion.setEstadoApelacion(EstadoApelacionActa.EN_ANALISIS);
+        apelacionActaRepository.guardar(apelacion);
+
+        registrarEvento(acta.getId(), TipoEventoActa.APEANL, null, null,
+                cmd.idUserOperacion(), "Apelacion pasada a EN_ANALISIS");
+
+        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
+        snapshotRepository.guardar(snap);
+
+        return ComandoResultado.de(acta.getId(), String.valueOf(apelacion.getId()), TipoEventoActa.APEANL.codigo(), null);
+    }
+
+    public ComandoResultado resolverModificaCondena(ResolverApelacionModificaCondenaCommand cmd) {
+        FalActaApelacion apelacion = apelacionActaRepository.findById(cmd.apelacionId())
+                .orElseThrow(() -> new PrecondicionVioladaException("Apelacion no encontrada: " + cmd.apelacionId()));
+        FalActa acta = actaRepository.buscarPorId(apelacion.getActaId())
+                .orElseThrow(() -> new ActaNoEncontradaException(apelacion.getActaId()));
+
+        // Mark apelacion as resolved
+        apelacion.setEstadoApelacion(EstadoApelacionActa.RESUELTA);
+        apelacion.setResultadoResolucion(ResultadoResolucionApelacion.MODIFICA_CONDENA);
+        apelacion.setFhResolucion(LocalDateTime.now());
+        apelacion.setIdUserResolucion(cmd.idUserResolucion());
+        apelacionActaRepository.guardar(apelacion);
+
+        // Get old vigente fallo
+        FalActaFallo falloOriginal = falloActaRepository.buscarActivo(apelacion.getActaId()).orElse(null);
+
+        // Create new fallo sustitutivo
+        Long nuevoFalloId = falloActaRepository.nextId();
+        FalActaFallo nuevoFallo = new FalActaFallo(nuevoFalloId, apelacion.getActaId(),
+                TipoFalloActa.CONDENATORIO, LocalDateTime.now(), LocalDateTime.now(),
+                cmd.idUserResolucion() != null ? cmd.idUserResolucion() : "SYS");
+        nuevoFallo.setMontoCondena(cmd.nuevoMontoCondena());
+        nuevoFallo.setEstadoFallo(ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa.NOTIFICADO);
+        if (falloOriginal != null) {
+            nuevoFallo.setFalloReemplazadoId(falloOriginal.getId());
+        }
+        falloActaRepository.guardarComoVigente(nuevoFallo);
+
+        if (falloOriginal != null) {
+            registrarEvento(acta.getId(), TipoEventoActa.FALRMP, null, null,
+                    null, "Fallo reemplazado por decision en apelacion");
+        }
+
+        registrarEvento(acta.getId(), TipoEventoActa.APEMCO, null, null,
+                cmd.idUserResolucion(), "Apelacion aceptada - condena modificada");
+
+        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
+        snapshotRepository.guardar(snap);
+
+        return ComandoResultado.de(acta.getId(), String.valueOf(apelacion.getId()), TipoEventoActa.APEMCO.codigo(), null);
+    }
+
+    public ComandoResultado resolverNulidad(ResolverApelacionNulidadCommand cmd) {
+        FalActaApelacion apelacion = apelacionActaRepository.findById(cmd.apelacionId())
+                .orElseThrow(() -> new PrecondicionVioladaException("Apelacion no encontrada: " + cmd.apelacionId()));
+        FalActa acta = actaRepository.buscarPorId(apelacion.getActaId())
+                .orElseThrow(() -> new ActaNoEncontradaException(apelacion.getActaId()));
+
+        // Mark apelacion as resolved with NULIDAD
+        apelacion.setEstadoApelacion(EstadoApelacionActa.RESUELTA);
+        apelacion.setResultadoResolucion(ResultadoResolucionApelacion.NULIDAD);
+        apelacion.setFhResolucion(LocalDateTime.now());
+        apelacion.setIdUserResolucion(cmd.idUserResolucion());
+        apelacionActaRepository.guardar(apelacion);
+
+        // Mark old vigente fallo as non-vigente
+        FalActaFallo falloOriginal = falloActaRepository.buscarActivo(apelacion.getActaId()).orElse(null);
+        if (falloOriginal != null) {
+            falloOriginal.setSiVigente(false);
+            falloActaRepository.guardar(falloOriginal);
+        }
+
+        // Set acta result
+        acta.setResultadoFinal(ResultadoFinalActa.NULIDAD);
+        actaRepository.guardar(acta);
+
+        registrarEvento(acta.getId(), TipoEventoActa.APENUL, null, null,
+                cmd.idUserResolucion(), "Apelacion resuelta - nulidad declarada");
+
+        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
+        snapshotRepository.guardar(snap);
+
+        return ComandoResultado.de(acta.getId(), String.valueOf(apelacion.getId()), TipoEventoActa.APENUL.codigo(), null);
+    }
 
     private void validarActaAbierta(FalActa acta) {
         SituacionAdministrativaActa sit = acta.getSituacionAdministrativa();
@@ -262,21 +406,19 @@ public class ApelacionActaService {
     }
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 

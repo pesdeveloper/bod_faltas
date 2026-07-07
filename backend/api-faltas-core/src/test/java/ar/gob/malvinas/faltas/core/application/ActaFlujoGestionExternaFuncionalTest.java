@@ -56,7 +56,7 @@ class ActaFlujoGestionExternaFuncionalTest {
 
         @Test
         @DisplayName("Pago externo apremio: PAGAPR, resultadoFinal=CONDENA_FIRME_PAGADA")
-        void pago_externo_apremio_condena_firme_pagada() {
+        void pago_externo_apremio_CONDENA_FIRME() {
             CasoUsoFuncionalRunner runner = new CasoUsoFuncionalRunner();
             CasoUsoFuncionalEjecucionResultado res = runner.ejecutar("ACT-019-GESTION-EXTERNA-PAGO-EXTERNO");
 

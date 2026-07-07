@@ -1,4 +1,4 @@
-﻿# 102 - Slice 9: Estrategia JDBC / MariaDB
+# 102 - Slice 9: Estrategia JDBC / MariaDB
 
 **Slice:** 9-0
 **Fecha:** 2026-07-02
@@ -531,7 +531,7 @@ Ajustar micro-slices segun hallazgos durante la implementacion.
 - Notificaciones automaticas: siNotificable activo.
 - Angular/frontend: decision de etapa pendiente.
 - Validacion criptografica real de hash.
-- fal_inspector_version campos firma: firma_storage_key, firma_hash, fh_firma_registrada.
+- fal_inspector_version campos firma: ELIMINADOS del modelo (decision 8F-11B).
 - fal_observacion completo.
 - PAGAPR definitivo.
 

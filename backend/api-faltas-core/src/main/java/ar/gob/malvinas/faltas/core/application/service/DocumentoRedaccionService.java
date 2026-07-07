@@ -25,6 +25,8 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoRedaccionRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
+import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
+import ar.gob.malvinas.faltas.core.repository.PersonaDomicilioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -73,6 +75,8 @@ public class DocumentoRedaccionService {
     private final ActaRepository actaRepository;
     private final FalloActaRepository falloRepository;
     private final PagoVoluntarioRepository pagoRepository;
+    private PersonaRepository personaRepository;
+    private PersonaDomicilioRepository domicilioRepository;
 
     @Autowired
     public DocumentoRedaccionService(
@@ -106,6 +110,25 @@ public class DocumentoRedaccionService {
             DocumentoCombinacionService combinacionService) {
         this(documentoRepository, defaultService, contenidoRepository,
                 redaccionRepository, combinacionService, null, null, null);
+    }
+
+    /** 10-arg constructor for tests with PersonaRepository and PersonaDomicilioRepository. */
+    public DocumentoRedaccionService(
+            DocumentoRepository documentoRepository,
+            DocumentoPlantillaDefaultService defaultService,
+            DocumentoPlantillaContenidoRepository contenidoRepository,
+            DocumentoRedaccionRepository redaccionRepository,
+            DocumentoCombinacionService combinacionService,
+            ActaRepository actaRepository,
+            FalloActaRepository falloRepository,
+            PagoVoluntarioRepository pagoRepository,
+            PersonaRepository personaRepository,
+            PersonaDomicilioRepository domicilioRepository) {
+        this(documentoRepository, defaultService, contenidoRepository,
+                redaccionRepository, combinacionService, actaRepository,
+                falloRepository, pagoRepository);
+        this.personaRepository = personaRepository;
+        this.domicilioRepository = domicilioRepository;
     }
 
     public DocumentoRedaccionResponse crearRedaccionDesdePlantilla(CrearRedaccionDocumentoCommand cmd) {

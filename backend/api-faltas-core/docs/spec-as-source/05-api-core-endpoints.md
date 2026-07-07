@@ -1,4 +1,4 @@
-﻿# 05 - API Core Endpoints
+# 05 - API Core Endpoints
 
 Base path: `/api/faltas`
 
@@ -323,12 +323,12 @@ Registra el pago externo de una gestion externa activa (PAGAPR).
 
 ---
 
-## Etapa 8 — Endpoints planificados multi-app (in-memory, sin MariaDB)
+## Etapa 8 â€” Endpoints planificados multi-app (in-memory, sin MariaDB)
 
 Esta seccion documenta los grupos de endpoints que se implementaran en Etapa 8.
 Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pendientes.
 
-### Bloque 8A — Administracion base
+### Bloque 8A â€” Administracion base
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -343,7 +343,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | GET    | /firmantes | Listar firmantes activos |
 | GET    | /firmantes/{id} | Obtener firmante |
 
-### Bloque 8B — Talonarios y numeracion
+### Bloque 8B â€” Talonarios y numeracion
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -354,7 +354,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | GET    | /talonarios/{id}/siguiente-numero | Obtener y reservar siguiente numero |
 | POST   | /talonarios/{id}/anular-numero | Anular y justificar numero |
 
-### Bloque 8C — App de firmas
+### Bloque 8C â€” App de firmas
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -362,7 +362,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | GET    | /firmas/pendientes/{firmante_id} | Bandeja por firmante especifico |
 | POST   | /actas/{idActa}/documentos/{idDoc}/firmar | Firmar documento (ampliado con firmante estructurado) |
 
-### Bloque 8D — Observaciones y adjuntos
+### Bloque 8D â€” Observaciones y adjuntos
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -371,7 +371,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | POST   | /adjuntos | Subir adjunto mock |
 | GET    | /actas/{id}/adjuntos | Listar adjuntos del acta |
 
-### Bloque 8E — App notificador municipal
+### Bloque 8E â€” App notificador municipal
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -379,7 +379,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | POST   | /notificaciones/{id}/intento | Registrar intento de notificacion |
 | POST   | /notificaciones/{id}/intento/{idIntento}/resultado | Registrar resultado del intento |
 
-### Bloque 8F — App corralo'n
+### Bloque 8F â€” App corralo'n
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -389,7 +389,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | POST   | /rodados/{id}/autorizar-retiro | Autorizar retiro |
 | POST   | /rodados/{id}/registrar-retiro | Registrar entrega / retiro |
 
-### Bloque 8G — Portal ciudadano
+### Bloque 8G â€” Portal ciudadano
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -403,3 +403,144 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 Todos estos endpoints se implementan sobre estado in-memory.
 No se usa MariaDB/JDBC en Etapa 8.
 Los repositorios son reemplazables por JDBC en Etapa 9 sin tocar servicios.
+
+## Endpoints dev/test/demo
+
+Disponibles solo en entornos de desarrollo, test y demo funcional.
+No son endpoints productivos. No tocan JDBC ni MariaDB.
+
+| Metodo | Endpoint | Descripcion | Habilitacion |
+|--------|----------|-------------|-------------|
+| POST | /demo/dev/reset | Reset in-memory: limpia repos y resembrada plantillas mock | `faltas.demo.reset.enabled=true` |
+| GET | /demo/documentos/graph | Graph demo documental (8 casos operativos) | Siempre disponible en perfil memory |
+| GET | /demo/actas/dataset-funcional | Catalogo de cobertura del dataset funcional (31 actas) | Siempre disponible |
+
+### POST /demo/dev/reset â€” Slice 8F-5
+
+- **Property de habilitacion**: `faltas.demo.reset.enabled=true` (default: `false`)
+- **Si deshabilitado**: responde `404`
+- **Que hace**: limpia los 24 repositorios in-memory y resembrada las 8 plantillas mock
+- **Response**: `DevResetResponse` con ejecutado, fhReset, repositoriosReseteados, plantillasRecreadas, casosDatasetFuncional, etc.
+- **Idempotente**: si, ejecutar N veces produce el mismo estado
+- **No toca**: JDBC, MariaDB, SQL, archivos, datos reales
+
+### GET /demo/documentos/graph - Slice 8F-4
+
+- **Sin request body ni query params.**
+- **Response:** `DocumentoGraphDemoResultado` con 8 casos operativos documentales.
+- **Campos clave para frontend:**
+  - `totalCasos`, `casosExitosos`, `casosFallidos`, `completo`, `fhEjecucion`
+  - `casos[].codigoCaso`, `casos[].descripcionCaso`, `casos[].accionDocumental`, `casos[].tipoDocu`
+  - `casos[].actaId`, `casos[].documentoId`, `casos[].redaccionId` (IDs de navegaciÃ³n)
+  - `casos[].estadoRedaccion`, `casos[].redaccionCompleta`, `casos[].exitoso`
+  - `casos[].storageKey` (esquema `mock://`), `casos[].hashDocu` (prefijo `sha256-mock-`)
+  - `casos[].errorMensaje` (null si exitoso, presente si fallido)
+- **Siempre disponible** en perfil memory, sin property guard.
+- **No modifica estado.** Cada llamada crea actas demo frescas independientes.
+
+### GET /demo/actas/dataset-funcional - Slice 8F-4B
+
+- **Sin request body ni query params.**
+- **Response:** `DatasetFuncionalCoberturaResultado` con catÃ¡logo de 31 actas declarativas.
+- **Campos clave para frontend:**
+  - `totalActasMock`, `totalCasosUsoCubiertos`, `totalDocumentosEsperados`
+  - `coberturaCompletaSegunDominioActual`, `advertencias`
+  - `actas[].codigo` (clave estable), `actas[].titulo`, `actas[].descripcion`
+  - `actas[].bloqueEsperado`, `actas[].situacionEsperada`, `actas[].bandejaEsperada`
+  - `actas[].cerrableEsperado`, `actas[].requiereFallo`, `actas[].requierePago`
+  - `casosUsoCubiertos[]`, `casosUsoPendientes[]`
+- **Siempre disponible.** Solo lectura del catÃ¡logo estÃ¡tico.
+- **totalActasMock == actas.length** garantizado.
+
+### POST /demo/dev/reset - Slice 8F-5
+
+- **Property de habilitaciÃ³n**: `faltas.demo.reset.enabled=true` (default: `false`)
+- **Si deshabilitado**: responde `404` (cuerpo vacÃ­o)
+- **Que hace**: limpia los 24 repositorios in-memory y resembrada las 8 plantillas mock
+- **Campos clave del response (DevResetResponse):**
+  - `ejecutado=true`, `modo="memory"`, `fhReset` (timestamp)
+  - `repositoriosReseteados` (â‰¥ 24), `plantillasRecreadas=8`
+  - `casosDatasetFuncional=31`, `errores=0`
+  - `repositorios[]`, `acciones[]`, `advertencias[]`
+- **Idempotente**: ejecutar N veces produce el mismo estado
+- **No toca**: JDBC, MariaDB, SQL, archivos, datos reales
+
+### Contrato de errores demo
+
+| Caso | HTTP |
+|------|------|
+| Reset deshabilitado | 404 (cuerpo vacÃ­o) |
+| MÃ©todo incorrecto en reset (GET) | 405 |
+| GET /demo/documentos/graph | 200 siempre |
+| GET /demo/actas/dataset-funcional | 200 siempre |
+
+### CORS demo (Slice 8F-6)
+
+Configurado via `DemoCorsConfig` (WebMvcConfigurer):
+- Cubre `/demo/**` y `/api/**`
+- Propiedad: `faltas.demo.cors.allowed-origins` (default `*`)
+- Para producciÃ³n: configurar con URL real del frontend Angular
+
+
+### GET /demo/actas/{codigo} - Slice 8F-7 (NUEVO)
+
+- **Path**: /demo/actas/{codigo} (bajo /demo, no productivo)
+- **Codigos validos**: cualquier codigo del DatasetFuncionalDominioCatalog (ACT-001-LABRADA ... ACT-031-PAGO-CONDENA-CON-DESCUENTO)
+- **HTTP 200**: para codigo existente â€” respuesta frontend-ready completa
+- **HTTP 404**: para codigo inexistente â€” sin stacktrace expuesto
+- **Materializacion real**: ejecuta CasoUsoFuncionalRunner aislado, devuelve instancia real (no declarativa)
+- **Idempotente**: mismo codigo â†’ mismo estado final, mismos conteos de timeline/documentos
+- **Campos clave del response (DemoActaDetalleResponse):**
+  - codigo, 	itulo, descripcion, casoUsoPrincipal
+  - dataset: {bloqueEsperado, situacionEsperada, bandejaEsperada, cerrableEsperado}
+  - cta: {actaId, numeroActa, codigoActa, bloqueActual, estadoProcesal, situacionAdministrativa, resultadoFinal, bandeja, cerrable}
+  - 	imeline[]: eventos append-only reales {orden, eventoId, tipoEvento, descripcion, fhEvento} â€” ordenados por ordenLogico
+  - documentos[]: documentos reales {documentoId, tipoDocu, estadoDocu, storageKey, hashDocu, mock, fhGeneracion, plantillaId, descripcion}
+  - demo: {mock=true, materializada, source="DATASET_FUNCIONAL", warnings[]}
+  - links: {self, dataset, graph}
+- **Guardrails**: storageKey nunca ile:// ni s3://; hashDocu nunca hash real
+
+### GET /demo/actas/dataset-funcional (actualizado Slice 8F-7)
+
+- **Campo nuevo aditivo**: detallePath por cada acta en el array ctas[]
+- Ejemplo: "detallePath": "/demo/actas/ACT-001-LABRADA"
+- No rompe ningun test previo ni contrato existente
+
+### Contrato de errores demo (actualizado 8F-7)
+
+| Caso | HTTP |
+|------|------|
+| Reset deshabilitado | 404 (cuerpo vacio) |
+| Metodo incorrecto en reset (GET) | 405 |
+| Codigo de acta inexistente | 404 |
+| GET /demo/documentos/graph | 200 siempre |
+| GET /demo/actas/dataset-funcional | 200 siempre |
+| GET /demo/actas/{codigo valido} | 200 siempre |
+
+### GET /demo/health - Slice 8F-8 (NUEVO)
+
+- **Path**: /demo/health (bajo /demo, no productivo)
+- **HTTP 200**: siempre que el modulo este iniciado.
+- **Sin efectos**: no ejecuta reset, no genera documentos, no llama HTTP contra si mismo.
+- **Checks internos realizados**:
+  - Dataset: 	otalActasMock == 31, detalleDisponible (via detallePath()).
+  - Documentos: 	otalPlantillasMock == 8 via DocumentoPlantillaRepository.listar().
+  - Reset: informa si altas.demo.reset.enabled esta activo o no.
+  - Endpoints: lista estatica de 5 endpoints demo conocidos.
+- **Campos clave del response (DemoHealthResponse)**:
+  - status: "UP"
+  - demoReady: boolean (true si dataset.ready && documentos.ready)
+  - hEjecucion: timestamp de evaluacion
+  - ersionDemo: "8F-8"
+  - dataset: {ready, totalActasMock, coberturaCompleta, detalleDisponible}
+  - documentos: {ready, totalPlantillasMock, graphDisponible, storageReal=false}
+  - eset: {endpoint, enabled, defaultSeguro}
+  - endpoints[]: lista de {method, path, ready, descripcion}
+  - warnings[]: advertencias si algo no esta completo (no es error fatal)
+- **Uso en frontend Angular demo**: consultar /demo/health al iniciar la SPA; si demoReady=true habilitar navegacion completa; si hay warnings mostrarlos en banner informativo.
+- **No valida todavia**: base real, storage real, PDF real, autenticacion productiva.
+- **Guardrails**: storageReal=false siempre; esetEnabled=false por defecto; no expone s3:// ni ile://.
+
+### GAP-8 — CERRADO (Slice 8F-8)
+
+GET /demo/health implementado, testeado con 16 tests de contrato.

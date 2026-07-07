@@ -10,7 +10,9 @@ package ar.gob.malvinas.faltas.core.domain.enums;
  */
 public enum EstadoApelacionActa {
     PRESENTADA,
+    EN_ANALISIS,
     RECHAZADA,
     ACEPTADA_ABSUELVE,
+    RESUELTA,
     SIN_EFECTO
 }

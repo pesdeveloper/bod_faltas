@@ -4,6 +4,8 @@ import ar.gob.malvinas.faltas.core.application.command.ParalizarActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ReactivarActaCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
@@ -17,7 +19,6 @@ import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 /**
  * Servicio de paralizacion y reactivacion de actas.
@@ -66,9 +67,7 @@ public class ActaParalizacionService {
         actaRepository.guardar(acta);
 
         registrarEvento(acta.getId(), TipoEventoActa.ACTPAR,
-                cmd.motivoParalizacion() != null
-                        ? cmd.motivoParalizacion()
-                        : cmd.observaciones());
+                cmd.motivoParalizacion() != null ? cmd.motivoParalizacion().name() : cmd.observacionTexto());
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
@@ -94,7 +93,7 @@ public class ActaParalizacionService {
         registrarEvento(acta.getId(), TipoEventoActa.ACTREA,
                 cmd.motivoReactivacion() != null
                         ? cmd.motivoReactivacion()
-                        : cmd.observaciones());
+                        : cmd.observacionTexto());
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
@@ -104,17 +103,15 @@ public class ActaParalizacionService {
                 "Acta reactivada. Situacion: ACTIVA");
     }
 
-    private void registrarEvento(Long idActa, TipoEventoActa tipo, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                null, null, null,
-                descripcion,
-                null);
+    private void registrarEvento(Long idActa, TipoEventoActa tipo, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .actorTipo(ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 }

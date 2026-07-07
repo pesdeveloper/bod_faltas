@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-public class InMemoryDocumentoPlantillaContenidoRepository implements DocumentoPlantillaContenidoRepository {
+public class InMemoryDocumentoPlantillaContenidoRepository implements DocumentoPlantillaContenidoRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalDocumentoPlantillaContenido> store = new ConcurrentHashMap<>();
     private final AtomicLong counter = new AtomicLong(1);
@@ -45,4 +45,13 @@ public class InMemoryDocumentoPlantillaContenidoRepository implements DocumentoP
                 .filter(c -> c.getPlantillaId().equals(plantillaId))
                 .toList();
     }
+
+    @Override
+    public void reset() { store.clear(); }
+
+    @Override
+    public String nombre() { return "DocumentoPlantillaContenido"; }
+
+    @Override
+    public int size() { return store.size(); }
 }

@@ -45,4 +45,9 @@ public record ActaMockFuncionalDefinicion(
         List<TipoEventoActa> eventosEsperados,
         List<String> endpointsServiciosCubiertos,
         List<String> observaciones
-) {}
+) {
+    @com.fasterxml.jackson.annotation.JsonProperty
+    public String detallePath() {
+        return "/demo/actas/" + codigo;
+    }
+}

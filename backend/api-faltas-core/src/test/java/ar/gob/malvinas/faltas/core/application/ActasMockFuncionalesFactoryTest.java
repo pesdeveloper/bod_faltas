@@ -128,11 +128,11 @@ class ActasMockFuncionalesFactoryTest {
 
     @Test
     @DisplayName("10. Acta de ACT-009-PAGVOL-CONFIRMADO tiene bloque CERR y situacion CERRADA")
-    void acta_pago_voluntario_confirmado_esta_cerrada() {
+    void acta_PAGO_VOLUNTARIO_PAGADO_esta_cerrada() {
         FalActa acta = DatasetFuncionalDominioCatalog.construirActa("ACT-009-PAGVOL-CONFIRMADO", 9L);
         assertThat(acta.getBloqueActual().codigo()).isEqualTo("CERR");
         assertThat(acta.getSituacionAdministrativa().name()).isEqualTo("CERRADA");
-        assertThat(acta.getResultadoFinal().name()).isEqualTo("PAGO_VOLUNTARIO_CONFIRMADO");
+        assertThat(acta.getResultadoFinal().name()).isEqualTo("PAGO_VOLUNTARIO_PAGADO");
         assertThat(acta.estaCerrada()).isTrue();
     }
 

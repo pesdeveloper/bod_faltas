@@ -53,7 +53,7 @@ class ActaFlujoPagoCondenaFuncionalTest {
 
         @Test
         @DisplayName("Condena firme pagada: PCOCNF+CIERRA, CERRADA, resultadoFinal=CONDENA_FIRME_PAGADA")
-        void condena_firme_pagada_cierra() {
+        void CONDENA_FIRME_cierra() {
             CasoUsoFuncionalRunner runner = new CasoUsoFuncionalRunner();
             CasoUsoFuncionalEjecucionResultado res = runner.ejecutar("ACT-017-CONDENA-FIRME-PAGADA");
 

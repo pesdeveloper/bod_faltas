@@ -9,6 +9,8 @@ import java.util.Optional;
  * Reemplazable por implementacion MariaDB/JDBC sin tocar servicios.
  */
 public interface GestionExternaRepository {
+    Long nextId();
+
     FalGestionExterna guardar(FalGestionExterna gestion);
     Optional<FalGestionExterna> buscarActiva(Long actaId);
     boolean existeActiva(Long actaId);

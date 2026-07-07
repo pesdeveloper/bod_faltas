@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-public class InMemoryDocumentoRedaccionRepository implements DocumentoRedaccionRepository {
+public class InMemoryDocumentoRedaccionRepository implements DocumentoRedaccionRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalDocumentoRedaccion> store = new ConcurrentHashMap<>();
     private final AtomicLong counter = new AtomicLong(1);
@@ -36,4 +36,15 @@ public class InMemoryDocumentoRedaccionRepository implements DocumentoRedaccionR
                 .filter(r -> r.getIdDocumento().equals(idDocumento))
                 .toList();
     }
+
+    @Override
+    public void reset() {
+        store.clear();
+    }
+
+    @Override
+    public String nombre() { return "DocumentoRedaccion"; }
+
+    @Override
+    public int size() { return (int) store.size(); }
 }

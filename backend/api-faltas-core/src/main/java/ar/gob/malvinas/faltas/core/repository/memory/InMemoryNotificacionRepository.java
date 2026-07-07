@@ -8,11 +8,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-public class InMemoryNotificacionRepository implements NotificacionRepository {
+public class InMemoryNotificacionRepository implements NotificacionRepository, ResettableInMemoryRepository {
 
-    private final Map<String, FalNotificacion> store = new ConcurrentHashMap<>();
+    private final AtomicLong idGen = new AtomicLong(1);
+    private final Map<Long, FalNotificacion> store = new ConcurrentHashMap<>();
+
+    @Override
+    public Long nextId() {
+        return idGen.getAndIncrement();
+    }
 
     @Override
     public FalNotificacion guardar(FalNotificacion notificacion) {
@@ -21,7 +28,7 @@ public class InMemoryNotificacionRepository implements NotificacionRepository {
     }
 
     @Override
-    public Optional<FalNotificacion> buscarPorId(String id) {
+    public Optional<FalNotificacion> buscarPorId(Long id) {
         return Optional.ofNullable(store.get(id));
     }
 
@@ -33,10 +40,18 @@ public class InMemoryNotificacionRepository implements NotificacionRepository {
     }
 
     @Override
-    public List<FalNotificacion> buscarPorDocumento(String idDocumento) {
+    public List<FalNotificacion> buscarPorDocumento(Long idDocumento) {
         return store.values().stream()
                 .filter(n -> idDocumento.equals(n.getIdDocumento()))
                 .toList();
     }
-}
 
+    @Override
+    public void reset() { store.clear(); idGen.set(1); }
+
+    @Override
+    public String nombre() { return "Notificacion"; }
+
+    @Override
+    public int size() { return store.size(); }
+}

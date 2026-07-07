@@ -4,8 +4,12 @@ import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCom
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
+import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
+import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoVoluntario;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
@@ -22,6 +26,7 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,6 +57,8 @@ public class FalloActaService {
     private final FalloActaRepository falloActaRepository;
     private final PagoVoluntarioRepository pagoVoluntarioRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    @Autowired(required = false)
+    private ActaDocumentoService actaDocumentoService;
 
     public FalloActaService(
             ActaRepository actaRepository,
@@ -79,9 +86,9 @@ public class FalloActaService {
 
         validarPrecondicionesFallo(acta, cmd.actaId());
 
-        String idFallo = UUID.randomUUID().toString();
+        Long idFallo = falloActaRepository.nextId();
         FalActaFallo fallo = new FalActaFallo(
-                idFallo, acta.getId(), TipoFalloActa.ABSOLUTORIO, LocalDateTime.now());
+                idFallo, acta.getId(), TipoFalloActa.ABSOLUTORIO, LocalDateTime.now(), LocalDateTime.now(), "SYS");
         fallo.setFundamentos(cmd.fundamentos());
 
         Long idDoc = documentoRepository.nextId();
@@ -94,15 +101,15 @@ public class FalloActaService {
         fallo.setDocumentoId(idDoc);
         falloActaRepository.guardar(fallo);
 
-        registrarEvento(acta.getId(), TipoEventoActa.FALABS, String.valueOf(idDoc), null, null,
+        registrarEvento(acta.getId(), TipoEventoActa.FALABS, idDoc, null, null,
                 "Fallo absolutorio dictado. " + nvl(cmd.observaciones()));
-        registrarEvento(acta.getId(), TipoEventoActa.DOCGEN, String.valueOf(idDoc), null, null,
+        registrarEvento(acta.getId(), TipoEventoActa.DOCGEN, idDoc, null, null,
                 "Documento ACTO_ADMINISTRATIVO (fallo absolutorio) generado.");
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), idFallo,
+        return ComandoResultado.de(acta.getId(), String.valueOf(idFallo),
                 TipoEventoActa.FALABS.codigo(),
                 "Fallo absolutorio dictado. Documento pendiente de firma.");
     }
@@ -121,9 +128,9 @@ public class FalloActaService {
 
         validarPrecondicionesFallo(acta, cmd.actaId());
 
-        String idFallo = UUID.randomUUID().toString();
+        Long idFallo = falloActaRepository.nextId();
         FalActaFallo fallo = new FalActaFallo(
-                idFallo, acta.getId(), TipoFalloActa.CONDENATORIO, LocalDateTime.now());
+                idFallo, acta.getId(), TipoFalloActa.CONDENATORIO, LocalDateTime.now(), LocalDateTime.now(), "SYS");
         fallo.setMontoCondena(cmd.montoCondena());
         fallo.setFundamentos(cmd.fundamentos());
 
@@ -137,16 +144,20 @@ public class FalloActaService {
         fallo.setDocumentoId(idDoc);
         falloActaRepository.guardar(fallo);
 
-        registrarEvento(acta.getId(), TipoEventoActa.FALCON, String.valueOf(idDoc), null, null,
+        if (actaDocumentoService != null) {
+            actaDocumentoService.asociar(acta.getId(), idDoc, RolDocuActa.FALLO, true, "SYS");
+        }
+
+        registrarEvento(acta.getId(), TipoEventoActa.FALCON, idDoc, null, null,
                 "Fallo condenatorio dictado. Monto: " + cmd.montoCondena()
                         + ". " + nvl(cmd.observaciones()));
-        registrarEvento(acta.getId(), TipoEventoActa.DOCGEN, String.valueOf(idDoc), null, null,
+        registrarEvento(acta.getId(), TipoEventoActa.DOCGEN, idDoc, null, null,
                 "Documento ACTO_ADMINISTRATIVO (fallo condenatorio) generado.");
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), idFallo,
+        return ComandoResultado.de(acta.getId(), String.valueOf(idFallo),
                 TipoEventoActa.FALCON.codigo(),
                 "Fallo condenatorio dictado. Monto: " + cmd.montoCondena()
                         + ". Documento pendiente de firma.");
@@ -202,21 +213,19 @@ public class FalloActaService {
     }
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 

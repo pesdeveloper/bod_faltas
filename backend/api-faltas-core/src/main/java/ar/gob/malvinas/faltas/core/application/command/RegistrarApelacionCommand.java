@@ -11,4 +11,8 @@ public record RegistrarApelacionCommand(
         String presentante,
         String fundamentos,
         String observaciones
-) {}
+) {
+    public static RegistrarApelacionCommand legacy(Long actaId, String presentante, String fundamentos, String observaciones) {
+        return new RegistrarApelacionCommand(actaId, presentante, fundamentos, observaciones);
+    }
+}

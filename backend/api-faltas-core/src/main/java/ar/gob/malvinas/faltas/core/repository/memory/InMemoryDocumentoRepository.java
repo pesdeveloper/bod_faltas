@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
-public class InMemoryDocumentoRepository implements DocumentoRepository {
+public class InMemoryDocumentoRepository implements DocumentoRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalDocumento> store = new ConcurrentHashMap<>();
     private final AtomicLong idCounter = new AtomicLong(1);
@@ -38,4 +38,15 @@ public class InMemoryDocumentoRepository implements DocumentoRepository {
     public Long nextId() {
         return idCounter.getAndIncrement();
     }
+
+    @Override
+    public void reset() {
+        store.clear();
+    }
+
+    @Override
+    public String nombre() { return "documentos"; }
+
+    @Override
+    public int size() { return (int) store.size(); }
 }

@@ -10,6 +10,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.ModoReingresoGestionExterna;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoGestionExterna;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.GestionExternaNoEncontradaException;
@@ -96,7 +98,8 @@ public class GestionExternaService {
 
         Optional<FalActaSnapshot> snapActual = snapshotRepository.buscarPorActa(cmd.actaId());
 
-        FalGestionExterna gestion = new FalGestionExterna(UUID.randomUUID().toString(), cmd.actaId());
+        Long gestionId = gestionExternaRepository.nextId();
+        FalGestionExterna gestion = new FalGestionExterna(gestionId, cmd.actaId(), LocalDateTime.now(), "SYS");
         gestion.setTipoGestionExterna(cmd.tipoGestionExterna());
         gestion.setEstadoGestionExterna(EstadoGestionExterna.DERIVADA);
         gestion.setResultadoGestionExterna(ResultadoGestionExterna.SIN_RESULTADO);
@@ -126,7 +129,7 @@ public class GestionExternaService {
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), gestion.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(gestion.getId()),
                 TipoEventoActa.EXTDER.codigo(),
                 "Acta derivada a gestion externa. Estado: DERIVADA. Tipo: " + cmd.tipoGestionExterna());
     }
@@ -193,7 +196,7 @@ public class GestionExternaService {
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), gestion.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(gestion.getId()),
                 TipoEventoActa.EXTRET.codigo(),
                 "Acta reingresada desde gestion externa. Modo: " + cmd.modoReingresoGestionExterna());
     }
@@ -268,7 +271,7 @@ public class GestionExternaService {
         snapshotRepository.guardar(snap);
 
         String estado = hayBloqueantes ? "CONDENA_FIRME_PAGADA (bloqueantes activos - ACTIVA/ANAL)" : "CERRADA";
-        return ComandoResultado.de(acta.getId(), gestion.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(gestion.getId()),
                 TipoEventoActa.PAGAPR.codigo(),
                 "Pago externo registrado en gestion externa. Estado acta: " + estado);
     }
@@ -284,7 +287,7 @@ public class GestionExternaService {
     }
 
     // -------------------------------------------------------------------------
-    // Validaciones ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â derivar
+    // Validaciones ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø derivar
     // -------------------------------------------------------------------------
 
     private void validarSituacionPermiteDerivacion(FalActa acta) {
@@ -333,9 +336,9 @@ public class GestionExternaService {
             throw new PrecondicionVioladaException(
                     "El acta tiene resultado ABSUELTO. No aplica derivacion a gestion externa.");
         }
-        if (resultado == ResultadoFinalActa.PAGO_VOLUNTARIO_CONFIRMADO) {
+        if (resultado == ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO) {
             throw new PrecondicionVioladaException(
-                    "El acta tiene resultado PAGO_VOLUNTARIO_CONFIRMADO. No aplica derivacion a gestion externa.");
+                    "El acta tiene resultado PAGO_VOLUNTARIO_PAGADO. No aplica derivacion a gestion externa.");
         }
         if (resultado == ResultadoFinalActa.CONDENA_FIRME_PAGADA) {
             throw new PrecondicionVioladaException(
@@ -357,7 +360,7 @@ public class GestionExternaService {
     }
 
     // -------------------------------------------------------------------------
-    // Validaciones ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â reingresar
+    // Validaciones ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø reingresar
     // -------------------------------------------------------------------------
 
     private void validarModoReingresoNoNulo(ReingresarDesdeGestionExternaCommand cmd) {
@@ -617,21 +620,19 @@ public class GestionExternaService {
     // -------------------------------------------------------------------------
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 
@@ -639,5 +640,4 @@ public class GestionExternaService {
         return s != null ? s : "";
     }
 }
-
 

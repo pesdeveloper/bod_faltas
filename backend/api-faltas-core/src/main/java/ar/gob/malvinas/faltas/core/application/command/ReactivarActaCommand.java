@@ -5,11 +5,20 @@ package ar.gob.malvinas.faltas.core.application.command;
  *
  * Precondiciones: acta existe, esta paralizada.
  * Efectos: situacion -> ACTIVA, registra ACTREA, recalcula snapshot.
- *
- * Slice 8F-4C: gap cubierto para ACT-020-PARALIZADA.
  */
 public record ReactivarActaCommand(
         Long actaId,
         String motivoReactivacion,
-        String observaciones
-) {}
+        String observacionTexto,
+        String idUserOperacion
+) {
+    /** Backward-compatible constructor for tests using only actaId. */
+    public ReactivarActaCommand(Long actaId) {
+        this(actaId, null, null, null);
+    }
+
+    /** Backward-compatible constructor for tests using actaId and motivoReactivacion. */
+    public ReactivarActaCommand(Long actaId, String motivoReactivacion) {
+        this(actaId, motivoReactivacion, null, null);
+    }
+}

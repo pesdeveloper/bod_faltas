@@ -12,6 +12,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.EstadoNotificacion;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoNotificacion;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoNoEncontradoException;
@@ -113,7 +115,7 @@ public class NotificacionService {
                     "El documento no pertenece al acta indicada.");
         }
 
-        String idNotif = UUID.randomUUID().toString();
+        Long idNotif = notificacionRepository.nextId();
         FalNotificacion notif = new FalNotificacion(
                 idNotif,
                 acta.getId(),
@@ -128,13 +130,13 @@ public class NotificacionService {
         acta.setBloqueActual(BloqueActual.NOTI);
         actaRepository.guardar(acta);
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTENV, String.valueOf(doc.getId()), idNotif,
+        registrarEvento(acta.getId(), TipoEventoActa.NOTENV, doc.getId(), idNotif,
                 null, "Notificacion enviada. Canal: " + cmd.canal());
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), idNotif,
+        return ComandoResultado.de(acta.getId(), String.valueOf(idNotif),
                 TipoEventoActa.NOTENV.codigo(),
                 "Notificacion enviada. Canal: " + cmd.canal());
     }
@@ -145,7 +147,7 @@ public class NotificacionService {
 
     public ComandoResultado registrarPositiva(RegistrarNotificacionPositivaCommand cmd) {
         FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
-                .orElseThrow(() -> new NotificacionNoEncontradaException(cmd.idNotificacion()));
+                .orElseThrow(() -> new NotificacionNoEncontradaException(String.valueOf(cmd.idNotificacion())));
 
         if (notif.getResultado() != null) {
             throw new PrecondicionVioladaException(
@@ -184,7 +186,7 @@ public class NotificacionService {
 
     public ComandoResultado registrarNegativa(RegistrarNotificacionNegativaCommand cmd) {
         FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
-                .orElseThrow(() -> new NotificacionNoEncontradaException(cmd.idNotificacion()));
+                .orElseThrow(() -> new NotificacionNoEncontradaException(String.valueOf(cmd.idNotificacion())));
 
         if (notif.getResultado() != null) {
             throw new PrecondicionVioladaException(
@@ -203,14 +205,14 @@ public class NotificacionService {
         acta.setBloqueActual(BloqueActual.ANAL);
         actaRepository.guardar(acta);
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTNEG, String.valueOf(notif.getIdDocumento()),
+        registrarEvento(acta.getId(), TipoEventoActa.NOTNEG, notif.getIdDocumento(),
                 notif.getId(), null,
                 "Notificacion negativa. Bloque retorna a ANAL. " + nvl(cmd.observaciones()));
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), notif.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTNEG.codigo(),
                 "Notificacion registrada como negativa. Snapshot actualizado para evaluacion.");
     }
@@ -221,7 +223,7 @@ public class NotificacionService {
 
     public ComandoResultado registrarVencida(RegistrarNotificacionVencidaCommand cmd) {
         FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
-                .orElseThrow(() -> new NotificacionNoEncontradaException(cmd.idNotificacion()));
+                .orElseThrow(() -> new NotificacionNoEncontradaException(String.valueOf(cmd.idNotificacion())));
 
         if (notif.getResultado() != null) {
             throw new PrecondicionVioladaException(
@@ -237,14 +239,14 @@ public class NotificacionService {
         FalActa acta = actaRepository.buscarPorId(notif.getIdActa())
                 .orElseThrow(() -> new ActaNoEncontradaException(notif.getIdActa()));
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTVNC, String.valueOf(notif.getIdDocumento()),
+        registrarEvento(acta.getId(), TipoEventoActa.NOTVNC, notif.getIdDocumento(),
                 notif.getId(), null,
                 "Notificacion vencida. " + nvl(cmd.observaciones()));
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), notif.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTVNC.codigo(),
                 "Notificacion registrada como vencida. Snapshot actualizado para evaluacion.");
     }
@@ -269,25 +271,28 @@ public class NotificacionService {
         actualizarFalloNotificado(acta.getId());
 
         acta.setResultadoFinal(ResultadoFinalActa.ABSUELTO);
-        acta.setBloqueActual(BloqueActual.ANAL);
+
+        boolean sinBloqueantes = !bloqueantesMaterialesChecker.tieneBloqueantesActivos(acta.getId());
+        if (sinBloqueantes) {
+            acta.setSituacionAdministrativa(SituacionAdministrativaActa.CERRADA);
+            acta.setBloqueActual(BloqueActual.CERR);
+        } else {
+            acta.setBloqueActual(BloqueActual.ANAL);
+        }
         actaRepository.guardar(acta);
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTPOS, String.valueOf(notif.getIdDocumento()),
+        registrarEvento(acta.getId(), TipoEventoActa.NOTPOS, notif.getIdDocumento(),
                 notif.getId(), null,
                 "Notificacion positiva de fallo absolutorio. " + nvl(observaciones));
 
-        if (!bloqueantesMaterialesChecker.tieneBloqueantesActivos(acta.getId())) {
-            acta.setSituacionAdministrativa(SituacionAdministrativaActa.CERRADA);
-            acta.setBloqueActual(BloqueActual.CERR);
-            actaRepository.guardar(acta);
-
+        if (sinBloqueantes) {
             registrarEvento(acta.getId(), TipoEventoActa.CIERRA, null, null, null,
                     "Acta cerrada. Fallo absolutorio notificado sin bloqueantes.");
 
             FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
             snapshotRepository.guardar(snap);
 
-            return ComandoResultado.de(acta.getId(), notif.getId(),
+            return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                     TipoEventoActa.NOTPOS.codigo(),
                     "Notificacion positiva de fallo absolutorio. Acta cerrada. Resultado: ABSUELTO.");
         }
@@ -295,7 +300,7 @@ public class NotificacionService {
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), notif.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTPOS.codigo(),
                 "Notificacion positiva de fallo absolutorio. Resultado: ABSUELTO. "
                         + "No se cierra por bloqueantes materiales activos.");
@@ -309,14 +314,14 @@ public class NotificacionService {
         acta.setBloqueActual(BloqueActual.ANAL);
         actaRepository.guardar(acta);
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTPOS, String.valueOf(notif.getIdDocumento()),
+        registrarEvento(acta.getId(), TipoEventoActa.NOTPOS, notif.getIdDocumento(),
                 notif.getId(), null,
                 "Notificacion positiva de fallo condenatorio. " + nvl(observaciones));
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), notif.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTPOS.codigo(),
                 "Notificacion positiva de fallo condenatorio. "
                         + "Pendiente proximo slice: apelacion / firmeza / pago condena.");
@@ -328,14 +333,14 @@ public class NotificacionService {
         acta.setBloqueActual(BloqueActual.ANAL);
         actaRepository.guardar(acta);
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTPOS, String.valueOf(notif.getIdDocumento()),
+        registrarEvento(acta.getId(), TipoEventoActa.NOTPOS, notif.getIdDocumento(),
                 notif.getId(), null,
                 "Notificacion positiva. " + nvl(observaciones));
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), notif.getId(),
+        return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTPOS.codigo(),
                 "Notificacion registrada como positiva. Bloque avanzado a ANAL.");
     }
@@ -350,21 +355,19 @@ public class NotificacionService {
     }
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
-                                  String idDocumento, String idNotificacion,
-                                  String idOperador, String descripcion) {
-        int orden = eventoRepository.proximoOrdenLogico(idActa);
-        FalActaEvento evento = new FalActaEvento(
-                UUID.randomUUID().toString(),
-                idActa,
-                tipo,
-                LocalDateTime.now(),
-                orden,
-                idDocumento,
-                idNotificacion,
-                idOperador,
-                descripcion,
-                null
-        );
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(tipo)
+                .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
+                .fhEvt(LocalDateTime.now())
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(idUserEvt)
+                .actorTipo(idUserEvt != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
+                .descripcionLegible(descripcionLegible)
+                .build();
         eventoRepository.registrar(evento);
     }
 
