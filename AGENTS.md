@@ -9,7 +9,7 @@ Antes de modificar el backend de Faltas, revisar:
 5. `backend/api-faltas-core/docs/spec-as-source/99-pendientes-siguientes-slices.md`
 6. `backend/api-faltas-core/docs/spec-as-source/02-estados-bloques-eventos.md`
 
-Spec viva: `backend/api-faltas-core/docs/spec-as-source/`. La carpeta hist?rica `docs/spec-as-source/` fue eliminada del repo (2026-06-29).
+La única spec-as-source canónica del proyecto está en `backend/api-faltas-core/docs/spec-as-source/`.
 
 Reglas:
 - no inventar eventos;
