@@ -8,6 +8,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalDependencia;
 import ar.gob.malvinas.faltas.core.domain.model.FalDependenciaVersion;
 import ar.gob.malvinas.faltas.core.repository.DependenciaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,8 +35,11 @@ public class DependenciaService {
 
     private final DependenciaRepository dependenciaRepository;
     private final AtomicLong secuencia = new AtomicLong(1);
+    private final FaltasClock faltasClock;
 
-    public DependenciaService(DependenciaRepository dependenciaRepository) {
+    public DependenciaService(DependenciaRepository dependenciaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.dependenciaRepository = dependenciaRepository;
     }
 
@@ -56,10 +60,11 @@ public class DependenciaService {
         }
 
         Long idDep = secuencia.getAndIncrement();
-        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : LocalDate.now();
+        LocalDateTime ahora = faltasClock.now();
+        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : ahora.toLocalDate();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
 
-        FalDependencia dep = new FalDependencia(idDep, cmd.nomDep(), LocalDateTime.now(), idUserAlta);
+        FalDependencia dep = new FalDependencia(idDep, cmd.nomDep(), ahora, idUserAlta);
         dep.setCodDep(cmd.codDep());
         dep.setIdDepPadre(idDepPadre);
         dependenciaRepository.guardar(dep);
@@ -90,7 +95,7 @@ public class DependenciaService {
             verDepPadre = resolverVerDepPadreVigente(idDepPadre);
         }
 
-        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : LocalDate.now();
+        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : faltasClock.now().toLocalDate();
 
         // Cerrar version anterior activa
         dependenciaRepository.findVersionVigente(cmd.idDep(), fhVigDesde).ifPresent(anterior -> {
@@ -131,7 +136,7 @@ public class DependenciaService {
     public FalDependenciaVersion obtenerVersionVigente(Long idDep, LocalDate fecha) {
         dependenciaRepository.findById(idDep)
                 .orElseThrow(() -> new DependenciaNoEncontradaException(idDep));
-        LocalDate fechaConsulta = fecha != null ? fecha : LocalDate.now();
+        LocalDate fechaConsulta = fecha != null ? fecha : faltasClock.now().toLocalDate();
         return dependenciaRepository.findVersionVigente(idDep, fechaConsulta)
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "No existe version vigente para la dependencia: " + idDep
@@ -170,7 +175,7 @@ public class DependenciaService {
         dependenciaRepository.findById(idDepPadre)
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "El padre informado no existe: " + idDepPadre));
-        return dependenciaRepository.findVersionVigente(idDepPadre, LocalDate.now())
+        return dependenciaRepository.findVersionVigente(idDepPadre, faltasClock.now().toLocalDate())
                 .map(FalDependenciaVersion::getVerDep)
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "El padre " + idDepPadre + " no tiene version vigente activa."));

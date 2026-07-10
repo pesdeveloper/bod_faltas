@@ -29,3 +29,56 @@ yarn-error.log*
 
 # Maven build artefacts
 target/
+
+# Archivos de continuidad no necesarios
+/CONTEXTO_CONTINUIDAD_BOD_FALTAS_POST_B1_PRE_MARIADB/
+
+# Recuperaciones y auditorías locales temporales
+/recuperacion-110-*/
+/auditoria-copias-110.csv
+/*.corrupto-backup-*
+
+# Directorios y parches temporales de worktree
+/_tmp_*/
+/_tmp_*.patch
+
+# ZIPs de contexto sueltos en la raíz (handoffs materializados)
+/CONTEXTO_*.zip
+
+# Baselines y reportes de saneamiento locales
+/git-baseline-*.txt
+/MOJIBAKE-*.txt
+
+# Python temporal
+**/__pycache__/
+*.py[cod]
+
+# Logs locales generados en la raíz del repositorio
+/mvn-*.log
+
+# Logs locales generados en la raíz del módulo
+/backend/api-faltas-core/log-*.txt
+/backend/api-faltas-core/mvn-*.log
+
+# Scripts locales de migración y validación temporal
+/util_pablo*.ps1
+/validar*.ps1
+/backend/api-faltas-core/migrate-*.ps1
+
+# Scripts Python temporales en la raíz
+/_*.py
+
+# Backups de archivos corruptos (en cualquier nivel)
+**/*.corrupto-backup-*
+
+
+# Scripts Python de migración en el módulo core
+/backend/api-faltas-core/fix-*.py
+/backend/api-faltas-core/patch-*.py
+/backend/api-faltas-core/migrate-*.py
+
+# Carpeta de diagnóstico pre-etapa (artefacto de trabajo)
+/DIAGNOSTICO-CIERRE-PRE-8F-12/
+
+# Hash suelto de ZIPs
+/ZIP-SHA256.txt

@@ -27,12 +27,12 @@ public class FalBloqueanteMaterial {
     private LocalDateTime fechaAlta;
     private LocalDateTime fechaCierre;
 
-    public FalBloqueanteMaterial(Long id, Long actaId) {
+    public FalBloqueanteMaterial(Long id, Long actaId, LocalDateTime fechaAlta) {
         this.id = id;
         this.actaId = actaId;
         this.estado = EstadoBloqueanteMaterial.PENDIENTE;
         this.siActivo = true;
-        this.fechaAlta = LocalDateTime.now();
+        this.fechaAlta = fechaAlta;
     }
 
     public Long getId() { return id; }

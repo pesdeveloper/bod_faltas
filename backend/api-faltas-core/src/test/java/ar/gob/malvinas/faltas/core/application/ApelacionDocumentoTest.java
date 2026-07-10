@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.*;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.*;
@@ -57,19 +59,19 @@ class ApelacionDocumentoTest {
 
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
-                new InMemoryActaEvidenciaRepository(), new InMemoryPersonaRepository());
+                new InMemoryActaEvidenciaRepository(), new InMemoryPersonaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 new InMemoryDocumentoPlantillaRepository(),
-                new TalonarioService(new InMemoryTalonarioRepository(), new InMemoryDependenciaRepository(), new InMemoryInspectorRepository()),
-                new InMemoryDependenciaRepository(), new InMemoryDocumentoFirmaReqRepository(), new InMemoryFirmanteRepository());
+                new TalonarioService(new InMemoryTalonarioRepository(), new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
+                new InMemoryDependenciaRepository(), new InMemoryDocumentoFirmaReqRepository(), new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker());
-        falloService = new FalloActaService(actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoRepo, recalc);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+        falloService = new FalloActaService(actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoRepo, recalc, FaltasClockTestSupport.FIXED);
         apelacionService = new ApelacionActaService(actaRepo, falloRepo, apelacionRepo, apelDocRepo, eventoRepo, snapshotRepo,
-                recalc, new NoOpBloqueantesMaterialesChecker());
+                recalc, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
 
     private Long crearApelacionPresentada() {
@@ -84,7 +86,7 @@ class ApelacionDocumentoTest {
     }
 
     private Long llegarAAnalisis(String nro) {
-        Long actaId = actaService.labrar(new LabrarActaCommand(TipoActa.TRANSITO, 1L, 1L, LocalDate.now(),
+        Long actaId = actaService.labrar(new LabrarActaCommand(TipoActa.TRANSITO, 1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(),
                 "Dir", null, null, null, "Inf", nro, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
         actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriched"));

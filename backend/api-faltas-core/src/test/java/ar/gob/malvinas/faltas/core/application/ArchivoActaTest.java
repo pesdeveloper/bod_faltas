@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.ArchivarActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ParalizarActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ReingresarDesdeArchivoCommand;
@@ -48,11 +50,11 @@ class ArchivoActaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo,
                 new InMemoryDocumentoRepository(), new InMemoryNotificacionRepository(),
                 new InMemoryPagoVoluntarioRepository(), new InMemoryFalloActaRepository(),
-                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository());
+                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
         service = new ArchivoActaService(actaRepo, eventoRepo, snapshotRepo, archivoRepo,
-                paralizacionRepo, motivoRepo, obsRepo, recalc);
+                paralizacionRepo, motivoRepo, obsRepo, recalc, FaltasClockTestSupport.FIXED);
         paralizacionService = new ParalizacionActaService(actaRepo, eventoRepo, snapshotRepo,
-                paralizacionRepo, obsRepo, recalc);
+                paralizacionRepo, obsRepo, recalc, FaltasClockTestSupport.FIXED);
         sembrarMotivos();
     }
 
@@ -71,15 +73,15 @@ class ArchivoActaTest {
     private long crearMotivo(String cod, boolean nulidad, boolean reingreso, boolean reqObs) {
         Long id = motivoRepo.nextId();
         FalMotivoArchivo m = new FalMotivoArchivo(id, cod, "Nombre " + cod, null,
-                nulidad, reingreso, reqObs, true, LocalDateTime.now(), "S");
+                nulidad, reingreso, reqObs, true, FaltasClockTestSupport.FIXED.now(), "S");
         return motivoRepo.guardar(m).getId();
     }
 
     private FalActa crearActaActiva(BloqueActual bloque) {
         Long id = actaRepo.nextId();
         FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), LocalDateTime.now(), "Calle 1", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "TEST");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,
+                ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "TEST");
         acta.setBloqueActual(bloque);
         return actaRepo.guardar(acta);
     }

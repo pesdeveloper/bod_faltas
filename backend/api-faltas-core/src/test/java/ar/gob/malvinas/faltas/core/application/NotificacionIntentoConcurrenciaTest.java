@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.*;
@@ -46,11 +48,11 @@ class NotificacionIntentoConcurrenciaTest {
         var falloRepo = new InMemoryFalloActaRepository();
         var apelRepo = new InMemoryApelacionActaRepository();
         var pagoCondRepo = new InMemoryPagoCondenaRepository();
-        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo);
+        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
 
-        intentoService = new NotificacionIntentoService(intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo);
-        acuseService = new NotificacionAcuseService(acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc);
-        loteService = new LoteCorreoService(loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc);
+        intentoService = new NotificacionIntentoService(intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED);
+        acuseService = new NotificacionAcuseService(acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
+        loteService = new LoteCorreoService(loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
     }
 
     private void crearActa(Long id) {

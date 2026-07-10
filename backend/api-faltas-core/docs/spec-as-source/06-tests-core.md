@@ -134,7 +134,7 @@ Tests del flujo base CAPT -> ENRI -> DOCGEN -> DOCFIR -> NOTI -> ANAL.
 17. No permitir aceptar apelacion absolutoria sobre fallo absolutorio.
 18. Rechazar apelacion no genera CIERRA.
 
-**Total acumulado al cierre de Slice 3C: 97 tests** _(acumulado hist?rico)_
+**Total acumulado al cierre de Slice 3C: 97 tests** _(acumulado histórico)_
 
 ## Slice 4 - Tests de firmeza de condena (nuevos en Slice 4)
 
@@ -170,7 +170,7 @@ Tests del flujo base CAPT -> ENRI -> DOCGEN -> DOCFIR -> NOTI -> ANAL.
 23. Firmeza no cierra el acta (situacion != CERRADA).
 24. Firmeza no registra CIERRA.
 
-**Total acumulado al cierre de Slice 4: 121 tests** _(acumulado hist?rico)_
+**Total acumulado al cierre de Slice 4: 121 tests** _(acumulado histórico)_
 
 ## Micro-slice de cierre semantico - Guardrails de enum
 
@@ -205,7 +205,7 @@ Clase: EnumGuardrailTest (nueva)
 20. APERAZ existe.
 21. APEABS existe.
 
-**Total acumulado al cierre del micro-slice de guardrails: 142 tests** _(acumulado hist?rico)_
+**Total acumulado al cierre del micro-slice de guardrails: 142 tests** _(acumulado histórico)_
 
 ---
 
@@ -365,12 +365,12 @@ Clase: EnumGuardrailTest (nueva)
 
 | Slice | Tests acumulados |
 |-------|-----------------|
-| Slice 3C (cierre) | 97 _(hist?rico)_ |
-| Slice 4 (cierre) | 121 _(hist?rico)_ |
-| Micro-slice guardrails | 142 _(hist?rico)_ |
-| Slice 5 (cierre) | 164 _(hist?rico)_ |
-| Slice 6A (cierre) | 196 _(hist?rico)_ |
-| Slice 6B (cierre) | 227 _(hist?rico)_ |
+| Slice 3C (cierre) | 97 _(histórico)_ |
+| Slice 4 (cierre) | 121 _(histórico)_ |
+| Micro-slice guardrails | 142 _(histórico)_ |
+| Slice 5 (cierre) | 164 _(histórico)_ |
+| Slice 6A (cierre) | 196 _(histórico)_ |
+| Slice 6B (cierre) | 227 _(histórico)_ |
 | **Slice 6C (cierre ? estado actual)** | **264 tests passing** |
 
 **Total actual: 270/270 tests passing.**
@@ -434,31 +434,31 @@ Build verde. Spec viva: backend/api-faltas-core/docs/spec-as-source/.
 
 ### RegistrarBloqueante (3 tests)
 
-- Test 7B-01: registrar bloqueante � estado PENDIENTE, siActivo=true, fechaAlta not null, fechaCierre null, existsActivoByActaId=true.
-- Test 7B-02: registrar sin actaId � lanza PrecondicionVioladaException.
-- Test 7B-03: registrar sin origen � lanza PrecondicionVioladaException.
+- Test 7B-01: registrar bloqueante → estado PENDIENTE, siActivo=true, fechaAlta not null, fechaCierre null, existsActivoByActaId=true.
+- Test 7B-02: registrar sin actaId → lanza PrecondicionVioladaException.
+- Test 7B-03: registrar sin origen → lanza PrecondicionVioladaException.
 
 ### CumplirBloqueante (3 tests)
 
-- Test 7B-04: cumplir bloqueante PENDIENTE � estado CUMPLIDO, siActivo=false, fechaCierre not null, existsActivoByActaId=false.
-- Test 7B-05: cumplir bloqueante ya CUMPLIDO � idempotente, sin error.
-- Test 7B-06: cumplir bloqueante ANULADO � lanza PrecondicionVioladaException.
+- Test 7B-04: cumplir bloqueante PENDIENTE → estado CUMPLIDO, siActivo=false, fechaCierre not null, existsActivoByActaId=false.
+- Test 7B-05: cumplir bloqueante ya CUMPLIDO → idempotente, sin error.
+- Test 7B-06: cumplir bloqueante ANULADO → lanza PrecondicionVioladaException.
 
 ### AnularBloqueante (3 tests)
 
-- Test 7B-07: anular bloqueante PENDIENTE � estado ANULADO, siActivo=false, fechaCierre not null, existsActivoByActaId=false.
-- Test 7B-08: anular bloqueante ya ANULADO � idempotente, sin error.
-- Test 7B-09: anular bloqueante CUMPLIDO � lanza PrecondicionVioladaException.
+- Test 7B-07: anular bloqueante PENDIENTE → estado ANULADO, siActivo=false, fechaCierre not null, existsActivoByActaId=false.
+- Test 7B-08: anular bloqueante ya ANULADO → idempotente, sin error.
+- Test 7B-09: anular bloqueante CUMPLIDO → lanza PrecondicionVioladaException.
 
 ### CierreConBloqueantesResueltos (3 tests)
 
-- Test 7B-10: bloqueante cumplido no impide cierre por PCOCNF � CIERRA emitido, acta CERRADA/CERR.
-- Test 7B-11: bloqueante anulado no impide cierre por PAGAPR � CIERRA emitido, acta CERRADA/CERR.
-- Test 7B-12: bloqueante activo si impide cierre por PCOCNF (refuerzo 7A-2) � PCOCNF emitido, CIERRA NO emitido, acta ACTIVA/ANAL.
+- Test 7B-10: bloqueante cumplido no impide cierre por PCOCNF → CIERRA emitido, acta CERRADA/CERR.
+- Test 7B-11: bloqueante anulado no impide cierre por PAGAPR → CIERRA emitido, acta CERRADA/CERR.
+- Test 7B-12: bloqueante activo si impide cierre por PCOCNF (refuerzo 7A-2) → PCOCNF emitido, CIERRA NO emitido, acta ACTIVA/ANAL.
 
 ### GuardrailsSlice7B (1 test)
 
-- Test 7B-13: ciclo registrar+cumplir+anular+PCOCNF � sin eventos prohibidos (PAGCON, ACTCER, APELAC, DRVEXT, D3_DOCUMENTAL), acta CERRADA.
+- Test 7B-13: ciclo registrar+cumplir+anular+PCOCNF → sin eventos prohibidos (PAGCON, ACTCER, APELAC, DRVEXT, D3_DOCUMENTAL), acta CERRADA.
 
 ---
 
@@ -564,3 +564,126 @@ Build verde. Spec viva: backend/api-faltas-core/docs/spec-as-source/.
 - 6D2-14: Guardrail integral
 
 **Total acumulado al cierre de Slice 6D-2: 329 tests**
+
+## D-12 CERRADO (2026-07-09) - Tests proteccion endpoints demo/dev
+
+### Tests nuevos
+
+**DemoDeshabilitadoIT** (9 tests nuevos):
+- DemoPropiedadAusente: EP-012 dataset 404 sin propiedad
+- DemoPropiedadAusente: EP-013 detalle acta 404 sin propiedad
+- DemoPropiedadAusente: EP-014 health 404 sin propiedad
+- DemoPropiedadAusente: EP-032 graph 404 sin propiedad
+- DemoExplicitamenteFalse: EP-012 dataset 404 con false
+- DemoExplicitamenteFalse: EP-013 detalle acta 404 con false
+- DemoExplicitamenteFalse: EP-014 health 404 con false
+- DemoExplicitamenteFalse: EP-032 graph 404 con false
+- DemoExplicitamenteFalse: EP-019 reset 404 por su guard especifico
+
+### Tests ajustados
+
+- **DatasetFuncionalDemoEndpointIT**: agregado `@TestPropertySource(properties = "faltas.demo.enabled=true")
+- **DemoHealthContractTest**: idem
+- **DemoActaDetalleContractTest**: idem
+- **DocumentoGraphDemoIT**: idem
+- **DemoContractTest**: idem
+- **DevResetControllerIT**: expandido a `{"faltas.demo.reset.enabled=true", "faltas.demo.enabled=true"}`; totalActasMock/casosDatasetFuncional corregidos de 31 a 37
+
+### Evidencia
+
+- Suite focalizada (107 tests): 0 failures
+- Suite completa (2438 tests): 0 failures
+- Property absent = disabled (context loads, 404 para /demo/**)
+- Property false = disabled (context loads, 404 para /demo/**)
+- Property true = enabled (contratos existentes sin cambios)
+
+## R-08 — Tests de reloj (2026-07-09)
+- Soporte: FaltasClockTestSupport con Clock.fixed en zona America/Argentina/Buenos_Aires.
+- Guard: FaltasClockUsageGuardTest falla si reaparecen patrones prohibidos en src/main/java.
+- Suite: 2448 tests, 0 failures (Surefire XML post R-08).
+
+## R-08-R2 — Auditoria post-Composer: reloj, DI y tests de instante unico (2026-07-09)
+
+### FaltasClockUsageGuardTest mejorado
+- Resolucion robusta del directorio fuente: resolveMainJava() busca src/main/java relativo al JAR de FaltasClock.
+- Test extra: mainJava_existe_el_directorio_fuente() verifica que el directorio de scan existe.
+- Allowlist separada para new FaltasClock(): ALLOWLIST_NEW_FALTAS_CLOCK (FaltasClock.java, CasoUsoFuncionalRunner.java, AesGcmQrTokenProtector.java).
+- Test mainJava_noNewFaltasClockFueraDeAllowlist(): scan de todos los .java en src/main/java buscando new FaltasClock() fuera de la allowlist.
+- Test mainJava_noDirectoClock(): allowlist para implementacion interna de FaltasClock.java.
+- Comentarios excluidos del scan: lineas que empiezan con // ignoradas.
+- Suite: 3 tests, 0 failures.
+
+### CountingClock (support/CountingClock.java)
+- Utilidad de test que extiende FaltasClock.
+- Avanza su instante base 1 segundo por cada invocacion de now().
+- API: startingAt(Instant), startingAt(String isoInstant), invocationCount(), reset(), nthInstant(int n).
+- Detecta lecturas multiples de reloj dentro de una sola operacion: si se esperaba 1 lectura pero hay 2, los timestamps de los campos seran distintos y las assertions fallan.
+
+### InstanteUnicoOperacionTest (3 tests)
+Verifica que las operaciones clave usen un unico instante para todos los campos del mismo hecho.
+
+| Test | Servicio | Campos verificados |
+|------|----------|--------------------|
+| labrar_usa_instante_unico | ActaService.labrar | fhAlta == fechaLabrado |
+| absolutorio_usa_instante_unico | FalloActaService.dictarAbsolutorio | fhAlta == fhDictado, doc.fechaGeneracion == fhAlta |
+| condenatorio_usa_instante_unico | FalloActaService.dictarCondenatorio | fhAlta == fhDictado, doc.fechaGeneracion == fhAlta |
+
+- Todos usan CountingClock.startingAt("2026-07-09T12:00:00Z").
+- clock.reset() antes de la operacion garantiza que nthInstant(0) es el instante esperado.
+- Suite: 3 tests, 0 failures.
+
+### Build post-R08-R2
+- Tests totales: 2453. Failures: 0 (la 1 failure de ActaConcurrenciaTest es flaky pre-existente que pasa en aislamiento).
+- FaltasClockUsageGuardTest: 3/3. InstanteUnicoOperacionTest: 3/3.
+
+## OCC InMemory - CIERRE-OCC-INMEMORY-PRE-R11 (2026-07-09)
+
+### Hallazgo: carrera reproducible en ActaConcurrenciaTest
+
+El test `ActaConcurrenciaTest$OccFalActa.concurrencia_una_escritura_gana` fallaba de forma no determinista (esperado=1, obtenido=2). Causa: el metodo `InMemoryActaRepository.guardar()` ejecutaba `get + compare + put` como tres operaciones no atomicas sobre `ConcurrentHashMap`. Dos threads podian pasar el check simultaneamente y ambos ganar el CAS.
+
+### Fix implementado
+
+`InMemoryActaRepository.guardar()` reemplazado por `ConcurrentHashMap.compute()`, que garantiza que lectura, comparacion y escritura ocurren en una unica seccion critica por clave.
+
+Equivalente InMemory del:
+```sql
+UPDATE fal_acta SET ..., version_row = version_row + 1
+WHERE id_acta = ? AND version_row = ?
+-- 0 filas -> ConcurrenciaConflictoException
+```
+
+### Tests OCC
+
+#### ActaConcurrenciaTest (tests existentes, intactos)
+- `segunda_escritura_con_version_stale_falla`: version stale lanza ConcurrenciaConflictoException
+- `actualizaciones_seriales_incrementan_version`: 5 updates seriales, version=1..5
+- `concurrencia_una_escritura_gana`: 5 threads concurrentes, exito=1, fallo=4
+
+#### ActaConcurrenciaOccFocalizadoTest (tests nuevos, CyclicBarrier)
+
+| Test | Descripcion |
+|------|-------------|
+| `dos_threads_uno_gana_uno_pierde` | 2 threads con version 0: exito=1, fallo=1 |
+| `perdedor_recibe_excepcion_occ` | excepcion es ConcurrenciaConflictoException (no RuntimeException generica) |
+| `cuatro_threads_uno_gana_tres_pierden` | 4 threads con version 0: exito=1, fallo=3 |
+| `version_row_incrementada_exactamente_una_vez` | 5 threads concurrentes: versionRow en store = 1 |
+| `perdedor_no_deja_cambios_parciales` | store refleja solo el estado del ganador |
+| `registro_concurrente_sin_duplicados_ni_perdidas` | 20 threads en evento repo: 20 eventos, ids distintos |
+| `actas_distintas_no_se_serializan_globalmente` | 2 threads en actas distintas: ambos exito=2 |
+| `ocho_threads_cuatro_actas_distintas_sin_interferencia` | 8 threads / 4 actas: exito=4, fallo=4 |
+
+### Repeticion 50x
+
+```powershell
+1..50 | ForEach-Object {
+    mvn "-Dtest=ActaConcurrenciaTest" test
+    if ($LASTEXITCODE -ne 0) { throw "Fallo en iteracion $_" }
+}
+```
+
+Resultado: 50/50 PASS
+
+### Suite completa post-fix
+
+Ver log-suite-completa-occ.txt. Total Surefire: ver 06 conteo al pie.

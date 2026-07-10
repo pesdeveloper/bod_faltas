@@ -10,6 +10,7 @@ import ar.gob.malvinas.faltas.core.application.command.EnviarAFirmaCommand;
 import ar.gob.malvinas.faltas.core.application.command.RegistrarFirmaDocumentalCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.result.NumeroDocumentoEmitidoResponse;
+import ar.gob.malvinas.faltas.core.application.result.NumerarDocumentoParaFirmasResponse;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFirma;
@@ -52,6 +53,7 @@ import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.FirmanteRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import ar.gob.malvinas.faltas.core.application.command.ConvalidarFirmaEscaneadaCommand;
 import ar.gob.malvinas.faltas.core.application.command.IncorporarDocumentoEscaneadoCommand;
@@ -83,6 +85,7 @@ public class DocumentoService {
     private final DependenciaRepository dependenciaRepository;
     private final DocumentoFirmaReqRepository documentoFirmaReqRepository;
     private final FirmanteRepository firmanteRepository;
+    private final FaltasClock faltasClock;
 
     public DocumentoService(
             ActaRepository actaRepository,
@@ -96,7 +99,9 @@ public class DocumentoService {
             TalonarioService talonarioService,
             DependenciaRepository dependenciaRepository,
             DocumentoFirmaReqRepository documentoFirmaReqRepository,
-            FirmanteRepository firmanteRepository) {
+            FirmanteRepository firmanteRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.documentoRepository = documentoRepository;
         this.firmaRepository = firmaRepository;
@@ -128,7 +133,7 @@ public class DocumentoService {
                 idDoc,
                 acta.getId(),
                 cmd.tipoDocumento(),
-                LocalDateTime.now(),
+                faltasClock.now(),
                 cmd.descripcion()
         );
         documentoRepository.guardar(doc);
@@ -170,7 +175,7 @@ public class DocumentoService {
                     "La plantilla no esta activa: " + cmd.plantillaId());
         }
 
-        LocalDate hoy = LocalDate.now();
+        LocalDate hoy = faltasClock.now().toLocalDate();
         if (plantilla.getFhVigDesde().isAfter(hoy)) {
             throw new PrecondicionVioladaException(
                     "La plantilla todavia no esta vigente. vigDesde: " + plantilla.getFhVigDesde());
@@ -185,11 +190,12 @@ public class DocumentoService {
                 idDoc,
                 cmd.idActa(),
                 plantilla.getTipoDocu(),
-                LocalDateTime.now(),
+                faltasClock.now(),
                 null,
                 EstadoDocu.BORRADOR,
                 plantilla.getTipoFirmaReq(),
-                plantilla.getId());
+                plantilla.getId(),
+                faltasClock.now());
 
         documentoRepository.guardar(doc);
 
@@ -259,7 +265,7 @@ public class DocumentoService {
                         + "'. No se puede determinar idDep para numeracion documental."));
 
         FalDependenciaVersion versionDep = dependenciaRepository
-                .findVersionVigente(dependencia.getIdDep(), LocalDate.now())
+                .findVersionVigente(dependencia.getIdDep(), faltasClock.now().toLocalDate())
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "No hay version vigente para la dependencia id=" + dependencia.getIdDep()
                         + ". No se puede determinar verDep para numeracion documental."));
@@ -269,7 +275,7 @@ public class DocumentoService {
                 (short) versionDep.getVerDep(),
                 doc.getTipoDocu().codigo(),
                 doc.getId(),
-                LocalDateTime.now(),
+                faltasClock.now(),
                 cmd.idUserOperacion()
         );
 
@@ -282,6 +288,101 @@ public class DocumentoService {
         documentoRepository.guardar(doc);
 
         return doc;
+    }
+
+    // -------------------------------------------------------------------------
+    // NumerarDocumentoParaFirmas (D-18): endpoint de integracion controlada con Firmas
+    // -------------------------------------------------------------------------
+
+    /**
+     * Capacidad central de numeracion documental expuesta para la aplicacion de Firmas.
+     *
+     * Comportamiento:
+     * - Si el documento ya esta numerado: devuelve el numero existente (idempotente).
+     * - Si no esta numerado y el momento es AL_FIRMAR: numera y devuelve el numero.
+     * - Si el momento no es compatible con el circuito de Firmas: rechaza con error.
+     *
+     * Orden obligatorio al usar AL_FIRMAR:
+     *   1. Firmas solicita numeracion (este metodo).
+     *   2. Faltas asigna y persiste el numero.
+     *   3. Firmas renderiza el contenido final incluyendo el numero.
+     *   4. Firmas calcula el hash del contenido definitivo.
+     *   5. Firmas firma exactamente ese contenido.
+     *   6. Firmas registra la firma via POST /documentos/{id}/firmar-real.
+     *
+     * Nunca numerar despues de calcular el hash ni despues de firmar.
+     *
+     * Slice D-18.
+     */
+    public synchronized NumerarDocumentoParaFirmasResponse numerarDocumentoParaFirmas(NumerarDocumentoCommand cmd) {
+        if (cmd.documentoId() == null) {
+            throw new PrecondicionVioladaException("documentoId es obligatorio para numeracion via Firmas.");
+        }
+        if (cmd.idUserOperacion() == null || cmd.idUserOperacion().isBlank()) {
+            throw new PrecondicionVioladaException("idUserOperacion es obligatorio y no puede estar en blanco.");
+        }
+
+        FalDocumento doc = documentoRepository.buscarPorId(cmd.documentoId())
+                .orElseThrow(() -> new DocumentoNoEncontradoException(cmd.documentoId()));
+
+        if (doc.getPlantillaId() == null) {
+            throw new PrecondicionVioladaException(
+                    "El documento no tiene plantilla asociada. Solo se pueden numerar documentos generados desde plantilla.");
+        }
+
+        Long plantillaId = doc.getPlantillaId();
+        FalDocumentoPlantilla plantilla = documentoPlantillaRepository.buscarPorId(plantillaId)
+                .orElseThrow(() -> new DocumentoPlantillaNoEncontradaException(plantillaId));
+
+        MomentoNumeracionDocu momento = plantilla.getMomentoNumeracionDocu();
+
+        // Idempotencia: si ya esta numerado, devolver sin consumir otro correlativo
+        if (doc.getNroDocu() != null) {
+            return new NumerarDocumentoParaFirmasResponse(
+                    doc.getId(), true, doc.getNroDocu(),
+                    doc.getIdTalonario(), doc.getNroTalonarioUsado(),
+                    momento, doc.getEstadoDocu());
+        }
+
+        // Validar que el documento requiere numeracion
+        if (!plantilla.isSiRequiereNumeracion()) {
+            throw new PrecondicionVioladaException(
+                    "El documento no requiere numeracion (siRequiereNumeracion=false). Plantilla: " + plantillaId);
+        }
+        if (momento == MomentoNumeracionDocu.NO_APLICA) {
+            throw new PrecondicionVioladaException(
+                    "momentoNumeracionDocu=NO_APLICA: este documento no se numera. Plantilla: " + plantillaId);
+        }
+        if (momento == MomentoNumeracionDocu.AL_EMITIR) {
+            throw new PrecondicionVioladaException(
+                    "momentoNumeracionDocu=AL_EMITIR no es compatible con la integracion de Firmas. "
+                    + "La numeracion al emitir se gestiona internamente en el flujo de emision.");
+        }
+        if (momento == MomentoNumeracionDocu.AL_CREAR) {
+            throw new PrecondicionVioladaException(
+                    "Inconsistencia: momentoNumeracionDocu=AL_CREAR pero el documento no tiene nroDocu. "
+                    + "El documento debio numerarse automaticamente al generarse desde plantilla.");
+        }
+        if (momento == MomentoNumeracionDocu.AL_ENVIAR_A_FIRMA) {
+            throw new PrecondicionVioladaException(
+                    "Inconsistencia: momentoNumeracionDocu=AL_ENVIAR_A_FIRMA pero el documento no tiene nroDocu. "
+                    + "El documento debio numerarse al enviarse a firma.");
+        }
+        // momento == AL_FIRMAR: unico momento valido para que Firmas solicite numeracion activa
+
+        if (doc.getEstadoDocu() != EstadoDocu.PENDIENTE_FIRMA) {
+            throw new PrecondicionVioladaException(
+                    "El documento debe estar en estado PENDIENTE_FIRMA para numerarse via integracion de Firmas. "
+                    + "Estado actual: " + doc.getEstadoDocu());
+        }
+
+        // Delegar en la capacidad central unica de numeracion
+        FalDocumento docNumerado = numerarDocumento(cmd);
+
+        return new NumerarDocumentoParaFirmasResponse(
+                docNumerado.getId(), false, docNumerado.getNroDocu(),
+                docNumerado.getIdTalonario(), docNumerado.getNroTalonarioUsado(),
+                momento, docNumerado.getEstadoDocu());
     }
 
     // -------------------------------------------------------------------------
@@ -346,7 +447,7 @@ public class DocumentoService {
                 .listarFirmaReqPorPlantilla(plantilla.getId())
                 .stream().filter(FalDocumentoPlantillaFirmaReq::isSiActiva).toList();
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         for (FalDocumentoPlantillaFirmaReq req : activos) {
             Long id = documentoFirmaReqRepository.nextId();
             FalDocumentoFirmaReq firmaReq = new FalDocumentoFirmaReq(
@@ -407,8 +508,8 @@ public class DocumentoService {
                 null,
                 null,
                 null,
-                LocalDateTime.now(),
-                LocalDateTime.now(),
+                faltasClock.now(),
+                faltasClock.now(),
                 firmante
         );
         firmaRepository.guardar(firma);
@@ -514,7 +615,7 @@ public class DocumentoService {
             doc = numerarDocumento(new NumerarDocumentoCommand(doc.getId(), cmd.idUserFirma()));
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         Long firmaId = firmaRepository.nextId();
 
         FalDocumentoFirma firma = new FalDocumentoFirma(
@@ -653,7 +754,7 @@ public class DocumentoService {
             }
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         doc.marcarEmitido(cmd.storageKey(), cmd.hashDocu(), ahora);
         documentoRepository.guardar(doc);
 
@@ -702,10 +803,10 @@ public class DocumentoService {
         }
 
         Long idDoc = documentoRepository.nextId();
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         FalDocumento doc = FalDocumento.crearAdjunto(
                 idDoc, cmd.idActa(), cmd.tipoDocu(),
-                cmd.storageKey(), cmd.hashDocu(), ahora, cmd.plantillaId());
+                cmd.storageKey(), cmd.hashDocu(), ahora, cmd.plantillaId(), ahora);
 
         documentoRepository.guardar(doc);
 
@@ -799,7 +900,7 @@ public class DocumentoService {
         validarMecanismo(habilitacion, req.getMecanismoFirmaReq());
         validarOrdenFirma(cmd.documentoId(), req.getOrdenFirma());
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         Long firmaId = firmaRepository.nextId();
 
         FalDocumentoFirma firma = new FalDocumentoFirma(
@@ -869,7 +970,7 @@ public class DocumentoService {
     }
 
     private FalFirmanteVersion resolverVersionVigente(Long idFirmante) {
-        return firmanteRepository.findVersionVigente(idFirmante, LocalDate.now())
+        return firmanteRepository.findVersionVigente(idFirmante, faltasClock.now().toLocalDate())
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "El firmante id=" + idFirmante + " no tiene version vigente."));
     }
@@ -924,7 +1025,7 @@ public class DocumentoService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

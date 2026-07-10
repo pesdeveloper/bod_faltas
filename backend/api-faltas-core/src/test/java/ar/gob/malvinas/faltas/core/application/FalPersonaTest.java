@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.PersonaService;
 import ar.gob.malvinas.faltas.core.domain.enums.SujBieEstado;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocumentoPersona;
@@ -28,7 +30,7 @@ class FalPersonaTest {
     @BeforeEach
     void setUp() {
         repo = new InMemoryPersonaRepository();
-        service = new PersonaService(repo);
+        service = new PersonaService(repo, FaltasClockTestSupport.FIXED);
     }
 
     @Nested
@@ -260,7 +262,7 @@ class FalPersonaTest {
         void idSuj_debe_ser_20() {
             FalPersona p = service.crear(TipoPersona.FISICA, null, null, "Test", null, null, null, null, null, "USR1");
             assertThatThrownBy(() ->
-                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 99L, 42L, LocalDateTime.now(), "USR1"))
+                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 99L, 42L, FaltasClockTestSupport.FIXED.now(), "USR1"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("20");
         }
@@ -269,7 +271,7 @@ class FalPersonaTest {
         @DisplayName("ACTIVA: idSuj=20, idBie, fhSujBieCreacion obligatorios")
         void activa_exige_todos_campos() {
             FalPersona p = service.crear(TipoPersona.FISICA, null, null, "Test", null, null, null, null, null, "USR1");
-            LocalDateTime fh = LocalDateTime.now();
+            LocalDateTime fh = FaltasClockTestSupport.FIXED.now();
             FalPersona act = service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 20L, 5001L, fh, "USR1");
             assertThat(act.getIdSuj()).isEqualTo(20L);
             assertThat(act.getIdBie()).isEqualTo(5001L);
@@ -341,7 +343,7 @@ class FalPersonaTest {
         @Test
         @DisplayName("guardar almacena copia del input: mutacion del input no afecta store")
         void guardar_aislado() {
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            java.time.LocalDateTime now = FaltasClockTestSupport.FIXED.now();
             FalPersona input = new FalPersona(100L, TipoPersona.FISICA, now, "USR1");
             input.setApellido("Original");
             repo.guardar(input);
@@ -421,7 +423,7 @@ class FalPersonaTest {
         FalPersona p = service.crear(TipoPersona.FISICA, TipoDocumentoPersona.DNI, "45678901",
                 "ConCuenta", null, null, null, null, null, "USR1");
         FalPersona act = service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA,
-                20L, 9001L, LocalDateTime.now(), "SYS");
+                20L, 9001L, FaltasClockTestSupport.FIXED.now(), "SYS");
         assertThat(act.tieneCuentaActiva()).isTrue();
     }
 }

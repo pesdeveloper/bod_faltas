@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application.demo;
 
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento;
+
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoObligacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFormaPago;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoMovimientoPago;
@@ -72,25 +74,20 @@ public class PagoObligacionMockSeeder {
 
         // Forma contado
         FalActaFormaPago forma = new FalActaFormaPago(
-                2001L, 1001L, (short) 1, TipoFormaPago.CONTADO,
+                2001L, 1001L, (short) 1, TipoFormaPago.RECIBO_AL_COBRO,
                 new BigDecimal("1500.00"), BASE, BASE, "SYSTEM");
         formaRepo.save(forma);
 
         // Movimientos: deuda -> pago procesado -> obligacion cancelada
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4001L, 1001L, TipoMovimientoPago.DEUDA_EMITIDA, BASE.plusHours(1), BASE.plusHours(1), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4001L, 1001L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusHours(1), BASE.plusHours(1), "SYS")
                 .formaPagoId(2001L).build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4002L, 1001L, TipoMovimientoPago.PAGO_CONTADO_GENERADO, BASE.plusHours(2), BASE.plusHours(2), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4002L, 1001L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusHours(2), BASE.plusHours(2), "SYS")
                 .formaPagoId(2001L).build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4003L, 1001L, TipoMovimientoPago.PAGO_PROCESADO, BASE.plusHours(3), BASE.plusHours(3), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4003L, 1001L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusHours(3), BASE.plusHours(3), "SYS")
                 .formaPagoId(2001L).referenciaExterna("EM-2026-0001").build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4004L, 1001L, TipoMovimientoPago.PAGO_CONFIRMADO_TESORERIA, BASE.plusHours(4), BASE.plusHours(4), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4004L, 1001L, TipoMovimientoPago.PAGO_CONFIRMADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusHours(4), BASE.plusHours(4), "SYS")
                 .formaPagoId(2001L).build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4005L, 1001L, TipoMovimientoPago.OBLIGACION_CANCELADA, BASE.plusHours(5), BASE.plusHours(5), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4005L, 1001L, TipoMovimientoPago.PAGO_CONFIRMADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusHours(5), BASE.plusHours(5), "SYS")
                 .formaPagoId(2001L).build());
 
         // Proyectar estado final
@@ -119,18 +116,15 @@ public class PagoObligacionMockSeeder {
         plan.setImporteCuotaRegular(new BigDecimal("666.67"));
         planRepo.save(plan);
 
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4010L, 1002L, TipoMovimientoPago.DEUDA_EMITIDA, BASE, BASE, "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4010L, 1002L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE, BASE, "SYS")
                 .formaPagoId(2002L).planPagoRefId(3001L).build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4011L, 1002L, TipoMovimientoPago.PLAN_GENERADO, BASE.plusDays(1), BASE.plusDays(1), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4011L, 1002L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusDays(1), BASE.plusDays(1), "SYS")
                 .formaPagoId(2002L).planPagoRefId(3001L).build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4012L, 1002L, TipoMovimientoPago.PLAN_EN_MORA, BASE.plusDays(35), BASE.plusDays(35), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4012L, 1002L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusDays(35), BASE.plusDays(35), "SYS")
                 .formaPagoId(2002L).planPagoRefId(3001L).build());
 
         FalActaObligacionPago oblig1002 = obligacionRepo.findById(1002L).get();
-        oblig1002.setEstadoObligacion(EstadoObligacionPago.EN_PLAN);
+        oblig1002.setEstadoObligacion(EstadoObligacionPago.CON_FORMA_PAGO_VIGENTE);
         obligacionRepo.save(oblig1002);
     }
 
@@ -156,11 +150,9 @@ public class PagoObligacionMockSeeder {
         planOriginal.setImporteCuotaRegular(new BigDecimal("833.33"));
         planRepo.save(planOriginal);
 
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4020L, 1003L, TipoMovimientoPago.PLAN_GENERADO, BASE, BASE, "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4020L, 1003L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE, BASE, "SYS")
                 .formaPagoId(2003L).planPagoRefId(3002L).build());
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4021L, 1003L, TipoMovimientoPago.PLAN_CAIDO, BASE.plusDays(90), BASE.plusDays(90), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4021L, 1003L, TipoMovimientoPago.EMISION_ANULADA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusDays(90), BASE.plusDays(90), "SYS")
                 .formaPagoId(2003L).planPagoRefId(3002L).build());
 
         // Refinanciacion: nuevo plan
@@ -180,12 +172,11 @@ public class PagoObligacionMockSeeder {
         FalActaPlanPagoRef planAnteriorRec = planRepo.findById(3002L).get();
         planRepo.refinanciarAtomico(planNuevo, planAnteriorRec);
 
-        movimientoRepo.append(new FalActaPagoMovimiento.Builder(
-                4022L, 1003L, TipoMovimientoPago.PLAN_REFINANCIADO, BASE.plusDays(95), BASE.plusDays(95), "SYS")
+        movimientoRepo.append(new FalActaPagoMovimiento.Builder(4022L, 1003L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, BASE.plusDays(95), BASE.plusDays(95), "SYS")
                 .formaPagoId(2004L).planPagoRefId(3003L).build());
 
         FalActaObligacionPago oblig1003 = obligacionRepo.findById(1003L).get();
-        oblig1003.setEstadoObligacion(EstadoObligacionPago.REFINANCIADA);
+        oblig1003.setEstadoObligacion(EstadoObligacionPago.CON_FORMA_PAGO_VIGENTE);
         obligacionRepo.save(oblig1003);
     }
 }

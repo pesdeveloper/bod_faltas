@@ -65,7 +65,7 @@ Campos clave: accionDocumental, tipoActa (nullable), idDependencia (nullable), p
 
 ## 5. Variables documentales
 
-ConvenciÃƒÂ³n de nombres:
+Convención de nombres:
 ```
 {{namespace.nombreCampo}}
 ```
@@ -255,7 +255,7 @@ No se crean tablas fisicas para estos enums. No se crean seeds.
 
 ---
 
-## Slice 8F-2 Ã¢â‚¬â€ Context builder desde acta/snapshots + plantillas mock
+## Slice 8F-2 — Context builder desde acta/snapshots + plantillas mock
 
 **Estado: CERRADO**
 **Build: 1040/1040 tests OK**
@@ -354,11 +354,11 @@ Cada plantilla tiene:
 
 ### Siguiente slice recomendado
 
-**8F-3 Ã¢â‚¬â€ Mock PDF renderer / generacion final simulada de documentos.**
+**8F-3 — Mock PDF renderer / generacion final simulada de documentos.**
 
 ---
 
-## 8F-3 Ã¢â‚¬â€ Mock PDF renderer y generacion final simulada de documentos
+## 8F-3 — Mock PDF renderer y generacion final simulada de documentos
 
 ### Proposito del renderer mock
 
@@ -368,7 +368,7 @@ en una representacion textual simulada, sin usar librerias PDF reales (no iText,
 El objetivo es cerrar el ciclo documental en el prototipo:
 
 `
-Redaccion BORRADOR Ã¢â€ â€™ confirmar Ã¢â€ â€™ generacion mock Ã¢â€ â€™ metadatos en FalDocumento
+Redaccion BORRADOR → confirmar → generacion mock → metadatos en FalDocumento
 `
 
 ### Diferencia entre PDF mock y PDF real
@@ -387,7 +387,7 @@ Redaccion BORRADOR Ã¢â€ â€™ confirmar Ã¢â€ â€™ generacion 
 
 El prototipo es un modulo descartable in-memory. El objetivo es validar:
 - el modelo de estados y transiciones
-- el circuito redaccion Ã¢â€ â€™ confirmacion Ã¢â€ â€™ generacion
+- el circuito redaccion → confirmacion → generacion
 - los metadatos que el sistema necesita setear
 
 No tiene sentido conectar storage real hasta que el modelo sea estable.
@@ -398,9 +398,9 @@ Estos tres campos en FalDocumento permanecen null **mientras la redaccion esta e
 
 Se setean **solo al confirmar y generar mock**, en DocumentoGeneracionMockService.confirmarYGenerarMockPdf():
 
-- storageKey Ã¢â€ Â mock://documentos/{id}/redacciones/{id}/documento-final.pdf
-- hashDocu Ã¢â€ Â sha256-mock-{hex-sha256-del-contenido-mock}
-- hGeneracion Ã¢â€ Â timestamp del momento de renderizado
+- storageKey → mock://documentos/{id}/redacciones/{id}/documento-final.pdf
+- hashDocu → sha256-mock-{hex-sha256-del-contenido-mock}
+- hGeneracion → timestamp del momento de renderizado
 
 ### Regla de BORRADOR sin PDF
 
@@ -417,18 +417,18 @@ Ninguna operacion anterior a la confirmacion puede violar esta regla.
 
 `
 Al confirmar y generar:
-  redaccion.estadoRedaccion Ã¢â€ â€™ CONFIRMADA
-  redaccion.fhConfirmacion Ã¢â€ â€™ seteado
-  redaccion.idUserConfirmacion Ã¢â€ â€™ seteado
-  FalDocumento.storageKey Ã¢â€ â€™ mock://...
-  FalDocumento.hashDocu Ã¢â€ â€™ sha256-mock-...
-  FalDocumento.fhGeneracion Ã¢â€ â€™ seteado
+  redaccion.estadoRedaccion → CONFIRMADA
+  redaccion.fhConfirmacion → seteado
+  redaccion.idUserConfirmacion → seteado
+  FalDocumento.storageKey → mock://...
+  FalDocumento.hashDocu → sha256-mock-...
+  FalDocumento.fhGeneracion → seteado
 `
 
 ### Separacion entre generacion, emision, firma y notificacion
 
 - **Generacion mock (8F-3)**: confirmar redaccion + setear metadatos simulados. No emite.
-- **Emision formal (8C)**: transicion BORRADOR/FIRMADO Ã¢â€ â€™ EMITIDO con storageKey/hashDocu reales.
+- **Emision formal (8C)**: transicion BORRADOR/FIRMADO → EMITIDO con storageKey/hashDocu reales.
 - **Firma (8C)**: proceso de firma digital o escaneada. Requiere PENDIENTE_FIRMA o ADJUNTO.
 - **Notificacion**: flujo separado post-emision.
 
@@ -538,7 +538,7 @@ Devuelve DatasetFuncionalCoberturaResultado con:
 ### Guardrails cumplidos
 
 - No JDBC, no JPA/Hibernate, no tablas, no seeds.
-- No PDF/storage real, no librerÃ­as PDF, no filesystem documental.
+- No PDF/storage real, no librerías PDF, no filesystem documental.
 - No reflection, SpEL, eval, ScriptEngine.
 - No Angular, no frontend.
 - No endpoint reset todavia.
@@ -616,7 +616,7 @@ Estado final del dataset en 8F-4B-R1:
 
 ---
 
-## 8F-4C � Pruebas funcionales completas por caso de uso
+## 8F-4C — Pruebas funcionales completas por caso de uso
 
 ### Diferencia entre dataset funcional y prueba funcional
 
@@ -628,17 +628,17 @@ Estado final del dataset en 8F-4B-R1:
 - Cada test funcional crea el acta desde cero (sin reutilizar estado global).
 - No se fabrican estados finales con setters directos.
 - Si falta un servicio de dominio in-memory necesario, se implementa en el slice.
-- Los �nicos gaps permitidos son de infraestructura futura expl�cita (JDBC/MariaDB real).
+- Los únicos gaps permitidos son de infraestructura futura explícita (JDBC/MariaDB real).
 
 ### Servicios nuevos creados en 8F-4C
 
 | Servicio | Motivo |
 |---|---|
-| ActaParalizacionService | Gap detectado: no hab�a servicio para ACTPAR/ACTREA |
+| ActaParalizacionService | Gap detectado: no había servicio para ACTPAR/ACTREA |
 | ParalizarActaCommand | Comando nuevo |
 | ReactivarActaCommand | Comando nuevo |
 | CasoUsoFuncionalRunner | Runner funcional del dataset completo |
-| CasoUsoFuncionalEjecucionResultado | Modelo de resultado de ejecuci�n |
+| CasoUsoFuncionalEjecucionResultado | Modelo de resultado de ejecución |
 | PasoFuncionalResultado | Modelo de paso individual |
 
 ### Suites funcionales creadas (11 + 1 cobertura)
@@ -660,17 +660,17 @@ Estado final del dataset en 8F-4B-R1:
 
 ### Decisiones de dominio
 
-**Descuento en ACT-031**: El descuento no tiene evento propio (DESCT no existe en TipoEventoActa). El pago con descuento queda representado como atributo/observaci�n del PCOCNF. Raz�n: el descuento es una variante del pago confirmado, no una transici�n de estado distinta.
+**Descuento en ACT-031**: El descuento no tiene evento propio (DESCT no existe en TipoEventoActa). El pago con descuento queda representado como atributo/observación del PCOCNF. Razón: el descuento es una variante del pago confirmado, no una transición de estado distinta.
 
-**FirmaReq completa**: El ciclo de firma v�a DocumentoFirmaReqService funciona correctamente en el prototipo in-memory. Los tests funcionales usan irmarDocumento() directamente que genera el evento DOCFIR.
+**FirmaReq completa**: El ciclo de firma vía DocumentoFirmaReqService funciona correctamente en el prototipo in-memory. Los tests funcionales usan irmarDocumento() directamente que genera el evento DOCFIR.
 
-**Emisi�n formal**: No requerida para cerrar los casos del dataset actual. Pendiente en 8F-5/8F-6 cuando se precise el endpoint formal de numeraci�n.
+**Emisión formal**: No requerida para cerrar los casos del dataset actual. Pendiente en 8F-5/8F-6 cuando se precise el endpoint formal de numeración.
 
 **Acta archivada / REINGRESO_PARA_CIERRE**: No pertenecen al ciclo funcional del dataset actual. Quedan documentados como pendientes para slice 8F-5+.
 
-**ACT-022 (Absuelto con bloqueante)**: El fallo absolutorio con bloqueante material activo no genera CIERRA. La NotificacionService usa RepositoryBloqueantesMaterialesChecker que bloquea el cierre si hay bloqueantes activos. El cierre se produce cuando BloqueanteMaterialService resuelve el �ltimo bloqueante.
+**ACT-022 (Absuelto con bloqueante)**: El fallo absolutorio con bloqueante material activo no genera CIERRA. La NotificacionService usa RepositoryBloqueantesMaterialesChecker que bloquea el cierre si hay bloqueantes activos. El cierre se produce cuando BloqueanteMaterialService resuelve el último bloqueante.
 
-**ACT-025 (PrecondicionVioladaException)**: Los guardrails de precondici�n se testean verificando que PrecondicionVioladaException se lanza al invocar comandos fuera de orden.
+**ACT-025 (PrecondicionVioladaException)**: Los guardrails de precondición se testean verificando que PrecondicionVioladaException se lanza al invocar comandos fuera de orden.
 
 ### Eventos validados
 
@@ -683,14 +683,14 @@ Bandeja: todas las CodigoBandeja operativas
 SituacionAdministrativa: ACTIVA, PARALIZADA, CERRADA, EN_GESTION_EXTERNA
 ResultadoFinal: ABSUELTO, CONDENA_FIRME, CONDENA_FIRME_PAGADA, PAGO_VOLUNTARIO_CONFIRMADO, NOTIFICACION_NEGATIVA_SIN_COMPARENCIA
 
-### Relaci�n con slices siguientes
+### Relación con slices siguientes
 
-- **8F-5**: Endpoint dev/test de reset y recreaci�n in-memory.
+- **8F-5**: Endpoint dev/test de reset y recreación in-memory.
 - **8F-6**: Frontend-ready: bandejas y acciones desde Angular.
 
 ---
 
-## 8F-5 � Reset dev/test in-memory
+## 8F-5 — Reset dev/test in-memory
 
 ### Objetivo
 

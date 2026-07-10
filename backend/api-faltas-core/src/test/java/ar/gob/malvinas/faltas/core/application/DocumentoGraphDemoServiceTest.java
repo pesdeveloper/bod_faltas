@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableRegistry;
 import ar.gob.malvinas.faltas.core.application.demo.PlantillasMockSeeder;
@@ -61,12 +63,12 @@ class DocumentoGraphDemoServiceTest {
                 new DocumentoPlantillaDefaultService(defaultRepo);
         DocumentoRedaccionService redaccionService = new DocumentoRedaccionService(
                 docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion,
-                actaRepo, falloRepo, pagoRepo);
+                actaRepo, falloRepo, pagoRepo, FaltasClockTestSupport.FIXED);
         DocumentoGeneracionMockService generacionService = new DocumentoGeneracionMockService(
-                redaccionRepo, docRepo, new DocumentoPdfMockRenderer());
+                redaccionRepo, docRepo, new DocumentoPdfMockRenderer(FaltasClockTestSupport.FIXED), FaltasClockTestSupport.FIXED);
 
         graphDemoService = new DocumentoGraphDemoService(
-                actaRepo, falloRepo, pagoRepo, docRepo, redaccionService, generacionService);
+                actaRepo, falloRepo, pagoRepo, docRepo, redaccionService, generacionService, FaltasClockTestSupport.FIXED);
     }
 
     @Test

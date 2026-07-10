@@ -1,7 +1,6 @@
 package ar.gob.malvinas.faltas.core.domain.model;
 
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoObligacionPago;
-import ar.gob.malvinas.faltas.core.domain.enums.MotivoAptitudIntimacion;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoObligacionPago;
 
 import java.math.BigDecimal;
@@ -19,7 +18,7 @@ import java.time.LocalDateTime;
  * PAGO_VOLUNTARIO: nace de valorizacion confirmada, falloId NULL.
  * CONDENA: exige falloId y valorizacion coherente.
  *
- * Montos escala 2. Caches de mora y aptitud son auxiliares, no fuente primaria.
+ * Montos escala 2.
  */
 public class FalActaObligacionPago {
 
@@ -35,12 +34,6 @@ public class FalActaObligacionPago {
     private final LocalDateTime fhDeterminacion;
     private String idUserDeterminacion;
     private Long formaPagoVigenteId;
-    private boolean siAptaIntimacion;
-    private LocalDateTime fhAptaIntimacion;
-    private MotivoAptitudIntimacion motivoAptaIntimacion;
-    private Short cantDiasMora;
-    private Short cantCuotasMora;
-    private Short cantCuotasMoraConsec;
     private LocalDateTime fhCancelacion;
     private boolean siExcluirEscaneo;
     private LocalDateTime fhUltSyncIngresos;
@@ -102,27 +95,6 @@ public class FalActaObligacionPago {
     public void setIdUserDeterminacion(String v) { this.idUserDeterminacion = v; }
     public Long getFormaPagoVigenteId() { return formaPagoVigenteId; }
     public void setFormaPagoVigenteId(Long v) { this.formaPagoVigenteId = v; }
-    public boolean isSiAptaIntimacion() { return siAptaIntimacion; }
-    public void setSiAptaIntimacion(boolean v) { this.siAptaIntimacion = v; }
-    public LocalDateTime getFhAptaIntimacion() { return fhAptaIntimacion; }
-    public void setFhAptaIntimacion(LocalDateTime v) { this.fhAptaIntimacion = v; }
-    public MotivoAptitudIntimacion getMotivoAptaIntimacion() { return motivoAptaIntimacion; }
-    public void setMotivoAptaIntimacion(MotivoAptitudIntimacion v) { this.motivoAptaIntimacion = v; }
-    public Short getCantDiasMora() { return cantDiasMora; }
-    public void setCantDiasMora(Short v) {
-        if (v != null && v < 0) throw new IllegalArgumentException("cantDiasMora no puede ser negativo");
-        this.cantDiasMora = v;
-    }
-    public Short getCantCuotasMora() { return cantCuotasMora; }
-    public void setCantCuotasMora(Short v) {
-        if (v != null && v < 0) throw new IllegalArgumentException("cantCuotasMora no puede ser negativo");
-        this.cantCuotasMora = v;
-    }
-    public Short getCantCuotasMoraConsec() { return cantCuotasMoraConsec; }
-    public void setCantCuotasMoraConsec(Short v) {
-        if (v != null && v < 0) throw new IllegalArgumentException("cantCuotasMoraConsec no puede ser negativo");
-        this.cantCuotasMoraConsec = v;
-    }
     public LocalDateTime getFhCancelacion() { return fhCancelacion; }
     public void setFhCancelacion(LocalDateTime v) { this.fhCancelacion = v; }
     public boolean isSiExcluirEscaneo() { return siExcluirEscaneo; }
@@ -134,11 +106,11 @@ public class FalActaObligacionPago {
     public LocalDateTime getFhAlta() { return fhAlta; }
     public String getIdUserAlta() { return idUserAlta; }
 
-    public boolean estaCancelada() {
-        return estadoObligacion == EstadoObligacionPago.CANCELADA;
+    public boolean estaCanceladaPorPago() {
+        return estadoObligacion == EstadoObligacionPago.CANCELADA_POR_PAGO;
     }
-    public boolean estaAnulada() {
-        return estadoObligacion == EstadoObligacionPago.ANULADA;
+    public boolean estaDejadaSinEfecto() {
+        return estadoObligacion == EstadoObligacionPago.DEJADA_SIN_EFECTO;
     }
     public boolean esVoluntaria() {
         return tipoObligacion == TipoObligacionPago.PAGO_VOLUNTARIO;
@@ -149,18 +121,18 @@ public class FalActaObligacionPago {
 
     public void cancelar(LocalDateTime fhCancelacion) {
         if (fhCancelacion == null) throw new IllegalArgumentException("fhCancelacion es obligatoria");
-        if (this.estadoObligacion == EstadoObligacionPago.CANCELADA)
+        if (this.estadoObligacion == EstadoObligacionPago.CANCELADA_POR_PAGO)
             throw new IllegalStateException("La obligacion ya esta cancelada.");
-        if (this.estadoObligacion == EstadoObligacionPago.ANULADA)
-            throw new IllegalStateException("No se puede cancelar una obligacion anulada.");
-        this.estadoObligacion = EstadoObligacionPago.CANCELADA;
+        if (this.estadoObligacion == EstadoObligacionPago.DEJADA_SIN_EFECTO)
+            throw new IllegalStateException("No se puede cancelar una obligacion dejada sin efecto.");
+        this.estadoObligacion = EstadoObligacionPago.CANCELADA_POR_PAGO;
         this.fhCancelacion = fhCancelacion;
     }
 
-    public void anular() {
-        if (this.estadoObligacion == EstadoObligacionPago.ANULADA)
-            throw new IllegalStateException("La obligacion ya esta anulada.");
-        this.estadoObligacion = EstadoObligacionPago.ANULADA;
+    public void dejarSinEfecto() {
+        if (this.estadoObligacion == EstadoObligacionPago.DEJADA_SIN_EFECTO)
+            throw new IllegalStateException("La obligacion ya esta dejada sin efecto.");
+        this.estadoObligacion = EstadoObligacionPago.DEJADA_SIN_EFECTO;
         this.siVigente = false;
     }
 
@@ -173,12 +145,6 @@ public class FalActaObligacionPago {
         c.falloId = this.falloId;
         c.estadoObligacion = this.estadoObligacion;
         c.formaPagoVigenteId = this.formaPagoVigenteId;
-        c.siAptaIntimacion = this.siAptaIntimacion;
-        c.fhAptaIntimacion = this.fhAptaIntimacion;
-        c.motivoAptaIntimacion = this.motivoAptaIntimacion;
-        c.cantDiasMora = this.cantDiasMora;
-        c.cantCuotasMora = this.cantCuotasMora;
-        c.cantCuotasMoraConsec = this.cantCuotasMoraConsec;
         c.fhCancelacion = this.fhCancelacion;
         c.siExcluirEscaneo = this.siExcluirEscaneo;
         c.fhUltSyncIngresos = this.fhUltSyncIngresos;

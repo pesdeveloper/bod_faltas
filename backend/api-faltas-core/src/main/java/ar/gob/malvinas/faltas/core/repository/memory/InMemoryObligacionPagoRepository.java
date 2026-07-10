@@ -64,6 +64,14 @@ public class InMemoryObligacionPagoRepository
     }
 
     @Override
+    public List<FalActaObligacionPago> findAllVigentes() {
+        return store.values().stream()
+                .filter(FalActaObligacionPago::isSiVigente)
+                .map(FalActaObligacionPago::copia)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
     public Optional<FalActaObligacionPago> findVigenteByActaId(Long actaId) {
         return store.values().stream()
                 .filter(o -> o.getActaId().equals(actaId) && o.isSiVigente())

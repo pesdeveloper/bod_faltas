@@ -14,6 +14,7 @@ public interface ObligacionPagoRepository {
     FalActaObligacionPago save(FalActaObligacionPago obligacion);
     Optional<FalActaObligacionPago> findById(Long id);
     List<FalActaObligacionPago> findByActaId(Long actaId);
+    List<FalActaObligacionPago> findAllVigentes();
     Optional<FalActaObligacionPago> findVigenteByActaId(Long actaId);
     /** Operacion atomica: desactiva vigente anterior y guarda nueva vigente. */
     FalActaObligacionPago crearVigenteAtomico(FalActaObligacionPago nueva, FalActaObligacionPago anteriorONull);

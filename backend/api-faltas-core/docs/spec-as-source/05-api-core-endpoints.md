@@ -20,6 +20,7 @@ Base path: `/api/faltas`
 | POST | /actas/{id}/documentos | Generar documento |
 | POST | /actas/{idActa}/documentos/{idDoc}/firmar | Firmar documento (acta o fallo) |
 | GET  | /actas/{id}/documentos | Listar documentos del acta |
+| POST | /documentos/{documentoId}/numerar | Numerar documento para integracion con Firmas (D-18; requiere JWT Bearer) |
 
 ## Notificaciones
 
@@ -323,12 +324,13 @@ Registra el pago externo de una gestion externa activa (PAGAPR).
 
 ---
 
-## Etapa 8 â€” Endpoints planificados multi-app (in-memory, sin MariaDB)
+## Etapa 8 — Endpoints planificados multi-app (in-memory, sin MariaDB)
 
 Esta seccion documenta los grupos de endpoints que se implementaran en Etapa 8.
-Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pendientes.
+La mayoria se implementan bloque a bloque segun el roadmap de 99-pendientes.
+Nota: algunos endpoints de Etapa 8 han sido implementados en slices posteriores (por ejemplo, D-18 implemento POST /api/faltas/documentos/{id}/numerar). Ver las secciones de cada slice para el contrato vigente.
 
-### Bloque 8A â€” Administracion base
+### Bloque 8A — Administracion base
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -343,7 +345,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | GET    | /firmantes | Listar firmantes activos |
 | GET    | /firmantes/{id} | Obtener firmante |
 
-### Bloque 8B â€” Talonarios y numeracion
+### Bloque 8B — Talonarios y numeracion
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -351,10 +353,10 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | GET    | /talonarios | Listar talonarios activos |
 | POST   | /talonarios/{id}/asignar-dependencia | Asignar talonario a dependencia |
 | POST   | /talonarios/{id}/asignar-inspector | Asignar talonario a inspector |
-| GET    | /talonarios/{id}/siguiente-numero | Obtener y reservar siguiente numero |
+| GET    | /talonarios/{id}/siguiente-numero | SUPERADO / NO IMPLEMENTAR: enfoque generico de correlativo reemplazado por operacion sobre el objeto de negocio concreto. Ver POST /api/faltas/documentos/{id}/numerar (D-18). No existe en codigo. |
 | POST   | /talonarios/{id}/anular-numero | Anular y justificar numero |
 
-### Bloque 8C â€” App de firmas
+### Bloque 8C — App de firmas
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -362,7 +364,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | GET    | /firmas/pendientes/{firmante_id} | Bandeja por firmante especifico |
 | POST   | /actas/{idActa}/documentos/{idDoc}/firmar | Firmar documento (ampliado con firmante estructurado) |
 
-### Bloque 8D â€” Observaciones y adjuntos
+### Bloque 8D — Observaciones y adjuntos
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -371,7 +373,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | POST   | /adjuntos | Subir adjunto mock |
 | GET    | /actas/{id}/adjuntos | Listar adjuntos del acta |
 
-### Bloque 8E â€” App notificador municipal
+### Bloque 8E — App notificador municipal
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -379,7 +381,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | POST   | /notificaciones/{id}/intento | Registrar intento de notificacion |
 | POST   | /notificaciones/{id}/intento/{idIntento}/resultado | Registrar resultado del intento |
 
-### Bloque 8F â€” App corralo'n
+### Bloque 8F — App corralo'n
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -389,7 +391,7 @@ Ninguno existe todavia. Se implementan bloque a bloque segun el roadmap de 99-pe
 | POST   | /rodados/{id}/autorizar-retiro | Autorizar retiro |
 | POST   | /rodados/{id}/registrar-retiro | Registrar entrega / retiro |
 
-### Bloque 8G â€” Portal ciudadano
+### Bloque 8G — Portal ciudadano
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
@@ -406,16 +408,20 @@ Los repositorios son reemplazables por JDBC en Etapa 9 sin tocar servicios.
 
 ## Endpoints dev/test/demo
 
-Disponibles solo en entornos de desarrollo, test y demo funcional.
+Disponibles solo cuando `faltas.demo.enabled=true` (default: `false`).
 No son endpoints productivos. No tocan JDBC ni MariaDB.
+Con la propiedad ausente o `false`, los controllers no se instancian y las rutas devuelven `404`.
+
+**Property general:** `faltas.demo.enabled=false` (default seguro).
+**D-12 CERRADO** (2026-07-09).
 
 | Metodo | Endpoint | Descripcion | Habilitacion |
 |--------|----------|-------------|-------------|
 | POST | /demo/dev/reset | Reset in-memory: limpia repos y resembrada plantillas mock | `faltas.demo.reset.enabled=true` |
-| GET | /demo/documentos/graph | Graph demo documental (8 casos operativos) | Siempre disponible en perfil memory |
-| GET | /demo/actas/dataset-funcional | Catalogo de cobertura del dataset funcional (31 actas) | Siempre disponible |
+| GET | /demo/documentos/graph | Graph demo documental (8 casos operativos) | ``faltas.demo.enabled=true`` |
+| GET | /demo/actas/dataset-funcional | Catalogo de cobertura del dataset funcional | ``faltas.demo.enabled=true`` |
 
-### POST /demo/dev/reset â€” Slice 8F-5
+### POST /demo/dev/reset — Slice 8F-5
 
 - **Property de habilitacion**: `faltas.demo.reset.enabled=true` (default: `false`)
 - **Si deshabilitado**: responde `404`
@@ -431,17 +437,17 @@ No son endpoints productivos. No tocan JDBC ni MariaDB.
 - **Campos clave para frontend:**
   - `totalCasos`, `casosExitosos`, `casosFallidos`, `completo`, `fhEjecucion`
   - `casos[].codigoCaso`, `casos[].descripcionCaso`, `casos[].accionDocumental`, `casos[].tipoDocu`
-  - `casos[].actaId`, `casos[].documentoId`, `casos[].redaccionId` (IDs de navegaciÃ³n)
+  - `casos[].actaId`, `casos[].documentoId`, `casos[].redaccionId` (IDs de navegación)
   - `casos[].estadoRedaccion`, `casos[].redaccionCompleta`, `casos[].exitoso`
   - `casos[].storageKey` (esquema `mock://`), `casos[].hashDocu` (prefijo `sha256-mock-`)
   - `casos[].errorMensaje` (null si exitoso, presente si fallido)
-- **Siempre disponible** en perfil memory, sin property guard.
+- **Disponible solo con** ``faltas.demo.enabled=true``. Sin la propiedad o con ``false``, responde ``404``.
 - **No modifica estado.** Cada llamada crea actas demo frescas independientes.
 
 ### GET /demo/actas/dataset-funcional - Slice 8F-4B
 
 - **Sin request body ni query params.**
-- **Response:** `DatasetFuncionalCoberturaResultado` con catÃ¡logo de 31 actas declarativas.
+- **Response:** `DatasetFuncionalCoberturaResultado` con catálogo de 31 actas declarativas.
 - **Campos clave para frontend:**
   - `totalActasMock`, `totalCasosUsoCubiertos`, `totalDocumentosEsperados`
   - `coberturaCompletaSegunDominioActual`, `advertencias`
@@ -449,17 +455,17 @@ No son endpoints productivos. No tocan JDBC ni MariaDB.
   - `actas[].bloqueEsperado`, `actas[].situacionEsperada`, `actas[].bandejaEsperada`
   - `actas[].cerrableEsperado`, `actas[].requiereFallo`, `actas[].requierePago`
   - `casosUsoCubiertos[]`, `casosUsoPendientes[]`
-- **Siempre disponible.** Solo lectura del catÃ¡logo estÃ¡tico.
+- **Disponible solo con** ``faltas.demo.enabled=true``. Sin la propiedad o con ``false``, responde ``404``. Solo lectura del catálogo estático.
 - **totalActasMock == actas.length** garantizado.
 
 ### POST /demo/dev/reset - Slice 8F-5
 
-- **Property de habilitaciÃ³n**: `faltas.demo.reset.enabled=true` (default: `false`)
-- **Si deshabilitado**: responde `404` (cuerpo vacÃ­o)
+- **Property de habilitación**: `faltas.demo.reset.enabled=true` (default: `false`)
+- **Si deshabilitado**: responde `404` (cuerpo vacío)
 - **Que hace**: limpia los 24 repositorios in-memory y resembrada las 8 plantillas mock
 - **Campos clave del response (DevResetResponse):**
   - `ejecutado=true`, `modo="memory"`, `fhReset` (timestamp)
-  - `repositoriosReseteados` (â‰¥ 24), `plantillasRecreadas=8`
+  - `repositoriosReseteados` (≥ 24), `plantillasRecreadas=8`
   - `casosDatasetFuncional=31`, `errores=0`
   - `repositorios[]`, `acciones[]`, `advertencias[]`
 - **Idempotente**: ejecutar N veces produce el mismo estado
@@ -469,8 +475,8 @@ No son endpoints productivos. No tocan JDBC ni MariaDB.
 
 | Caso | HTTP |
 |------|------|
-| Reset deshabilitado | 404 (cuerpo vacÃ­o) |
-| MÃ©todo incorrecto en reset (GET) | 405 |
+| Reset deshabilitado | 404 (cuerpo vacío) |
+| Método incorrecto en reset (GET) | 405 |
 | GET /demo/documentos/graph | 200 siempre |
 | GET /demo/actas/dataset-funcional | 200 siempre |
 
@@ -479,26 +485,27 @@ No son endpoints productivos. No tocan JDBC ni MariaDB.
 Configurado via `DemoCorsConfig` (WebMvcConfigurer):
 - Cubre `/demo/**` y `/api/**`
 - Propiedad: `faltas.demo.cors.allowed-origins` (default `*`)
-- Para producciÃ³n: configurar con URL real del frontend Angular
+- Para producción: configurar con URL real del frontend Angular
 
 
 ### GET /demo/actas/{codigo} - Slice 8F-7 (NUEVO)
 
 - **Path**: /demo/actas/{codigo} (bajo /demo, no productivo)
 - **Codigos validos**: cualquier codigo del DatasetFuncionalDominioCatalog (ACT-001-LABRADA ... ACT-031-PAGO-CONDENA-CON-DESCUENTO)
-- **HTTP 200**: para codigo existente â€” respuesta frontend-ready completa
-- **HTTP 404**: para codigo inexistente â€” sin stacktrace expuesto
+- **HTTP 200**: para codigo existente — respuesta frontend-ready completa
+- **HTTP 404**: para codigo inexistente — sin stacktrace expuesto
 - **Materializacion real**: ejecuta CasoUsoFuncionalRunner aislado, devuelve instancia real (no declarativa)
-- **Idempotente**: mismo codigo â†’ mismo estado final, mismos conteos de timeline/documentos
+- **Idempotente**: mismo codigo → mismo estado final, mismos conteos de timeline/documentos
 - **Campos clave del response (DemoActaDetalleResponse):**
   - codigo, 	itulo, descripcion, casoUsoPrincipal
   - dataset: {bloqueEsperado, situacionEsperada, bandejaEsperada, cerrableEsperado}
   - cta: {actaId, numeroActa, codigoActa, bloqueActual, estadoProcesal, situacionAdministrativa, resultadoFinal, bandeja, cerrable}
-  - 	imeline[]: eventos append-only reales {orden, eventoId, tipoEvento, descripcion, fhEvento} â€” ordenados por ordenLogico
+  - 	imeline[]: eventos append-only reales {orden, eventoId, tipoEvento, descripcion, fhEvento} — ordenados por ordenLogico
   - documentos[]: documentos reales {documentoId, tipoDocu, estadoDocu, storageKey, hashDocu, mock, fhGeneracion, plantillaId, descripcion}
   - demo: {mock=true, materializada, source="DATASET_FUNCIONAL", warnings[]}
   - links: {self, dataset, graph}
-- **Guardrails**: storageKey nunca ile:// ni s3://; hashDocu nunca hash real
+- **Guardrails**: storageKey nunca
+ile:// ni s3://; hashDocu nunca hash real
 
 ### GET /demo/actas/dataset-funcional (actualizado Slice 8F-7)
 
@@ -525,22 +532,154 @@ Configurado via `DemoCorsConfig` (WebMvcConfigurer):
 - **Checks internos realizados**:
   - Dataset: 	otalActasMock == 31, detalleDisponible (via detallePath()).
   - Documentos: 	otalPlantillasMock == 8 via DocumentoPlantillaRepository.listar().
-  - Reset: informa si altas.demo.reset.enabled esta activo o no.
+  - Reset: informa si
+altas.demo.reset.enabled esta activo o no.
   - Endpoints: lista estatica de 5 endpoints demo conocidos.
 - **Campos clave del response (DemoHealthResponse)**:
   - status: "UP"
   - demoReady: boolean (true si dataset.ready && documentos.ready)
-  - hEjecucion: timestamp de evaluacion
-  - ersionDemo: "8F-8"
+  -
+hEjecucion: timestamp de evaluacion
+  -
+ersionDemo: "8F-8"
   - dataset: {ready, totalActasMock, coberturaCompleta, detalleDisponible}
   - documentos: {ready, totalPlantillasMock, graphDisponible, storageReal=false}
-  - eset: {endpoint, enabled, defaultSeguro}
+  -
+eset: {endpoint, enabled, defaultSeguro}
   - endpoints[]: lista de {method, path, ready, descripcion}
   - warnings[]: advertencias si algo no esta completo (no es error fatal)
 - **Uso en frontend Angular demo**: consultar /demo/health al iniciar la SPA; si demoReady=true habilitar navegacion completa; si hay warnings mostrarlos en banner informativo.
 - **No valida todavia**: base real, storage real, PDF real, autenticacion productiva.
-- **Guardrails**: storageReal=false siempre; esetEnabled=false por defecto; no expone s3:// ni ile://.
+- **Guardrails**: storageReal=false siempre;
+esetEnabled=false por defecto; no expone s3:// ni
+ile://.
 
 ### GAP-8 — CERRADO (Slice 8F-8)
 
 GET /demo/health implementado, testeado con 16 tests de contrato.
+
+## Pagos / integracion (Slice 8F-11M-B1)
+
+| Metodo | Endpoint | Descripcion |
+|--------|----------|-------------|
+| POST | /pagos/notificar-movimiento | Notificacion normal de movimiento (tipos: DEUDA_EMITIDA, PAGO_PROCESADO, PAGO_CONFIRMADO, EMISION_ANULADA). Registra movimiento append-only, recalcula proyeccion economica. NO acepta PAGO_REVERTIDO (usar endpoint especifico de reverso). |
+| POST | /pagos/revertir-movimiento | Operacion especifica de reverso atomico: crea 1 movimiento PAGO_REVERTIDO, emite exactamente 1 evento PAGREV, recalcula estados. Rechaza reverso por endpoint generico. Idempotente por referenciaExterna. |
+
+Base path completo: `POST /api/faltas/pagos/notificar-movimiento`.
+
+Request: `NotificarMovimientoPagoRequest` (obligacion, forma, plan, tipo/origen/clasificacion, importes, referencia externa, fechas).
+
+Respuestas: 200 movimiento creado; 409 duplicado (`MovimientoPagoDuplicadoException`); 422 precondicion.
+
+### 8F-11M-B1-R2 (cierre)
+
+- **Autenticacion obligatoria**: `/api/faltas/pagos/**` exige `Authorization: Bearer <jwt>` con `sub` valido (no vacio, hasta 36 caracteres). Sin Bearer valido responde **401**; no hay fallback anonimo `integracion-externa`.
+- **Idempotencia**: clave `origenMovimiento + referenciaExterna`. Reintento identico -> `ALREADY_EXISTS` (no crea otro movimiento ni evento); mismo origen/referencia con importe u obligacion distintos -> **409**. Un reintento sin `fhMovimiento` informada no falla por avance del Clock.
+- **Conciliacion**: no crea movimiento ni evento ni muta el movimiento original; reclasifica importes agregados usando el input mock absoluto de Tesoreria; es idempotente; payload incompatible -> **409**.
+- **Reversos**: solo tipos reversibles (`PAGO_CONFIRMADO`); reverso identico es idempotente; segundo reverso distinto sobre un original ya revertido se rechaza.
+
+---
+
+## CIERRE-D14-D18 (2026-07-09) - Endpoint de numeracion documental para Firmas
+
+### POST /api/faltas/documentos/{documentoId}/numerar
+
+**Finalidad:** integracion controlada con la aplicacion de Firmas para asignar un numero de talonario electronico a un documento antes de que Firmas renderice su contenido definitivo y calcule el hash.
+
+**Autenticacion:** requerida. Actor obtenido del JWT `sub` via `ActorContextHolder`. Sin Bearer valido: HTTP 401.
+
+**Request:** sin body. El actor, la politica y el talonario los resuelve el sistema internamente. El cliente no elige correlativo, politica ni talonario.
+
+**Response:** `NumerarDocumentoParaFirmasResponse`
+  - `documentoId`: Long
+  - `yaEstabaNumerado`: boolean
+  - `nroDocu`: String (numero asignado)
+  - `idTalonario`: Long
+  - `nroTalonarioUsado`: Integer
+  - `momentoAplicado`: MomentoNumeracionDocu
+  - `estadoDocu`: EstadoDocu
+
+**HTTP 201 CREATED:** si numera por primera vez.
+**HTTP 200 OK:** si devuelve idempotentemente el numero ya asignado (`yaEstabaNumerado = true`).
+
+**Momento elegible inicial:** `AL_FIRMAR` para la primera numeracion desde Firmas.
+**Momentos anteriores ya numerados:** se devuelven idempotentemente (200 OK).
+
+**Orden obligatorio:** numerar -> contenido definitivo/hash -> firma.
+
+**No es:** administracion de talonarios. No entrega correlativos libres. No es API generica.
+
+**Errores:**
+| Caso | HTTP |
+|------|------|
+| Documento no encontrado | 404 |
+| Plantilla no requiere numeracion | 422 |
+| Momento incompatible | 422 |
+| Estado del documento incompatible | 422 |
+| Talonario no vigente / sin politica | 422 |
+| Sin Bearer valido | 401 |
+
+
+---
+
+## CIERRE-R11 (2026-07-09) - Contrato global de errores HTTP
+
+### GlobalFaltasControllerAdvice
+
+Todos los endpoints del modulo `api-faltas-core` comparten un contrato de errores canonico gestionado por `GlobalFaltasControllerAdvice`.
+
+#### DTO de respuesta de error: ErrorResponse
+
+```json
+{
+  "codigoError": "ACTA_NO_ENCONTRADA",
+  "mensaje": "Recurso no encontrado",
+  "detalle": null,
+  "correlacionId": null
+}
+```
+
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| `codigoError` | String | Codigo semantico del error. Nunca nulo ni vacio. |
+| `mensaje` | String | Descripcion legible. Sin info interna. |
+| `detalle` | String | Opcional. Detalles de validacion o contexto adicional. |
+| `correlacionId` | String | Reservado para uso futuro (trazabilidad). |
+
+#### Tabla de HTTP status por categoria de excepcion
+
+| HTTP | Categoria | Excepciones cubiertas |
+|------|-----------|----------------------|
+| 404 | Recurso no encontrado | 29 excepciones `*NoEncontrad*Exception` del dominio + `NoResourceFoundException` (ruta sin handler / demo deshabilitado) |
+| 422 | Precondicion violada | `PrecondicionVioladaException` |
+| 409 | Conflicto OCC | `ConcurrenciaConflictoException` |
+| 409 | Pago duplicado | `MovimientoPagoDuplicadoException` |
+| 409 | Acuse/conciliacion duplicada | `AcuseDuplicadoException`, `ConciliacionIncompatibleException` |
+| 400 | Token QR invalido | `QrTokenInvalidoException` |
+| 400 | Bean Validation | `MethodArgumentNotValidException`, `ConstraintViolationException` |
+| 400 | JSON invalido | `HttpMessageNotReadableException` |
+| 400 | Parametro faltante/invalido | `MissingServletRequestParameterException`, `MethodArgumentTypeMismatchException` |
+| 405 | Metodo no soportado | `HttpRequestMethodNotSupportedException` |
+| 415 | Content-Type no soportado | `HttpMediaTypeNotSupportedException` |
+| 4xx-5xx | ResponseStatusException | Pass-through del status code de la excepcion Spring |
+| 500 | Error interno (fallback) | Cualquier excepcion no cubierta (se logea como ERROR) |
+
+#### Contrato de seguridad
+
+- **401**: gestionado por `SecurityConfig.authenticationEntryPoint` (filtro de seguridad). NO interceptado por el advice.
+- **403**: gestionado por Spring Security. NO interceptado por el advice.
+- `Throwable` y `Error` de JVM no son capturados.
+- Stack traces y mensajes internos nunca se exponen al cliente.
+
+#### Cobertura de handlers locales eliminados
+
+Los 17 controladores del modulo tenian handlers locales `@ExceptionHandler` que devolvian `Map<String, String>{"error": "..."}`.
+Fueron eliminados sistematicamente. El contrato canonico `ErrorResponse` es el unico mecanismo de respuesta de error.
+
+#### Tests del contrato
+
+| Test | Clase | Cobertura |
+|------|-------|-----------|
+| Unitario por handler | `GlobalFaltasControllerAdviceTest` | 14 tests, todos los handlers cubiertos |
+| Cobertura arquitectural | `GlobalFaltasControllerAdviceCoverageTest` | 50 excepciones dominio, HTTP status y codigoError validados |
+| Contrato HTTP integrado | `FlujoCoreIT`, `DemoDeshabilitadoTest`, `DemoActaDetalleContractTest` | Suite completa 2478 tests |

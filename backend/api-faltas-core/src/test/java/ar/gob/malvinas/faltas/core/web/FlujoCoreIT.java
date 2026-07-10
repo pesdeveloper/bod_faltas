@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,8 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Test de integraciÃ³n con contexto Spring real.
- * Cubre el flujo HTTP completo: labrar â†’ firma â†’ notificaciÃ³n positiva.
+ * Test de integración con contexto Spring real.
+ * Cubre el flujo HTTP completo: labrar → firma → notificación positiva.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,7 +44,7 @@ class FlujoCoreIT {
                 "tipoActa", "TRANSITO",
                 "idDependencia", "DEP-001",
                 "idInspector", "INS-001",
-                "fechaActa", LocalDate.now().toString(),
+                "fechaActa", FaltasClockTestSupport.FIXED.now().toLocalDate().toString(),
                 "domicilioHecho", "Belgrano 200",
                 "infractorDocumento", "87654321"
         ));
@@ -108,7 +109,7 @@ class FlujoCoreIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.codBandeja").value("PENDIENTE_NOTIFICACION"));
 
-        // 8. Enviar notificaciÃ³n
+        // 8. Enviar notificación
         String notifBody = mapper.writeValueAsString(Map.of(
                 "idDocumento", idDoc,
                 "canal", "EMAIL"
@@ -123,7 +124,7 @@ class FlujoCoreIT {
 
         String idNotif = extractField(notifResult, "idEntidadAfectada");
 
-        // 9. Registrar notificaciÃ³n positiva
+        // 9. Registrar notificación positiva
         mvc.perform(post("/api/faltas/notificaciones/{id}/positiva", idNotif)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))

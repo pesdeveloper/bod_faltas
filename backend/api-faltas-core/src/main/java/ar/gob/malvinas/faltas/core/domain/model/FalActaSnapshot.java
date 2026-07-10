@@ -87,7 +87,7 @@ public class FalActaSnapshot {
 
     public FalActaSnapshot(Long idActa) {
         this.idActa = idActa;
-        this.ultimaActualizacion = LocalDateTime.now();
+        this.ultimaActualizacion = null;
     }
 
     public Long getIdActa() { return idActa; }

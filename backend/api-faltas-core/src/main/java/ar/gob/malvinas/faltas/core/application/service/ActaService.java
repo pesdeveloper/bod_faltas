@@ -25,6 +25,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -40,6 +41,7 @@ public class ActaService {
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final ActaEvidenciaRepository evidenciaRepository;
+    private final FaltasClock faltasClock;
     private PersonaRepository personaRepository;
 
     public ActaService(
@@ -47,12 +49,14 @@ public class ActaService {
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
             SnapshotRecalculador snapshotRecalculador,
-            ActaEvidenciaRepository evidenciaRepository) {
+            ActaEvidenciaRepository evidenciaRepository,
+            FaltasClock faltasClock) {
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
         this.snapshotRecalculador = snapshotRecalculador;
         this.evidenciaRepository = evidenciaRepository;
+        this.faltasClock = faltasClock;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -62,8 +66,9 @@ public class ActaService {
             ActaSnapshotRepository snapshotRepository,
             SnapshotRecalculador snapshotRecalculador,
             ActaEvidenciaRepository evidenciaRepository,
-            PersonaRepository personaRepository) {
-        this(actaRepository, eventoRepository, snapshotRepository, snapshotRecalculador, evidenciaRepository);
+            PersonaRepository personaRepository,
+            FaltasClock faltasClock) {
+        this(actaRepository, eventoRepository, snapshotRepository, snapshotRecalculador, evidenciaRepository, faltasClock);
         this.personaRepository = personaRepository;
     }
 
@@ -82,6 +87,8 @@ public class ActaService {
             }
         }
 
+        LocalDateTime ahora = faltasClock.now();
+        LocalDate hoy = ahora.toLocalDate();
         Long id = actaRepository.nextId();
         String uuidTecnico = UUID.randomUUID().toString();
 
@@ -91,15 +98,15 @@ public class ActaService {
                 cmd.tipoActa(),
                 cmd.idDependencia() != null ? cmd.idDependencia() : 1L,
                 cmd.idInspector() != null ? cmd.idInspector() : 1L,
-                cmd.fechaActa() != null ? cmd.fechaActa() : java.time.LocalDate.now(),
-                LocalDateTime.now(),
+                cmd.fechaActa() != null ? cmd.fechaActa() : hoy,
+                ahora,
                 cmd.domicilioHecho(),
                 cmd.observaciones(),
                 cmd.latInfr(),
                 null,
                 cmd.resultadoFirmaInfractor(),
                 cmd.idPersonaInfractor(),
-                LocalDateTime.now(),
+                ahora,
                 null
         );
         if (cmd.infractorDocumento() != null) acta.setInfractorDocumento(cmd.infractorDocumento());
@@ -113,14 +120,14 @@ public class ActaService {
         actaRepository.guardar(acta);
 
         if (cmd.evidenciasActa() != null) {
-            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime ahoraEv = ahora;
             for (EvidenciaActaItem item : cmd.evidenciasActa()) {
                 FalActaEvidencia evidencia = new FalActaEvidencia(
                         evidenciaRepository.nextId(),
                         acta.getId(),
                         item.tipoEvid(),
                         item.storageKey(),
-                        ahora
+                        ahoraEv
                 );
                 evidenciaRepository.guardar(evidencia);
             }
@@ -203,7 +210,7 @@ public class ActaService {
 
     private FalPersona crearPersonaMinimal(String nroDoc, String nombreMostrar) {
         Long id = personaRepository.nextId();
-        FalPersona persona = new FalPersona(id, TipoPersona.FISICA, LocalDateTime.now(), "SYS");
+        FalPersona persona = new FalPersona(id, TipoPersona.FISICA, faltasClock.now(), "SYS");
         if (nroDoc != null && !nroDoc.isBlank()) {
             String nroDocNorm = nroDoc.strip().replaceAll("[^0-9a-zA-Z\\\\-]", "");
             if (nroDocNorm.length() > 20) nroDocNorm = nroDocNorm.substring(0, 20);
@@ -223,7 +230,7 @@ public class ActaService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

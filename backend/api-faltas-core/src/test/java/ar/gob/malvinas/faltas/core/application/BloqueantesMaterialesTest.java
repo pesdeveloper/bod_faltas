@@ -83,6 +83,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 /**
  * Tests del Slice 7A: Motor real de bloqueantes materiales.
@@ -142,34 +143,35 @@ class BloqueantesMaterialesTest {
         bloqueantesChecker = new RepositoryBloqueantesMaterialesChecker(bloqueanteMaterialRepo);
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository());
+        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoPlantillaRepository(),
 
-                        new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository()),
+                        new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository());
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                        FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker());
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
         falloService = new FalloActaService(
-                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc);
+                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
         gestionExternaService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo, recalc,
-                bloqueantesChecker);
-        CierreActaHelper cierreActaHelper = new CierreActaHelper(actaRepo, eventoRepo, snapshotRepo, recalc);
-        bloqueanteMaterialService = new BloqueanteMaterialService(bloqueanteMaterialRepo, actaRepo, cierreActaHelper);
+                bloqueantesChecker, FaltasClockTestSupport.FIXED);
+        CierreActaHelper cierreActaHelper = new CierreActaHelper(actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
+        bloqueanteMaterialService = new BloqueanteMaterialService(bloqueanteMaterialRepo, actaRepo, cierreActaHelper, FaltasClockTestSupport.FIXED);
         pagoCondenaService = new PagoCondenaService(
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
-                bloqueantesChecker);
+                bloqueantesChecker, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -179,7 +181,7 @@ class BloqueantesMaterialesTest {
     private Long crearActaConCondenaFirme(String docNum) {
         Long actaId = actaService.labrar(new LabrarActaCommand(
                 "TRANSITO", "DEP-001", "INS-001",
-                LocalDate.now(), "Av. Argentina 100", "San Martin 200",
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 100", "San Martin 200",
                 null, null, null, "Infractor Test", docNum,
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
         actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
@@ -213,14 +215,14 @@ class BloqueantesMaterialesTest {
     }
 
     private void registrarBloqueante(Long actaId) {
-        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepo.nextId(), actaId);
+        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepo.nextId(), actaId, FaltasClockTestSupport.FIXED.now());
         b.setOrigen(OrigenBloqueanteMaterial.RODADO);
         b.setDescripcion("Rodado retenido en deposito");
         bloqueanteMaterialRepo.guardar(b);
     }
 
     private void registrarBloqueanteCumplido(Long actaId) {
-        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepo.nextId(), actaId);
+        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepo.nextId(), actaId, FaltasClockTestSupport.FIXED.now());
         b.setOrigen(OrigenBloqueanteMaterial.RODADO);
         b.setEstado(EstadoBloqueanteMaterial.CUMPLIDO);
         b.setSiActivo(false);
@@ -403,7 +405,7 @@ class BloqueantesMaterialesTest {
     class RegistrarBloqueante {
 
         @Test
-        @DisplayName("Test 7B-01: Registrar bloqueante ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ó├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇª├é┬í├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¼├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Ø PENDIENTE, siActivo=true, fechaAlta not null, fechaCierre null, existsActivo=true")
+        @DisplayName("Test 7B-01: Registrar bloqueante → PENDIENTE, siActivo=true, fechaAlta not null, fechaCierre null, existsActivo=true")
         void registrar_bloqueante_estado_inicial() {
             Long actaId = 7001L;
             RegistrarBloqueanteMaterialCommand cmd = new RegistrarBloqueanteMaterialCommand(
@@ -441,7 +443,7 @@ class BloqueantesMaterialesTest {
     class CumplirBloqueante {
 
         @Test
-        @DisplayName("Test 7B-04: Cumplir bloqueante ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ó├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇª├é┬í├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¼├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Ø CUMPLIDO, siActivo=false, fechaCierre not null, existsActivo=false")
+        @DisplayName("Test 7B-04: Cumplir bloqueante → CUMPLIDO, siActivo=false, fechaCierre not null, existsActivo=false")
         void cumplir_bloqueante_estado_cumplido() {
             Long actaId = 7004L;
             FalBloqueanteMaterial b = bloqueanteMaterialService.registrar(
@@ -490,7 +492,7 @@ class BloqueantesMaterialesTest {
     class AnularBloqueante {
 
         @Test
-        @DisplayName("Test 7B-07: Anular bloqueante ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ó├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇª├é┬í├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¼├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Ø ANULADO, siActivo=false, fechaCierre not null, existsActivo=false")
+        @DisplayName("Test 7B-07: Anular bloqueante → ANULADO, siActivo=false, fechaCierre not null, existsActivo=false")
         void anular_bloqueante_estado_anulado() {
             Long actaId = 7007L;
             FalBloqueanteMaterial b = bloqueanteMaterialService.registrar(

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableContextBuilder;
@@ -73,8 +75,8 @@ class PersonaIntegracionTest {
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
 
-        personaService = new PersonaService(personaRepo);
-        domService = new PersonaDomicilioService(domRepo, personaRepo, id -> false);
+        personaService = new PersonaService(personaRepo, FaltasClockTestSupport.FIXED);
+        domService = new PersonaDomicilioService(domRepo, personaRepo, id -> false, FaltasClockTestSupport.FIXED);
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, new InMemoryDocumentoRepository(),
@@ -82,10 +84,10 @@ class PersonaIntegracionTest {
                 new InMemoryPagoVoluntarioRepository(),
                 new InMemoryFalloActaRepository(),
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository());
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
-                new InMemoryActaEvidenciaRepository(), personaRepo);
+                new InMemoryActaEvidenciaRepository(), personaRepo, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -104,7 +106,7 @@ class PersonaIntegracionTest {
 
             ComandoResultado resultado = actaService.labrar(new LabrarActaCommand(
                     TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), "Av. Pioneros 100", "Infraccion test",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Pioneros 100", "Infraccion test",
                     null, null, null, null,
                     persona.getId(),
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
@@ -122,7 +124,7 @@ class PersonaIntegracionTest {
 
             ComandoResultado resultado = actaService.labrar(new LabrarActaCommand(
                     TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), "Calle Test", "Test",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Calle Test", "Test",
                     null, null, null, null,
                     persona.getId(),
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
@@ -141,7 +143,7 @@ class PersonaIntegracionTest {
 
             ComandoResultado resultado = actaService.labrar(new LabrarActaCommand(
                     TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), "Hecho 1", "Obs",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Hecho 1", "Obs",
                     null, null, null, null, persona.getId(),
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
 
@@ -155,7 +157,7 @@ class PersonaIntegracionTest {
 
             actaService.labrar(new LabrarActaCommand(
                     TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), "Hecho", "Obs",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Hecho", "Obs",
                     null, null, "Juan Perez", "99887766",
                     null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
@@ -221,7 +223,7 @@ class PersonaIntegracionTest {
 
             ComandoResultado res = actaService.labrar(new LabrarActaCommand(
                     TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), "Hecho", "Obs",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Hecho", "Obs",
                     null, null, null, null,
                     persona.getId(),
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
@@ -305,19 +307,19 @@ class PersonaIntegracionTest {
                     "Gonzalez", "Carlos", null, null, null, null, "SYS");
 
             FalActa acta = new FalActa(1L, "uuid-test", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), java.time.LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Av. Test 1", "Obs", null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
-                    persona.getId(), java.time.LocalDateTime.now(), "SYS");
+                    persona.getId(), FaltasClockTestSupport.FIXED.now(), "SYS");
 
             FalDocumento doc = new FalDocumento(10L, 1L,
                     ar.gob.malvinas.faltas.core.domain.enums.TipoDocu.ACTO_ADMINISTRATIVO,
-                    java.time.LocalDateTime.now(), "Doc Test",
+                    FaltasClockTestSupport.FIXED.now(), "Doc Test",
                     ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.BORRADOR,
-                    ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null);
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
 
             Map<String, Object> ctx = DocumentoVariableContextBuilder.buildDesdeActa(
-                    acta, doc, persona, null, null, null, null);
+                    acta, doc, persona, null, null, null, null, FaltasClockTestSupport.FIXED.now());
 
             assertThat(ctx).containsKey("infractor.nombreCompleto");
             assertThat(ctx.get("infractor.nombreCompleto").toString()).contains("GONZALEZ");
@@ -339,20 +341,20 @@ class PersonaIntegracionTest {
                     null, null, null, "SYS");
 
             FalActa acta = new FalActa(1L, "uuid-test", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), java.time.LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Lugar hecho", "Obs", null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
-                    persona.getId(), java.time.LocalDateTime.now(), "SYS");
+                    persona.getId(), FaltasClockTestSupport.FIXED.now(), "SYS");
             acta.setIdDomicilioInfractorAct(dom.getId());
 
             FalDocumento doc = new FalDocumento(10L, 1L,
                     ar.gob.malvinas.faltas.core.domain.enums.TipoDocu.ACTO_ADMINISTRATIVO,
-                    java.time.LocalDateTime.now(), "Doc Test",
+                    FaltasClockTestSupport.FIXED.now(), "Doc Test",
                     ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.BORRADOR,
-                    ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null);
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
 
             Map<String, Object> ctx = DocumentoVariableContextBuilder.buildDesdeActa(
-                    acta, doc, persona, dom, null, null, null);
+                    acta, doc, persona, dom, null, null, null, FaltasClockTestSupport.FIXED.now());
 
             assertThat(ctx).containsKey("domicilioInfractor.texto");
             assertThat(ctx.get("domicilioInfractor.texto").toString())
@@ -366,19 +368,19 @@ class PersonaIntegracionTest {
                     "TestNoDom", null, null, null, null, null, "SYS");
 
             FalActa acta = new FalActa(1L, "uuid-test", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), java.time.LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Lugar hecho", "Obs", null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
-                    persona.getId(), java.time.LocalDateTime.now(), "SYS");
+                    persona.getId(), FaltasClockTestSupport.FIXED.now(), "SYS");
 
             FalDocumento doc = new FalDocumento(10L, 1L,
                     ar.gob.malvinas.faltas.core.domain.enums.TipoDocu.ACTO_ADMINISTRATIVO,
-                    java.time.LocalDateTime.now(), "Doc Test",
+                    FaltasClockTestSupport.FIXED.now(), "Doc Test",
                     ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.BORRADOR,
-                    ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null);
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
 
             Map<String, Object> ctx = DocumentoVariableContextBuilder.buildDesdeActa(
-                    acta, doc, persona, null, null, null, null);
+                    acta, doc, persona, null, null, null, null, FaltasClockTestSupport.FIXED.now());
 
             assertThat(ctx).doesNotContainKey("domicilioInfractor.texto");
         }
@@ -404,7 +406,7 @@ class PersonaIntegracionTest {
                     actaRepo,
                     null, null,
                     personaRepo,
-                    domRepo);
+                    domRepo, FaltasClockTestSupport.FIXED);
             assertThat(svc).isNotNull();
         }
     }

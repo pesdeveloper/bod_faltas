@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.ActaArticuloInfringidoService;
 import ar.gob.malvinas.faltas.core.application.service.MedidaPreventivaService;
 import ar.gob.malvinas.faltas.core.application.service.NormativaService;
@@ -223,13 +225,13 @@ class TarifarioValorizacionTest {
         @BeforeEach
         void setUp() {
             tarifarioRepo = new InMemoryTarifarioUnidadFaltasRepository();
-            tarifarioService = new TarifarioService(tarifarioRepo);
+            tarifarioService = new TarifarioService(tarifarioRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("alta válida crea tarifario con siActiva=true")
         void alta_valida() {
             FalTarifarioUnidadFaltas t = tarifarioService.crear(
-                    TipoUnidadFaltas.SALARIO, new BigDecimal("100000"), LocalDate.now(), null, "u1");
+                    TipoUnidadFaltas.SALARIO, new BigDecimal("100000"), FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "u1");
             assertThat(t.getId()).isNotNull();
             assertThat(t.isSiActiva()).isTrue();
             assertThat(t.getValorUnidad()).isEqualByComparingTo(new BigDecimal("100000.00"));
@@ -238,14 +240,14 @@ class TarifarioValorizacionTest {
         @Test @DisplayName("valorUnidad cero lanza excepcion")
         void valorUnidad_cero() {
             assertThatThrownBy(() -> tarifarioService.crear(
-                    TipoUnidadFaltas.SALARIO, BigDecimal.ZERO, LocalDate.now(), null, "u1"))
+                    TipoUnidadFaltas.SALARIO, BigDecimal.ZERO, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "u1"))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
         @Test @DisplayName("valorUnidad negativo lanza excepcion")
         void valorUnidad_negativo() {
             assertThatThrownBy(() -> tarifarioService.crear(
-                    TipoUnidadFaltas.SALARIO, new BigDecimal("-1"), LocalDate.now(), null, "u1"))
+                    TipoUnidadFaltas.SALARIO, new BigDecimal("-1"), FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "u1"))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -271,14 +273,14 @@ class TarifarioValorizacionTest {
         void findUltimoVigente() {
             FalTarifarioUnidadFaltas viejo = new FalTarifarioUnidadFaltas(1L,
                     TipoUnidadFaltas.SALARIO, new BigDecimal("80000"),
-                    LocalDate.of(2022, 1, 1), LocalDateTime.now(), "u1");
+                    LocalDate.of(2022, 1, 1), FaltasClockTestSupport.FIXED.now(), "u1");
             viejo.setFhVigHasta(LocalDate.of(2022, 12, 31));
             viejo.setSiActiva(false);
             tarifarioRepo.save(viejo);
 
             FalTarifarioUnidadFaltas nuevo = new FalTarifarioUnidadFaltas(2L,
                     TipoUnidadFaltas.SALARIO, new BigDecimal("120000"),
-                    LocalDate.of(2023, 1, 1), LocalDateTime.now(), "u1");
+                    LocalDate.of(2023, 1, 1), FaltasClockTestSupport.FIXED.now(), "u1");
             tarifarioRepo.save(nuevo);
 
             Optional<FalTarifarioUnidadFaltas> res = tarifarioService.resolverUltimoVigente(
@@ -291,7 +293,7 @@ class TarifarioValorizacionTest {
         void findUltimoVigente_sin_inactivos() {
             FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(1L,
                     TipoUnidadFaltas.SALARIO, new BigDecimal("100000"),
-                    LocalDate.of(2022, 1, 1), LocalDateTime.now(), "u1");
+                    LocalDate.of(2022, 1, 1), FaltasClockTestSupport.FIXED.now(), "u1");
             t.setFhVigHasta(LocalDate.of(2022, 12, 31));
             t.setSiActiva(false);
             tarifarioRepo.save(t);
@@ -304,7 +306,7 @@ class TarifarioValorizacionTest {
         @Test @DisplayName("aislamiento: save devuelve copia")
         void aislamiento() {
             FalTarifarioUnidadFaltas t = tarifarioService.crear(
-                    TipoUnidadFaltas.UNIDAD_FIJA, new BigDecimal("5000"), LocalDate.now(), null, "u1");
+                    TipoUnidadFaltas.UNIDAD_FIJA, new BigDecimal("5000"), FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "u1");
             FalTarifarioUnidadFaltas leido = tarifarioRepo.findById(t.getId()).orElseThrow();
             leido.setSiActiva(false);
             FalTarifarioUnidadFaltas relectura = tarifarioRepo.findById(t.getId()).orElseThrow();
@@ -349,7 +351,7 @@ class TarifarioValorizacionTest {
         void setUp() {
             medidaRepo = new InMemoryMedidaPreventivaRepository();
             articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            medidaService = new MedidaPreventivaService(medidaRepo, articuloMedidaRepo);
+            medidaService = new MedidaPreventivaService(medidaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("crear primera versión con version=1")
@@ -402,7 +404,7 @@ class TarifarioValorizacionTest {
 
         @Test @DisplayName("tipoBloqueanteDefault requiere siPuedeBloquearCierre=true")
         void bloqueante_default_requiere_puede_bloquear() {
-            FalMedidaPreventiva m = new FalMedidaPreventiva(1L, "TEST", (short) 1, "Test", LocalDateTime.now(), "u1");
+            FalMedidaPreventiva m = new FalMedidaPreventiva(1L, "TEST", (short) 1, "Test", FaltasClockTestSupport.FIXED.now(), "u1");
             m.setSiPuedeBloquearCierre(false);
             assertThatThrownBy(() -> m.setTipoBloqueanteDefault(OrigenBloqueanteMaterial.RODADO))
                     .isInstanceOf(IllegalArgumentException.class);
@@ -410,7 +412,7 @@ class TarifarioValorizacionTest {
 
         @Test @DisplayName("si no puede bloquear, tipoBloqueanteDefault es null")
         void sin_bloqueante_null() {
-            FalMedidaPreventiva m = new FalMedidaPreventiva(1L, "TEST", (short) 1, "Test", LocalDateTime.now(), "u1");
+            FalMedidaPreventiva m = new FalMedidaPreventiva(1L, "TEST", (short) 1, "Test", FaltasClockTestSupport.FIXED.now(), "u1");
             m.setSiPuedeBloquearCierre(true);
             m.setTipoBloqueanteDefault(OrigenBloqueanteMaterial.RODADO);
             m.setSiPuedeBloquearCierre(false);
@@ -454,7 +456,7 @@ class TarifarioValorizacionTest {
         void setUp() {
             medidaRepo = new InMemoryMedidaPreventivaRepository();
             articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            medidaService = new MedidaPreventivaService(medidaRepo, articuloMedidaRepo);
+            medidaService = new MedidaPreventivaService(medidaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("vincular con PK compuesta")
@@ -527,20 +529,20 @@ class TarifarioValorizacionTest {
             normativaRepo = new InMemoryNormativaRepository();
             articuloImputadoRepo = new InMemoryActaArticuloInfringidoRepository();
             articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository());
-            svc = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo);
+            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository(), FaltasClockTestSupport.FIXED);
+            svc = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
 
             acta = actaRepo.guardar(new FalActa(actaRepo.nextId(), "uuid-1", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(), "Calle 123", null, null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "u1"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 123", null, null, null,
+                    ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "u1"));
 
             normativa = normativaService.crearNormativa(new CrearNormativaFaltasCommand(
-                    "ORD01", 1, "Ordenanza 01", null, LocalDate.now(), "u1"));
+                    "ORD01", 1, "Ordenanza 01", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
 
             articulo = normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
                     normativa.getId(), "ART01", 1, "Artículo 1", null,
                     new BigDecimal("2"), ar.gob.malvinas.faltas.core.domain.enums.TipoUnidad.SALARIO,
-                    false, null, null, LocalDate.now(), "u1"));
+                    false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
         }
 
         @Test @DisplayName("imputar artículo válido")
@@ -561,7 +563,7 @@ class TarifarioValorizacionTest {
         @Test @DisplayName("artículo no pertenece a la normativa lanza excepcion")
         void articulo_no_pertenece_normativa() {
             FalNormativaFaltas otra = normativaService.crearNormativa(new CrearNormativaFaltasCommand(
-                    "ORD02", 1, "Otra", null, LocalDate.now(), "u1"));
+                    "ORD02", 1, "Otra", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             assertThatThrownBy(() -> svc.imputar(acta.getId(), otra.getId(), articulo.getId(), "u1"))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
@@ -589,7 +591,7 @@ class TarifarioValorizacionTest {
             FalArticuloNormativaFaltas art2 = normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
                     normativa.getId(), "ART02", 1, "Artículo 2", null,
                     new BigDecimal("1"), ar.gob.malvinas.faltas.core.domain.enums.TipoUnidad.UNIDAD_FIJA,
-                    false, null, null, LocalDate.now(), "u1"));
+                    false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
 
             FalActaArticuloInfringido imp1 = svc.imputar(acta.getId(), normativa.getId(), articulo.getId(), "u1");
             FalActaArticuloInfringido imp2 = svc.corregir(imp1.getId(), normativa.getId(), art2.getId(), "u1");
@@ -647,25 +649,25 @@ class TarifarioValorizacionTest {
             valorizacionRepo = new InMemoryActaValorizacionRepository();
             itemRepo = new InMemoryActaValorizacionItemRepository();
             articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository());
-            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo);
-            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo);
+            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository(), FaltasClockTestSupport.FIXED);
+            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
+            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo, FaltasClockTestSupport.FIXED);
 
             acta = actaRepo.guardar(new FalActa(actaRepo.nextId(), "uuid-1", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(), "Calle 123", null, null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "u1"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 123", null, null, null,
+                    ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "u1"));
 
             normativa = normativaService.crearNormativa(new CrearNormativaFaltasCommand(
-                    "ORD01", 1, "Ordenanza 01", null, LocalDate.now(), "u1"));
+                    "ORD01", 1, "Ordenanza 01", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
 
             artSalario = normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
                     normativa.getId(), "ART01", 1, "Artículo 1", null,
                     new BigDecimal("3"), ar.gob.malvinas.faltas.core.domain.enums.TipoUnidad.SALARIO,
-                    false, null, null, LocalDate.now(), "u1"));
+                    false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
 
             FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
                     tarifarioRepo.nextId(), TipoUnidadFaltas.SALARIO, new BigDecimal("100000"),
-                    LocalDate.of(2020, 1, 1), LocalDateTime.now(), "sistema");
+                    LocalDate.of(2020, 1, 1), FaltasClockTestSupport.FIXED.now(), "sistema");
             tarifarioRepo.save(t);
         }
 
@@ -824,7 +826,7 @@ class TarifarioValorizacionTest {
                     valorizacionRepo.nextId(), acta.getId(),
                     TipoValorizacionActa.CONDENA, OrigenValorizacion.JUEZ_ADMINISTRATIVO,
                     CriterioTarifario.MANUAL, new BigDecimal("500000"),
-                    LocalDateTime.now(), "u1", LocalDateTime.now(), "u1");
+                    FaltasClockTestSupport.FIXED.now(), "u1", FaltasClockTestSupport.FIXED.now(), "u1");
             condena.setEstadoValorizacion(EstadoValorizacion.CONFIRMADA);
             condena.setSiVigente(true);
             valorizacionRepo.save(condena);

@@ -202,7 +202,7 @@ public class FalActaValorizacion {
      * PRELIMINAR -> CONFIRMADA.
      * La confirmacion cambia el estado de la misma fila; una nueva decision genera nueva fila PRELIMINAR.
      */
-    public void marcarConfirmada(LocalDateTime fhConfirmacion, String idUserConfirmacion) {
+    public void marcarPagada(LocalDateTime fhConfirmacion, String idUserConfirmacion) {
         if (estadoValorizacion != EstadoValorizacion.PRELIMINAR)
             throw new IllegalStateException(
                     "Solo se puede confirmar desde PRELIMINAR. Estado actual: " + estadoValorizacion);

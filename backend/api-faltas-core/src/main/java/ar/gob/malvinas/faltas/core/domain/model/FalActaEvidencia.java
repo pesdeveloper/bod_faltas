@@ -29,7 +29,7 @@ public class FalActaEvidencia {
         this.idActa = idActa;
         this.tipoEvid = tipoEvid;
         this.storageKey = storageKey;
-        this.fechaRegistro = fechaRegistro != null ? fechaRegistro : LocalDateTime.now();
+        this.fechaRegistro = fechaRegistro;
     }
 
     public Long getId() { return id; }

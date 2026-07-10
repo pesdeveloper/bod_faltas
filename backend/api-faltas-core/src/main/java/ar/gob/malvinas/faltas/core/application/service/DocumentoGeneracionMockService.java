@@ -12,6 +12,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalDocumentoRedaccion;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRedaccionRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 
@@ -38,11 +39,14 @@ public class DocumentoGeneracionMockService {
     private final DocumentoRedaccionRepository redaccionRepository;
     private final DocumentoRepository documentoRepository;
     private final DocumentoPdfMockRenderer renderer;
+    private final FaltasClock faltasClock;
 
     public DocumentoGeneracionMockService(
             DocumentoRedaccionRepository redaccionRepository,
             DocumentoRepository documentoRepository,
-            DocumentoPdfMockRenderer renderer) {
+            DocumentoPdfMockRenderer renderer,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.redaccionRepository = redaccionRepository;
         this.documentoRepository = documentoRepository;
         this.renderer = renderer;
@@ -67,7 +71,7 @@ public class DocumentoGeneracionMockService {
 
         LocalDateTime fhOperacion = cmd.fhOperacion() != null
                 ? cmd.fhOperacion()
-                : LocalDateTime.now();
+                : faltasClock.now();
 
         redaccion.confirmar(fhOperacion, cmd.idUserOperacion());
 

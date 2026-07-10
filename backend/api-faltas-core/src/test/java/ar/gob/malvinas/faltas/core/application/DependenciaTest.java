@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.VersionarDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.service.DependenciaService;
@@ -45,7 +47,7 @@ class DependenciaTest {
     @BeforeEach
     void setUp() {
         dependenciaRepo = new InMemoryDependenciaRepository();
-        dependenciaService = new DependenciaService(dependenciaRepo);
+        dependenciaService = new DependenciaService(dependenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -55,12 +57,12 @@ class DependenciaTest {
     private FalDependencia crearDependenciaTransito() {
         return dependenciaService.crear(new CrearDependenciaCommand(
                 null, "Oficina de Transito Central", null,
-                TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalDependencia crearDependenciaConCod(String codDep, String nomDep, TipoActa tipo) {
         return dependenciaService.crear(new CrearDependenciaCommand(
-                codDep, nomDep, null, tipo, LocalDate.now(), "sistema"));
+                codDep, nomDep, null, tipo, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     // =========================================================================
@@ -122,7 +124,7 @@ class DependenciaTest {
         @DisplayName("nomDep nulo lanza PrecondicionVioladaException")
         void crear_sin_nomDep_nulo_falla() {
             assertThatThrownBy(() -> dependenciaService.crear(new CrearDependenciaCommand(
-                    null, null, null, TipoActa.TRANSITO, LocalDate.now(), "sistema")))
+                    null, null, null, TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nomDep");
         }
@@ -131,7 +133,7 @@ class DependenciaTest {
         @DisplayName("nomDep en blanco lanza PrecondicionVioladaException")
         void crear_con_nomDep_blanco_falla() {
             assertThatThrownBy(() -> dependenciaService.crear(new CrearDependenciaCommand(
-                    null, "  ", null, TipoActa.TRANSITO, LocalDate.now(), "sistema")))
+                    null, "  ", null, TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nomDep");
         }
@@ -149,7 +151,7 @@ class DependenciaTest {
         @DisplayName("tipoActa nulo lanza PrecondicionVioladaException")
         void crear_sin_tipoActa_falla() {
             assertThatThrownBy(() -> dependenciaService.crear(new CrearDependenciaCommand(
-                    null, "Oficina Comercio", null, null, LocalDate.now(), "sistema")))
+                    null, "Oficina Comercio", null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("tipoActa");
         }
@@ -197,7 +199,7 @@ class DependenciaTest {
 
             FalDependencia hija = dependenciaService.crear(new CrearDependenciaCommand(
                     null, "Transito Zona Sur", padre.getIdDep(),
-                    TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                    TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
 
             List<FalDependenciaVersion> versionesHija = dependenciaRepo.findVersionesByDep(hija.getIdDep());
             assertThat(versionesHija).hasSize(1);
@@ -220,7 +222,7 @@ class DependenciaTest {
         void padre_inexistente_falla() {
             assertThatThrownBy(() -> dependenciaService.crear(new CrearDependenciaCommand(
                     null, "Hija sin padre", 9999L,
-                    TipoActa.CONTRAVENCION, LocalDate.now(), "sistema")))
+                    TipoActa.CONTRAVENCION, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("9999");
         }
@@ -241,7 +243,7 @@ class DependenciaTest {
 
             FalDependenciaVersion v2 = dependenciaService.versionar(new VersionarDependenciaCommand(
                     dep.getIdDep(), "Transito Central (actualizada)", null,
-                    TipoActa.TRANSITO, LocalDate.now().plusDays(1), "admin"));
+                    TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1), "admin"));
 
             assertThat(v2.getVerDep()).isEqualTo(2);
         }
@@ -259,7 +261,7 @@ class DependenciaTest {
         @DisplayName("Historial tiene 2 versiones; la nueva esta activa, la anterior inactiva")
         void versionar_conserva_historial_y_deja_nueva_vigente() {
             FalDependencia dep = crearDependenciaTransito();
-            LocalDate fhVigDesdeV2 = LocalDate.now().plusDays(1);
+            LocalDate fhVigDesdeV2 = FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1);
 
             dependenciaService.versionar(new VersionarDependenciaCommand(
                     dep.getIdDep(), "Nombre v2", null,
@@ -322,7 +324,7 @@ class DependenciaTest {
             for (TipoActa tipo : TipoActa.values()) {
                 FalDependencia dep = dependenciaService.crear(new CrearDependenciaCommand(
                         null, "Dep para " + tipo.name(), null,
-                        tipo, LocalDate.now(), "sistema"));
+                        tipo, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
                 assertThat(dep).isNotNull();
             }
         }
@@ -340,7 +342,7 @@ class DependenciaTest {
         @DisplayName("Versionar dependencia con idDep inexistente lanza DependenciaNoEncontradaException")
         void versionar_dependencia_inexistente_falla() {
             assertThatThrownBy(() -> dependenciaService.versionar(new VersionarDependenciaCommand(
-                    9999L, "Nombre", null, TipoActa.TRANSITO, LocalDate.now(), "admin")))
+                    9999L, "Nombre", null, TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "admin")))
                     .isInstanceOf(DependenciaNoEncontradaException.class)
                     .hasMessageContaining("9999");
         }

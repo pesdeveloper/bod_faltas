@@ -543,3 +543,51 @@ Resumen plan:
 - 9-7: Emision formal + adjuntos + eventos JDBC.
 - 9-8: Actas core JDBC.
 - 9-9: Repositorios UUID/String y retiro de legacy.
+
+### Actualizacion R-08 (2026-07-09)
+Hallazgo historico de 134
+ow() directos en productivo: **cerrado**. Timestamps funcionales provienen de FaltasClock en aplicacion; MariaDB no debe imponer tiempos de negocio via CURRENT_TIMESTAMP salvo auditoria tecnica explicita.
+
+
+### Contrato OCC InMemory - CIERRE-OCC-INMEMORY-PRE-R11 (2026-07-09)
+
+#### InMemory (implementado)
+
+- Mecanismo: `ConcurrentHashMap.compute()` por `idActa`.
+- Semantica: compare-and-set atomico.
+- Validacion: `existente.versionRow == esperado`.
+- Escritura: `versionRow = esperado + 1`, retorna nueva copia defensiva.
+- Fallo: `ConcurrenciaConflictoException` si version no coincide; mapa sin cambios.
+- Garantia: lectura, comparacion y escritura en una unica seccion critica por clave.
+- Sin lock global: actas con distinto `idActa` no se serializan entre si.
+
+#### MariaDB futuro (equivalencia)
+
+```sql
+UPDATE fal_acta
+SET    ...,
+       version_row = version_row + 1
+WHERE  id_acta     = :idActa
+  AND  version_row = :versionEsperada;
+-- rowsAffected == 0 -> throw ConcurrenciaConflictoException
+```
+
+#### Diagrama ventana de carrera (pre-fix)
+
+```
+Thread A: store.get(1) -> versionRow=0
+Thread B: store.get(1) -> versionRow=0
+Thread A: check 0!=0? NO -> pasa     <- punto critico (no atomico)
+Thread B: check 0!=0? NO -> pasa     <- punto critico (no atomico)
+Thread A: store.put(1, versionRow=1) -> exitos++
+Thread B: store.put(1, versionRow=1) -> exitos++  <- BUG: dos ganadores
+```
+
+#### Diagrama con fix (compute)
+
+```
+Thread A: compute(1, lambda)
+  lambda: existente.versionRow=0, acta.versionRow=0 -> match -> version=1 -> put
+Thread B: compute(1, lambda) -> bloqueado hasta que A termine
+  lambda: existente.versionRow=1, acta.versionRow=0 -> mismatch -> throw OCC
+```

@@ -6,6 +6,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoModelo;
 import ar.gob.malvinas.faltas.core.repository.VehiculoMarcaRepository;
 import ar.gob.malvinas.faltas.core.repository.VehiculoModeloRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,8 +17,11 @@ public class VehiculoModeloService {
 
     private final VehiculoModeloRepository modeloRepository;
     private final VehiculoMarcaRepository marcaRepository;
+    private final FaltasClock faltasClock;
 
-    public VehiculoModeloService(VehiculoModeloRepository modeloRepository, VehiculoMarcaRepository marcaRepository) {
+    public VehiculoModeloService(VehiculoModeloRepository modeloRepository, VehiculoMarcaRepository marcaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.modeloRepository = modeloRepository;
         this.marcaRepository = marcaRepository;
     }
@@ -40,7 +44,7 @@ public class VehiculoModeloService {
         if (modeloRepository.findByMarcaAndNombre(marcaId, nombreTrim).isPresent())
             throw new IllegalStateException("Ya existe un modelo con nombre " + nombreTrim + " para la marca " + marcaId);
         Long id = modeloRepository.nextId();
-        FalVehiculoModelo modelo = new FalVehiculoModelo(id, marcaId, codigo, nombre, LocalDateTime.now(), idUserAlta);
+        FalVehiculoModelo modelo = new FalVehiculoModelo(id, marcaId, codigo, nombre, faltasClock.now(), idUserAlta);
         return modeloRepository.guardar(modelo);
     }
 

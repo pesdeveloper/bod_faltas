@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
@@ -35,7 +37,7 @@ class FalloApelacionConcurrenciaTest {
     private FalActaFallo crearFallo(Long actaId) {
         Long id = falloRepo.nextId();
         FalActaFallo f = new FalActaFallo(id, actaId,
-                TipoFalloActa.CONDENATORIO, LocalDateTime.now(), LocalDateTime.now(), "USR-1");
+                TipoFalloActa.CONDENATORIO, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-1");
         f.setMontoCondena(new BigDecimal("1000"));
         f.setEstadoFallo(EstadoFalloActa.NOTIFICADO);
         return f;
@@ -44,7 +46,7 @@ class FalloApelacionConcurrenciaTest {
     private FalActaApelacion crearApelacion(Long actaId, Long falloId) {
         Long id = apelacionRepo.nextId();
         FalActaApelacion a = new FalActaApelacion(id, actaId, falloId, CanalApelacion.PRESENCIAL,
-                TipoPresentacion.TEXTO, "Apelo el fallo", LocalDateTime.now(), "USR", LocalDateTime.now(), "USR");
+                TipoPresentacion.TEXTO, "Apelo el fallo", FaltasClockTestSupport.FIXED.now(), "USR", FaltasClockTestSupport.FIXED.now(), "USR");
         a.setEstadoApelacion(EstadoApelacionActa.PRESENTADA);
         return a;
     }
@@ -149,7 +151,7 @@ class FalloApelacionConcurrenciaTest {
         Thread t1 = Thread.ofVirtual().start(() -> {
             try {
                 barrier.await();
-                a1.resolver(ResultadoResolucionApelacion.RECHAZADA, LocalDateTime.now(), "T1", null);
+                a1.resolver(ResultadoResolucionApelacion.RECHAZADA, FaltasClockTestSupport.FIXED.now(), "T1", null);
                 apelacionRepo.guardar(a1);
                 exitos.incrementAndGet();
             } catch (ConcurrenciaConflictoException e) { conflictos.incrementAndGet(); }
@@ -158,7 +160,7 @@ class FalloApelacionConcurrenciaTest {
         Thread t2 = Thread.ofVirtual().start(() -> {
             try {
                 barrier.await();
-                a2.resolver(ResultadoResolucionApelacion.ACEPTADA_ABSUELVE, LocalDateTime.now(), "T2", null);
+                a2.resolver(ResultadoResolucionApelacion.ACEPTADA_ABSUELVE, FaltasClockTestSupport.FIXED.now(), "T2", null);
                 apelacionRepo.guardar(a2);
                 exitos.incrementAndGet();
             } catch (ConcurrenciaConflictoException e) { conflictos.incrementAndGet(); }
@@ -193,7 +195,7 @@ class FalloApelacionConcurrenciaTest {
         Thread tFirmeza = Thread.ofVirtual().start(() -> {
             try {
                 barrier.await();
-                falloVigente.declararFirmeza(LocalDateTime.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+                falloVigente.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
                 falloRepo.guardar(falloVigente);
                 exitos.incrementAndGet();
             } catch (Exception e) { }
@@ -240,7 +242,7 @@ class FalloApelacionConcurrenciaTest {
                             apelDocRepo.nextId(), apelacionId,
                             TipoDocumentoApelacion.OTRO, OrigenPresentacion.INFRACTOR,
                             null, "key-" + idx, "doc-" + idx + ".pdf", (short) 1,
-                            1000L + idx, LocalDateTime.now(), LocalDateTime.now(), "USR-" + idx);
+                            1000L + idx, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-" + idx);
                     apelDocRepo.guardar(doc);
                 } finally {
                     latch.countDown();

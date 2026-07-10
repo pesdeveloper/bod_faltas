@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.*;
 import ar.gob.malvinas.faltas.core.application.result.ConvalidacionEscaneadaResultado;
 import ar.gob.malvinas.faltas.core.application.service.*;
@@ -70,16 +72,16 @@ class DocumentoAdjuntoTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository());
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
 
-        talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo);
-        depService = new DependenciaService(depRepo);
-        plantillaService = new DocumentoPlantillaService(plantillaRepo);
-        firmanteService = new FirmanteService(firmanteRepo, depRepo);
+        talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
+        depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
+        plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
+        firmanteService = new FirmanteService(firmanteRepo, depRepo, FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
-                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo);
+                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo, FaltasClockTestSupport.FIXED);
     }
 
     // -------------------------------------------------------------------------
@@ -91,7 +93,7 @@ class DocumentoAdjuntoTest {
         FalActa acta = new FalActa(
                 id, UUID.randomUUID().toString(),
                 "TRANSITO", DEP_COD, "INS-001",
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
         actaRepo.guardar(acta);
@@ -101,12 +103,12 @@ class DocumentoAdjuntoTest {
     private FalActa crearActaConDep() {
         depService.crear(new CrearDependenciaCommand(
                 DEP_COD, "Dep Adj", null, TipoActa.TRANSITO,
-                LocalDate.now().minusDays(30), USER));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(30), USER));
         return crearActa();
     }
 
     private FalFirmante crearFirmanteConHabilitacion(short rolFirmaReq, short tipoDocuCodigo) {
-        FalFirmante firmante = firmanteService.crear(new CrearFirmanteCommand("user-adj-test", "Firmante Adj Test", "Inspector", "Cargo", null, null, LocalDate.now().minusDays(10), USER));
+        FalFirmante firmante = firmanteService.crear(new CrearFirmanteCommand("user-adj-test", "Firmante Adj Test", "Inspector", "Cargo", null, null, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(10), USER));
         firmanteService.agregarHabilitacion(new AgregarHabilitacionFirmanteCommand(
                 firmante.getIdFirmante(), 1, tipoDocuCodigo, rolFirmaReq, null, USER));
         return firmante;
@@ -125,7 +127,7 @@ class DocumentoAdjuntoTest {
         Long reqId = firmaReqRepo.nextId();
         FalDocumentoFirmaReq req = new FalDocumentoFirmaReq(
                 reqId, docId, seq, rol, null, null, true, true,
-                LocalDateTime.now(), USER);
+                FaltasClockTestSupport.FIXED.now(), USER);
         firmaReqRepo.guardar(req);
         return req;
     }
@@ -531,7 +533,7 @@ class DocumentoAdjuntoTest {
             short rol2 = (short) 2;
             FalFirmante f1 = crearFirmanteConHabilitacion(rol, TipoDocu.CONSTANCIA.codigo());
             // f2 with rol2
-            FalFirmante f2 = firmanteService.crear(new CrearFirmanteCommand("user-f2-test", "Firmante2", "Inspector", "Cargo", null, null, LocalDate.now().minusDays(5), USER));
+            FalFirmante f2 = firmanteService.crear(new CrearFirmanteCommand("user-f2-test", "Firmante2", "Inspector", "Cargo", null, null, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(5), USER));
             firmanteService.agregarHabilitacion(new AgregarHabilitacionFirmanteCommand(
                     f2.getIdFirmante(), 1, TipoDocu.CONSTANCIA.codigo(), rol2, null, USER));
 
@@ -570,7 +572,7 @@ class DocumentoAdjuntoTest {
             // Create doc without storageKey via constructor (not adjunto factory)
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    LocalDateTime.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null);
+                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -585,7 +587,7 @@ class DocumentoAdjuntoTest {
             FalActa acta = crearActaConDep();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    LocalDateTime.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null);
+                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             doc.setStorageKey("storage/x.pdf");
             // hashDocu is null
             docRepo.guardar(doc);
@@ -602,7 +604,7 @@ class DocumentoAdjuntoTest {
             FalActa acta = crearActaConDep();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    LocalDateTime.now(), null, EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA, null);
+                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -634,7 +636,7 @@ class DocumentoAdjuntoTest {
             FalDocumentoFirmaReq req = crearFirmaReqParaDoc(doc.getId(), (short) 1, rol);
 
             // Force req to FIRMADO state
-            req.marcarFirmado(99L, LocalDateTime.now(), firmante.getIdFirmante(), (short) 1);
+            req.marcarFirmado(99L, FaltasClockTestSupport.FIXED.now(), firmante.getIdFirmante(), (short) 1);
             firmaReqRepo.guardar(req);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -663,7 +665,7 @@ class DocumentoAdjuntoTest {
             crearFirmaReqParaDoc(doc.getId(), (short) 1, (short) 1);
 
             // Create firmante with future vigDesde (no version vigente today)
-            FalFirmante firmante = firmanteService.crear(new CrearFirmanteCommand("user-futuro-test", "Firmante Futuro", "Inspector", "Cargo", null, null, LocalDate.now().plusDays(10), USER));
+            FalFirmante firmante = firmanteService.crear(new CrearFirmanteCommand("user-futuro-test", "Firmante Futuro", "Inspector", "Cargo", null, null, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(10), USER));
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
                     new ConvalidarFirmaEscaneadaCommand(doc.getId(), (short) 1, firmante.getIdFirmante(), USER, null)))
@@ -700,7 +702,7 @@ class DocumentoAdjuntoTest {
             Long reqId = firmaReqRepo.nextId();
             FalDocumentoFirmaReq req = new FalDocumentoFirmaReq(
                     reqId, doc.getId(), (short) 1, rol, mecReq, null, true, true,
-                    LocalDateTime.now(), USER);
+                    FaltasClockTestSupport.FIXED.now(), USER);
             firmaReqRepo.guardar(req);
 
             // Firmante con habilitacion SIN mecanismo (null)
@@ -721,7 +723,7 @@ class DocumentoAdjuntoTest {
             short rol2 = (short) 2;
 
             FalFirmante f1 = crearFirmanteConHabilitacion(rol1, TipoDocu.CONSTANCIA.codigo());
-            FalFirmante f2 = firmanteService.crear(new CrearFirmanteCommand("user-f2-test", "Firmante2", "Inspector", "Cargo", null, null, LocalDate.now().minusDays(5), USER));
+            FalFirmante f2 = firmanteService.crear(new CrearFirmanteCommand("user-f2-test", "Firmante2", "Inspector", "Cargo", null, null, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(5), USER));
             firmanteService.agregarHabilitacion(new AgregarHabilitacionFirmanteCommand(
                     f2.getIdFirmante(), 1, TipoDocu.CONSTANCIA.codigo(), rol2, null, USER));
 
@@ -729,14 +731,14 @@ class DocumentoAdjuntoTest {
             Long r1id = firmaReqRepo.nextId();
             FalDocumentoFirmaReq req1 = new FalDocumentoFirmaReq(
                     r1id, doc.getId(), (short) 1, rol1, null, (short) 1, true, true,
-                    LocalDateTime.now(), USER);
+                    FaltasClockTestSupport.FIXED.now(), USER);
             firmaReqRepo.guardar(req1);
 
             // Req con orden 2 (debe esperar)
             Long r2id = firmaReqRepo.nextId();
             FalDocumentoFirmaReq req2 = new FalDocumentoFirmaReq(
                     r2id, doc.getId(), (short) 2, rol2, null, (short) 2, true, true,
-                    LocalDateTime.now(), USER);
+                    FaltasClockTestSupport.FIXED.now(), USER);
             firmaReqRepo.guardar(req2);
 
             // Trying to sign req2 first should fail
@@ -914,7 +916,7 @@ class DocumentoAdjuntoTest {
         void marcarFirmadoDesdeAdjuntoSoloAceptaAdjunto() {
             Long id = docRepo.nextId();
             FalDocumento docBorrador = new FalDocumento(id, 1L, TipoDocu.CONSTANCIA,
-                    LocalDateTime.now(), null, EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null);
+                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             assertThatThrownBy(docBorrador::marcarFirmadoDesdeAdjunto)
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("ADJUNTO");

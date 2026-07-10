@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.PersonaDomicilioService;
 import ar.gob.malvinas.faltas.core.application.service.PersonaService;
 import ar.gob.malvinas.faltas.core.domain.enums.ModoDomicilio;
@@ -40,10 +42,10 @@ class FalPersonaDomicilioTest {
     void setUp() {
         personaRepo = new InMemoryPersonaRepository();
         domRepo = new InMemoryPersonaDomicilioRepository();
-        PersonaService personaService = new PersonaService(personaRepo);
+        PersonaService personaService = new PersonaService(personaRepo, FaltasClockTestSupport.FIXED);
 
         service = new PersonaDomicilioService(domRepo, personaRepo,
-                domicilioId -> false);
+                domicilioId -> false, FaltasClockTestSupport.FIXED);
 
         FalPersona persona = personaService.crear(TipoPersona.FISICA, null, null,
                 "TestPersona", null, null, null, null, null, "SYS");
@@ -495,7 +497,7 @@ class FalPersonaDomicilioTest {
         @DisplayName("Domicilio usado formalmente: crea nueva fila")
         void correccion_nueva_fila() {
             PersonaDomicilioService serviceConUso = new PersonaDomicilioService(domRepo, personaRepo,
-                    domicilioId -> true);
+                    domicilioId -> true, FaltasClockTestSupport.FIXED);
             FalPersonaDomicilio d = crearMalvinasLocal(false);
             Long idOriginal = d.getId();
             FalPersonaDomicilio nueva = serviceConUso.corregir(idOriginal, "Nueva version", "SYS");

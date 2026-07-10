@@ -397,10 +397,21 @@ Estos datos requieren carga inicial de configuracion (datos maestros, no seed de
 
 ## 11. Transacciones criticas para Slice 9
 
-Numeracion documental:
+Numeracion documental electronica:
   Componentes: num_talonario + num_talonario_movimiento + fal_documento.nro_docu
-  Motivo: correlativo atomico. Sin huecos ni duplicados. Alta concurrencia.
-  Estrategia: SELECT ... FOR UPDATE o bloqueo a nivel talonario.
+  Motivo: correlativo atomico. Sin duplicados. Alta concurrencia multiinstancia.
+  Estrategia: NEXT VALUE FOR <secuencia_del_talonario> (SEQUENCE MariaDB de num_talonario.nombre_secuencia)
+    para obtener el correlativo; no usar SELECT ... FOR UPDATE sobre num_talonario como generador;
+    no usar ultimo_nro_usado; transaccion unica que comprende: insercion en num_talonario_movimiento
+    (unicidad por id_talonario + nro_talonario), asociacion id_talonario/nro_talonario_usado/nro_docu
+    al documento, y actualizacion OCC de fal_documento.version_row; idempotencia por documento ya
+    numerado (verificar nro_docu antes de consumir otra SEQUENCE); recarga tras conflicto OCC
+    (si el documento ya fue numerado por otra instancia, devolver ese numero; si estado incompatible,
+    conflicto funcional).
+  Nota: una SEQUENCE puede presentar saltos tecnicos por rollback, cache o reinicio del motor.
+    Esos valores no se reutilizan artificialmente. Los saltos tecnicos de una SEQUENCE electronica
+    no equivalen a huecos ilegales de un talonario manual fisico. No prometer numeracion electronica
+    sin huecos. El control exhaustivo de huecos aplica a talonarios manuales fisicos.
 
 Envio a firma con numeracion:
   Componentes: fal_documento (nroDocu + PENDIENTE_FIRMA) + num_talonario_movimiento
@@ -542,7 +553,9 @@ Ajustar micro-slices segun hallazgos durante la implementacion.
 Riesgo                                           | Nivel | Mitigacion
 -------------------------------------------------|-------|--------------------------------------------------
 IDs UUID String en 7 repositorios                | MEDIO | Decidir BIGINT vs UUID al migrar cada uno
-Numeracion: huecos/duplicados bajo concurrencia  | ALTO  | SELECT FOR UPDATE o lock a nivel talonario
+Numeracion: duplicacion bajo concurrencia        | ALTO  | SEQUENCE + constraints unicas (id_talonario,nro_talonario) en num_talonario_movimiento; OCC fal_documento.version_row
+Numeracion: conflicto OCC bajo carrera           | MEDIO | Recargar tras conflicto OCC; devolver numero ya asignado si compatible; conflicto funcional si incompatible
+Numeracion: saltos tecnicos de SEQUENCE          | BAJO  | Aceptables para talonarios electronicos segun politica aprobada; no reutilizar valores avanzados; sin huecos ilegales
 generarDocumento/firmarDocumento legacy          | BAJO  | Siguen activos; deprecar post-Slice 9
 Snapshot y concurrencia JDBC                     | MEDIO | Recalcular snapshot dentro de cada transaccion
 Seeds de catalogos incompletos                   | MEDIO | Enums Java tienen codigos; datos configurables necesitan carga real
@@ -600,3 +613,8 @@ Variables de entorno para perfil jdbc:
 9-2 - JdbcDocumentoPlantillaRepository.
 
 Ver: backend/api-faltas-core/docs/spec-as-source/103-slice-9-1-infraestructura-jdbc.md
+
+### Equivalencia temporal InMemory / MariaDB
+- InMemory: FaltasClock en servicios; timestamps pasados explicitamente a repositorios.
+- MariaDB adapter: persistir los mismos timestamps recibidos; sin decision de negocio en DDL.
+- Zona canonica: America/Argentina/Buenos_Aires.

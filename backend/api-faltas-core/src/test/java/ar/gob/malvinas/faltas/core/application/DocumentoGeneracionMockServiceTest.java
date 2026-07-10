@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarRedaccionYGenerarDocumentoMockCommand;
 import ar.gob.malvinas.faltas.core.application.result.DocumentoGeneracionMockResponse;
 import ar.gob.malvinas.faltas.core.application.service.DocumentoGeneracionMockService;
@@ -39,13 +41,13 @@ class DocumentoGeneracionMockServiceTest {
         redaccionRepo = new InMemoryDocumentoRedaccionRepository();
         docRepo = new InMemoryDocumentoRepository();
         service = new DocumentoGeneracionMockService(
-                redaccionRepo, docRepo, new DocumentoPdfMockRenderer());
+                redaccionRepo, docRepo, new DocumentoPdfMockRenderer(FaltasClockTestSupport.FIXED), FaltasClockTestSupport.FIXED);
     }
 
     private FalDocumento guardarDoc(Long id) {
         FalDocumento doc = new FalDocumento(
-                id, 10L, TipoDocu.ACTO_ADMINISTRATIVO, LocalDateTime.now(), "Fallo Test",
-                EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null);
+                id, 10L, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Fallo Test",
+                EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
         return docRepo.guardar(doc);
     }
 

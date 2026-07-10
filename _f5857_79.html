@@ -1,7 +1,0 @@
-$ErrorActionPreference = 'Stop'
-$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-$src = 'S:\Source\Repos\Bod-Faltas\.tmp-edits\models-restored.ts'
-$dst = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\core\models\prototipo-faltas.models.ts'
-$content = [System.IO.File]::ReadAllText($src, $utf8NoBom)
-[System.IO.File]::WriteAllText($dst, $content, $utf8NoBom)
-Write-Host 'OK models written'

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.ActaConsistencyChecker;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
@@ -38,9 +40,9 @@ class ActaEventoInvariantesTest {
     private FalActa crearActa() {
         Long id = actaRepo.nextId();
         FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                LocalDateTime.now(), "TEST");
+                FaltasClockTestSupport.FIXED.now(), "TEST");
         return actaRepo.guardar(acta);
     }
 
@@ -49,7 +51,7 @@ class ActaEventoInvariantesTest {
                 .actaId(acta.getId())
                 .tipoEvt(TipoEventoActa.ACTLAB)
                 .origenEvt(OrigenEvento.USUARIO_WEB)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(FaltasClockTestSupport.FIXED.now())
                 .actorTipo(ActorTipoEvento.USUARIO_INTERNO)
                 .idUserEvt("TEST")
                 .descripcionLegible("Acta labrada")
@@ -75,9 +77,9 @@ class ActaEventoInvariantesTest {
         void acta_sin_uuid() {
             Long id = actaRepo.nextId();
             FalActa acta = new FalActa(id, "", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                    LocalDateTime.now(), "TEST");
+                    FaltasClockTestSupport.FIXED.now(), "TEST");
             actaRepo.guardar(acta);
             registrarActlab(acta);
             var violaciones = checker.verificar(acta, eventoRepo.buscarPorActa(acta.getId()));
@@ -97,7 +99,7 @@ class ActaEventoInvariantesTest {
                     .actaId(acta.getId())
                     .tipoEvt(TipoEventoActa.ACTLAB)
                     .origenEvt(OrigenEvento.USUARIO_WEB)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .actorTipo(ActorTipoEvento.USUARIO_INTERNO)
                     .descripcionLegible("Test")
                     .build();
@@ -114,7 +116,7 @@ class ActaEventoInvariantesTest {
                     .actaId(acta.getId())
                     .tipoEvt(TipoEventoActa.ACTLAB)
                     .origenEvt(OrigenEvento.USUARIO_WEB)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .actorTipo(ActorTipoEvento.SISTEMA)
                     .build();
             FalActaEvento guardado = eventoRepo.registrar(evt);
@@ -127,7 +129,7 @@ class ActaEventoInvariantesTest {
             FalActaEvento evt = FalActaEvento.builder()
                     .actaId(1L)
                     .tipoEvt(TipoEventoActa.DOCGEN)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .build();
             assertThat(evt.siEvtCierre()).isFalse();
             assertThat(evt.siEvtExt()).isFalse();
@@ -140,7 +142,7 @@ class ActaEventoInvariantesTest {
             FalActaEvento evt = FalActaEvento.builder()
                     .actaId(1L)
                     .tipoEvt(TipoEventoActa.FALABS)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .siEvtCierre(true)
                     .descripcionLegible("Cierre por fallo absolutorio")
                     .build();
@@ -151,9 +153,9 @@ class ActaEventoInvariantesTest {
         @DisplayName("Eventos se ordenan cronologicamente al buscar por acta")
         void eventos_en_orden_cronologico() {
             FalActa acta = crearActa();
-            LocalDateTime t1 = LocalDateTime.now().minusMinutes(5);
-            LocalDateTime t2 = LocalDateTime.now().minusMinutes(3);
-            LocalDateTime t3 = LocalDateTime.now();
+            LocalDateTime t1 = FaltasClockTestSupport.FIXED.now().minusMinutes(5);
+            LocalDateTime t2 = FaltasClockTestSupport.FIXED.now().minusMinutes(3);
+            LocalDateTime t3 = FaltasClockTestSupport.FIXED.now();
 
             eventoRepo.registrar(FalActaEvento.builder()
                     .actaId(acta.getId()).tipoEvt(TipoEventoActa.ACTLAB).fhEvt(t1).build());
@@ -178,7 +180,7 @@ class ActaEventoInvariantesTest {
             eventoRepo.registrar(FalActaEvento.builder()
                     .actaId(acta.getId())
                     .tipoEvt(TipoEventoActa.NOTENV)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .correlacionId(correlId)
                     .build());
 
@@ -202,7 +204,7 @@ class ActaEventoInvariantesTest {
             FalActaEvento eventoAjeno = eventoRepo.registrar(FalActaEvento.builder()
                     .actaId(otraActa.getId())
                     .tipoEvt(TipoEventoActa.ACTLAB)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .build());
 
             List<FalActaEvento> eventosIncorrectos = List.of(eventoAjeno);
@@ -217,7 +219,7 @@ class ActaEventoInvariantesTest {
             FalActaEvento eventoInvalido = eventoRepo.registrar(FalActaEvento.builder()
                     .actaId(acta.getId())
                     .tipoEvt(TipoEventoActa.DOCGEN)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .build());
             var violaciones = checker.verificar(acta, List.of(eventoInvalido));
             assertThat(violaciones).anyMatch(v -> v.regla().equals("PRIMER_EVENTO_INVALIDO"));

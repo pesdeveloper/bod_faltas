@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.*;
@@ -29,14 +31,14 @@ class ObservacionTest {
     void setUp() {
         repo = new InMemoryObservacionRepository();
         actaRepo = new InMemoryActaRepository();
-        service = new ObservacionService(repo, actaRepo);
+        service = new ObservacionService(repo, actaRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa() {
         Long id = actaRepo.nextId();
         FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), LocalDateTime.now(), "Calle 1", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "TEST");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,
+                ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "TEST");
         return actaRepo.guardar(acta);
     }
 
@@ -77,7 +79,7 @@ class ObservacionTest {
         @DisplayName("texto vacio rechazado")
         void texto_vacio_rechazado() {
             assertThatThrownBy(() -> new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, "   ", null, LocalDateTime.now(), "U"))
+                    null, "   ", null, FaltasClockTestSupport.FIXED.now(), "U"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -85,7 +87,7 @@ class ObservacionTest {
         @DisplayName("texto null rechazado")
         void texto_null_rechazado() {
             assertThatThrownBy(() -> new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, null, null, LocalDateTime.now(), "U"))
+                    null, null, null, FaltasClockTestSupport.FIXED.now(), "U"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -94,7 +96,7 @@ class ObservacionTest {
         void texto_limite_1000() {
             String texto = "A".repeat(1000);
             FalObservacion obs = new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, texto, null, LocalDateTime.now(), "U");
+                    null, texto, null, FaltasClockTestSupport.FIXED.now(), "U");
             assertThat(obs.getObservacion()).hasSize(1000);
         }
 
@@ -103,7 +105,7 @@ class ObservacionTest {
         void texto_supera_1000_rechazado() {
             String texto = "A".repeat(1001);
             assertThatThrownBy(() -> new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, texto, null, LocalDateTime.now(), "U"))
+                    null, texto, null, FaltasClockTestSupport.FIXED.now(), "U"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -111,7 +113,7 @@ class ObservacionTest {
         @DisplayName("texto con espacios se hace trim")
         void texto_trim() {
             FalObservacion obs = new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, "  hola  ", null, LocalDateTime.now(), "U");
+                    null, "  hola  ", null, FaltasClockTestSupport.FIXED.now(), "U");
             assertThat(obs.getObservacion()).isEqualTo("hola");
         }
 
@@ -119,7 +121,7 @@ class ObservacionTest {
         @DisplayName("siActiva=true al crear")
         void activa_al_crear() {
             FalObservacion obs = new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, "texto", null, LocalDateTime.now(), "U");
+                    null, "texto", null, FaltasClockTestSupport.FIXED.now(), "U");
             assertThat(obs.isSiActiva()).isTrue();
         }
 
@@ -127,7 +129,7 @@ class ObservacionTest {
         @DisplayName("copia produce objeto independiente")
         void copia_independiente() {
             FalObservacion obs = new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
-                    null, "texto", OrigenObservacion.USUARIO, LocalDateTime.now(), "U");
+                    null, "texto", OrigenObservacion.USUARIO, FaltasClockTestSupport.FIXED.now(), "U");
             FalObservacion copia = obs.copia();
             copia.setSiActiva(false);
             assertThat(obs.isSiActiva()).isTrue();

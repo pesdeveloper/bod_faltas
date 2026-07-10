@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.ParalizarActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ReactivarActaCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
@@ -44,16 +46,16 @@ class ParalizacionActaInvariantesTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo,
                 new InMemoryDocumentoRepository(), new InMemoryNotificacionRepository(),
                 new InMemoryPagoVoluntarioRepository(), new InMemoryFalloActaRepository(),
-                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository());
+                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
         service = new ParalizacionActaService(actaRepo, eventoRepo, snapshotRepo,
-                paralizacionRepo, obsRepo, recalc);
+                paralizacionRepo, obsRepo, recalc, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActaActiva(BloqueActual bloque) {
         Long id = actaRepo.nextId();
         FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), LocalDateTime.now(), "Calle 1", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "TEST");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,
+                ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "TEST");
         acta.setBloqueActual(bloque);
         return actaRepo.guardar(acta);
     }

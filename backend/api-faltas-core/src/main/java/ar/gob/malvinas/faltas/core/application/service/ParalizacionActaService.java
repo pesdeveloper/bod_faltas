@@ -24,6 +24,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.ObservacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -51,6 +52,7 @@ public class ParalizacionActaService {
     private final ActaParalizacionRepository paralizacionRepository;
     private final ObservacionRepository observacionRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
 
     public ParalizacionActaService(
             ActaRepository actaRepository,
@@ -58,7 +60,9 @@ public class ParalizacionActaService {
             ActaSnapshotRepository snapshotRepository,
             ActaParalizacionRepository paralizacionRepository,
             ObservacionRepository observacionRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -88,7 +92,7 @@ public class ParalizacionActaService {
         validarNoExisteCicloActivo(cmd.actaId());
 
         String usuario = cmd.idUserOperacion() != null ? cmd.idUserOperacion() : "SYS";
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         Long cicloId = paralizacionRepository.nextId();
         FalActaParalizacion ciclo = new FalActaParalizacion(
@@ -140,7 +144,7 @@ public class ParalizacionActaService {
                         "No existe ciclo activo de paralizacion para acta: " + cmd.actaId()));
 
         String usuario = cmd.idUserOperacion() != null ? cmd.idUserOperacion() : "SYS";
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         FalActaParalizacion cierre = cicloActivo.copia();
         cierre.setFhReactivacion(ahora);
@@ -200,7 +204,7 @@ public class ParalizacionActaService {
                 .actaId(actaId)
                 .tipoEvt(tipo)
                 .origenEvt(usuario != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idUserEvt(usuario)
                 .actorTipo(usuario != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
                 .descripcionLegible(descripcionLegible)

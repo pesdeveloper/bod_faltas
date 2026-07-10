@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
@@ -26,7 +28,7 @@ class AuditoriaTest {
         @DisplayName("fhAlta e idUserAlta son obligatorios en alta")
         void alta_tiene_auditoria() {
             FalActa acta = new FalActa(1L, "uuid", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Calle", "Av", null, null,
                     ResultadoFirmaInfractor.FIRMADA, null,
                     FECHA_TEST, USUARIO_TEST);
@@ -38,7 +40,7 @@ class AuditoriaTest {
         @DisplayName("fhUltMod e idUserUltMod son null en alta")
         void modificacion_null_en_alta() {
             FalActa acta = new FalActa(1L, "uuid", TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Calle", "Av", null, null,
                     ResultadoFirmaInfractor.FIRMADA, null,
                     FECHA_TEST, USUARIO_TEST);
@@ -63,7 +65,7 @@ class AuditoriaTest {
         @DisplayName("fhAlta e idUserAlta presentes en alta")
         void alta_tiene_auditoria() {
             FalActaFallo fallo = new FalActaFallo(1L, 100L, TipoFalloActa.ABSOLUTORIO,
-                    LocalDateTime.now(), FECHA_TEST, USUARIO_TEST);
+                    FaltasClockTestSupport.FIXED.now(), FECHA_TEST, USUARIO_TEST);
             assertThat(fallo.getFhAlta()).isEqualTo(FECHA_TEST);
             assertThat(fallo.getIdUserAlta()).isEqualTo(USUARIO_TEST);
         }
@@ -77,7 +79,7 @@ class AuditoriaTest {
         @DisplayName("alta: fhAlta e idUserAlta seteados, fhUltMod e idUserUltMod nulos")
         void alta_auditoria_correcta() {
             FalActaApelacion ap = new FalActaApelacion(1L, 100L, 200L,
-                    EstadoApelacionActa.PRESENTADA, LocalDateTime.now(),
+                    EstadoApelacionActa.PRESENTADA, FaltasClockTestSupport.FIXED.now(),
                     "pres", "fund", null, true,
                     FECHA_TEST, USUARIO_TEST);
             assertThat(ap.getFhAlta()).isEqualTo(FECHA_TEST);
@@ -90,7 +92,7 @@ class AuditoriaTest {
         @DisplayName("setters de modificacion funcionan")
         void modificacion_setteable() {
             FalActaApelacion ap = new FalActaApelacion(1L, 100L, 200L,
-                    EstadoApelacionActa.PRESENTADA, LocalDateTime.now(),
+                    EstadoApelacionActa.PRESENTADA, FaltasClockTestSupport.FIXED.now(),
                     "pres", "fund", null, true,
                     FECHA_TEST, USUARIO_TEST);
             LocalDateTime fhMod = LocalDateTime.of(2026, 7, 5, 11, 30);
@@ -109,7 +111,7 @@ class AuditoriaTest {
         @DisplayName("alta: fhAlta e idUserAlta presentes")
         void alta_auditoria() {
             FalNotificacion n = new FalNotificacion(1L, 100L, 200L,
-                    TipoDocu.ACTO_ADMINISTRATIVO, "POSTAL", LocalDateTime.now(),
+                    TipoDocu.ACTO_ADMINISTRATIVO, "POSTAL", FaltasClockTestSupport.FIXED.now(),
                     FECHA_TEST, USUARIO_TEST);
             assertThat(n.getFhAlta()).isEqualTo(FECHA_TEST);
             assertThat(n.getIdUserAlta()).isEqualTo(USUARIO_TEST);

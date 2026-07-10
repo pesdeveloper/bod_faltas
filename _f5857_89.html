@@ -1,6 +1,0 @@
-$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-$path = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\core\models\prototipo-faltas.models.ts'
-$c = [System.IO.File]::ReadAllText($path, $utf8NoBom)
-$c = $c.Replace("`r`n", "`n")
-[System.IO.File]::WriteAllText($path, $c, $utf8NoBom)
-Write-Host 'OK normalized'

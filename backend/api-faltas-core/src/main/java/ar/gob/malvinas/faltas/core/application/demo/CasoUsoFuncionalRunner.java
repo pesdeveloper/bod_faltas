@@ -8,6 +8,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 
 import java.math.BigDecimal;
@@ -56,6 +57,10 @@ public class CasoUsoFuncionalRunner {
     private final ActaParalizacionService paralizacionService;
 
     public CasoUsoFuncionalRunner() {
+        // Composition root manual: authorized exception to new FaltasClock() rule.
+        // This class is NOT a Spring bean. It creates one canonical clock instance
+        // and injects it into all services it wires. Not for production Spring context.
+        FaltasClock faltasClock = new FaltasClock();
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -75,57 +80,57 @@ public class CasoUsoFuncionalRunner {
                 new RepositoryBloqueantesMaterialesChecker(bloqueanteMaterialRepo);
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, faltasClock);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
-                new InMemoryActaEvidenciaRepository());
+                new InMemoryActaEvidenciaRepository(), faltasClock);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 new InMemoryDocumentoPlantillaRepository(),
                 new TalonarioService(new InMemoryTalonarioRepository(),
-                        new InMemoryDependenciaRepository(), new InMemoryInspectorRepository()),
+                        new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), faltasClock),
                 new InMemoryDependenciaRepository(),
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository());
+                new InMemoryFirmanteRepository(), faltasClock);
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, bloqueantesChecker);
+                falloRepo, bloqueantesChecker, faltasClock);
 
         pagoVolService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoVolRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), faltasClock);
 
         falloService = new FalloActaService(
-                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc);
+                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, faltasClock);
 
         apelacionService = new ApelacionActaService(
                 actaRepo, falloRepo, apelacionRepo, apelacionDocRepo, eventoRepo, snapshotRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), faltasClock);
 
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, faltasClock);
 
         gestionExtService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondRepo, gestionExtRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), faltasClock);
 
         gestionExtServiceConBloqueantes = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondRepo, gestionExtRepo, recalc,
-                bloqueantesChecker);
+                bloqueantesChecker, faltasClock);
 
         pagoCondService = new PagoCondenaService(
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), faltasClock);
 
         CierreActaHelper cierreActaHelper = new CierreActaHelper(
-                actaRepo, eventoRepo, snapshotRepo, recalc);
+                actaRepo, eventoRepo, snapshotRepo, recalc, faltasClock);
         bloqueanteMaterialService = new BloqueanteMaterialService(
-                bloqueanteMaterialRepo, actaRepo, cierreActaHelper);
+                bloqueanteMaterialRepo, actaRepo, cierreActaHelper, faltasClock);
 
         paralizacionService = new ActaParalizacionService(
-                actaRepo, eventoRepo, snapshotRepo, recalc);
+                actaRepo, eventoRepo, snapshotRepo, recalc, faltasClock);
     }
 
     // =========================================================================

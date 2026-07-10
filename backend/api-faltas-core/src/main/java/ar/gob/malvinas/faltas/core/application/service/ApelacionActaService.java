@@ -36,6 +36,7 @@ import ar.gob.malvinas.faltas.core.repository.ApelacionActaRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -69,6 +70,7 @@ public class ApelacionActaService {
     private final SnapshotRecalculador snapshotRecalculador;
     private final BloqueantesMaterialesChecker bloqueantesChecker;
     private ApelacionDocumentoRepository apelacionDocumentoRepository;
+    private final FaltasClock faltasClock;
 
     public ApelacionActaService(
             ActaRepository actaRepository,
@@ -77,7 +79,9 @@ public class ApelacionActaService {
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
             SnapshotRecalculador snapshotRecalculador,
-            BloqueantesMaterialesChecker bloqueantesChecker) {
+            BloqueantesMaterialesChecker bloqueantesChecker,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.falloActaRepository = falloActaRepository;
         this.apelacionActaRepository = apelacionActaRepository;
@@ -87,7 +91,7 @@ public class ApelacionActaService {
         this.bloqueantesChecker = bloqueantesChecker;
     }
     @org.springframework.beans.factory.annotation.Autowired
-    // 8-arg constructor with ApelacionDocumentoRepository
+    // 9-arg constructor with ApelacionDocumentoRepository
     public ApelacionActaService(
             ActaRepository actaRepository,
             FalloActaRepository falloActaRepository,
@@ -96,9 +100,10 @@ public class ApelacionActaService {
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
             SnapshotRecalculador snapshotRecalculador,
-            BloqueantesMaterialesChecker bloqueantesChecker) {
+            BloqueantesMaterialesChecker bloqueantesChecker,
+            FaltasClock faltasClock) {
         this(actaRepository, falloActaRepository, apelacionActaRepository,
-                eventoRepository, snapshotRepository, snapshotRecalculador, bloqueantesChecker);
+                eventoRepository, snapshotRepository, snapshotRecalculador, bloqueantesChecker, faltasClock);
         this.apelacionDocumentoRepository = apelacionDocumentoRepository;
     }
 
@@ -107,7 +112,7 @@ public class ApelacionActaService {
             throw new IllegalStateException("ApelacionDocumentoRepository no configurado");
         }
         Long docId = apelacionDocumentoRepository.nextId();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime now = faltasClock.now();
         FalActaApelacionDocumento doc = new FalActaApelacionDocumento(
                 docId, cmd.apelacionId(), cmd.tipoDocApelacion(), cmd.origenPresentacion(),
                 cmd.documentoId(), cmd.storageKey(), cmd.nombreArchivo(), cmd.mimeType(),
@@ -139,18 +144,19 @@ public class ApelacionActaService {
                     "Ya existe una apelacion activa para esta acta. No se puede registrar otra.");
         }
 
+        LocalDateTime ahoraApe = faltasClock.now();
         Long idApelacion = apelacionActaRepository.nextId();
         FalActaApelacion apelacion = new FalActaApelacion(
                 idApelacion,
                 cmd.actaId(),
                 fallo.getId(),
                 EstadoApelacionActa.PRESENTADA,
-                LocalDateTime.now(),
+                ahoraApe,
                 cmd.presentante(),
                 cmd.fundamentos(),
                 cmd.observaciones(),
                 true,
-                LocalDateTime.now(),
+                ahoraApe,
                 "SYS"
         );
         apelacionActaRepository.guardar(apelacion);
@@ -190,7 +196,7 @@ public class ApelacionActaService {
 
         apelacion.setEstadoApelacion(EstadoApelacionActa.RESUELTA);
         apelacion.setResultadoResolucion(ResultadoResolucionApelacion.RECHAZADA);
-        apelacion.setFechaResolucion(LocalDateTime.now());
+        apelacion.setFechaResolucion(faltasClock.now());
         apelacion.setFundamentosResolucion(cmd.fundamentosResolucion());
         apelacion.setObservacionesResolucion(cmd.observaciones());
         apelacion.setSiActiva(false);
@@ -229,7 +235,7 @@ public class ApelacionActaService {
         }
 
         apelacion.setEstadoApelacion(EstadoApelacionActa.ACEPTADA_ABSUELVE);
-        apelacion.setFechaResolucion(LocalDateTime.now());
+        apelacion.setFechaResolucion(faltasClock.now());
         apelacion.setFundamentosResolucion(cmd.fundamentosResolucion());
         apelacion.setObservacionesResolucion(cmd.observaciones());
         apelacion.setSiActiva(false);
@@ -303,7 +309,8 @@ public class ApelacionActaService {
         // Mark apelacion as resolved
         apelacion.setEstadoApelacion(EstadoApelacionActa.RESUELTA);
         apelacion.setResultadoResolucion(ResultadoResolucionApelacion.MODIFICA_CONDENA);
-        apelacion.setFhResolucion(LocalDateTime.now());
+        LocalDateTime ahoraMod = faltasClock.now();
+        apelacion.setFhResolucion(ahoraMod);
         apelacion.setIdUserResolucion(cmd.idUserResolucion());
         apelacionActaRepository.guardar(apelacion);
 
@@ -313,7 +320,7 @@ public class ApelacionActaService {
         // Create new fallo sustitutivo
         Long nuevoFalloId = falloActaRepository.nextId();
         FalActaFallo nuevoFallo = new FalActaFallo(nuevoFalloId, apelacion.getActaId(),
-                TipoFalloActa.CONDENATORIO, LocalDateTime.now(), LocalDateTime.now(),
+                TipoFalloActa.CONDENATORIO, ahoraMod, ahoraMod,
                 cmd.idUserResolucion() != null ? cmd.idUserResolucion() : "SYS");
         nuevoFallo.setMontoCondena(cmd.nuevoMontoCondena());
         nuevoFallo.setEstadoFallo(ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa.NOTIFICADO);
@@ -345,7 +352,7 @@ public class ApelacionActaService {
         // Mark apelacion as resolved with NULIDAD
         apelacion.setEstadoApelacion(EstadoApelacionActa.RESUELTA);
         apelacion.setResultadoResolucion(ResultadoResolucionApelacion.NULIDAD);
-        apelacion.setFhResolucion(LocalDateTime.now());
+        apelacion.setFhResolucion(faltasClock.now());
         apelacion.setIdUserResolucion(cmd.idUserResolucion());
         apelacionActaRepository.guardar(apelacion);
 
@@ -412,7 +419,7 @@ public class ApelacionActaService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)
@@ -426,4 +433,3 @@ public class ApelacionActaService {
         return s != null ? s : "";
     }
 }
-

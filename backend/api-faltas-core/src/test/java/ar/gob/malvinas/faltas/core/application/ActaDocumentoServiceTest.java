@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.ActaDocumentoService;
 import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
@@ -39,7 +41,7 @@ class ActaDocumentoServiceTest {
         actaRepo = new InMemoryActaRepository();
         docRepo = new InMemoryDocumentoRepository();
         pivotRepo = new InMemoryActaDocumentoRepository();
-        service = new ActaDocumentoService(pivotRepo, actaRepo, docRepo);
+        service = new ActaDocumentoService(pivotRepo, actaRepo, docRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa(Long id) {
@@ -82,7 +84,7 @@ class ActaDocumentoServiceTest {
     }
 
     // =========================================================================
-    // T02: Campos y auditor�a de FalActaDocumento
+    // T02: Campos y auditoría de FalActaDocumento
     // =========================================================================
 
     @Test @DisplayName("T02: FalActaDocumento guarda todos los campos y es inmutable en id")
@@ -311,7 +313,7 @@ class ActaDocumentoServiceTest {
         // Segundo guardar del mismo par (sin usar asociarPrincipal)
         assertThatThrownBy(() ->
                 pivotRepo.guardar(new FalActaDocumento(1L, 80L, RolDocuActa.ACTA_PRINCIPAL, false,
-                        LocalDateTime.now(), "SYS")))
+                        FaltasClockTestSupport.FIXED.now(), "SYS")))
                 .isInstanceOf(ActaDocumentoYaExisteException.class);
     }
 }

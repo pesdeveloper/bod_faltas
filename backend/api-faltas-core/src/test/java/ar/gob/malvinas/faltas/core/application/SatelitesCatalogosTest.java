@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.ActaContravencionService;
 import ar.gob.malvinas.faltas.core.application.service.ActaMedidaPreventivaAplicadaService;
 import ar.gob.malvinas.faltas.core.application.service.ActaSustanciasAlimenticiasService;
@@ -291,7 +293,7 @@ class SatelitesCatalogosTest {
 
         @BeforeEach void setUp() {
             repo = new InMemoryVehiculoMarcaRepository();
-            servicio = new VehiculoMarcaService(repo);
+            servicio = new VehiculoMarcaService(repo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("alta valida retorna marca con siActivo=true")
@@ -306,13 +308,13 @@ class SatelitesCatalogosTest {
 
         @Test @DisplayName("codigo max 12 caracteres en entidad")
         void codigo_max_12() {
-            assertThatThrownBy(() -> new FalVehiculoMarca(1L, "A".repeat(13), "Marca", LocalDateTime.now(), "u1"))
+            assertThatThrownBy(() -> new FalVehiculoMarca(1L, "A".repeat(13), "Marca", FaltasClockTestSupport.FIXED.now(), "u1"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test @DisplayName("nombre max 24 caracteres en entidad")
         void nombre_max_24() {
-            assertThatThrownBy(() -> new FalVehiculoMarca(1L, "COD", "A".repeat(25), LocalDateTime.now(), "u1"))
+            assertThatThrownBy(() -> new FalVehiculoMarca(1L, "COD", "A".repeat(25), FaltasClockTestSupport.FIXED.now(), "u1"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -345,7 +347,7 @@ class SatelitesCatalogosTest {
 
         @Test @DisplayName("copia de entidad es independiente")
         void copia_independiente() {
-            FalVehiculoMarca original = new FalVehiculoMarca(1L, "FORD", "Ford", LocalDateTime.now(), "u1");
+            FalVehiculoMarca original = new FalVehiculoMarca(1L, "FORD", "Ford", FaltasClockTestSupport.FIXED.now(), "u1");
             FalVehiculoMarca copia = original.copia();
             copia.setSiActivo(false);
             assertThat(original.isSiActivo()).isTrue();
@@ -401,8 +403,8 @@ class SatelitesCatalogosTest {
         @BeforeEach void setUp() {
             marcaRepo = new InMemoryVehiculoMarcaRepository();
             modeloRepo = new InMemoryVehiculoModeloRepository();
-            marcaService = new VehiculoMarcaService(marcaRepo);
-            modeloService = new VehiculoModeloService(modeloRepo, marcaRepo);
+            marcaService = new VehiculoMarcaService(marcaRepo, FaltasClockTestSupport.FIXED);
+            modeloService = new VehiculoModeloService(modeloRepo, marcaRepo, FaltasClockTestSupport.FIXED);
             ford = marcaService.altaMarca("FORD", "Ford", "u1");
         }
 
@@ -478,8 +480,8 @@ class SatelitesCatalogosTest {
         private RubroVersionService servicio;
 
         @BeforeEach void setUp() {
-            repo = new InMemoryRubroVersionRepository();
-            servicio = new RubroVersionService(repo);
+            repo = new InMemoryRubroVersionRepository(FaltasClockTestSupport.FIXED);
+            servicio = new RubroVersionService(repo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("alta inicial crea version actual siVersionActual=true")
@@ -598,7 +600,7 @@ class SatelitesCatalogosTest {
         @BeforeEach void setUp() {
             transitoRepo = new InMemoryActaTransitoRepository();
             alcoholemiaRepo = new InMemoryActaTransitoAlcoholemiaRepository();
-            servicio = new ActaTransitoService(transitoRepo, alcoholemiaRepo);
+            servicio = new ActaTransitoService(transitoRepo, alcoholemiaRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("registro valido: 1:1 por actaId")
@@ -653,7 +655,7 @@ class SatelitesCatalogosTest {
         @BeforeEach void setUp() {
             transitoRepo = new InMemoryActaTransitoRepository();
             alcoholemiaRepo = new InMemoryActaTransitoAlcoholemiaRepository();
-            servicio = new ActaTransitoService(transitoRepo, alcoholemiaRepo);
+            servicio = new ActaTransitoService(transitoRepo, alcoholemiaRepo, FaltasClockTestSupport.FIXED);
             servicio.registrarTransito(1L);
         }
 
@@ -661,7 +663,7 @@ class SatelitesCatalogosTest {
         void medicion_valida() {
             FalActaTransitoAlcoholemia m = servicio.agregarMedicion(1L, (short) 1,
                     TipoPruebaAlcoholemia.ALCOHOLIMETRO, ResultadoCualitativoAlcoholemia.NEGATIVO,
-                    null, null, null, null, LocalDateTime.now(), "u1");
+                    null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThat(m.getId()).isNotNull();
             assertThat(m.isSiResultadoFinal()).isFalse();
         }
@@ -678,7 +680,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("resultado numerico sin unidad lanza excepcion en entidad")
         void numerico_sin_unidad() {
             FalActaTransitoAlcoholemia m = new FalActaTransitoAlcoholemia(1L, 1L, (short) 1,
-                    TipoPruebaAlcoholemia.ALCOHOLIMETRO, LocalDateTime.now(), "u1");
+                    TipoPruebaAlcoholemia.ALCOHOLIMETRO, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> m.setResultadoNumerico(new BigDecimal("0.25"), null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -686,7 +688,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("resultado numerico escala maxima 2")
         void escala_maxima_2() {
             FalActaTransitoAlcoholemia m = new FalActaTransitoAlcoholemia(1L, 1L, (short) 1,
-                    TipoPruebaAlcoholemia.ALCOHOLIMETRO, LocalDateTime.now(), "u1");
+                    TipoPruebaAlcoholemia.ALCOHOLIMETRO, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> m.setResultadoNumerico(new BigDecimal("0.123"), UnidadMedidaAlcoholemia.G_L))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -753,14 +755,14 @@ class SatelitesCatalogosTest {
             vehiculoRepo = new InMemoryActaVehiculoRepository();
             marcaRepo = new InMemoryVehiculoMarcaRepository();
             modeloRepo = new InMemoryVehiculoModeloRepository();
-            marcaService = new VehiculoMarcaService(marcaRepo);
-            modeloService = new VehiculoModeloService(modeloRepo, marcaRepo);
+            marcaService = new VehiculoMarcaService(marcaRepo, FaltasClockTestSupport.FIXED);
+            modeloService = new VehiculoModeloService(modeloRepo, marcaRepo, FaltasClockTestSupport.FIXED);
             servicio = new ActaVehiculoService(vehiculoRepo, marcaRepo, modeloRepo);
         }
 
         @Test @DisplayName("vehiculo textual sin marca normalizada se acepta")
         void fallback_textual() {
-            FalActaVehiculo v = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             v.setTipoVehiculo(TipoVehiculo.AUTO);
             v.setMarca(null, "Marca Desconocida");
             v.setModelo(null, "Modelo Desconocido");
@@ -775,7 +777,7 @@ class SatelitesCatalogosTest {
             FalVehiculoMarca toyota = marcaService.altaMarca("TOYOTA", "Toyota", "u1");
             FalVehiculoModelo corolla = modeloService.altaModelo(toyota.getId(), "COROLLA", "Corolla", "u1");
 
-            FalActaVehiculo v = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             v.setMarca(ford.getId(), "Ford");
             v.setModelo(corolla.getId(), "Corolla");
             assertThatThrownBy(() -> servicio.registrarVehiculo(1L, v))
@@ -787,7 +789,7 @@ class SatelitesCatalogosTest {
             FalVehiculoMarca ford = marcaService.altaMarca("FORD", "Ford", "u1");
             FalVehiculoModelo focus = modeloService.altaModelo(ford.getId(), "FOCUS", "Focus", "u1");
 
-            FalActaVehiculo v = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             v.setMarca(ford.getId(), "Ford");
             v.setModelo(focus.getId(), "Focus");
             FalActaVehiculo guardado = servicio.registrarVehiculo(1L, v);
@@ -797,9 +799,9 @@ class SatelitesCatalogosTest {
 
         @Test @DisplayName("segundo vehiculo para mismo actaId rechazado")
         void segundo_vehiculo_rechazado() {
-            FalActaVehiculo v = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             servicio.registrarVehiculo(1L, v);
-            FalActaVehiculo v2 = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v2 = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> servicio.registrarVehiculo(1L, v2))
                     .isInstanceOf(IllegalStateException.class);
         }
@@ -812,7 +814,7 @@ class SatelitesCatalogosTest {
 
         @Test @DisplayName("dominio max 10 caracteres en entidad")
         void dominio_max_10() {
-            FalActaVehiculo v = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> v.setDominioVehiculo("ABC1234567X"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -823,7 +825,7 @@ class SatelitesCatalogosTest {
             FalVehiculoModelo laguna = modeloService.altaModelo(renault.getId(), "LAGUNA", "Laguna", "u1");
             marcaService.desactivar(renault.getId(), "u2");
 
-            FalActaVehiculo v = new FalActaVehiculo(1L, LocalDateTime.now(), "u1");
+            FalActaVehiculo v = new FalActaVehiculo(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             v.setMarca(renault.getId(), "Renault");
             v.setModelo(laguna.getId(), "Laguna");
             FalActaVehiculo guardado = servicio.registrarVehiculo(1L, v);
@@ -846,15 +848,15 @@ class SatelitesCatalogosTest {
 
         @BeforeEach void setUp() {
             repo = new InMemoryActaContravencionRepository();
-            rubroRepo = new InMemoryRubroVersionRepository();
+            rubroRepo = new InMemoryRubroVersionRepository(FaltasClockTestSupport.FIXED);
             servicio = new ActaContravencionService(repo, rubroRepo);
-            rubroService = new RubroVersionService(rubroRepo);
+            rubroService = new RubroVersionService(rubroRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("registro valido con nomenclatura controlada")
         void registro_valido_controlado() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setSujetoInmueble(1L, 100L);
             FalActaContravencion guardado = servicio.registrar(1L, ctv);
             assertThat(guardado.getActaId()).isEqualTo(1L);
@@ -864,7 +866,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("manual excepcional sin idBieI: si_nomenclatura_manual=true")
         void manual_excepcional() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.MANUAL_EXCEPCIONAL, true, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.MANUAL_EXCEPCIONAL, true, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setMotivoNomenclaturaManual(MotivoNomenclaturaManual.SIN_DATOS_CATASTRO);
             assertThat(ctv.isSiNomenclaturaManual()).isTrue();
             assertThat(ctv.getOrigenNomencl()).isEqualTo(OrigenNomenclatura.MANUAL_EXCEPCIONAL);
@@ -873,14 +875,14 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("si_nomenclatura_manual=true y origen != MANUAL_EXCEPCIONAL lanza excepcion")
         void manual_true_con_origen_incorrecto() {
             assertThatThrownBy(() -> new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, true, LocalDateTime.now(), "u1"))
+                    1L, OrigenNomenclatura.CATASTRO, true, FaltasClockTestSupport.FIXED.now(), "u1"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test @DisplayName("pares Id_Suj_c e Id_Bie_c deben informarse juntos")
         void pares_suj_bie_c_juntos() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> ctv.setSujetoComercio(2L, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -888,7 +890,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("ambito OTRO exige texto")
         void ambito_otro_exige_texto() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> ctv.setAmbito(AmbitoCtv.OTRO, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -896,7 +898,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("ambito no OTRO exige texto null")
         void ambito_no_otro_texto_null() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> ctv.setAmbito(AmbitoCtv.COMERCIO, "No deberia"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -904,7 +906,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("ambito_ctv_txt max 80 caracteres")
         void ambito_ctv_txt_max_80() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> ctv.setAmbito(AmbitoCtv.OTRO, "A".repeat(81)))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -912,7 +914,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("secc como CHAR(2) - longitud max 2")
         void secc_max_2() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> ctv.setSecc("ABC"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -921,7 +923,7 @@ class SatelitesCatalogosTest {
         void rubro_coherente() {
             FalRubroVersion rub = rubroService.sincronizar(101, "Kiosco", (short) 0, "u1");
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setRubro(rub.getRubroId(), rub.getIdRub());
             FalActaContravencion guardado = servicio.registrar(1L, ctv);
             assertThat(guardado.getRubroId()).isEqualTo(rub.getRubroId());
@@ -931,7 +933,7 @@ class SatelitesCatalogosTest {
         void rubro_incoherente() {
             FalRubroVersion rub = rubroService.sincronizar(101, "Kiosco", (short) 0, "u1");
             FalActaContravencion ctv = new FalActaContravencion(
-                    2L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    2L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setRubro(rub.getRubroId(), 999);
             assertThatThrownBy(() -> servicio.registrar(2L, ctv))
                     .isInstanceOf(IllegalArgumentException.class);
@@ -940,10 +942,10 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("segundo registro para mismo actaId rechazado")
         void segundo_registro_rechazado() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             servicio.registrar(1L, ctv);
             FalActaContravencion ctv2 = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> servicio.registrar(1L, ctv2))
                     .isInstanceOf(IllegalStateException.class);
         }
@@ -951,7 +953,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("generarNomenclaturaResumen produce texto no vacio con datos cargados")
         void nomenclatura_resumen_con_datos() {
             FalActaContravencion ctv = new FalActaContravencion(
-                    1L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setSujetoInmueble(1L, 100L);
             ctv.setCirc((short) 1);
             ctv.setSecc("01");
@@ -974,15 +976,15 @@ class SatelitesCatalogosTest {
 
         @BeforeEach void setUp() {
             repo = new InMemoryActaSustanciasAlimenticiasRepository();
-            rubroRepo = new InMemoryRubroVersionRepository();
+            rubroRepo = new InMemoryRubroVersionRepository(FaltasClockTestSupport.FIXED);
             servicio = new ActaSustanciasAlimenticiasService(repo, rubroRepo);
-            rubroService = new RubroVersionService(rubroRepo);
+            rubroService = new RubroVersionService(rubroRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test @DisplayName("registro valido con rubro y ambito")
         void registro_valido() {
             FalRubroVersion rub = rubroService.sincronizar(301, "Restaurante", (short) 0, "u1");
-            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             s.setRubro(rub.getRubroId(), rub.getIdRub());
             s.setAmbito(AmbitoCtv.COMERCIO, null);
             s.setDescripcionSustancias("Alimentos en mal estado");
@@ -994,7 +996,7 @@ class SatelitesCatalogosTest {
         @Test @DisplayName("rubro coherente: rubroId e idRub deben coincidir")
         void rubro_coherente() {
             FalRubroVersion rub = rubroService.sincronizar(301, "Restaurante", (short) 0, "u1");
-            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(2L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(2L, FaltasClockTestSupport.FIXED.now(), "u1");
             s.setRubro(rub.getRubroId(), 999);
             assertThatThrownBy(() -> servicio.registrar(2L, s))
                     .isInstanceOf(IllegalArgumentException.class);
@@ -1002,14 +1004,14 @@ class SatelitesCatalogosTest {
 
         @Test @DisplayName("ambito OTRO exige texto")
         void ambito_otro_exige_texto() {
-            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> s.setAmbito(AmbitoCtv.OTRO, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test @DisplayName("descripcion larga se acepta")
         void descripcion_larga() {
-            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             String desc = "Descripcion sanitaria larga con detalles tecnicos sobre los alimentos inspeccionados. ".repeat(10);
             s.setDescripcionSustancias(desc);
             assertThat(s.getDescripcionSustancias()).isEqualTo(desc);
@@ -1017,19 +1019,19 @@ class SatelitesCatalogosTest {
 
         @Test @DisplayName("segundo registro para mismo actaId rechazado")
         void segundo_registro_rechazado() {
-            FalActaSustanciasAlimenticias s1 = new FalActaSustanciasAlimenticias(1L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s1 = new FalActaSustanciasAlimenticias(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             servicio.registrar(1L, s1);
-            FalActaSustanciasAlimenticias s2 = new FalActaSustanciasAlimenticias(1L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s2 = new FalActaSustanciasAlimenticias(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThatThrownBy(() -> servicio.registrar(1L, s2))
                     .isInstanceOf(IllegalStateException.class);
         }
 
-        @Test @DisplayName("historico de rubro versiÃ³n antigua sigue siendo valido")
+        @Test @DisplayName("historico de rubro versión antigua sigue siendo valido")
         void historico_rubro_valido() {
             FalRubroVersion v1 = rubroService.sincronizar(301, "Restaurante", (short) 0, "u1");
             rubroService.sincronizar(301, "Restaurante Nuevo", (short) 0, "u1");
             // v1 es historica pero sigue siendo valida para referencia
-            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, LocalDateTime.now(), "u1");
+            FalActaSustanciasAlimenticias s = new FalActaSustanciasAlimenticias(1L, FaltasClockTestSupport.FIXED.now(), "u1");
             s.setRubro(v1.getRubroId(), v1.getIdRub());
             FalActaSustanciasAlimenticias guardado = servicio.registrar(1L, s);
             assertThat(guardado.getRubroId()).isEqualTo(v1.getRubroId());
@@ -1058,24 +1060,24 @@ class SatelitesCatalogosTest {
             catalogoRepo = new InMemoryMedidaPreventivaRepository();
             bloqueanteMaterialRepo = new InMemoryBloqueanteMaterialRepository();
             servicio = new ActaMedidaPreventivaAplicadaService(
-                    medidaRepo, articuloRepo, articuloMedidaRepo, catalogoRepo, bloqueanteMaterialRepo);
+                    medidaRepo, articuloRepo, articuloMedidaRepo, catalogoRepo, bloqueanteMaterialRepo, FaltasClockTestSupport.FIXED);
 
             // Setup catalogo: medida preventiva
             FalMedidaPreventiva mp = new FalMedidaPreventiva(10L, "MP001", (short) 1,
-                    "Decomiso provisional", LocalDateTime.now(), "u1");
+                    "Decomiso provisional", FaltasClockTestSupport.FIXED.now(), "u1");
             mp.setSiPuedeBloquearCierre(true);
             mp.setTipoBloqueanteDefault(OrigenBloqueanteMaterial.MEDIDA_PREVENTIVA);
             catalogoRepo.save(mp);
 
             // Setup: articulo del acta (actaId=1, articuloId=20, actaArticuloId=100)
             FalActaArticuloInfringido art = new FalActaArticuloInfringido(
-                    100L, 1L, 5L, 20L, LocalDateTime.now(), "u1");
+                    100L, 1L, 5L, 20L, FaltasClockTestSupport.FIXED.now(), "u1");
             articuloRepo.save(art);
 
             // Setup: relacion articulo-medida valida
             ArticuloMedidaPreventivaId rel = new ArticuloMedidaPreventivaId(20L, 10L);
             FalArticuloMedidaPreventiva amp = new FalArticuloMedidaPreventiva(
-                    rel, false, LocalDateTime.now(), "u1");
+                    rel, false, FaltasClockTestSupport.FIXED.now(), "u1");
             articuloMedidaRepo.save(amp);
         }
 
@@ -1138,7 +1140,7 @@ class SatelitesCatalogosTest {
         void articulo_inactivo_rechazado() {
             FalActaArticuloInfringido articuloRepo2 = articuloRepo.findById(100L).orElseThrow();
             articuloRepo2.darDeBaja(ar.gob.malvinas.faltas.core.domain.enums.MotivoBajaArticuloInfringido.CORRECCION_IMPUTACION,
-                    LocalDateTime.now(), "u1");
+                    FaltasClockTestSupport.FIXED.now(), "u1");
             articuloRepo.save(articuloRepo2);
             assertThatThrownBy(() -> servicio.aplicarMedida(1L, 100L, 10L, false, null, "u1"))
                     .isInstanceOf(IllegalStateException.class);
@@ -1159,9 +1161,9 @@ class SatelitesCatalogosTest {
 
         private FalActa crearActa(Long id, TipoActa tipo) {
             return new FalActa(id, "uuid-" + id, tipo, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(), "Calle Falsa 123",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle Falsa 123",
                     null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                    LocalDateTime.now(), "u1");
+                    FaltasClockTestSupport.FIXED.now(), "u1");
         }
 
         @BeforeEach void setUp() throws Exception {
@@ -1175,7 +1177,7 @@ class SatelitesCatalogosTest {
                     new InMemoryPagoVoluntarioRepository(),
                     new InMemoryFalloActaRepository(),
                     new InMemoryApelacionActaRepository(),
-                    new InMemoryPagoCondenaRepository());
+                    new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
 
             // Inyectar repos satelite via reflexion (son @Autowired required=false)
             Field fTransito = SnapshotRecalculador.class.getDeclaredField("actaTransitoRepository");
@@ -1209,7 +1211,7 @@ class SatelitesCatalogosTest {
         void proyecta_idBie() {
             FalActa acta = crearActa(3L, TipoActa.CONTRAVENCION);
             FalActaContravencion ctv = new FalActaContravencion(
-                    3L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    3L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setSujetoInmueble(1L, 500L);
             ctv.setSujetoComercio(2L, 600L);
             contravencionRepo.guardar(ctv);
@@ -1223,7 +1225,7 @@ class SatelitesCatalogosTest {
         void proyecta_nomenclatura_resumen() {
             FalActa acta = crearActa(4L, TipoActa.CONTRAVENCION);
             FalActaContravencion ctv = new FalActaContravencion(
-                    4L, OrigenNomenclatura.CATASTRO, false, LocalDateTime.now(), "u1");
+                    4L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
             ctv.setSujetoInmueble(1L, 700L);
             ctv.setCirc((short) 1);
             ctv.setSecc("02");

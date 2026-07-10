@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.QrActaService;
 import ar.gob.malvinas.faltas.core.application.service.NotificacionIntentoService;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
@@ -49,9 +51,9 @@ class QrActaServiceTest {
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, new InMemoryNotificacionRepository(),
-                pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+                pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
-        service = new QrActaService(actaRepo, eventoRepo, snapshotRepo, qrAccesoRepo, recalc, tokenProtector);
+        service = new QrActaService(actaRepo, eventoRepo, snapshotRepo, qrAccesoRepo, recalc, tokenProtector, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa(Long id) {

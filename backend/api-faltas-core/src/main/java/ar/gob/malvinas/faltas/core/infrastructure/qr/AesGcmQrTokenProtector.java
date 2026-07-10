@@ -8,6 +8,8 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
@@ -42,24 +44,31 @@ public class AesGcmQrTokenProtector implements QrTokenProtector {
     private static final int KEY_LENGTH_BYTES = 32; // AES-256
 
     private final byte[] key;
+    private final Clock clock;
     private final SecureRandom rng = new SecureRandom();
 
-    /** Constructor para produccion: clave explicita de 32 bytes (AES-256). */
-    public AesGcmQrTokenProtector(byte[] key) {
+    /** Constructor de conveniencia con clave explicita. Usa reloj del sistema.
+     * Para production Spring beans usar el constructor inyectable AesGcmQrTokenProtector(byte[], FaltasClock). */
+    public AesGcmQrTokenProtector(byte[] key) { this(key, new FaltasClock()); }
+
+    public AesGcmQrTokenProtector(byte[] key, FaltasClock faltasClock) {
         if (key == null || key.length != KEY_LENGTH_BYTES) {
             throw new IllegalArgumentException(
                     "La clave AES-GCM debe tener exactamente " + KEY_LENGTH_BYTES + " bytes");
         }
         this.key = key.clone();
+        this.clock = faltasClock.clock();
     }
 
     /**
      * Constructor con clave efimera aleatoria.
      * SOLO para uso en desarrollo y tests. No usar en produccion.
      */
+    /** Demo/test-only constructor: generates random key and uses system clock. Not for production use. */
     public AesGcmQrTokenProtector() {
         this.key = new byte[KEY_LENGTH_BYTES];
         rng.nextBytes(this.key);
+        this.clock = new FaltasClock().clock();
     }
 
     @Override
@@ -70,7 +79,7 @@ public class AesGcmQrTokenProtector implements QrTokenProtector {
         byte[] nonce = new byte[16];
         rng.nextBytes(nonce);
         String nonceHex = HexFormat.of().formatHex(nonce);
-        long iat = Instant.now().getEpochSecond();
+        long iat = Instant.now(clock).getEpochSecond();
 
         String payload = buildPayload(uuidTecnico, nonceHex, iat);
         byte[] cipherBlob = encrypt(payload.getBytes(StandardCharsets.UTF_8));

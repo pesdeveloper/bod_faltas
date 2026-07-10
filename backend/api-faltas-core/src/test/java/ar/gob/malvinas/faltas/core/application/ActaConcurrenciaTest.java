@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
@@ -42,9 +44,9 @@ class ActaConcurrenciaTest {
     private FalActa crearActa() {
         Long id = actaRepo.nextId();
         FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                LocalDateTime.now(), "TEST");
+                FaltasClockTestSupport.FIXED.now(), "TEST");
         return actaRepo.guardar(acta);
     }
 
@@ -70,9 +72,9 @@ class ActaConcurrenciaTest {
             // Simular stale: usar una copia con version 0
             final FalActa actaStale = new FalActa(acta.getId(), acta.getUuidTecnico(),
                     TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Stale", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                    LocalDateTime.now(), "TEST");
+                    FaltasClockTestSupport.FIXED.now(), "TEST");
             // versionRow de actaStale es 0, pero repo tiene version 1
             assertThatThrownBy(() -> actaRepo.guardar(actaStale))
                     .isInstanceOf(ConcurrenciaConflictoException.class);
@@ -107,10 +109,10 @@ class ActaConcurrenciaTest {
                         // Todos leen la misma version stale (0)
                         FalActa stale = new FalActa(acta.getId(), acta.getUuidTecnico(),
                                 TipoActa.TRANSITO, 1L, 1L,
-                                LocalDate.now(), LocalDateTime.now(),
+                                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                                 "Intento concurrente", null, null, null,
                                 ResultadoFirmaInfractor.FIRMADA, null,
-                                LocalDateTime.now(), "TEST");
+                                FaltasClockTestSupport.FIXED.now(), "TEST");
                         actaRepo.guardar(stale);
                         exitos.incrementAndGet();
                     } catch (ConcurrenciaConflictoException e) {
@@ -139,7 +141,7 @@ class ActaConcurrenciaTest {
             FalActaEvento original = FalActaEvento.builder()
                     .actaId(acta.getId())
                     .tipoEvt(TipoEventoActa.ACTLAB)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .build();
             assertThat(original.getId()).isNull();
 
@@ -163,7 +165,7 @@ class ActaConcurrenciaTest {
                         eventoRepo.registrar(FalActaEvento.builder()
                                 .actaId(acta.getId())
                                 .tipoEvt(TipoEventoActa.DOCGEN)
-                                .fhEvt(LocalDateTime.now())
+                                .fhEvt(FaltasClockTestSupport.FIXED.now())
                                 .descripcionLegible("Evento concurrente " + idx)
                                 .build());
                     } finally {
@@ -190,7 +192,7 @@ class ActaConcurrenciaTest {
             FalActaEvento guardado = eventoRepo.registrar(FalActaEvento.builder()
                     .actaId(acta.getId())
                     .tipoEvt(TipoEventoActa.ACTLAB)
-                    .fhEvt(LocalDateTime.now())
+                    .fhEvt(FaltasClockTestSupport.FIXED.now())
                     .descripcionLegible("Acta labrada test")
                     .build());
 

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearInspectorCommand;
 import ar.gob.malvinas.faltas.core.application.command.VersionarInspectorCommand;
@@ -50,9 +52,9 @@ class InspectorTest {
     @BeforeEach
     void setUp() {
         dependenciaRepo = new InMemoryDependenciaRepository();
-        dependenciaService = new DependenciaService(dependenciaRepo);
+        dependenciaService = new DependenciaService(dependenciaRepo, FaltasClockTestSupport.FIXED);
         inspectorRepo = new InMemoryInspectorRepository();
-        inspectorService = new InspectorService(inspectorRepo, dependenciaRepo);
+        inspectorService = new InspectorService(inspectorRepo, dependenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -62,13 +64,13 @@ class InspectorTest {
     private FalDependencia crearDependenciaTransito() {
         return dependenciaService.crear(new CrearDependenciaCommand(
                 null, "Oficina de Transito Central", null,
-                TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalInspector crearInspectorConDep(String idUser, FalDependencia dep) {
         return inspectorService.crear(new CrearInspectorCommand(
                 idUser, 1001, "Juan Inspector",
-                dep.getIdDep(), 1, LocalDate.now(), "sistema"));
+                dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     // =========================================================================
@@ -114,7 +116,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     null, 1001, "Juan Inspector",
-                    dep.getIdDep(), 1, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idUser");
         }
@@ -125,7 +127,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "  ", 1001, "Juan Inspector",
-                    dep.getIdDep(), 1, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idUser");
         }
@@ -165,7 +167,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-003", null, "Juan Inspector",
-                    dep.getIdDep(), 1, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("legajoInsp");
         }
@@ -176,7 +178,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-003B", 0, "Juan Inspector",
-                    dep.getIdDep(), 1, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("legajoInsp");
         }
@@ -196,7 +198,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-004", 1004, null,
-                    dep.getIdDep(), 1, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nomInsp");
         }
@@ -215,7 +217,7 @@ class InspectorTest {
         void sin_idDep_falla() {
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-005", 1005, "Inspector Cinco",
-                    null, 1, LocalDate.now(), "sistema")))
+                    null, 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idDep");
         }
@@ -226,7 +228,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-005B", 1005, "Inspector CincoB",
-                    dep.getIdDep(), null, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("verDep");
         }
@@ -245,7 +247,7 @@ class InspectorTest {
         void dep_inexistente_falla() {
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-007", 1007, "Inspector Siete",
-                    9999L, 1, LocalDate.now(), "sistema")))
+                    9999L, 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("9999");
         }
@@ -265,7 +267,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-008", 1008, "Inspector Ocho",
-                    dep.getIdDep(), 99, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 99, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
@@ -288,7 +290,7 @@ class InspectorTest {
 
             assertThatThrownBy(() -> inspectorService.crear(new CrearInspectorCommand(
                     "USER-009", 1009, "Inspector Nueve",
-                    dep.getIdDep(), 1, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
@@ -309,7 +311,7 @@ class InspectorTest {
 
             FalInspectorVersion v2 = inspectorService.versionar(new VersionarInspectorCommand(
                     insp.getIdInsp(), 1010, "Juan Inspector Actualizado",
-                    dep.getIdDep(), 1, LocalDate.now().plusDays(1), "admin"));
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1), "admin"));
 
             assertThat(v2.getVerInsp()).isEqualTo(2);
         }
@@ -328,7 +330,7 @@ class InspectorTest {
         void versionar_cierra_version_anterior() {
             FalDependencia dep = crearDependenciaTransito();
             FalInspector insp = crearInspectorConDep("USER-011", dep);
-            LocalDate fhVigDesdeV2 = LocalDate.now().plusDays(1);
+            LocalDate fhVigDesdeV2 = FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1);
 
             inspectorService.versionar(new VersionarInspectorCommand(
                     insp.getIdInsp(), 1011, "Juan v2",
@@ -363,13 +365,13 @@ class InspectorTest {
             FalDependencia dep1 = crearDependenciaTransito();
             FalDependencia dep2 = dependenciaService.crear(new CrearDependenciaCommand(
                     null, "Oficina de Comercio", null,
-                    TipoActa.COMERCIO, LocalDate.now(), "sistema"));
+                    TipoActa.COMERCIO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
 
             FalInspector insp = crearInspectorConDep("USER-012", dep1);
 
             FalInspectorVersion v2 = inspectorService.versionar(new VersionarInspectorCommand(
                     insp.getIdInsp(), 1012, "Juan v2",
-                    dep2.getIdDep(), 1, LocalDate.now().plusDays(1), "admin"));
+                    dep2.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1), "admin"));
 
             assertThat(v2.getIdDep()).isEqualTo(dep2.getIdDep());
             assertThat(v2.getVerDep()).isEqualTo(1);
@@ -437,7 +439,7 @@ class InspectorTest {
             FalDependencia dep = crearDependenciaTransito();
             assertThatThrownBy(() -> inspectorService.versionar(new VersionarInspectorCommand(
                     9999L, 9999, "Nombre X",
-                    dep.getIdDep(), 1, LocalDate.now(), "admin")))
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "admin")))
                     .isInstanceOf(InspectorNoEncontradoException.class)
                     .hasMessageContaining("9999");
         }

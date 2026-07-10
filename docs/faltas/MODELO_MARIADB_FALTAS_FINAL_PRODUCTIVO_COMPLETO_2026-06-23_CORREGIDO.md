@@ -1,4 +1,4 @@
-﻿﻿# Modelo MariaDB final productivo completo — Dirección de Faltas
+# Modelo MariaDB final productivo completo — Dirección de Faltas
 
 **Fecha de cierre:** 2026-06-23  
 **Destino técnico:** MariaDB 11.x / InnoDB / `utf8mb4`  
@@ -369,6 +369,7 @@ Reglas:
 - Los eventos mock-only que expresan dominio se mapean a eventos productivos.
 - Los eventos de proyección/demo/estado se eliminan.
 - `CONFIR` / `CONDENA_FIRME` se conserva como evento productivo porque la firmeza de condena es un hito jurídico/operativo real.
+- El catálogo de eventos de pagos (compacto, un evento principal por operación atómica) se define en la sección 8.8. `DEBEMI`, `PAGPRC`, `PAGCFT`, `PAGANU`, `MOVPAG`, `PLNCAI`, `PLNCAN`, `OBLAUL`, `FPCGEN`, `FPPGEN`, `FPREFN` quedan eliminados del dominio de pagos (sin aliases históricos); `DEUDA_EMITIDA` y `PAGO_PROCESADO` pasan a ser movimientos económicos, no eventos.
 
 #### Archivo y reingreso
 
@@ -470,6 +471,31 @@ Tres tablas nuevas incorporadas en este slice:
 - `fal_documento_plantilla_default` (sección 5.12)
 - `fal_documento_redaccion` (sección 5.13)
 
+### 0.9 Autenticación mínima (D-3): JWT y contexto de actor
+
+La autenticación de la API es **JWT Bearer**. En el estado actual (desarrollo y pruebas) la definición es deliberadamente mínima:
+
+- Se extrae únicamente el claim estándar `sub` del token.
+- `sub` se usa como identificador técnico del actor (`id_user_*`, `actor_id`, `id_user_alta`, etc.).
+- La autorización queda **diferida**: todavía **no** se implementan roles, permisos ni políticas, ni se inspeccionan claims de autorización.
+- Todavía **no** se inspecciona firma, `issuer`, `audience`, expiración ni ninguna otra validación criptográfica. Antes de producción se incorporará la validación criptográfica completa del JWT (fuera de este slice).
+- Esto **no está listo para producción** y se documenta explícitamente como tal.
+
+Reglas técnicas de `sub`:
+
+- **No** se valida que `sub` tenga formato UUID. `sub` puede tener cualquier formato definido por el proveedor de identidad.
+- `sub` tendrá siempre una longitud máxima de 36 caracteres y se persiste en campos `CHAR(36)` como identificador técnico del actor.
+- Debe validarse únicamente que `sub` **exista, no esté vacío y no exceda 36 caracteres**. No exigir UUID.
+- Para desarrollo y pruebas puede usarse, por ejemplo, `usuario-demo-faltas`.
+- Los servicios de dominio **no** deben leer headers HTTP directamente. Debe existir un **contexto central de actor** que resuelva el actor a partir del token y lo provea a los casos de uso.
+- La trazabilidad mediante `sub` es **obligatoria** aunque la autorización permanezca diferida: todo hecho de dominio persiste el actor en el campo correspondiente (`id_user_*` / `actor_id`).
+
+Implicancias sobre firma documental (ver 5.3):
+
+- `id_user_firma` proviene de `sub`.
+- `rol_firmante` y `nombre_firmante` quedan **opcionales/reservados**; no se afirma todavía que el rol se extraiga obligatoriamente del token.
+- El rol **no** se utiliza todavía para autorización.
+
 ## 1. Dependencias, inspectores y tipo de acta
 
 ### 1.1 Regla funcional
@@ -549,92 +575,92 @@ Flujo:
 
 ### 1.7 Tabla `fal_firmante`
 
-Maestro del firmante/autorizado para firma. Administra el padr�n de usuarios habilitados para firmar documentos del sistema.
+Maestro del firmante/autorizado para firma. Administra el padrón de usuarios habilitados para firmar documentos del sistema.
 
 No registra firmas concretas. No almacena certificados, binarios ni metadata pesada.
 
-| Campo | Tipo MariaDB | Null | Clave/�ndice | Descripci�n | Regla |
+| Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
 |---|---|---|---|---|---|
-| `id_firmante` | `BIGINT AUTO_INCREMENT` | NO | PK | Identificador del firmante | PK t�cnica |
+| `id_firmante` | `BIGINT AUTO_INCREMENT` | NO | PK | Identificador del firmante | PK técnica |
 | `id_user` | `CHAR(36)` | NO | UNIQUE | Usuario IDP asociado | Debe alinearse con `fal_documento_firma.id_user_firma` |
-| `nom_firmante` | `VARCHAR(128)` | NO | IDX | Nombre visible actual | El hist�rico vive en versiones |
-| `si_activo` | `BOOLEAN` | NO | IDX | Activo l�gico | No eliminar f�sicamente si fue usado |
-| `fh_alta` | `DATETIME(6)` | NO | - | Alta t�cnica | Auditor�a |
-| `id_user_alta` | `CHAR(36)` | NO | - | Usuario alta | Auditor�a |
+| `nom_firmante` | `VARCHAR(128)` | NO | IDX | Nombre visible actual | El histórico vive en versiones |
+| `si_activo` | `BOOLEAN` | NO | IDX | Activo lógico | No eliminar físicamente si fue usado |
+| `fh_alta` | `DATETIME(6)` | NO | - | Alta técnica | Auditoría |
+| `id_user_alta` | `CHAR(36)` | NO | - | Usuario alta | Auditoría |
 
 Reglas:
 
-- `id_user` identifica al usuario habilitado para firmar. Es �nico por firmante.
+- `id_user` identifica al usuario habilitado para firmar. Es único por firmante.
 - No guardar certificados, binarios ni metadata pesada de firma en esta tabla.
 - No guardar firmas concretas. Las firmas concretas van en `fal_documento_firma`.
-- No eliminar f�sicamente firmantes que hayan firmado documentos.
+- No eliminar físicamente firmantes que hayan firmado documentos.
 
 ### 1.8 Tabla `fal_firmante_version`
 
-Versionado hist�rico de roles, cargo, dependencia y vigencia del firmante. Congela el contexto vigente en el momento de cada cambio relevante.
+Versionado histórico de roles, cargo, dependencia y vigencia del firmante. Congela el contexto vigente en el momento de cada cambio relevante.
 
-| Campo | Tipo MariaDB | Null | Clave/�ndice | Descripci�n | Regla |
+| Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
 |---|---|---|---|---|---|
 | `id_firmante` | `BIGINT` | NO | PK+FK | Firmante | FK a `fal_firmante` |
-| `ver_firmante` | `SMALLINT` | NO | PK | Versi�n | Incremental por firmante; inicia en 1 |
-| `id_user` | `CHAR(36)` | NO | IDX | Usuario congelado | Snapshot del IDP al crear la versi�n |
-| `nom_firmante` | `VARCHAR(128)` | NO | - | Nombre congelado | Snapshot hist�rico |
-| `rol_firmante` | `VARCHAR(40)` | SÃ | IDX | Rol institucional descriptivo | Snapshot opcional del rol funcional institucional; no define autorizaciÃ³n documental. La autorizaciÃ³n real va en `fal_firmante_version_habilitacion`. |
-| `cargo_firmante` | `VARCHAR(128)` | S� | - | Cargo visible | Snapshot legible; nullable si no aplica |
-| `id_dep` | `BIGINT` | S� | FK+IDX | Dependencia asociada | Nullable si no aplica; FK a `fal_dependencia` |
-| `ver_dep` | `SMALLINT` | S� | - | Versi�n dependencia | Obligatoria si hay `id_dep`; FK a `fal_dependencia_version` |
+| `ver_firmante` | `SMALLINT` | NO | PK | Versión | Incremental por firmante; inicia en 1 |
+| `id_user` | `CHAR(36)` | NO | IDX | Usuario congelado | Snapshot del IDP al crear la versión |
+| `nom_firmante` | `VARCHAR(128)` | NO | - | Nombre congelado | Snapshot histórico |
+| `rol_firmante` | `VARCHAR(40)` | SÍ | IDX | Rol institucional descriptivo | Snapshot opcional del rol funcional institucional; no define autorización documental. La autorización real va en `fal_firmante_version_habilitacion`. |
+| `cargo_firmante` | `VARCHAR(128)` | SÍ | - | Cargo visible | Snapshot legible; nullable si no aplica |
+| `id_dep` | `BIGINT` | SÍ | FK+IDX | Dependencia asociada | Nullable si no aplica; FK a `fal_dependencia` |
+| `ver_dep` | `SMALLINT` | SÍ | - | Versión dependencia | Obligatoria si hay `id_dep`; FK a `fal_dependencia_version` |
 | `fh_vig_desde` | `DATE` | NO | IDX | Inicio vigencia | Obligatorio |
-| `fh_vig_hasta` | `DATE` | S� | IDX | Fin vigencia | NULL si vigente |
-| `si_activo` | `BOOLEAN` | NO | IDX | Versi�n activa | Vigencia l�gica |
-| `fh_alta` | `DATETIME(6)` | NO | - | Alta t�cnica | Auditor�a |
-| `id_user_alta` | `CHAR(36)` | NO | - | Usuario alta | Auditor�a |
+| `fh_vig_hasta` | `DATE` | SÍ | IDX | Fin vigencia | NULL si vigente |
+| `si_activo` | `BOOLEAN` | NO | IDX | Versión activa | Vigencia lógica |
+| `fh_alta` | `DATETIME(6)` | NO | - | Alta técnica | Auditoría |
+| `id_user_alta` | `CHAR(36)` | NO | - | Usuario alta | Auditoría |
 
 Reglas:
 
 - `ver_firmante` inicia en 1 al crear el firmante.
-- Al versionar, la versi�n anterior cierra `fh_vig_hasta` y `si_activo = false`.
-- La versi�n nueva congela `id_user`, `nom_firmante`, `rol_firmante` (descriptivo opcional), `cargo_firmante`, `id_dep`, `ver_dep`.
-- `rol_firmante` es un campo descriptivo/institucional opcional. No define autorizaciÃ³n documental; la autorizaciÃ³n concreta va en `fal_firmante_version_habilitacion`.
+- Al versionar, la versión anterior cierra `fh_vig_hasta` y `si_activo = false`.
+- La versión nueva congela `id_user`, `nom_firmante`, `rol_firmante` (descriptivo opcional), `cargo_firmante`, `id_dep`, `ver_dep`.
+- `rol_firmante` es un campo descriptivo/institucional opcional. No define autorización documental; la autorización concreta va en `fal_firmante_version_habilitacion`.
 - `tipo_firma` NO va en `fal_firmante_version`; `tipo_firma` es el mecanismo/naturaleza de la firma.
-- Si cambia rol, cargo o dependencia, se crea nueva versi�n. No se actualizan versiones anteriores.
+- Si cambia rol, cargo o dependencia, se crea nueva versión. No se actualizan versiones anteriores.
 - Si se informa `id_dep`, debe informarse `ver_dep`.
 - Si se informa `id_dep`+`ver_dep`, debe existir el registro en `fal_dependencia_version`.
-- No se eliminan f�sicamente firmantes que hayan firmado documentos.
-- No se actualizan firmas hist�ricas por cambios posteriores en el firmante.
+- No se eliminan físicamente firmantes que hayan firmado documentos.
+- No se actualizan firmas históricas por cambios posteriores en el firmante.
 
 ### 1.9 Tabla `fal_firmante_version_habilitacion`
 
 
 
-Define quÃ© puede firmar una versiÃ³n concreta de firmante. Es la fuente de autorizaciÃ³n documental por firmante.
+Define qué puede firmar una versión concreta de firmante. Es la fuente de autorización documental por firmante.
 
 
 
-No define quiÃ©n firma un documento concreto (eso lo hace `fal_documento_firma_req`).
+No define quién firma un documento concreto (eso lo hace `fal_documento_firma_req`).
 
-Define quÃ© tipos de documento y roles puede satisfacer una versiÃ³n de firmante.
+Define qué tipos de documento y roles puede satisfacer una versión de firmante.
 
 
 
-| Campo | Tipo MariaDB | Null | Clave/Ãndice | DescripciÃ³n | Regla |
+| Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
 
 |---|---|---|---|---|---|
 
 | `id_firmante` | `BIGINT` | NO | PK+FK | Firmante | Parte de FK a `fal_firmante_version` |
 
-| `ver_firmante` | `SMALLINT` | NO | PK+FK | VersiÃ³n firmante | Parte de FK a `fal_firmante_version` |
+| `ver_firmante` | `SMALLINT` | NO | PK+FK | Versión firmante | Parte de FK a `fal_firmante_version` |
 
 | `tipo_docu` | `SMALLINT` | NO | PK+IDX | Tipo de documento habilitado | Compatible con `fal_documento.tipo_docu` |
 
 | `rol_firma_req` | `SMALLINT` | NO | PK+IDX | Rol requerido que puede satisfacer | Compatible con `fal_documento_firma_req.rol_firma_req` |
 
-| `mecanismo_firma_req` | `SMALLINT` | SÃ | IDX | Mecanismo permitido/requerido | NULL si no restringe mecanismo |
+| `mecanismo_firma_req` | `SMALLINT` | SÍ | IDX | Mecanismo permitido/requerido | NULL si no restringe mecanismo |
 
-| `si_activo` | `BOOLEAN` | NO | IDX | HabilitaciÃ³n activa | Baja lÃ³gica |
+| `si_activo` | `BOOLEAN` | NO | IDX | Habilitación activa | Baja lógica |
 
-| `fh_alta` | `DATETIME(6)` | NO | - | Alta tÃ©cnica | AuditorÃ­a |
+| `fh_alta` | `DATETIME(6)` | NO | - | Alta técnica | Auditoría |
 
-| `id_user_alta` | `CHAR(36)` | NO | - | Usuario alta | AuditorÃ­a |
+| `id_user_alta` | `CHAR(36)` | NO | - | Usuario alta | Auditoría |
 
 
 
@@ -642,21 +668,21 @@ Reglas:
 
 
 
-- Una versiÃ³n de firmante puede tener N habilitaciones.
+- Una versión de firmante puede tener N habilitaciones.
 
-- Cada habilitaciÃ³n indica un `tipo_docu` de documento que puede firmar esa versiÃ³n.
+- Cada habilitación indica un `tipo_docu` de documento que puede firmar esa versión.
 
-- Cada habilitaciÃ³n indica un `rol_firma_req` que esa versiÃ³n puede satisfacer.
+- Cada habilitación indica un `rol_firma_req` que esa versión puede satisfacer.
 
-- `mecanismo_firma_req` restringe mecanismo solo si estÃ¡ informado. NULL significa sin restricciÃ³n de mecanismo.
+- `mecanismo_firma_req` restringe mecanismo solo si está informado. NULL significa sin restricción de mecanismo.
 
-- La vigencia temporal de la habilitaciÃ³n se toma de `fal_firmante_version` (`fh_vig_desde`, `fh_vig_hasta`).
+- La vigencia temporal de la habilitación se toma de `fal_firmante_version` (`fh_vig_desde`, `fh_vig_hasta`).
 
-- Si cambia identidad, cargo, dependencia o vigencia del firmante, se crea nueva versiÃ³n de firmante.
+- Si cambia identidad, cargo, dependencia o vigencia del firmante, se crea nueva versión de firmante.
 
-- Si cambia una habilitaciÃ³n: dar de baja la habilitaciÃ³n actual (`si_activo = false`) y crear una nueva, o versionar el firmante. No dejar el criterio ambiguo.
+- Si cambia una habilitación: dar de baja la habilitación actual (`si_activo = false`) y crear una nueva, o versionar el firmante. No dejar el criterio ambiguo.
 
-- No modificar firmas histÃ³ricas por cambios posteriores en habilitaciones.
+- No modificar firmas históricas por cambios posteriores en habilitaciones.
 
 - No usar `tipo_firma` como rol; `tipo_firma` es mecanismo/naturaleza de la firma realizada.
 
@@ -972,7 +998,9 @@ La tabla no guarda payload libre. Cuando el evento necesita detalle estructurado
 
 Reglas:
 
-- Append-only: no se edita ni borra.
+- Append-only estricto: una fila insertada no se edita ni se borra.
+- La regla aplica también a eventos económicos. Conciliaciones, sincronizaciones, recalculaciones y cambios de proyección nunca actualizan una fila existente de `fal_acta_evento`.
+- Si una corrección funcional requiere un nuevo hecho de dominio, se registra otro evento; nunca se sobrescribe el anterior.
 - No usar `payload_json`.
 - `actor_tipo` indica la naturaleza funcional del actor.
 - `actor_id` guarda identidad técnica estable cuando existe subject IDP o identidad autenticada equivalente.
@@ -1063,24 +1091,6 @@ Eventos explícitamente prohibidos como productivos:
 | `monto_operativo_vigente` | `DECIMAL(14,2)` | SÍ | — | Valor visible/proyectado seleccionado | `fal_acta_valorizacion` |
 | `si_monto_confirmado` | `BOOLEAN` | NO | IDX | Monto confirmado | `fal_acta_valorizacion` |
 | `si_muestra_monto_portal` | `BOOLEAN` | NO | IDX | Portal muestra monto | Reglas portal |
-| `tipo_obligacion_pago` | `SMALLINT` | SÍ | IDX | Tipo obligación vigente | `fal_acta_obligacion_pago` |
-| `estado_obligacion_pago` | `SMALLINT` | SÍ | IDX | Estado obligación | `fal_acta_obligacion_pago` |
-| `monto_obligacion_pago` | `DECIMAL(14,2)` | SÍ | — | Monto obligación | `fal_acta_obligacion_pago` |
-| `tipo_forma_pago_vigente` | `SMALLINT` | SÍ | IDX | Forma pago vigente | `fal_acta_forma_pago` |
-| `estado_forma_pago_vigente` | `SMALLINT` | SÍ | IDX | Estado forma pago | `fal_acta_forma_pago` |
-| `si_plan_pago` | `BOOLEAN` | NO | IDX | Tiene plan | `fal_acta_plan_pago_ref` |
-| `estado_plan_pago` | `SMALLINT` | SÍ | IDX | Estado plan | `fal_acta_plan_pago_ref` |
-| `cant_cuotas_plan` | `SMALLINT` | SÍ | — | Cuotas plan | Cache desde ingresos |
-| `valor_cuota_plan` | `DECIMAL(14,2)` | SÍ | — | Valor cuota | Cache desde ingresos |
-| `cant_cuotas_pagadas` | `SMALLINT` | SÍ | — | Cuotas pagadas | Cache operativo |
-| `cant_cuotas_mora` | `SMALLINT` | SÍ | — | Cuotas en mora | Cache operativo |
-| `cant_cuotas_mora_consec` | `SMALLINT` | SÍ | — | Mora consecutiva | Cache operativo |
-| `cant_dias_mora` | `SMALLINT` | SÍ | — | Días mora | Cache operativo |
-| `si_apta_intimacion` | `BOOLEAN` | NO | IDX | Apta intimación | Reglas pago/plan |
-| `motivo_apta_intimacion` | `SMALLINT` | SÍ | IDX | Motivo aptitud | Reglas pago/plan |
-| `si_pago_procesado` | `BOOLEAN` | NO | IDX | Pago procesado vigente | Movimientos pagos |
-| `si_pago_confirmado` | `BOOLEAN` | NO | IDX | Pago confirmado vigente | Movimientos pagos |
-| `fh_ult_sync_ingresos` | `DATETIME(6)` | SÍ | IDX | Última sincronización | Integración ingresos |
 | `si_gestion_ext` | `BOOLEAN` | NO | IDX | Gestión externa activa | `fal_acta_gestion_externa` |
 | `gestion_externa_activa_id` | `BIGINT` | SÍ | FK+IDX | Ciclo externo activo | `fal_acta_gestion_externa` |
 | `tipo_gestion_ext` | `SMALLINT` | SÍ | IDX | Tipo gestión externa | `fal_acta_gestion_externa` |
@@ -1106,6 +1116,10 @@ Reglas:
 - `monto_operativo_vigente` es proyección para UX; la verdad vive en `fal_acta_valorizacion` y, si ya hay comprobante emitido, en `fal_acta_obligacion_pago`.
 - Si hay gestión externa activa, `gestion_externa_activa_id` debe apuntar al ciclo activo y `estado_gestion_ext` debe reflejar su estado operativo.
 - No se derivan pagos de tablas viejas descartadas.
+- `fal_acta_snapshot` no duplica importes, conciliación, mora, saldos ni estados actuales de obligación/forma/plan. Toda lectura económica actual por acta se resuelve desde `fal_acta_economia_proyeccion` mediante `acta_id`.
+- `monto_operativo_vigente` continúa siendo una proyección de valorización para UX; no reemplaza la proyección económica de pagos.
+- El estado estructural del plan admite `ACTIVO`, `FINALIZADO_POR_PAGO`, `ANULADO` y `REFINANCIADO`. La mora y la condición calculada de plan caído no son estados del plan.
+- `PLAN_CAIDO` puede materializarse únicamente como condición mutable en `fal_acta_economia_proyeccion`; nunca en `fal_acta_snapshot`, `fal_acta_plan_pago_ref` ni `fal_acta_evento`.
 - `doc_infractor_txt` fusiona tipo y número de documento para uso informativo en bandejas. Ejemplos: `DNI 22276143`, `CUIT 20-12345678-5`.
 - `tipo_doc_infractor` y `nro_doc_infractor` no se proyectan por separado en snapshot; la fuente primaria sigue siendo `fal_persona`.
 - `domicilio_infractor_txt`, `domicilio_notif_txt`, `domicilio_infr_txt`, `ubicacion_infr_resumen`, `licencia_provincia_txt`, `licencia_unidad_txt` y `nomenclatura_resumen` son caches regenerables para bandejas/listados.
@@ -2107,25 +2121,25 @@ Catálogo `mecanismo_firma_req`:
 
 Registra las firmas asociadas a un documento emitido por el sistema.
 
-La tabla conserva los datos mínimos necesarios para saber qué documento se firmó, quién lo firmó, con qué mecanismo, con qué rol/claim funcional, cuándo se firmó y, si aplica, qué referencia externa respalda la operación.
+La tabla conserva los datos mínimos necesarios para saber qué documento se firmó, quién lo firmó, con qué mecanismo, cuándo se firmó y, si aplica, qué referencia externa respalda la operación.
 
 `tipo_firma` representa el mecanismo o naturaleza de la firma.  
 No representa el rol del firmante.
 
-El rol del firmante se conserva como snapshot del claim recibido en el bearer/token del usuario que firma, porque ese rol puede cambiar en el futuro, pero la firma debe conservar con qué autorización funcional fue realizada.
+La identidad del firmante se toma del claim `sub` del JWT (ver 0.9) y se guarda en `id_user_firma`. `rol_firmante` y `nombre_firmante` quedan **opcionales/reservados** en el estado actual: pueden completarse como snapshot histórico cuando exista información disponible, pero el rol **no** se utiliza todavía para autorización y **no** se afirma que se extraiga obligatoriamente del token.
 
 | Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
 |---|---|---|---|---|---|
 | `id` | `BIGINT AUTO_INCREMENT` | NO | PK | Firma | PK técnica |
 | `documento_id` | `BIGINT` | NO | FK+IDX | Documento | Documento firmado |
-| `id_firmante` | `BIGINT` | S? | FK+IDX | Firmante que ejecut? la firma | FK a `fal_firmante`; nullable si firma es de sistema |
-| `ver_firmante` | `SMALLINT` | S? | FK+IDX | Versi?n del firmante usada | FK a `fal_firmante_version`; debe informarse si hay `id_firmante` |
-| `seq_firma_req` | `SMALLINT` | SÃ | FK+IDX | Requisito de firma satisfecho | Junto con `documento_id`, referencia `fal_documento_firma_req`; NULL para firmas sin requisito explÃ­cito |
+| `id_firmante` | `BIGINT` | SÍ | FK+IDX | Firmante que ejecutó la firma | FK a `fal_firmante`; nullable si firma es de sistema |
+| `ver_firmante` | `SMALLINT` | SÍ | FK+IDX | Versión del firmante usada | FK a `fal_firmante_version`; debe informarse si hay `id_firmante` |
+| `seq_firma_req` | `SMALLINT` | SÍ | FK+IDX | Requisito de firma satisfecho | Junto con `documento_id`, referencia `fal_documento_firma_req`; NULL para firmas sin requisito explícito |
 | `tipo_firma` | `SMALLINT` | NO | IDX | Tipo/mecanismo de firma | Catálogo funcional |
 | `estado_firma` | `SMALLINT` | NO | IDX | Estado firma | Catálogo funcional |
-| `id_user_firma` | `CHAR(36)` | SÍ | IDX | Usuario firmante | Subject/IDP del usuario, si aplica |
-| `rol_firmante` | `VARCHAR(40)` | SÍ | IDX | Rol/claim del firmante | Snapshot tomado del bearer/token |
-| `nombre_firmante` | `VARCHAR(64)` | SÍ | — | Nombre visible del firmante | Snapshot tomado del token/IDP o perfil al momento de firma |
+| `id_user_firma` | `CHAR(36)` | SÍ | IDX | Usuario firmante | Proviene del claim `sub` del JWT (ver 0.9) |
+| `rol_firmante` | `VARCHAR(40)` | SÍ | IDX | Rol del firmante (opcional/reservado) | Snapshot opcional; no se usa para autorización todavía |
+| `nombre_firmante` | `VARCHAR(64)` | SÍ | — | Nombre visible del firmante (opcional/reservado) | Snapshot legible opcional |
 | `fh_firma` | `DATETIME(6)` | SÍ | IDX | Fecha/hora de firma | Obligatoria si `estado_firma = FIRMADA` |
 | `hash_documento` | `CHAR(64)` | SÍ | IDX | Hash del documento firmado | SHA-256 hexadecimal |
 | `referencia_firma_ext` | `VARCHAR(120)` | SÍ | IDX | Referencia externa de firma | Solo si la firma tiene respaldo/operación externa |
@@ -2137,14 +2151,13 @@ Reglas:
 
 - Puede haber más de una firma por documento si el circuito lo requiere.
 - `tipo_firma` representa el mecanismo de firma, no el rol del firmante.
-- `rol_firmante` no se selecciona manualmente en la firma.
-- `rol_firmante` se toma del bearer/token del usuario que firma.
-- `rol_firmante` se guarda como snapshot histórico del claim usado al momento de firmar.
-- El rol guardado permite reconstruir con qué autorización funcional se firmó el documento.
+- `id_user_firma` proviene del claim `sub` del JWT (ver 0.9) y es la trazabilidad obligatoria del firmante.
+- `rol_firmante` y `nombre_firmante` son **opcionales/reservados**: pueden guardarse como snapshot histórico si hay información disponible, pero no son obligatorios y el rol no se utiliza todavía para autorización.
+- No se afirma todavía que `rol_firmante` se extraiga obligatoriamente del token; la autorización permanece diferida.
 - Si el usuario cambia de rol posteriormente, no se modifica `rol_firmante` en firmas ya registradas.
-- Si firma un usuario real, debería informarse `id_user_firma`, `rol_firmante` y `nombre_firmante`.
-- Si `tipo_firma = SISTEMA`, `rol_firmante` puede tomar valor `SISTEMA` o el claim técnico equivalente usado por el proceso automático.
-- `nombre_firmante` es un snapshot legible para visualización y control. No reemplaza al usuario/subject.
+- Si firma un usuario real, debe informarse al menos `id_user_firma`.
+- Si `tipo_firma = SISTEMA`, `rol_firmante`/`nombre_firmante` pueden quedar nulos o tomar un valor técnico como `SISTEMA`.
+- `nombre_firmante` es un snapshot legible opcional para visualización. No reemplaza al usuario/subject.
 - `hash_documento` corresponde al contenido exacto firmado.
 - Si el documento cambia, no se reutiliza la firma anterior.
 - Para esta etapa, el hash se asume `SHA-256` y se guarda como hexadecimal en `CHAR(64)`.
@@ -2155,8 +2168,8 @@ Reglas:
 - Las observaciones administrativas o comentarios sobre la firma no van en esta tabla; deben registrarse en `fal_observacion`.
 - `id_firmante` y `ver_firmante` vinculan la firma al registro del firmante habilitado.
 
-- `seq_firma_req` vincula la firma al requisito especÃ­fico de `fal_documento_firma_req` que fue satisfecho. NULL si la firma no corresponde a un requisito explÃ­cito. Son NULL si el firmante no est? en el padr?n (p. ej. firma de sistema).
-- Aunque exista FK al firmante versionado, los snapshots `id_user_firma`, `rol_firmante` y `nombre_firmante` deben conservarse para garantizar trazabilidad hist?rica ante cambios posteriores.
+- `seq_firma_req` vincula la firma al requisito específico de `fal_documento_firma_req` que fue satisfecho. NULL si la firma no corresponde a un requisito explícito. Son NULL si el firmante no está en el padrón (p. ej. firma de sistema).
+- Aunque exista FK al firmante versionado, los snapshots `id_user_firma`, `rol_firmante` y `nombre_firmante` deben conservarse para garantizar trazabilidad histórica ante cambios posteriores.
 
 #### Catálogo `tipo_firma`
 
@@ -2227,14 +2240,14 @@ Decisiones tomadas:
 - La tabla queda chica y operativa.
 - `tipo_firma` queda como mecanismo/naturaleza de firma.
 - Se elimina la idea de usar `tipo_firma` para representar inspector, autoridad o funcionario.
-- `rol_firmante` se conserva como snapshot del claim del bearer/token al momento de firmar.
+- `rol_firmante` queda opcional/reservado; no se usa todavía para autorización (ver 0.9).
 - No se define catálogo interno de roles de firma en esta tabla.
 - `nombre_firmante` queda en `VARCHAR(64)`.
 - Se conserva `hash_documento` como control mínimo de integridad.
 - Se conserva `referencia_firma_ext` para integraciones externas o respaldo físico/digitalizado.
 - No se guardan certificados, binarios ni metadata pesada.
 
-#### RelaciÃ³n funcional: firmante habilitado y firma de documento
+#### Relación funcional: firmante habilitado y firma de documento
 
 
 
@@ -2246,11 +2259,11 @@ Resumen:
 
 
 
-1. Cada documento firmable tiene uno o mÃ¡s requisitos definidos en `fal_documento_firma_req`.
+1. Cada documento firmable tiene uno o más requisitos definidos en `fal_documento_firma_req`.
 
 2. La bandeja de firma se genera cruzando requisitos pendientes con firmantes vigentes y habilitaciones compatibles en `fal_firmante_version_habilitacion`.
 
-3. Al firmar, se valida firmante, habilitaciÃ³n, asignaciÃ³n especÃ­fica y orden de firma.
+3. Al firmar, se valida firmante, habilitación, asignación específica y orden de firma.
 
 4. Se crea `fal_documento_firma` con snapshot completo (`id_firmante`, `ver_firmante`, `id_user_firma`, `rol_firmante`, `nombre_firmante`, `tipo_firma`, `hash_documento`).
 
@@ -2354,9 +2367,9 @@ Al firmar un requisito de firma:
 8. Se crea registro en `fal_documento_firma` con snapshot:
    - `documento_id`, `seq_firma_req`
    - `id_firmante`, `ver_firmante`
-   - `id_user_firma` (snapshot del subject/IDP)
-   - `rol_firmante` (snapshot del claim/bearer al momento de firmar)
-   - `nombre_firmante` (snapshot legible)
+   - `id_user_firma` (del claim `sub` del JWT; ver 0.9)
+   - `rol_firmante` (opcional/reservado; no usado para autorización)
+   - `nombre_firmante` (opcional/reservado; snapshot legible)
    - `tipo_firma` (mecanismo usado)
    - `estado_firma = FIRMADA`
    - `fh_firma`
@@ -3921,14 +3934,39 @@ Decisiones tomadas:
 ## 8. Pagos e integración con Ingresos/Tesorería
 ### 8.1 Regla general
 
-Faltas no es cuenta corriente ni tesorería. La verdad financiera vive en Ingresos/Tesorería. Faltas conserva obligación jurídica/administrativa, referencias, movimientos y caches operativos.
+Faltas no es cuenta corriente ni tesorería. La verdad financiera vive en Ingresos/Tesorería. Faltas conserva obligación jurídica/administrativa, referencias, movimientos económicos, decisiones administrativas y caches operativos regenerables.
+
+El modelo separa sin ambigüedad **nueve planos conceptuales**. Son nueve responsabilidades, no nueve tablas obligatorias:
+
+1. **Estado jurídico/administrativo de una obligación** (`fal_acta_obligacion_pago.estado_obligacion`): qué debe o dejó de deber el infractor según Faltas.
+2. **Estado de una forma de pago** (`fal_acta_forma_pago.estado_forma_pago`): estado del instrumento (recibo al cobro, plan, refinanciación) generado en Ingresos.
+3. **Referencia resumida de un plan** (`fal_acta_plan_pago_ref`): cabecera estructural del plan, sin espejo del cronograma de cuotas.
+4. **Movimiento económico real** (`fal_acta_pago_movimiento`): hechos financieros estrictamente append-only (emisión, pago, confirmación, reverso, anulación).
+5. **Conciliación actual con Tesorería** (`fal_acta_economia_proyeccion`): clasificación vigente de importes confirmados; no tiene historial local ni modifica movimientos.
+6. **Decisión administrativa de Faltas sobre un pago anterior** (`fal_acta_pago_resolucion`): resolución humana, no espejo de Ingresos.
+7. **Evento funcional/jurídico del acta** (`fal_acta_evento`): timeline estrictamente append-only; no registra sincronizaciones o cambios de cache.
+8. **Proyección económica actual** (`fal_acta_economia_proyeccion`): saldos, importes, cantidades, flags y datos de consulta rápida, mutables y regenerables.
+9. **Cálculo dinámico al corte** (`fal_acta_economia_proyeccion`): mora, importe vencido, aptitud de intimación y plan caído calculado; pueden cambiar incluso durante el mismo día.
+
+No se crea `fal_acta_pago_conciliacion`: no se requiere auditoría local de cada cambio de conciliación. El estado vigente se conserva únicamente en la proyección económica y puede reconstruirse consultando Ingresos/Tesorería.
+
+Distinciones obligatorias:
+
+- obligación determinada por Faltas ≠ recibo al cobro/prepago generado ≠ deuda materializada en Ingresos ≠ pago procesado ≠ pago confirmado ≠ pago conciliado ≠ obligación cancelada.
+- `DEUDA_EMITIDA` **no** es un estado jurídico de la obligación: es un movimiento/hecho de integración con Ingresos (`fal_acta_pago_movimiento.tipo_movimiento = DEUDA_EMITIDA`).
+- Una obligación puede existir en Faltas sin deuda materializada en Ingresos.
+- `EMISION_ANULADA` ≠ `PAGO_ANULADO` ≠ `OBLIGACION_DEJADA_SIN_EFECTO`.
+- El "plan caído" y la "mora" son condiciones dinámicas calculadas, nunca estados estructurales ni eventos. Pueden materializarse únicamente como datos actuales y regenerables en `fal_acta_economia_proyeccion`.
 
 Tablas definitivas:
 
-- `fal_acta_obligacion_pago`
-- `fal_acta_forma_pago`
-- `fal_acta_plan_pago_ref`
-- `fal_acta_pago_movimiento`
+- `fal_acta_obligacion_pago` — estado jurídico/administrativo de la obligación.
+- `fal_acta_forma_pago` — instrumento de pago vigente/histórico.
+- `fal_acta_plan_pago_ref` — cabecera estructural resumida del plan (sin tabla de cuotas).
+- `fal_acta_pago_movimiento` — movimientos económicos reales estrictamente append-only.
+- `fal_acta_economia_proyeccion` — estado económico actual por acta, mutable y regenerable.
+- `fal_acta_pago_resolucion` — decisión de Faltas sobre pago aplicado a obligación anterior.
+- `fal_acta_evento` — hechos funcionales/jurídicos del acta, estrictamente append-only.
 
 ### 8.2 Tabla `fal_acta_obligacion_pago`
 
@@ -3938,27 +3976,54 @@ Tablas definitivas:
 | `version_row` | `INT` | NO | — | Versión de fila | Concurrencia optimista. Default `0`; incrementar en cada actualización del agregado |
 | `acta_id` | `BIGINT` | NO | FK+IDX | Acta | Expediente |
 | `persona_id` | `BIGINT` | NO | FK+IDX | Persona obligada | Infractor/persona |
-| `tipo_obligacion` | `SMALLINT` | NO | IDX | Tipo | VOLUNTARIO, CONDENA |
+| `tipo_obligacion` | `SMALLINT` | NO | IDX | Tipo jurídico | VOLUNTARIO, CONDENA |
+| `origen_obligacion` | `SMALLINT` | NO | IDX | Origen de la obligación | Catálogo cerrado: FALTAS, APREMIO, JUZGADO |
 | `valorizacion_id` | `BIGINT` | SÍ | FK+IDX | Valorización origen | Debe estar confirmada |
 | `fallo_id` | `BIGINT` | SÍ | FK+IDX | Fallo origen | Si condena |
+| `obligacion_reemplazada_id` | `BIGINT` | SÍ | FK+IDX | Obligación anterior | Si esta obligación reemplaza a otra (diferencia/Apremio) |
 | `monto_original` | `DECIMAL(14,2)` | NO | — | Monto obligación | Desde valorización confirmada |
-| `estado_obligacion` | `SMALLINT` | NO | IDX | Estado | Vigente, deuda emitida, en plan, cancelada, etc. |
+| `estado_obligacion` | `SMALLINT` | NO | IDX | Estado jurídico/administrativo | Catálogo cerrado (ver abajo). Nunca `DEUDA_EMITIDA`, `EN_PLAN`, `EN_MORA`, `PLAN_CAIDO` |
 | `fh_determinacion` | `DATETIME(6)` | NO | IDX | Fecha determinación | Funcional |
-| `id_user_determinacion` | `CHAR(36)` | SÍ | IDX | Usuario determinación | Trazabilidad |
-| `forma_pago_vigente_id` | `BIGINT` | SÍ | FK+IDX | Forma vigente | Contado/plan/refinanciación |
-| `si_apta_intimacion` | `BOOLEAN` | NO | IDX | Apta intimación | Cache operativo |
-| `fh_apta_intimacion` | `DATETIME(6)` | SÍ | IDX | Fecha aptitud | Si aplica |
-| `motivo_apta_intimacion` | `SMALLINT` | SÍ | IDX | Motivo | Enum estable |
-| `cant_dias_mora` | `SMALLINT` | SÍ | — | Días mora | Cache operativo |
-| `cant_cuotas_mora` | `SMALLINT` | SÍ | — | Cuotas mora | Cache operativo |
-| `cant_cuotas_mora_consec` | `SMALLINT` | SÍ | — | Mora consecutiva | Cache operativo |
-| `fh_cancelacion` | `DATETIME(6)` | SÍ | IDX | Cancelación | Si cancelada |
-| `si_excluir_escaneo` | `BOOLEAN` | NO | IDX | Excluir sync | Cancelada/anulada/refinanciada/cerrada |
-| `fh_ult_sync_ingresos` | `DATETIME(6)` | SÍ | IDX | Última sync | Integración |
+| `id_user_determinacion` | `CHAR(36)` | SÍ | IDX | Usuario determinación | Trazabilidad (proviene de `sub`) |
+| `forma_pago_vigente_id` | `BIGINT` | SÍ | FK+IDX | Forma vigente | Recibo al cobro/plan/refinanciación |
+| `fh_cancelacion` | `DATETIME(6)` | SÍ | IDX | Cancelación | Si cancelada por pago |
+| `si_excluir_escaneo` | `BOOLEAN` | NO | IDX | Excluir sync | Cancelada/dejada sin efecto/reemplazada/cerrada |
 | `si_vigente` | `BOOLEAN` | NO | IDX | Vigente | Control |
 | `acta_id_vigente` | `BIGINT` | SÍ | UNIQUE AUX | Columna generada | `CASE WHEN si_vigente = true THEN acta_id ELSE NULL END` |
 | `fh_alta` | `DATETIME(6)` | NO | — | Alta | Auditoría |
 | `id_user_alta` | `CHAR(36)` | NO | — | Usuario alta | Auditoría |
+
+#### Catálogo `estado_obligacion` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `DETERMINADA` | Faltas determinó la obligación; aún sin forma de pago vigente |
+| 2 | `PENDIENTE_FORMA_PAGO` | Obligación activa a la espera de un nuevo instrumento de pago (p. ej. tras anulación de emisión/plan) |
+| 3 | `CON_FORMA_PAGO_VIGENTE` | Existe una forma de pago vigente (recibo al cobro, plan o refinanciación) |
+| 4 | `CANCELADA_POR_PAGO` | Cancelada por pago confirmado (con evidencia o conciliado) |
+| 5 | `REEMPLAZADA` | Reemplazada por una nueva obligación (diferencia fijada, nueva valorización de Apremio) |
+| 6 | `DEJADA_SIN_EFECTO` | Dejada sin efecto por absolución/nulidad; conserva histórico económico |
+
+Prohibido como `estado_obligacion`: `DEUDA_EMITIDA`, `EN_PLAN`, `EN_MORA`, `PLAN_CAIDO`. Son movimientos económicos o condiciones dinámicas, no estados jurídicos.
+
+#### Catálogo `origen_obligacion` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `FALTAS` | Determinada en el circuito interno de Faltas |
+| 2 | `APREMIO` | Determinada/reemplazada en gestión de Apremios (mantiene tipo jurídico `CONDENA`) |
+| 3 | `JUZGADO` | Determinada/modificada en sede de Juzgado y reingresada a Faltas |
+
+#### Reglas de obligación y proyección económica
+
+- `fal_acta_obligacion_pago` conserva únicamente el estado jurídico/administrativo, el monto original y sus referencias estructurales. No almacena saldos, conciliación, mora, aptitud de intimación ni flags de reapertura.
+- Los importes confirmados, saldos, conciliación vigente y cálculos operativos se materializan exclusivamente en `fal_acta_economia_proyeccion`.
+- Los hechos financieros históricos viven en `fal_acta_pago_movimiento`; el estado actual que depende de Ingresos/Tesorería puede reconstruirse consultando esas fuentes y regenerando la proyección.
+- Un pago confirmado con evidencia puede cancelar operativamente la obligación (`CANCELADA_POR_PAGO`) y habilitar cierre aunque Tesorería aún no lo haya conciliado. La separación de importes pendiente/conciliado se refleja solo en la proyección.
+- Un reverso/contracargo genera un movimiento nuevo, revive el saldo proyectado y marca `si_reapertura_requerida = true` en la proyección. No cambia automáticamente el acta de `CERR` a `ANAL`; la reapertura se ejecuta por acción formal controlada.
+- La obligación se cancela una sola vez aunque existan pagos duplicados reales; el excedente lo administra Ingresos/Tesorería.
+- Un reintegro/devolución pendiente **no** bloquea el cierre jurídico del acta.
+
 ### 8.3 Tabla `fal_acta_forma_pago`
 
 | Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
@@ -3967,16 +4032,17 @@ Tablas definitivas:
 | `version_row` | `INT` | NO | — | Versión de fila | Concurrencia optimista. Default `0`; incrementar en cada actualización del agregado |
 | `obligacion_pago_id` | `BIGINT` | NO | FK+IDX | Obligación | Padre |
 | `nro_forma` | `SMALLINT` | NO | IDX | Número forma | Historial |
-| `tipo_forma_pago` | `SMALLINT` | NO | IDX | Tipo | CONTADO, PLAN_PAGO, REFINANCIACION |
-| `estado_forma_pago` | `SMALLINT` | NO | IDX | Estado | Generada, activa, confirmada, mora, caída, etc. |
-| `monto_forma` | `DECIMAL(14,2)` | NO | — | Monto | Monto de esta forma |
-| `Cmte_EM` | `CHAR(2)` | SÍ | IDX | Comprobante emisión | Referencia ingresos |
-| `Pref_EM` | `SMALLINT` | SÍ | IDX | Prefijo emisión | Referencia ingresos |
-| `Nro_EM` | `INT` | SÍ | IDX | Número emisión | Referencia ingresos |
-| `Cmte_PG` | `CHAR(2)` | SÍ | IDX | Comprobante pago | Recibo/pago si contado |
-| `Pref_PG` | `SMALLINT` | SÍ | IDX | Prefijo pago | Recibo/pago |
-| `Nro_PG` | `INT` | SÍ | IDX | Número pago | Recibo/pago |
-| `forma_reemplazada_id` | `BIGINT` | SÍ | FK+IDX | Forma anterior | Refinanciación |
+| `tipo_forma_pago` | `SMALLINT` | NO | IDX | Tipo | RECIBO_AL_COBRO, PLAN_PAGO, REFINANCIACION |
+| `estado_forma_pago` | `SMALLINT` | NO | IDX | Estado | Catálogo cerrado (ver abajo). Nunca `MORA` ni `CAIDA` |
+| `monto_forma` | `DECIMAL(14,2)` | NO | — | Monto | Monto de esta forma. Inmutable mientras el recibo esté vigente |
+| `fh_vencimiento` | `DATETIME(6)` | SÍ | IDX | Vencimiento vigente | Del recibo al cobro/prepago. Modificable/extensible; nunca causa de rechazo de pago |
+| `Cmte_EM` | `CHAR(2)` | SÍ | IDX | Comprobante emisión | Referencia ingresos; nulo hasta materialización |
+| `Pref_EM` | `SMALLINT` | SÍ | IDX | Prefijo emisión | Referencia ingresos; nulo hasta materialización |
+| `Nro_EM` | `INT` | SÍ | IDX | Número emisión | Referencia ingresos; nulo hasta materialización |
+| `Cmte_PG` | `CHAR(2)` | SÍ | IDX | Comprobante pago | Recibo/pago; nulo hasta materialización |
+| `Pref_PG` | `SMALLINT` | SÍ | IDX | Prefijo pago | Recibo/pago; nulo hasta materialización |
+| `Nro_PG` | `INT` | SÍ | IDX | Número pago | Recibo/pago; nulo hasta materialización |
+| `forma_reemplazada_id` | `BIGINT` | SÍ | FK+IDX | Forma anterior | Refinanciación/reemplazo |
 | `fh_generacion` | `DATETIME(6)` | NO | IDX | Generación | Funcional |
 | `fh_pago_procesado` | `DATETIME(6)` | SÍ | IDX | Pago procesado | No cierra |
 | `fh_pago_confirmado` | `DATETIME(6)` | SÍ | IDX | Pago confirmado | Habilita cierre si corresponde |
@@ -3986,6 +4052,37 @@ Tablas definitivas:
 | `obligacion_pago_id_vigente` | `BIGINT` | SÍ | UNIQUE AUX | Columna generada | `CASE WHEN si_vigente = true THEN obligacion_pago_id ELSE NULL END` |
 | `tipo_forma_pago_vigente` | `SMALLINT` | SÍ | UNIQUE AUX | Columna generada | `CASE WHEN si_vigente = true THEN tipo_forma_pago ELSE NULL END` |
 | `si_excluir_escaneo` | `BOOLEAN` | NO | IDX | Excluir sync | Si no corresponde consultar |
+
+#### Catálogo `tipo_forma_pago` (nomenclatura canónica)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `RECIBO_AL_COBRO` | Recibo al cobro / prepago para pago único (voluntario, condena o contado). Nomenclatura canónica; reemplaza al histórico `CONTADO` |
+| 2 | `PLAN_PAGO` | Plan de pago en cuotas |
+| 3 | `REFINANCIACION` | Refinanciación de un plan anterior |
+
+#### Catálogo `estado_forma_pago` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `GENERADA` | Instrumento generado, aún no vigente |
+| 2 | `VIGENTE` | Instrumento vigente |
+| 3 | `VENCIDA` | Vencida por fecha; no impide aceptar un pago real |
+| 4 | `PAGADA` | Pagada |
+| 5 | `ANULADA` | Anulada (deja la obligación pendiente de nueva forma) |
+| 6 | `REEMPLAZADA` | Reemplazada por refinanciación/nueva forma |
+
+Prohibido como `estado_forma_pago`: `MORA` y `CAIDA` (condiciones dinámicas, no estados de forma).
+
+#### Reglas de forma de pago
+
+- El vencimiento (`fh_vencimiento`) puede modificarse o extenderse en cualquier momento.
+- Un pago realizado fuera de término se acepta siempre que haya sido procesado por Tesorería, Caja, banco, portal, entidad recaudadora o integración autorizada. La fecha de vencimiento **nunca** se usa para rechazar un pago real.
+- Mientras el recibo esté vigente, el monto de la obligación asociada **no** puede modificarse; sí puede modificarse/extenderse el vencimiento.
+- Una vez vencido, Faltas puede mantener el monto o reemplazarlo mediante nueva valorización.
+- `Cmte_EM/Pref_EM/Nro_EM` y `Cmte_PG/Pref_PG/Nro_PG` pueden permanecer nulos hasta que Ingresos materialice facturación/emisión y/o pago (posiblemente en la misma operación al momento del cobro).
+- Anular una forma/plan deja la forma no vigente y la obligación en `PENDIENTE_FORMA_PAGO`; no equivale a pago ni a absolución.
+
 ### 8.4 Tabla `fal_acta_plan_pago_ref`
 
 | Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
@@ -3996,28 +4093,38 @@ Tablas definitivas:
 | `obligacion_pago_id` | `BIGINT` | NO | FK+IDX | Obligación | Padre |
 | `id_tdoc_plan` | `SMALLINT` | NO | IDX | Tipo doc plan | Para plan: `1` |
 | `id_doc_plan` | `BIGINT` | NO | IDX | ID plan externo | Fuente Ingresos |
-| `estado_plan` | `SMALLINT` | NO | IDX | Estado plan | Cache operativo desde Ingresos |
+| `estado_plan` | `SMALLINT` | NO | IDX | Estado estructural del plan | Catálogo cerrado: `ACTIVO`, `FINALIZADO_POR_PAGO`, `ANULADO`, `REFINANCIADO`. Nunca `CAIDO` ni `CUMPLIDO` |
 | `fh_generacion_plan` | `DATETIME(6)` | SÍ | IDX | Generación plan | Informada por Ingresos |
 | `cantidad_cuotas` | `SMALLINT` | NO | — | Cantidad cuotas | Característica del plan |
 | `importe_total_plan` | `DECIMAL(14,2)` | NO | — | Total plan | Cache operativo |
 | `importe_cuota_regular` | `DECIMAL(14,2)` | SÍ | — | Cuota regular | Cache operativo |
-| `cantidad_cuotas_pagadas` | `SMALLINT` | SÍ | — | Cuotas pagadas | Cache, no verdad financiera primaria |
-| `cantidad_cuotas_vencidas` | `SMALLINT` | SÍ | — | Cuotas vencidas | Cache |
-| `cantidad_cuotas_en_mora` | `SMALLINT` | SÍ | — | Cuotas mora | Cache |
-| `cantidad_cuotas_mora_consec` | `SMALLINT` | SÍ | — | Mora consecutiva | Cache |
-| `dias_mora_max` | `SMALLINT` | SÍ | — | Días mora max | Cache |
-| `fh_ultimo_pago` | `DATETIME(6)` | SÍ | IDX | Último pago | Cache |
-| `fh_caida` | `DATETIME(6)` | SÍ | IDX | Fecha caída | Si caído |
+| `fh_finalizacion_pago` | `DATETIME(6)` | SÍ | IDX | Finalización por pago | Se completa cuando `estado_plan = FINALIZADO_POR_PAGO` |
 | `fh_cancelacion` | `DATETIME(6)` | SÍ | IDX | Cancelación | Si cancelado |
 | `fh_refinanciacion` | `DATETIME(6)` | SÍ | IDX | Refinanciación | Si refinanciado |
 | `plan_refinanciado_id` | `BIGINT` | SÍ | FK+IDX | Nuevo plan | Si refinanciado |
-| `si_apto_intimacion` | `BOOLEAN` | NO | IDX | Apto intimación | Cache operativo |
-| `fh_apto_intimacion` | `DATETIME(6)` | SÍ | IDX | Fecha aptitud | Si aplica |
-| `motivo_apta_intimacion` | `SMALLINT` | SÍ | IDX | Motivo | Enum |
 | `si_excluir_escaneo` | `BOOLEAN` | NO | IDX | Excluir sync | Cancelado/anulado/refinanciado |
-| `fh_ult_sync_ingresos` | `DATETIME(6)` | SÍ | IDX | Última sync | Integración |
 | `si_vigente` | `BOOLEAN` | NO | IDX | Plan vigente | Indica plan operativo vigente asociado a la obligación |
 | `obligacion_pago_id_vigente` | `BIGINT` | SÍ | UNIQUE AUX | Columna generada | `CASE WHEN si_vigente = true THEN obligacion_pago_id ELSE NULL END` |
+
+#### Catálogo `estado_plan` (estructural, cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `ACTIVO` | Plan vigente |
+| 2 | `FINALIZADO_POR_PAGO` | Todas las cuotas pagadas; obligación `CANCELADA_POR_PAGO` |
+| 3 | `ANULADO` | Plan anulado (deja la obligación pendiente de nueva forma) |
+| 4 | `REFINANCIADO` | Plan reemplazado por refinanciación; se vincula el nuevo plan |
+
+#### Reglas del plan (sin tabla de cuotas, sin caída persistida)
+
+- **No** existe tabla de cuotas (`fal_acta_plan_pago_cuota`). El identificador externo del plan es `id_tdoc_plan + id_doc_plan`; el cronograma completo se consulta en Ingresos cuando sea necesario.
+- **Plan caído** es una condición **dinámica** derivada de cuotas en mora, antigüedad de la mora, vencimientos vigentes y reglas del tipo de plan. No existe evento `PLAN_PAGO_CAIDO`, código `PLNCAI`, estado estructural `CAIDO` ni `fh_caida` como hecho definitivo. Puede materializarse para consulta rápida únicamente en `fal_acta_economia_proyeccion` mediante `si_plan_caido_calculado`, `fh_desde_plan_caido_calculado` y `motivo_plan_caido_calculado`. El proceso nocturno y las actualizaciones en tiempo real pueden cambiar esa condición incluso durante el mismo día. Nunca altera `estado_plan`.
+- **Plan finalizado por pago**: cuando todas las cuotas quedan pagadas y la obligación pasa a `CANCELADA_POR_PAGO`: `estado_plan = FINALIZADO_POR_PAGO`, `si_vigente = false` y se completa `fh_finalizacion_pago`. **No** se genera un evento propio del plan (no existe `PLAN_PAGO_CUMPLIDO`); el evento principal es el de confirmación del pago que canceló la obligación (`PAGCNF`/`PCOCNF`). No agregar `CUMPLIDO`.
+- **Plan anulado** (`ANULADO`) no elimina la obligación ni equivale a pago/absolución; la obligación queda `PENDIENTE_FORMA_PAGO`.
+- **Refinanciación** (`REFINANCIADO`) es un hecho relevante: el plan anterior deja de ser vigente, queda identificado como refinanciado, se vincula el nuevo plan (`plan_refinanciado_id`), la obligación continúa y cambia la forma de pago vigente.
+- No persistir `cantidad_cuotas_impagas`; se deriva en la proyección como `cantidad_cuotas - cantidad_cuotas_pagadas`.
+- Las cuotas pagadas/vencidas/en mora, días de mora, importe vencido, saldo, aptitud de intimación y fecha de corte viven exclusivamente en `fal_acta_economia_proyeccion`; no se duplican en la cabecera estructural del plan.
+
 ### 8.5 Tabla `fal_acta_pago_movimiento`
 
 | Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
@@ -4026,8 +4133,12 @@ Tablas definitivas:
 | `obligacion_pago_id` | `BIGINT` | NO | FK+IDX | Obligación | Padre |
 | `forma_pago_id` | `BIGINT` | SÍ | FK+IDX | Forma | Si aplica |
 | `plan_pago_ref_id` | `BIGINT` | SÍ | FK+IDX | Plan | Si aplica |
-| `tipo_movimiento` | `SMALLINT` | NO | IDX | Movimiento | Pago procesado, confirmado, anulado, mora, caída, etc. |
-| `nro_cuota` | `SMALLINT` | SÍ | IDX | Número cuota | Si movimiento de cuota |
+| `tipo_movimiento` | `SMALLINT` | NO | IDX | Movimiento económico real | Catálogo cerrado (ver abajo). Solo hechos económicos, no estados |
+| `origen_movimiento` | `SMALLINT` | NO | IDX | Origen del movimiento | Qué sistema/canal/actor **informó o generó** el hecho en Faltas. Catálogo cerrado (ver abajo). No confundir con `origen_confirmacion` |
+| `origen_confirmacion` | `SMALLINT` | SÍ | IDX | Quién **confirmó** el pago | Catálogo (ver abajo) |
+| `clasificacion_pago` | `SMALLINT` | SÍ | IDX | Clasificación especial | NORMAL, OBLIGACION_ANTERIOR, DUPLICADO_REAL |
+| `evidencia_documento_id` | `BIGINT` | SÍ | FK+IDX | Evidencia adjunta | `fal_documento`/`fal_acta_evidencia` que respalda el pago confirmado |
+| `nro_cuota` | `SMALLINT` | SÍ | IDX | Número cuota | Identifica movimientos de una cuota cuando aplica |
 | `importe_capital` | `DECIMAL(14,2)` | SÍ | — | Capital | Si informado |
 | `importe_rima` | `DECIMAL(14,2)` | SÍ | — | RIMA/interés | Si informado |
 | `importe_total` | `DECIMAL(14,2)` | SÍ | — | Total | Si informado |
@@ -4040,48 +4151,420 @@ Tablas definitivas:
 | `Nro_PG` | `INT` | SÍ | IDX | Número pago | Referencia ingresos |
 | `id_cierre` | `BIGINT` | SÍ | IDX | Cierre caja/Tesorería | Si informado |
 | `id_ope` | `BIGINT` | SÍ | IDX | Operación pago | Si informado |
-| `movimiento_anulado_id` | `BIGINT` | SÍ | FK+IDX | Movimiento anulado | Para reversos/contracargos |
+| `movimiento_anulado_id` | `BIGINT` | SÍ | FK+IDX | Movimiento revertido | Para reversos/contracargos/anulaciones |
 | `motivo_anulacion_pago` | `SMALLINT` | SÍ | IDX | Motivo anulación | CONTRACARGO, ANULACION_TESORERIA, etc. |
 | `fh_pago_procesado` | `DATETIME(6)` | SÍ | IDX | Pago procesado | Si aplica |
 | `fh_pago_confirmado` | `DATETIME(6)` | SÍ | IDX | Pago confirmado | Si aplica |
-| `referencia_externa` | `VARCHAR(80)` | SÍ | IDX | Ref externa | Idempotencia/integración |
-| `fh_movimiento` | `DATETIME(6)` | NO | IDX | Fecha movimiento | Funcional |
+| `referencia_externa` | `VARCHAR(80)` | SÍ | IDX | Ref externa idempotente | Idempotencia/integración por operación externa estructurada |
+| `fh_movimiento` | `DATETIME(6)` | NO | IDX | Fecha funcional real del movimiento | Fecha efectiva del hecho económico (inmutable) |
+| `fh_recepcion_tecnica` | `DATETIME(6)` | SÍ | IDX | Fecha de recepción técnica | Cuándo llegó a Faltas |
 | `fh_alta` | `DATETIME(6)` | NO | — | Alta | Auditoría |
-| `id_user_alta` | `CHAR(36)` | SÍ | — | Usuario/proceso | Puede ser integración |
+| `id_user_alta` | `CHAR(36)` | SÍ | — | Usuario/proceso | Puede ser integración (proviene de `sub` si es usuario) |
+
+#### Catálogo `tipo_movimiento` (movimientos económicos reales, cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `DEUDA_EMITIDA` | Deuda materializada/emitida en Ingresos |
+| 2 | `PAGO_PROCESADO` | Pago procesado, aún no confirmado |
+| 3 | `PAGO_CONFIRMADO` | Pago confirmado (por Tesorería/Caja o con evidencia por usuario de Faltas) |
+| 4 | `PAGO_REVERTIDO` | Reverso/contracargo/anulación de un pago; genera nuevo movimiento |
+| 5 | `EMISION_ANULADA` | Anulación de una emisión/recibo/forma en Ingresos |
+
+El número de cuota (`nro_cuota`) identifica el movimiento de una cuota cuando aplica; no se crean tipos separados por cuota.
+
+#### Catálogo `origen_movimiento` (cerrado)
+
+Indica qué sistema, canal o actor **informó o generó** en Faltas el hecho financiero representado por el movimiento. No confundir con `origen_confirmacion` (quién confirmó el pago). Se persiste como `SMALLINT` con enum documentado; no texto libre.
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `INGRESOS` | Informado por integración interna de Ingresos |
+| 2 | `TESORERIA` | Informado por Tesorería |
+| 3 | `CAJA` | Informado por Caja |
+| 4 | `ENTIDAD_RECAUDADORA` | Banco, portal de pagos, gateway u otro recaudador autorizado |
+| 5 | `APREMIO` | Originado en la gestión de Apremios |
+| 6 | `USUARIO_FALTAS` | Registrado/confirmado operativamente por usuario de Faltas con evidencia |
+| 7 | `INTEGRACION_EXTERNA` | Integración externa autorizada |
+| 8 | `PROCESO_PROGRAMADO` | Hecho financiero genuinamente generado por un proceso programado de Faltas; no se usa para importar o conciliar hechos cuyo origen real sea Ingresos/Tesorería |
 
 Reglas:
 
-- Pago procesado no cierra.
-- Pago confirmado por Tesorería puede habilitar cierre.
-- Confirmación no es irreversible: puede haber anulación, reverso o contracargo.
-- Anulación no borra movimiento original; genera nuevo movimiento.
-- Si anula pago confirmado que cancelaba obligación, se recalculan caches y cerrabilidad.
+- Si el proceso nocturno descubre un hecho originado en Ingresos/Tesorería, conserva ese origen estable (`INGRESOS`, `TESORERIA`, etc.); la identidad técnica del proceso queda en `id_user_alta`. `PROCESO_PROGRAMADO` solo corresponde cuando el proceso mismo genera un hecho financiero real.
+- `USUARIO_FALTAS` puede registrar o confirmar operativamente un pago con evidencia.
+- `ENTIDAD_RECAUDADORA` representa banco, portal de pagos, gateway u otro recaudador autorizado.
 
-### 8.6 Endpoint conceptual de integración
+#### Catálogo `origen_confirmacion` (cerrado)
 
-Endpoint:
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `TESORERIA` | Confirmado/conciliado por Tesorería |
+| 2 | `CAJA` | Confirmado por Caja |
+| 3 | `INGRESOS` | Confirmado por integración interna de Ingresos |
+| 4 | `ENTIDAD_RECAUDADORA` | Banco/portal/entidad recaudadora autorizada |
+| 5 | `USUARIO_FALTAS` | Confirmado operativamente por usuario de Faltas con evidencia |
+| 6 | `INTEGRACION` | Confirmado por integración autorizada |
+
+#### Catálogo `clasificacion_pago` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `NORMAL` | Pago normal contra la obligación vigente |
+| 2 | `OBLIGACION_ANTERIOR` | Pago aplicado contra una obligación anterior (requiere resolución de Faltas) |
+| 3 | `DUPLICADO_REAL` | Segunda operación financiera real distinta (no idempotencia técnica) |
+
+Reglas:
+
+- `fal_acta_pago_movimiento` es **append-only estricto**: una fila insertada no se actualiza ni se borra. Todos sus campos son inmutables, incluida la evidencia original y `origen_confirmacion`.
+- Es la verdad histórica local de los hechos financieros. Saldos, conciliación vigente, mora y demás datos actuales no se duplican en obligación, plan o snapshot; viven en `fal_acta_economia_proyeccion`.
+- `PAGO_PROCESADO` no cierra. `PAGO_CONFIRMADO` puede habilitar cierre, sea por Tesorería/Caja o por evidencia confirmada por usuario de Faltas (`origen_confirmacion = USUARIO_FALTAS`). La proyección clasifica ese importe como pendiente de Tesorería.
+- **Un pago con evidencia está confirmado**: puede cancelar operativamente la obligación, habilitar cierre y liberar materiales aunque todavía no integre la recaudación conciliada.
+- **Conciliación no crea ni suma un segundo pago y tampoco modifica el movimiento**: cuando Tesorería reconoce una operación previamente confirmada con evidencia, se reclasifican los importes y el estado vigente únicamente en `fal_acta_economia_proyeccion`.
+- Si la integración informa un hecho financiero nuevo, se inserta un nuevo movimiento. Si informa solo un cambio proyectable/conciliable sobre un hecho ya existente, se actualiza la proyección sin insertar movimiento ni evento.
+- **Pago fuera de término**: se acepta siempre; `fh_vencimiento` de la forma no rechaza pagos reales. `tipo_vencimiento_pago` solo clasifica.
+- **Pago duplicado real**: dos operaciones financieras diferentes se registran como movimientos distintos (`clasificacion_pago = DUPLICADO_REAL`). La misma notificación recibida dos veces es idempotencia (ver 8.5.1). La obligación se cancela una sola vez; los ajustes/devoluciones del excedente son de Ingresos/Tesorería.
+- **Pago aplicado a obligación anterior**: se acepta (`clasificacion_pago = OBLIGACION_ANTERIOR`), permanece vinculado a la obligación contra la que se pagó y dispara una resolución de Faltas registrada en `fal_acta_pago_resolucion`.
+- **Reverso/contracargo/anulación**: nunca borra ni modifica el movimiento original; genera un **nuevo** `PAGO_REVERTIDO` con `movimiento_anulado_id`, revive saldo/obligación y recalcula proyección y cerrabilidad. Si el acta estaba cerrada, la proyección marca `si_reapertura_requerida` sin cambiar `CERR`→`ANAL` automáticamente.
+
+#### 8.5.1 Idempotencia acotada por origen
+
+- `origen_movimiento` es obligatorio. La unicidad de idempotencia es **`UNIQUE(origen_movimiento, referencia_externa)`** (no una unicidad global sobre `referencia_externa`). El origen estable forma parte de la clave para evitar colisiones entre sistemas distintos; varias filas con `referencia_externa` nula siguen admitidas por la semántica de nulos de MariaDB.
+- Además, la resolución idempotente puede apoyarse en referencias estructuradas: `Cmte_EM + Pref_EM + Nro_EM`; `Cmte_PG + Pref_PG + Nro_PG`; `id_ope`; identificador externo de plan `id_tdoc_plan + id_doc_plan`; y la referencia propia de la integración cuando exista.
+- Una repetición técnica del mismo mensaje **no** duplica el movimiento.
+- Dos pagos financieros reales diferentes **se registran** aunque correspondan a la misma obligación y tengan el mismo importe.
+- El índice único respeta la semántica de nulos de MariaDB (varias filas con `referencia_externa` nula son admitidas) y la estrategia de unicidad vigente del documento.
+
+### 8.6 Tabla `fal_acta_economia_proyeccion`
+
+Proyección económica actual, una fila por acta. Es mutable, regenerable y optimizada para consultas; **no** es fuente histórica ni jurídica de verdad.
+
+| Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
+|---|---|---|---|---|---|
+| `acta_id` | `BIGINT` | NO | PK+FK | Acta | Una única proyección económica por acta |
+| `version_row` | `INT` | NO | — | Versión de fila | Concurrencia optimista; default `0` |
+| `obligacion_vigente_id` | `BIGINT` | SÍ | FK+IDX | Obligación vigente | `fal_acta_obligacion_pago` |
+| `forma_pago_vigente_id` | `BIGINT` | SÍ | FK+IDX | Forma vigente | `fal_acta_forma_pago` |
+| `plan_pago_vigente_id` | `BIGINT` | SÍ | FK+IDX | Plan vigente | `fal_acta_plan_pago_ref` |
+| `tipo_obligacion` | `SMALLINT` | SÍ | IDX | Tipo de obligación actual | VOLUNTARIO, CONDENA |
+| `estado_obligacion` | `SMALLINT` | SÍ | IDX | Estado jurídico actual | Copia regenerable de la obligación vigente |
+| `monto_obligacion_vigente` | `DECIMAL(14,2)` | SÍ | — | Monto vigente | Consulta rápida |
+| `tipo_forma_pago` | `SMALLINT` | SÍ | IDX | Tipo de forma actual | Copia regenerable |
+| `estado_forma_pago` | `SMALLINT` | SÍ | IDX | Estado de forma actual | Copia regenerable |
+| `estado_plan` | `SMALLINT` | SÍ | IDX | Estado estructural del plan | `ACTIVO`, `FINALIZADO_POR_PAGO`, `ANULADO`, `REFINANCIADO` |
+| `cantidad_cuotas` | `SMALLINT` | SÍ | — | Cuotas del plan | Resumen actual |
+| `importe_cuota_regular` | `DECIMAL(14,2)` | SÍ | — | Importe cuota regular | Resumen actual |
+| `cantidad_cuotas_pagadas` | `SMALLINT` | SÍ | — | Cuotas pagadas | Calculado/sincronizado |
+| `cantidad_cuotas_vencidas` | `SMALLINT` | SÍ | — | Cuotas vencidas | Calculado/sincronizado |
+| `cantidad_cuotas_en_mora` | `SMALLINT` | SÍ | — | Cuotas en mora | Calculado/sincronizado |
+| `cantidad_cuotas_mora_consec` | `SMALLINT` | SÍ | — | Mora consecutiva | Calculado/sincronizado |
+| `dias_mora_max` | `SMALLINT` | SÍ | — | Mayor antigüedad de mora | Calculado al corte |
+| `importe_pago_procesado` | `DECIMAL(14,2)` | SÍ | — | Pago procesado aún no confirmado | Proyección actual |
+| `importe_confirmado_evidencia_pendiente` | `DECIMAL(14,2)` | SÍ | — | Confirmado con evidencia, pendiente de Tesorería | No volver a sumar al conciliar |
+| `importe_confirmado_tesoreria` | `DECIMAL(14,2)` | SÍ | — | Confirmado/conciliado por Tesorería | Proyección actual |
+| `importe_observado_tesoreria` | `DECIMAL(14,2)` | SÍ | — | Importe actualmente observado | Proyección actual |
+| `importe_aplicado_total` | `DECIMAL(14,2)` | NO | — | Importe neto aplicado a la obligación | Monto usado para cancelación operativa y cálculo de saldo; default `0` |
+| `importe_revertido` | `DECIMAL(14,2)` | SÍ | — | Total revertido al corte | Derivado de movimientos |
+| `saldo_pendiente` | `DECIMAL(14,2)` | SÍ | — | Saldo vigente | Calculado al corte |
+| `importe_vencido_plan` | `DECIMAL(14,2)` | SÍ | — | Importe vencido del plan | Calculado al corte |
+| `estado_conciliacion_actual` | `SMALLINT` | NO | IDX | Estado agregado vigente | Catálogo cerrado; no es historial |
+| `si_conciliacion_pendiente` | `BOOLEAN` | NO | IDX | Existe importe pendiente | Derivado de importes/estado actual |
+| `fh_ultima_conciliacion` | `DATETIME(6)` | SÍ | IDX | Última conciliación conocida | Dato actual, reemplazable |
+| `referencia_ultima_conciliacion` | `VARCHAR(80)` | SÍ | IDX | Referencia vigente conocida | Control/idempotencia de la actualización proyectable |
+| `si_pago_procesado` | `BOOLEAN` | NO | IDX | Existe pago procesado vigente | Proyección actual |
+| `si_pago_confirmado` | `BOOLEAN` | NO | IDX | Existe pago confirmado aplicable | Proyección actual |
+| `si_plan_caido_calculado` | `BOOLEAN` | NO | IDX | Condición calculada de plan caído | Puede cambiar durante el día; no es estado ni evento |
+| `fh_desde_plan_caido_calculado` | `DATETIME(6)` | SÍ | IDX | Inicio del episodio calculado vigente | Se limpia si deja de cumplirse la condición |
+| `motivo_plan_caido_calculado` | `SMALLINT` | SÍ | IDX | Motivo dominante actual | Catálogo cerrado (ver abajo) |
+| `si_apta_intimacion` | `BOOLEAN` | NO | IDX | Apta intimación | Cálculo operativo actual |
+| `fh_apta_intimacion` | `DATETIME(6)` | SÍ | IDX | Fecha desde la cual resulta apta | Dato proyectado |
+| `motivo_apta_intimacion` | `SMALLINT` | SÍ | IDX | Motivo de aptitud | Enum estable del dominio |
+| `si_reapertura_requerida` | `BOOLEAN` | NO | IDX | Reverso posterior al cierre | No reabre automáticamente el acta |
+| `ultimo_movimiento_id_proyectado` | `BIGINT` | SÍ | FK+IDX | Último movimiento local incorporado | Watermark técnico, no prueba única de completitud |
+| `fh_corte_economico` | `DATETIME(6)` | NO | IDX | Corte de los valores | Permite evaluar frescura |
+| `fh_ultima_sincronizacion` | `DATETIME(6)` | SÍ | IDX | Última consulta a fuente externa | Control operativo |
+| `origen_ultima_actualizacion` | `SMALLINT` | NO | IDX | Cómo se actualizó | Catálogo cerrado (ver abajo) |
+| `fh_ult_mod` | `DATETIME(6)` | NO | — | Última modificación | Control técnico |
+| `id_user_ult_mod` | `CHAR(36)` | SÍ | — | Usuario/proceso | `sub` o identidad técnica del proceso |
+
+#### Catálogo `estado_conciliacion_actual` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `NO_APLICA` | No hay pagos que requieran conciliación |
+| 2 | `PENDIENTE_TESORERIA` | Existe importe confirmado con evidencia aún pendiente |
+| 3 | `CONCILIADO_TESORERIA` | Los importes confirmados aplicables están conciliados |
+| 4 | `OBSERVADO_TESORERIA` | Existe importe actualmente observado por Tesorería |
+
+Si coexisten situaciones, la precedencia agregada es `OBSERVADO_TESORERIA` → `PENDIENTE_TESORERIA` → `CONCILIADO_TESORERIA` → `NO_APLICA`; los importes separados conservan el detalle necesario para consulta.
+
+#### Catálogo `origen_ultima_actualizacion` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `TIEMPO_REAL` | Actualizada en la misma operación funcional o notificación |
+| 2 | `SINCRONIZACION_NOCTURNA` | Recalculada por el proceso programado |
+| 3 | `REBUILD` | Reconstrucción completa desde tablas locales y fuentes externas |
+| 4 | `CORRECCION_CONTROLADA` | Corrección operativa autorizada |
+
+#### Catálogo `motivo_plan_caido_calculado` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `CUOTAS_EN_MORA` | Cantidad de cuotas en mora supera la regla vigente |
+| 2 | `MORA_CONSECUTIVA` | Se alcanzó la cantidad de cuotas consecutivas configurada |
+| 3 | `ANTIGUEDAD_MORA` | Se superó la antigüedad máxima admitida |
+| 4 | `REGLA_INGRESOS` | La fuente externa informa que se cumple la condición calculable |
+| 5 | `COMBINADA` | Concurren dos o más criterios |
+
+Reglas:
+
+- Esta tabla es la **única** proyección económica actual por acta. No duplicar sus importes, conciliación, mora o flags en `fal_acta_obligacion_pago`, `fal_acta_plan_pago_ref` ni `fal_acta_snapshot`.
+- Es mutable y regenerable. Puede actualizarse varias veces en el mismo día por pagos, reversos, refinanciaciones, extensiones de vencimiento, conciliaciones o sincronizaciones.
+- Las operaciones en tiempo real actualizan la proyección dentro de la misma transacción que inserta el movimiento y modifica las tablas estructurales correspondientes.
+- Una conciliación de un pago ya confirmado reclasifica `importe_confirmado_evidencia_pendiente` hacia `importe_confirmado_tesoreria` sin aumentar nuevamente el total aplicado, sin insertar otro movimiento y sin modificar el movimiento original.
+- Las actualizaciones de integración deben ser idempotentes y preferentemente establecer valores absolutos/recalculados, no sumar ciegamente deltas repetibles.
+- La proyección puede reconstruirse a partir de las tablas estructurales, los movimientos locales y una nueva consulta a Ingresos/Tesorería. No se requiere historia local de conciliación.
+- `si_plan_caido_calculado` es dato de consulta rápida, no hecho jurídico. Puede pasar de verdadero a falso y viceversa; `fh_desde_plan_caido_calculado` describe solo el episodio vigente.
+- Actualizar o reconstruir esta tabla nunca genera por sí mismo un evento en `fal_acta_evento`.
+- `importe_aplicado_total` es el importe neto que Faltas considera actualmente aplicado a la obligación vigente.
+- Suma los pagos confirmados con evidencia aunque Tesorería todavía no los haya conciliado, y también los pagos confirmados/conciliados por Tesorería.
+- La conciliación de Tesorería solo reclasifica `importe_confirmado_evidencia_pendiente` hacia `importe_confirmado_tesoreria`; esa reclasificación no modifica `importe_aplicado_total`.
+- Un reverso, contracargo o anulación real reduce `importe_aplicado_total`; una observación de Tesorería no lo reduce por sí sola. Para reducirlo debe existir un reverso, una anulación, una corrección funcional explícita u otro hecho económico real documentado.
+- Los pagos duplicados reales pueden registrarse como movimientos distintos, pero `importe_aplicado_total` nunca supera `monto_obligacion_vigente`; el excedente queda bajo responsabilidad de Ingresos/Tesorería.
+- `saldo_pendiente` se calcula como `MAX(monto_obligacion_vigente - importe_aplicado_total, 0)`.
+- Las actualizaciones de `importe_aplicado_total` deben ser idempotentes y preferentemente establecer valores absolutos/recalculados al corte, sin acumular deltas por reintento.
+- `importe_aplicado_total` es parte de la proyección actual (mutable, regenerable, recalculable, no histórica y no jurídica); no genera eventos por sí mismo y su actualización no modifica movimientos históricos.
+- Se actualiza en tiempo real ante movimientos económicos reales, por sincronización nocturna, por rebuild o por corrección controlada.
+
+### 8.7 Tabla `fal_acta_pago_resolucion`
+
+Tabla **funcional, no financiera**. Conserva la decisión administrativa de Faltas respecto de un pago aplicado a una obligación anterior. No es espejo de Ingresos.
+
+| Campo | Tipo MariaDB | Null | Clave/índice | Descripción | Regla |
+|---|---|---|---|---|---|
+| `id` | `BIGINT AUTO_INCREMENT` | NO | PK | Resolución | PK técnica |
+| `version_row` | `INT` | NO | — | Versión de fila | Concurrencia optimista. Default `0` |
+| `acta_id` | `BIGINT` | NO | FK+IDX | Acta | Expediente |
+| `movimiento_pago_id` | `BIGINT` | NO | FK+IDX | Movimiento pagado | Pago que motiva la resolución |
+| `obligacion_origen_pago_id` | `BIGINT` | NO | FK+IDX | Obligación de origen del pago | Obligación contra la cual se registró originalmente el pago que ahora se evalúa frente a una obligación posterior/vigente |
+| `obligacion_vigente_evaluada_id` | `BIGINT` | SÍ | FK+IDX | Obligación vigente evaluada | Obligación posterior/vigente considerada |
+| `tipo_resolucion` | `SMALLINT` | NO | IDX | Decisión | Catálogo (ver abajo) |
+| `monto_obligacion_evaluado` | `DECIMAL(14,2)` | SÍ | — | Monto vigente evaluado | Base del cálculo |
+| `importe_pago_reconocido` | `DECIMAL(14,2)` | SÍ | — | Importe reconocido | Del pago aplicado |
+| `monto_diferencia_fijada` | `DECIMAL(14,2)` | SÍ | — | Diferencia fijada | Si `FIJAR_DIFERENCIA` |
+| `valorizacion_diferencia_id` | `BIGINT` | SÍ | FK+IDX | Valorización de la diferencia | Nueva valorización creada |
+| `nueva_obligacion_pago_id` | `BIGINT` | SÍ | FK+IDX | Nueva obligación por diferencia | Obligación creada por la diferencia |
+| `fundamento` | `VARCHAR(255)` | SÍ | — | Fundamento | Justificación de la autoridad |
+| `documento_id` | `BIGINT` | SÍ | FK+IDX | Documento respaldo | Acto administrativo si aplica |
+| `fh_resolucion` | `DATETIME(6)` | NO | IDX | Fecha de resolución | Funcional |
+| `id_user_resolucion` | `CHAR(36)` | NO | IDX | Usuario que resolvió | Proviene de `sub` |
+| `fh_alta` | `DATETIME(6)` | NO | — | Alta | Auditoría |
+| `id_user_alta` | `CHAR(36)` | NO | — | Usuario alta | Auditoría |
+
+#### Catálogo `tipo_resolucion` (cerrado)
+
+| ID | Código enum | Descripción |
+|---:|---|---|
+| 1 | `ACEPTAR_COMO_CANCELACION_TOTAL` | El pago de origen cancela totalmente; la obligación vigente evaluada queda `DEJADA_SIN_EFECTO` |
+| 2 | `FIJAR_DIFERENCIA` | La obligación vigente evaluada queda `REEMPLAZADA`; se crea nueva valorización + nueva obligación solo por la diferencia |
+| 3 | `MANTENER_OBLIGACION_VIGENTE` | La obligación vigente continúa; el pago permanece reconocido contra su obligación de origen |
+
+Efectos exactos por `tipo_resolucion` (se conserva histórico; no se sobrescriben resoluciones anteriores):
+
+- **`ACEPTAR_COMO_CANCELACION_TOTAL`**:
+  - la obligación vigente evaluada (`obligacion_vigente_evaluada_id`) queda `DEJADA_SIN_EFECTO`;
+  - no se genera diferencia;
+  - el pago original permanece vinculado a `obligacion_origen_pago_id` (no se mueve ni se modifica);
+  - se evalúa cerrabilidad mediante el coordinador de cierre.
+- **`FIJAR_DIFERENCIA`**:
+  - la obligación vigente evaluada queda `REEMPLAZADA`;
+  - se crea una nueva valorización por la diferencia (`valorizacion_diferencia_id`);
+  - se crea una nueva obligación por la diferencia (`nueva_obligacion_pago_id`);
+  - se solicita después el nuevo instrumento de pago (contrato de generación, ver 8.10.2.B);
+  - el importe sugerido puede calcularse como `monto vigente - importe reconocido`, pero la autoridad puede fijar otro importe con fundamento;
+  - el pago original no se mueve ni se modifica.
+- **`MANTENER_OBLIGACION_VIGENTE`**:
+  - la obligación evaluada continúa vigente;
+  - no se descuenta automáticamente el pago anterior;
+  - se exige `fundamento`;
+  - el pago permanece vinculado a su obligación de origen.
+- La creación del nuevo instrumento por diferencia **no** espera la confirmación posterior de la anulación; esa confirmación sirve para conciliación/trazabilidad.
+
+### 8.8 Catálogo de eventos de pagos
+
+La bitácora de `fal_acta_evento` debe ser compacta. Regla:
+
+> Una operación funcional atómica genera como máximo un evento principal del acta. El detalle vive en las tablas funcionales.
+
+Eventos productivos de pagos (`tipo_evt` `CHAR(6)`):
+
+| Código | Enum Java futuro | Decisión |
+|---|---|---|
+| `OBLDET` | `OBLIGACION_PAGO_DETERMINADA` | Conservar |
+| `OBLSFE` | `OBLIGACION_PAGO_DEJADA_SIN_EFECTO` | Nuevo concepto canónico |
+| `OBLREP` | `OBLIGACION_PAGO_REEMPLAZADA` | Nuevo concepto canónico |
+| `RCBGEN` | `RECIBO_AL_COBRO_GENERADO` | Reemplaza `FPCGEN` |
+| `PLNGEN` | `PLAN_PAGO_GENERADO` | Reemplaza `FPPGEN` |
+| `PLNREF` | `PLAN_PAGO_REFINANCIADO` | Reemplaza `FPREFN` |
+| `PLNANU` | `PLAN_PAGO_ANULADO` | Reemplaza `PLNCAN` |
+| `PAGCNF` | `PAGO_VOLUNTARIO_CONFIRMADO` | Conservar |
+| `PCOCNF` | `PAGO_CONDENA_CONFIRMADO` | Conservar |
+| `PAGCMP` | `COMPROBANTE_PAGO_ADJUNTADO` | Solo si existe documento real |
+| `PAGREV` | `PAGO_REVERTIDO` | Reemplaza semántica genérica de `PAGANU` |
+| `EMIANU` | `EMISION_INGRESOS_ANULADA` | Hecho relevante |
+| `PAGANT` | `PAGO_APLICADO_A_OBLIGACION_ANTERIOR` | Hecho relevante |
+| `PAGRES` | `PAGO_ANTERIOR_RESUELTO` | Decisión de Faltas |
+
+Verificación de colisiones: se contrastaron estos códigos con los eventos productivos ya presentes en el documento (`CONFIR`/`CONDENA_FIRME` y la lista de prohibidos de proyección). No se detectó colisión con códigos `CHAR(6)` productivos existentes en este documento. Si al fijar los enums Java se detectara una colisión con otro dominio, se conserva el concepto y se elige otro `CHAR(6)` claro, informándolo.
+
+#### Precedencia determinista del evento principal
+
+Regla: una operación funcional atómica genera **como máximo un** evento principal en `fal_acta_evento`. La siguiente matriz fija cuál es ese evento:
+
+| Operación funcional | Evento principal |
+|---|---|
+| Determinar una obligación sin generar instrumento | `OBLDET — OBLIGACION_PAGO_DETERMINADA` |
+| Determinar obligación y generar recibo al cobro en la misma operación | `RCBGEN — RECIBO_AL_COBRO_GENERADO` |
+| Generar plan de pago | `PLNGEN — PLAN_PAGO_GENERADO` |
+| Refinanciar plan | `PLNREF — PLAN_PAGO_REFINANCIADO` |
+| Anular plan sin reemplazo inmediato | `PLNANU — PLAN_PAGO_ANULADO` |
+| Confirmar pago voluntario | `PAGCNF — PAGO_VOLUNTARIO_CONFIRMADO` |
+| Confirmar pago de condena | `PCOCNF — PAGO_CONDENA_CONFIRMADO` |
+| Adjuntar evidencia real de pago | `PAGCMP — COMPROBANTE_PAGO_ADJUNTADO` |
+| Revertir/contracargar/anular un pago confirmado | `PAGREV — PAGO_REVERTIDO` |
+| Ingresos anula una emisión o instrumento | `EMIANU — EMISION_INGRESOS_ANULADA` |
+| Detectar pago aplicado a obligación anterior | `PAGANT — PAGO_APLICADO_A_OBLIGACION_ANTERIOR` |
+| Resolver administrativamente un pago anterior | `PAGRES — PAGO_ANTERIOR_RESUELTO` |
+| Absolución o nulidad deja obligación sin efecto | Evento jurídico principal de absolución/nulidad; **no** emitir además `OBLSFE` |
+| Reemplazo de obligación como acción principal autónoma | `OBLREP — OBLIGACION_PAGO_REEMPLAZADA` |
+| Dejar obligación sin efecto como acción principal autónoma no cubierta por otro evento jurídico | `OBLSFE — OBLIGACION_PAGO_DEJADA_SIN_EFECTO` |
+
+Reglas de precedencia:
+
+- `OBLREP` y `OBLSFE` **no** se emiten como eventos secundarios automáticos cuando otro evento principal ya explica la operación.
+- El detalle completo de obligaciones, valorizaciones, planes y resoluciones vive en las tablas funcionales.
+- **No** se agregan eventos técnicos por actualización/rebuild de `fal_acta_economia_proyeccion`, mora nocturna, plan caído calculado o conciliación interna sin cambio funcional relevante.
+- Una fila económica ya registrada en `fal_acta_evento` nunca se actualiza para agregar datos posteriores de integración o conciliación.
+
+Eventos eliminados del dominio de pagos (no crear aliases históricos; eran reservados sin emisor productivo):
+
+- `DEBEMI` → ahora movimiento económico `DEUDA_EMITIDA`.
+- `PAGPRC` → ahora movimiento económico `PAGO_PROCESADO`.
+- `PAGCFT` → sustituido por `PAGCNF`/`PCOCNF`.
+- `MOVPAG` → demasiado genérico.
+- `PLNCAI` → condición dinámica (plan caído), nunca evento.
+- `OBLAUL` → ambiguo; reemplazado por `OBLSFE` y `OBLREP`.
+- `PAGANU` → reemplazado por `PAGREV` (reverso con movimiento nuevo).
+
+Los códigos `LOTEMI`, `LOTPRC`, `LOTANU` pertenecen al dominio postal/lotes, **no** al de pagos. No se aprueban ni se eliminan por esta revisión; permanecen fuera del catálogo económico.
+
+### 8.9 Proceso nocturno de sincronización
+
+Existe un proceso nocturno/programado que:
+
+- consulta Ingresos/Tesorería;
+- incorpora únicamente hechos financieros reales faltantes como nuevos movimientos append-only, preservando el origen estable del hecho;
+- recalcula la conciliación actual y los importes separados de la proyección;
+- recalcula cantidades de cuotas pagadas, vencidas y en mora;
+- recalcula `importe_vencido_plan`, saldos y aptitud de intimación;
+- recalcula `importe_aplicado_total` y el `saldo_pendiente` proyectado (`MAX(monto_obligacion_vigente - importe_aplicado_total, 0)`);
+- calcula o revierte `si_plan_caido_calculado` y su episodio vigente;
+- actualiza fechas de corte, watermarks y frescura de `fal_acta_economia_proyeccion`;
+- corrige diferencias de la proyección económica.
+
+Restricciones del proceso nocturno:
+
+- **No** actualiza ni borra filas de `fal_acta_pago_movimiento` o `fal_acta_evento`.
+- **No** crea eventos jurídicos por el mero paso del tiempo ni por cambios de proyección.
+- **No** convierte la mora o el plan caído calculado en estados definitivos.
+- **No** duplica movimientos existentes.
+- La conciliación de un pago ya confirmado actualiza solo la proyección; no inserta otro pago.
+- Los movimientos recibidos en tiempo real actualizan `fal_acta_economia_proyeccion` inmediatamente; el proceso nocturno reconcilia, recalcula y corrige.
+
+### 8.10 Contratos de integración
+
+#### 8.10.1 Ingresos/Tesorería → Faltas
 
     POST /api/faltas/pagos/notificar-movimiento
 
-Vías posibles:
-
-- proceso nocturno/programado;
-- Tesorería en tiempo real;
-- Caja;
-- plataforma externa;
-- integración interna de Ingresos;
-- reproceso técnico/manual controlado.
+Debe soportar al menos: deuda emitida; pago procesado; pago confirmado; conciliación de un pago confirmado con evidencia; reverso; contracargo; anulación de pago; emisión anulada; actualización de referencias de plan; pago de cuota; pago duplicado real.
 
 Reglas:
 
-- Debe ser idempotente.
-- No debe duplicar movimientos.
+- Los movimientos son idempotentes por `origen_movimiento + referencia_externa` y por las referencias estructuradas disponibles.
+- No duplica movimientos.
 - Resuelve obligación/forma/plan por referencias estructuradas.
-- Registra `fal_acta_pago_movimiento`.
-- Actualiza caches operativos.
-- Usa `Cmte_EM`, `Pref_EM`, `Nro_EM` para deuda/emisión.
-- Usa `Cmte_PG`, `Pref_PG`, `Nro_PG` para pago/recibo.
-- Acepta anulación de pagos procesados y confirmados.
+- Si la notificación representa un hecho financiero nuevo, registra `fal_acta_pago_movimiento`; siempre actualiza o recalcula `fal_acta_economia_proyeccion`.
+- Usa `Cmte_EM/Pref_EM/Nro_EM` para deuda/emisión y `Cmte_PG/Pref_PG/Nro_PG` para pago/recibo.
+- Idempotencia acotada por origen: `UNIQUE(origen_movimiento, referencia_externa)`; las referencias nulas pueden repetirse según la semántica de MariaDB (ver 8.5.1).
+- La conciliación de un pago confirmado con evidencia actualiza únicamente `fal_acta_economia_proyeccion`: reclasifica importes y estado actual, **no** modifica el movimiento, no inserta un segundo pago y no genera evento.
+- Las actualizaciones proyectables deben ser idempotentes y establecer un resultado absoluto/recalculado al corte, evitando acumulaciones por reintento.
+
+#### 8.10.2 Faltas → Ingresos (dos contratos independientes)
+
+La anulación y la generación de instrumentos son **dos contratos conceptuales independientes**. La generación de un nuevo instrumento **no** debe ejecutarse a través de un endpoint llamado `anular`. Son contratos requeridos del sistema de **Ingresos**; se documentan como conceptuales (no se fija como productiva una URL de otro sistema).
+
+##### A. Solicitar anulación
+
+Finalidad: anular emisión; anular recibo al cobro; anular plan; anular forma de pago.
+
+Ejemplo conceptual:
+
+    POST /api/ingresos/instrumentos-pago/anular
+
+Payload mínimo conceptual: tipo de instrumento; referencias estructuradas; motivo; acta; obligación; actor/proceso solicitante; referencia idempotente.
+
+##### B. Solicitar generación de nuevo instrumento
+
+Finalidad: generar recibo por diferencia; generar emisión por diferencia; generar plan o refinanciación; materializar una nueva forma de pago.
+
+Ejemplo conceptual:
+
+    POST /api/ingresos/instrumentos-pago/generar
+
+Payload mínimo conceptual: obligación nueva; tipo de forma; monto; origen; referencias de acta/persona/cuenta; vencimiento o condiciones; referencia idempotente.
+
+Reglas:
+
+- La generación del nuevo instrumento **no** se ejecuta mediante el endpoint `anular`.
+- Faltas puede continuar el proceso funcional **sin** esperar una notificación posterior de conciliación de la anulación.
+- Ingresos puede notificar luego el resultado (vía 8.10.1) para actualizar las tablas funcionales y la proyección.
+- Ingresos también puede informar a Faltas una anulación iniciada allí.
+
+#### 8.10.3 Resolución interna de pago anterior
+
+    POST /api/faltas/actas/{actaId}/obligaciones/resolver-pago-anterior
+
+- Soporta las tres decisiones (`ACEPTAR_COMO_CANCELACION_TOTAL`, `FIJAR_DIFERENCIA`, `MANTENER_OBLIGACION_VIGENTE`).
+- Registra `fal_acta_pago_resolucion` y, cuando corresponde, vincula la valorización de la diferencia y la nueva obligación.
+
+### 8.11 Reportes económicos
+
+Faltas debe poder informar por rango de fechas y agrupar por: dependencia; tipo de acta; tipo de infracción; artículo; pago voluntario o condena; circuito interno o Apremios.
+
+Métricas separadas:
+
+1. pagos confirmados operativamente con evidencia;
+2. pagos pendientes de conciliación;
+3. pagos confirmados/conciliados por Tesorería;
+4. recaudación neta descontando reversos;
+5. saldo pendiente;
+6. importe vencido al último corte;
+7. cuotas pagadas, impagas y vencidas;
+8. proyección de cobro.
+
+Para proyecciones detalladas de planes, consultar Ingresos; **no** copiar el cronograma completo de cuotas.
+
+### 8.12 Gestión externa (Juzgado y Apremios)
+
+- **Juzgado**: no cobra, no genera planes, no procesa pagos; puede confirmar, absolver, producir nulidad o modificar el monto. Luego el acta reingresa a Faltas y continúa por el circuito interno.
+- **Apremios**: puede anular un plan anterior, generar un nuevo plan, refinanciar, recibir pago contado o modificar el importe exigible.
+  - Si solo cambia la financiación: **misma obligación + nueva forma de pago + nuevo plan**.
+  - Si Apremios modifica el importe: **obligación anterior `REEMPLAZADA` + nueva valorización + nueva obligación + nueva forma de pago**. La nueva obligación mantiene tipo jurídico `CONDENA` y `origen_obligacion = APREMIO`.
+
+### 8.13 Absolución o nulidad posterior a un pago
+
+Faltas conserva: el pago histórico (sin moverlo); la obligación `DEJADA_SIN_EFECTO`; el estado económico informativo. El reintegro/devolución/compensación posterior pertenece a Ingresos/Tesorería y queda fuera del alcance de Faltas. Un reintegro pendiente **no** bloquea el cierre jurídico del acta.
 
 ---
 
@@ -4829,8 +5312,8 @@ Regla:
 - `fal_acta` guarda el estado actual operativo del expediente.
 - Las tablas históricas guardan el detalle primario de cada ciclo o decisión específica.
 - `fal_acta_snapshot` es regenerable y nunca es fuente primaria.
-- Las actualizaciones de estado deben ser transaccionales y registrar evento append-only.
-- Ante inconsistencias, se reconstruye snapshot desde tablas primarias y eventos.
+- Las actualizaciones funcionales deben ser transaccionales y registrar un evento append-only cuando corresponda. Las actualizaciones puramente proyectables no generan evento.
+- Ante inconsistencias, se reconstruye `fal_acta_snapshot` desde tablas primarias y eventos, y `fal_acta_economia_proyeccion` desde tablas económicas, movimientos y fuentes externas.
 
 ### 12.3 Concurrencia optimista con `version_row`
 
@@ -4894,7 +5377,7 @@ Siguientes tareas de implementación:
 | Domicilios | `fal_persona_domicilio(persona_id, si_activo, si_notificable)` |
 | Normativa | `fal_dependencia_normativa(id_dep, ver_dep)`, `fal_articulo_normativa_faltas(normativa_id)` |
 | Valorización | `fal_acta_valorizacion(acta_id, si_vigente)`, `fal_acta_valorizacion(acta_id, estado_valorizacion)`, índice único auxiliar para vigente por `acta_id + tipo_valorizacion_acta` |
-| Pagos | `fal_acta_obligacion_pago(acta_id, estado_obligacion)`, `fal_acta_pago_movimiento(Cmte_PG, Pref_PG, Nro_PG)` |
+| Pagos | `fal_acta_obligacion_pago(acta_id, estado_obligacion)`, `fal_acta_obligacion_pago(origen_obligacion)`, `fal_acta_obligacion_pago(obligacion_reemplazada_id)`, `UNIQUE fal_acta_pago_movimiento(origen_movimiento, referencia_externa)` (origen obligatorio; varias referencias nulas admitidas), `fal_acta_pago_movimiento(obligacion_pago_id, tipo_movimiento)`, `fal_acta_pago_movimiento(id_ope)`, `fal_acta_pago_movimiento(Cmte_PG, Pref_PG, Nro_PG)`, `fal_acta_forma_pago(fh_vencimiento)`, `fal_acta_economia_proyeccion(estado_obligacion, estado_plan)`, `fal_acta_economia_proyeccion(si_conciliacion_pendiente, estado_conciliacion_actual)`, `fal_acta_economia_proyeccion(si_plan_caido_calculado, si_apta_intimacion)`, `fal_acta_economia_proyeccion(si_reapertura_requerida)`, `fal_acta_economia_proyeccion(fh_corte_economico, fh_ultima_sincronizacion)`, `fal_acta_pago_resolucion(acta_id, tipo_resolucion)`, `fal_acta_pago_resolucion(movimiento_pago_id)`, `fal_acta_pago_resolucion(obligacion_origen_pago_id)` |
 | Numeración | `num_talonario(codigo)`, `num_talonario_ambito(talonario_id)`, `UNIQUE num_talonario_movimiento(id_talonario, nro_talonario)` |
 
 ---

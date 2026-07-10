@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDocumentoPlantillaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearPoliticaNumeracionCommand;
@@ -107,18 +109,18 @@ class DocumentoEmisionFormalTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository());
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
 
-        talonarioService = new TalonarioService(talonarioRepo, depRepo, new InMemoryInspectorRepository());
-        depService = new DependenciaService(depRepo);
-        plantillaService = new DocumentoPlantillaService(plantillaRepo);
+        talonarioService = new TalonarioService(talonarioRepo, depRepo, new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
+        depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
+        plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, new InMemoryDocumentoFirmaRepository(),
                 eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo, talonarioService, depRepo,
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository());
+                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -130,7 +132,7 @@ class DocumentoEmisionFormalTest {
         FalActa acta = new FalActa(
                 id, UUID.randomUUID().toString(),
                 "TRANSITO", DEP_COD, "INS-001",
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Belgrano 200", "Calle 123", null, null, null, "Pedro Gomez", "98765432",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
         actaRepo.guardar(acta);
@@ -140,14 +142,14 @@ class DocumentoEmisionFormalTest {
     private void crearDependencia() {
         depService.crear(new CrearDependenciaCommand(
                 DEP_COD, "Dep Emision", null, TipoActa.TRANSITO,
-                LocalDate.now().minusDays(30), "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(30), "sistema"));
     }
 
     private NumPolitica crearPoliticaDoc(String codigo) {
         return talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 codigo, "Politica " + codigo, ClaseNumeracion.DOCUMENTO,
                 false, false, null, false, null, false, null,
-                "{NRO}", true, LocalDate.now().minusDays(1), null, "sistema"));
+                "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
     }
 
     private NumTalonario crearTalonarioDoc(Long politicaId, String codigo) {
@@ -164,7 +166,7 @@ class DocumentoEmisionFormalTest {
                 tipoDocu.codigo(), null, null, null,
                 AlcanceTalonario.GLOBAL,
                 (short) 10,
-                LocalDate.now().minusDays(1), null, true, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
     }
 
     /**
@@ -180,7 +182,7 @@ class DocumentoEmisionFormalTest {
                 TipoFirmaReq.NO_REQUIERE,
                 siNumeracion, momento,
                 false, siGeneraPdf, true,
-                LocalDate.now().minusDays(1), null, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
         return plantillaService.activar(p.getId());
     }
 
@@ -195,7 +197,7 @@ class DocumentoEmisionFormalTest {
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
                 false, siGeneraPdf, true,
-                LocalDate.now().minusDays(1), null, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
         return plantillaService.activar(p.getId());
     }
 
@@ -210,9 +212,9 @@ class DocumentoEmisionFormalTest {
         Long docId = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 docId, acta.getId(), plantilla.getTipoDocu(),
-                LocalDateTime.now(), null,
+                FaltasClockTestSupport.FIXED.now(), null,
                 EstadoDocu.FIRMADO, TipoFirmaReq.FIRMA_INTERNA,
-                plantilla.getId());
+                plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
         return doc;
     }
@@ -223,9 +225,9 @@ class DocumentoEmisionFormalTest {
         Long docId = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 docId, acta.getId(), plantilla.getTipoDocu(),
-                LocalDateTime.now(), null,
+                FaltasClockTestSupport.FIXED.now(), null,
                 estado, TipoFirmaReq.FIRMA_INTERNA,
-                plantilla.getId());
+                plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
         return doc;
     }
@@ -236,9 +238,9 @@ class DocumentoEmisionFormalTest {
         Long docId = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 docId, acta.getId(), plantilla.getTipoDocu(),
-                LocalDateTime.now(), null,
+                FaltasClockTestSupport.FIXED.now(), null,
                 estado, plantilla.getTipoFirmaReq(),
-                plantilla.getId());
+                plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
         return doc;
     }
@@ -639,7 +641,7 @@ class DocumentoEmisionFormalTest {
             Long docId = docRepo.nextId();
             FalDocumento docSinPlantilla = new FalDocumento(
                     docId, acta.getId(), TipoDocu.CONSTANCIA,
-                    LocalDateTime.now(), "sin plantilla");
+                    FaltasClockTestSupport.FIXED.now(), "sin plantilla");
             docSinPlantilla.setEstadoDocu(EstadoDocu.BORRADOR);
             docRepo.guardar(docSinPlantilla);
 
@@ -787,7 +789,7 @@ class DocumentoEmisionFormalTest {
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,
                     true, false, true,
-                    LocalDate.now().minusDays(1), null, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
             FalDocumentoPlantilla plantilla = plantillaService.activar(p.getId());
             FalActa acta = crearActa();
             FalDocumento doc = generarBorrador(acta, plantilla);

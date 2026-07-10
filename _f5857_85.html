@@ -1,9 +1,0 @@
-$path = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\core\services\prototipo-faltas-api.service.ts'
-$b = [System.IO.File]::ReadAllBytes($path)
-$crlf = 0; $lfOnly = 0
-for ($i = 0; $i -lt $b.Length; $i++) {
-  if ($b[$i] -eq 0x0A) {
-    if ($i -gt 0 -and $b[$i-1] -eq 0x0D) { $crlf++ } else { $lfOnly++ }
-  }
-}
-Write-Host ('CRLF=' + $crlf + ' LFonly=' + $lfOnly + ' size=' + $b.Length)

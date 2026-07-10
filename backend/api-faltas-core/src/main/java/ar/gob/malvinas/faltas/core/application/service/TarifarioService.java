@@ -6,6 +6,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.TarifarioNoEncontradoExcepti
 import ar.gob.malvinas.faltas.core.domain.model.FalTarifarioUnidadFaltas;
 import ar.gob.malvinas.faltas.core.repository.TarifarioUnidadFaltasRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,8 +23,11 @@ import java.util.Optional;
 public class TarifarioService {
 
     private final TarifarioUnidadFaltasRepository tarifarioRepo;
+    private final FaltasClock faltasClock;
 
-    public TarifarioService(TarifarioUnidadFaltasRepository tarifarioRepo) {
+    public TarifarioService(TarifarioUnidadFaltasRepository tarifarioRepo,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.tarifarioRepo = tarifarioRepo;
     }
 
@@ -44,7 +48,7 @@ public class TarifarioService {
 
         Long id = tarifarioRepo.nextId();
         FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
-                id, tipoUnidad, valorUnidad, fhVigDesde, LocalDateTime.now(), idUser);
+                id, tipoUnidad, valorUnidad, fhVigDesde, faltasClock.now(), idUser);
         t.setFhVigHasta(fhVigHasta);
         return tarifarioRepo.save(t);
     }

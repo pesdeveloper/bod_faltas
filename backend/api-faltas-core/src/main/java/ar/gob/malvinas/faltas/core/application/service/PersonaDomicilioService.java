@@ -11,6 +11,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalPersonaDomicilio;
 import ar.gob.malvinas.faltas.core.repository.PersonaDomicilioRepository;
 import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,11 +40,14 @@ public class PersonaDomicilioService {
     private final PersonaDomicilioRepository domicilioRepository;
     private final PersonaRepository personaRepository;
     private final PersonaDomicilioUsoChecker usoChecker;
+    private final FaltasClock faltasClock;
 
     public PersonaDomicilioService(
             PersonaDomicilioRepository domicilioRepository,
             PersonaRepository personaRepository,
-            PersonaDomicilioUsoChecker usoChecker) {
+            PersonaDomicilioUsoChecker usoChecker,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.domicilioRepository = domicilioRepository;
         this.personaRepository = personaRepository;
         this.usoChecker = usoChecker;
@@ -87,7 +91,7 @@ public class PersonaDomicilioService {
             throw new PersonaNoEncontradaException(personaId);
 
         Long id = domicilioRepository.nextId();
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         validarReglasDomicilio(modoDomicilio, idProvincia, unidadTerritorialTipo, idUnidadTerritorial,
                 idLocalidad, idCalle, idLocMalvinas, idTcaMalvinas,
@@ -123,7 +127,7 @@ public class PersonaDomicilioService {
 
         if (usoChecker.estaUsadoFormalmente(domicilioId)) {
             Long id = domicilioRepository.nextId();
-            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime ahora = faltasClock.now();
             FalPersonaDomicilio nueva = new FalPersonaDomicilio(
                     id, dom.getPersonaId(), dom.getActaOrigenId(),
                     dom.getTipoDomicilio(), dom.getOrigenDomicilio(), dom.getModoDomicilio(),
@@ -140,7 +144,7 @@ public class PersonaDomicilioService {
         }
 
         dom.setDomicilioTxt(domicilioTxtNuevo);
-        dom.setFhUltMod(LocalDateTime.now());
+        dom.setFhUltMod(faltasClock.now());
         dom.setIdUserUltMod(idUserMod);
         return domicilioRepository.guardar(dom);
     }
@@ -150,7 +154,7 @@ public class PersonaDomicilioService {
                 .orElseThrow(() -> new DomicilioPersonaNoEncontradoException(domicilioId));
         dom.setSiActivo(false);
         dom.setSiPrincipal(false);
-        dom.setFhUltMod(LocalDateTime.now());
+        dom.setFhUltMod(faltasClock.now());
         dom.setIdUserUltMod(idUserMod);
         return domicilioRepository.guardar(dom);
     }

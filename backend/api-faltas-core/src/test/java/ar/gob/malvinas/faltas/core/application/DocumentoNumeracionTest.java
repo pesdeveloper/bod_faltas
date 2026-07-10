@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDocumentoPlantillaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearPoliticaNumeracionCommand;
@@ -115,17 +117,17 @@ class DocumentoNumeracionTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository());
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
 
-        talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo);
-        depService = new DependenciaService(depRepo);
-        plantillaService = new DocumentoPlantillaService(plantillaRepo);
+        talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
+        depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
+        plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo, talonarioService, depRepo,
                 new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository());
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -141,7 +143,7 @@ class DocumentoNumeracionTest {
         FalActa acta = new FalActa(
                 id, UUID.randomUUID().toString(),
                 "TRANSITO", DEP_COD, "INS-001",
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
         actaRepo.guardar(acta);
@@ -156,21 +158,21 @@ class DocumentoNumeracionTest {
     private FalDependencia crearDependencia() {
         return depService.crear(new CrearDependenciaCommand(
                 DEP_COD, "Dep Uno", null, TipoActa.TRANSITO,
-                LocalDate.now().minusDays(30), "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(30), "sistema"));
     }
 
     private NumPolitica crearPoliticaDocSimple() {
         return talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 "POL-DOC-01", "Politica documentos", ClaseNumeracion.DOCUMENTO,
                 false, false, null, false, null, false, null,
-                "{NRO}", true, LocalDate.now().minusDays(1), null, "sistema"));
+                "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
     }
 
     private NumPolitica crearPoliticaDocConPrefijo() {
         return talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 "POL-DOC-02", "Politica documentos con prefijo y longitud", ClaseNumeracion.DOCUMENTO,
                 false, true, "NOTIF", false, null, false, (short) 5,
-                "{PREFIJO}-{NRO}", true, LocalDate.now().minusDays(1), null, "sistema"));
+                "{PREFIJO}-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
     }
 
     private NumTalonario crearTalonarioDocGlobal(Long politicaId) {
@@ -187,7 +189,7 @@ class DocumentoNumeracionTest {
                 tipoDocu, null, null, null,
                 AlcanceTalonario.GLOBAL,
                 (short) 10,
-                LocalDate.now().minusDays(1), null, true, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
     }
 
     private void crearAmbitoDependencia(Long talonarioId, Short tipoDocu, Long idDep, Short verDep) {
@@ -196,7 +198,7 @@ class DocumentoNumeracionTest {
                 tipoDocu, null, idDep, verDep,
                 AlcanceTalonario.DEPENDENCIA,
                 (short) 5,
-                LocalDate.now().minusDays(1), null, true, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
     }
 
     private FalDocumentoPlantilla crearPlantillaConNumeracion(String codigo, TipoDocu tipoDocu,
@@ -207,7 +209,7 @@ class DocumentoNumeracionTest {
                 TipoFirmaReq.NO_REQUIERE,
                 true, momento,
                 false, false, true,
-                LocalDate.now().minusDays(1), null, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
         return plantillaService.activar(p.getId());
     }
 
@@ -218,7 +220,7 @@ class DocumentoNumeracionTest {
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
                 false, false, true,
-                LocalDate.now().minusDays(1), null, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
         return plantillaService.activar(p.getId());
     }
 
@@ -503,7 +505,7 @@ class DocumentoNumeracionTest {
         void falla_si_sin_plantilla() {
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, 1L,
-                    TipoDocu.CONSTANCIA, LocalDateTime.now(), "sin plantilla");
+                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(), "sin plantilla");
             docRepo.guardar(doc);
 
             assertThatThrownBy(() ->
@@ -586,7 +588,7 @@ class DocumentoNumeracionTest {
                     tal1.getId(), ClaseNumeracion.DOCUMENTO,
                     TipoDocu.CONSTANCIA.codigo(), null, null, null,
                     AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now().minusDays(1), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
 
             NumTalonario tal2 = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-DOC-AMB2", "Talonario 2",
@@ -596,7 +598,7 @@ class DocumentoNumeracionTest {
                     tal2.getId(), ClaseNumeracion.DOCUMENTO,
                     TipoDocu.CONSTANCIA.codigo(), null, null, null,
                     AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now().minusDays(1), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
 
             FalDocumentoPlantilla p = crearPlantillaConNumeracion(
                     "PLNT-5A-020", TipoDocu.CONSTANCIA, MomentoNumeracionDocu.AL_ENVIAR_A_FIRMA);
@@ -674,7 +676,7 @@ class DocumentoNumeracionTest {
             NumPolitica polActa = talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-GUARD", "Politica actas guardrail", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now().minusDays(1), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
             NumTalonario talActa = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     polActa.getId(), "TAL-ACTA-GUARD", "Talonario acta guardrail",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -683,7 +685,7 @@ class DocumentoNumeracionTest {
                     talActa.getId(), ClaseNumeracion.ACTA,
                     null, null, null, null,
                     AlcanceTalonario.GLOBAL, (short) 1,
-                    LocalDate.now().minusDays(1), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
 
             // Crear talonario DOCUMENTO
             NumPolitica polDoc = crearPoliticaDocSimple();

@@ -2,6 +2,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 
 import ar.gob.malvinas.faltas.core.domain.model.FalRubroVersion;
 import ar.gob.malvinas.faltas.core.repository.RubroVersionRepository;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,11 @@ public class InMemoryRubroVersionRepository implements RubroVersionRepository, R
     private final List<FalRubroVersion> store = new CopyOnWriteArrayList<>();
     private final AtomicLong idCounter = new AtomicLong(1);
     private final Object lockIdRub = new Object();
+    private final FaltasClock faltasClock;
+
+    public InMemoryRubroVersionRepository(FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
+    }
 
     @Override public Long nextId() { return idCounter.getAndIncrement(); }
 
@@ -71,7 +77,7 @@ public class InMemoryRubroVersionRepository implements RubroVersionRepository, R
                 }
                 // Cerrar version anterior
                 actual.setSiVersionActual(false);
-                actual.setValidTo(LocalDateTime.now());
+                actual.setValidTo(faltasClock.now());
                 actual.setCloseOperation(nuevaVersion.getSourceOperation());
                 store.removeIf(v -> v.getRubroId().equals(actual.getRubroId()));
                 store.add(actual.copia());

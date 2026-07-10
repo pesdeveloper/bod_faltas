@@ -6,7 +6,7 @@ import java.util.Optional;
 
 /**
  * Contrato de persistencia del snapshot operativo del acta.
- * El snapshot es regenerable y se reemplaza en cada recÃ¡lculo.
+ * El snapshot es regenerable y se reemplaza en cada recálculo.
  */
 public interface ActaSnapshotRepository {
     FalActaSnapshot guardar(FalActaSnapshot snapshot);

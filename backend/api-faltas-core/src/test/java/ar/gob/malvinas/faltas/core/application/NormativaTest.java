@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CrearArticuloNormativaFaltasCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearNormativaFaltasCommand;
@@ -49,34 +51,34 @@ class NormativaTest {
     @BeforeEach
     void setUp() {
         dependenciaRepo = new InMemoryDependenciaRepository();
-        dependenciaService = new DependenciaService(dependenciaRepo);
+        dependenciaService = new DependenciaService(dependenciaRepo, FaltasClockTestSupport.FIXED);
         normativaRepo = new InMemoryNormativaRepository();
-        normativaService = new NormativaService(normativaRepo, dependenciaRepo);
+        normativaService = new NormativaService(normativaRepo, dependenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalDependencia crearDep() {
         return dependenciaService.crear(new CrearDependenciaCommand(
                 "DEP01", "Dependencia de Transito", null,
-                TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalNormativaFaltas crearNormativa() {
         return normativaService.crearNormativa(new CrearNormativaFaltasCommand(
                 "ORCV", 1, "Ordenanza de Control Vehicular",
-                "Descripcion de prueba", LocalDate.now(), "sistema"));
+                "Descripcion de prueba", FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalNormativaFaltas crearNormativaConCodigo(String codigoNorma, int versionNorma) {
         return normativaService.crearNormativa(new CrearNormativaFaltasCommand(
                 codigoNorma, versionNorma, "Normativa " + codigoNorma + " v" + versionNorma,
-                null, LocalDate.now(), "sistema"));
+                null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalArticuloNormativaFaltas crearArticulo(Long normativaId, TipoUnidad tipoUnidad) {
         return normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
                 normativaId, "ART01", 1, "Articulo 1",
                 "Descripcion articulo", BigDecimal.valueOf(2.5), tipoUnidad,
-                false, null, null, LocalDate.now(), "sistema"));
+                false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
     @Nested
     @DisplayName("8A4-01: TipoUnidad catalogo productivo cerrado")
@@ -140,28 +142,28 @@ class NormativaTest {
         @DisplayName("Rechaza normativa sin codigoNorma")
         void rechaza_sin_codigoNorma() {
             assertThatThrownBy(() -> normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand(null, 1, "Nombre", null, LocalDate.now(), "sistema")))
+                    new CrearNormativaFaltasCommand(null, 1, "Nombre", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
         @DisplayName("Rechaza normativa con codigoNorma en blanco")
         void rechaza_codigoNorma_blank() {
             assertThatThrownBy(() -> normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand("  ", 1, "Nombre", null, LocalDate.now(), "sistema")))
+                    new CrearNormativaFaltasCommand("  ", 1, "Nombre", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
         @DisplayName("Rechaza normativa sin nombreNorma")
         void rechaza_sin_nombreNorma() {
             assertThatThrownBy(() -> normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand("COD1", 1, null, null, LocalDate.now(), "sistema")))
+                    new CrearNormativaFaltasCommand("COD1", 1, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
         @DisplayName("Rechaza normativa con versionNorma = 0")
         void rechaza_versionNorma_cero() {
             assertThatThrownBy(() -> normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand("COD1", 0, "Nombre", null, LocalDate.now(), "sistema")))
+                    new CrearNormativaFaltasCommand("COD1", 0, "Nombre", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -245,7 +247,7 @@ class NormativaTest {
                             n.getId(), "ART02", 1, "Articulo con pago voluntario",
                             null, BigDecimal.valueOf(3.0), TipoUnidad.SALARIO,
                             true, BigDecimal.valueOf(1.5), TipoUnidad.SALARIO,
-                            LocalDate.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
             assertThat(a.isSiTienePagoVoluntario()).isTrue();
             assertThat(a.getCantidadUnidadesPagoVoluntario())
                     .isEqualByComparingTo(BigDecimal.valueOf(1.5));
@@ -259,7 +261,7 @@ class NormativaTest {
             normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
                     n.getId(), "ART02", 1, "Articulo 2",
                     null, BigDecimal.ONE, TipoUnidad.MONTO,
-                    false, null, null, LocalDate.now(), "sistema"));
+                    false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
             assertThat(normativaService.listarArticulosByNormativa(n.getId())).hasSize(2);
         }
     }
@@ -280,7 +282,7 @@ class NormativaTest {
                     new CrearArticuloNormativaFaltasCommand(
                             n.getId(), null, 1, "Nombre",
                             null, BigDecimal.ONE, TipoUnidad.SALARIO,
-                            false, null, null, LocalDate.now(), "sistema")))
+                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -291,7 +293,7 @@ class NormativaTest {
                     new CrearArticuloNormativaFaltasCommand(
                             n.getId(), "ART01", 1, null,
                             null, BigDecimal.ONE, TipoUnidad.SALARIO,
-                            false, null, null, LocalDate.now(), "sistema")))
+                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -302,7 +304,7 @@ class NormativaTest {
                     new CrearArticuloNormativaFaltasCommand(
                             n.getId(), "ART01", 1, "Nombre",
                             null, BigDecimal.ONE, null,
-                            false, null, null, LocalDate.now(), "sistema")))
+                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -313,7 +315,7 @@ class NormativaTest {
                     new CrearArticuloNormativaFaltasCommand(
                             n.getId(), "ART01", 1, "Nombre",
                             null, null, TipoUnidad.SALARIO,
-                            false, null, null, LocalDate.now(), "sistema")))
+                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -332,7 +334,7 @@ class NormativaTest {
                     new CrearArticuloNormativaFaltasCommand(
                             n.getId(), "ART01", 1, "Nombre",
                             null, BigDecimal.ONE, TipoUnidad.SALARIO,
-                            true, null, TipoUnidad.SALARIO, LocalDate.now(), "sistema")))
+                            true, null, TipoUnidad.SALARIO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test

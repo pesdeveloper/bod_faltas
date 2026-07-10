@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.*;
@@ -45,13 +47,13 @@ class NotificacionAcuseLoteServiceTest {
         var pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
         acuseService = new NotificacionAcuseService(
-                acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc);
+                acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
 
         loteService = new LoteCorreoService(
-                loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc);
+                loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa(Long id) {

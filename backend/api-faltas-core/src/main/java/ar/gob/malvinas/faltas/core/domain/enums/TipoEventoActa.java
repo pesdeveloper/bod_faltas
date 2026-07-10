@@ -1,27 +1,5 @@
 package ar.gob.malvinas.faltas.core.domain.enums;
 
-/**
- * Tipos de evento de dominio del acta.
- * Codigo de 6 caracteres persistible como CHAR(6) en MariaDB.
- *
- * Solo eventos con valor real de trazabilidad, auditoria o reconstruccion.
- * Prohibido incluir eventos de proyeccion como PASE_BANDEJA.
- *
- * ACTCAP y ACTENR son eventos productivos reales: representan transiciones
- * de bloque observables y auditables en el circuito (CAPT->ENRI, ENRI->doc).
- * No son eventos demo ni de proyeccion.
- *
- * APELAC NO EXISTE como evento productivo.
- * Eventos productivos de apelacion: APEPRE (presentada), APEANL (en analisis), APERAZ (rechazada), APEABS (aceptada-absuelve), APEMCO (modifica condena), APENUL (nulidad), FALRMP (fallo reemplazado).
- * PLAVNC y CONFIR son eventos productivos de firmeza de condena (Slice 4).
- *
- * PAGCON NO EXISTE como evento productivo.
- * Eventos productivos de pago de condena: PCOINF (informado), PCOCNF (confirmado), PCOOBS (observado).
- * Pago de condena se implementa en Slice 5.
- *
- * DRVEXT NO EXISTE como evento productivo. Prohibido.
- * Eventos productivos de gestion externa (Slice 6): EXTDER (derivar), EXTRET (reingresar), PAGAPR (pago apremio).
- */
 public enum TipoEventoActa {
 
     ACTLAB("ACTLAB", "Acta labrada/creada"),
@@ -61,20 +39,20 @@ public enum TipoEventoActa {
     APEANL("APEANL", "Apelacion pasada a EN_ANALISIS"),
     APEMCO("APEMCO", "Apelacion aceptada - condena modificada"),
     APENUL("APENUL", "Apelacion resuelta - nulidad declarada"),
-    FALRMP("FALRMP", "Fallo reemplazado por decision en apelacion"),    DOCADJ("DOCADJ", "Documento adjuntado/incorporado al expediente"),
+    FALRMP("FALRMP", "Fallo reemplazado por decision en apelacion"),
+    DOCADJ("DOCADJ", "Documento adjuntado/incorporado al expediente"),
     CIERRA("CIERRA", "Acta cerrada definitivamente"),
-    // Slice 8F-11H: eventos del nuevo modelo de pagos (obligacion, forma, plan, movimiento)
-    OBLDET("OBLDET", "Obligacion de pago determinada (nueva)"),
-    OBLAUL("OBLAUL", "Obligacion de pago anulada"),
-    DEBEMI("DEBEMI", "Deuda emitida en Ingresos"),
-    FPCGEN("FPCGEN", "Forma de pago contado generada"),
-    FPPGEN("FPPGEN", "Forma de pago plan generada"),
-    FPREFN("FPREFN", "Refinanciacion de plan de pago generada"),
-    PAGPRC("PAGPRC", "Pago procesado por Ingresos"),
-    PAGCFT("PAGCFT", "Pago confirmado por Tesoreria"),
-    PAGANU("PAGANU", "Pago anulado"),
-    MOVPAG("MOVPAG", "Movimiento de pago registrado"),
-    PLNCAI("PLNCAI", "Plan de pago caido"),
+    OBLDET("OBLDET", "Obligacion de pago determinada"),
+    OBLSFE("OBLSFE", "Obligacion de pago dejada sin efecto"),
+    OBLREP("OBLREP", "Obligacion de pago reemplazada"),
+    RCBGEN("RCBGEN", "Recibo al cobro generado"),
+    PLNGEN("PLNGEN", "Plan de pago generado"),
+    PLNREF("PLNREF", "Plan de pago refinanciado"),
+    PLNANU("PLNANU", "Plan de pago anulado"),
+    PAGREV("PAGREV", "Pago revertido/contracargado"),
+    EMIANU("EMIANU", "Emision Ingresos anulada"),
+    PAGANT("PAGANT", "Pago aplicado a obligacion anterior"),
+    PAGRES("PAGRES", "Pago anterior resuelto administrativamente"),
     NOTINT("NOTINT", "Intento de notificacion registrado"),
     NOTREI("NOTREI", "Reintento de notificacion registrado"),
     NOTRVE("NOTRVE", "Reintento de notificacion post vencimiento"),
@@ -86,11 +64,7 @@ public enum TipoEventoActa {
     LOTANU("LOTANU", "Lote de correo anulado"),
     PORPOS("PORPOS", "Notificacion positiva por portal infractor"),
     NOTSUP("NOTSUP", "Intento de notificacion superado por portal"),
-    PLNCAN("PLNCAN", "Plan de pago cancelado"),
-
     DOCAMP("DOCAMP", "Documento adjuntado a apelacion"),
-
-    // Slice 8F-11K: eventos de acceso via QR
     QRGEN("QRGENA", "Codigo QR de acceso generado para el acta"),
     QRACC("QRACCA", "Acceso valido al acta registrado via codigo QR");
 
@@ -112,5 +86,3 @@ public enum TipoEventoActa {
         throw new IllegalArgumentException("TipoEventoActa no reconocido: '" + codigo + "'");
     }
 }
-
-

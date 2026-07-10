@@ -442,11 +442,11 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 ### ReingresarDesdeGestionExternaCommand
 
 **Campos:**
-- `actaId` � obligatorio
-- `modoReingresoGestionExterna` � obligatorio; debe ser `REINGRESO_PARA_REVISION` o `REINGRESO_SIN_PAGO`
-- `motivoReingreso` � obligatorio, no vacio
-- `resultadoGestionExterna` � opcional (nullable); si se informa se persiste en `FalGestionExterna`
-- `observaciones` � opcional (nullable)
+- `actaId` — obligatorio
+- `modoReingresoGestionExterna` — obligatorio; debe ser `REINGRESO_PARA_REVISION` o `REINGRESO_SIN_PAGO`
+- `motivoReingreso` — obligatorio, no vacio
+- `resultadoGestionExterna` — opcional (nullable); si se informa se persiste en `FalGestionExterna`
+- `observaciones` — opcional (nullable)
 
 **Precondiciones:**
 - Acta existe
@@ -607,7 +607,7 @@ cuando `resultadoGestionExterna` es no nulo.
   - Si resultado es `SIN_PAGO`: modo debe ser `REINGRESO_SIN_PAGO`
   - Si resultado es `SIN_CAMBIOS`: modo debe ser `REINGRESO_PARA_REVISION`
 
-**Caso A � SIN_PAGO / REINGRESO_SIN_PAGO:**
+**Caso A — SIN_PAGO / REINGRESO_SIN_PAGO:**
 - Precondiciones: Caso base + `resultadoFinal == CONDENA_FIRME` (ya existia en 6B)
 - Efectos: EXTRET emitido; `FalGestionExterna.resultadoGestionExterna = SIN_PAGO`;
   `modoReingresoGestionExterna = REINGRESO_SIN_PAGO`; `fechaReingreso = now`;
@@ -615,7 +615,7 @@ cuando `resultadoGestionExterna` es no nulo.
   `FalActa.resultadoFinal` permanece `CONDENA_FIRME`; `situacionAdministrativa = ACTIVA`; `bloqueActual = ANAL`
 - No emite PAGAPR, CIERRA ni PCOCNF
 
-**Caso B � SIN_CAMBIOS / REINGRESO_PARA_REVISION:**
+**Caso B — SIN_CAMBIOS / REINGRESO_PARA_REVISION:**
 - Precondiciones: Caso base
 - Efectos: EXTRET emitido; `FalGestionExterna.resultadoGestionExterna = SIN_CAMBIOS`;
   `modoReingresoGestionExterna = REINGRESO_PARA_REVISION`; `fechaReingreso = now`;
@@ -866,3 +866,47 @@ Extiende Slice 6D-1. Habilita los tres casos de reingreso con dictamen externo d
 - Actualizacion definitiva de monto condena post-MODIFICA_MONTO (comando dedicado)
 - Documentos externos (fal_documento): pendiente hasta JDBC
 - Fundamentos/observaciones (fal_observacion): pendiente hasta JDBC
+
+---
+
+## CIERRE-D14-D18 (2026-07-09) - Numeracion documental para integracion Firmas
+
+### NumerarDocumentoParaFirmas
+
+**Operacion:** `NumerarDocumentoParaFirmas`
+**Comando:** `NumerarDocumentoCommand(documentoId, actor)`
+**Servicio:** `DocumentoService.numerarDocumentoParaFirmas`
+
+**Clasificacion:**
+- Capacidad documental central reutilizable.
+- Invocada internamente por los flujos documentales del sistema.
+- Endpoint de integracion controlada para la aplicacion de Firmas.
+- No es API generica para obtener correlativos de talonario.
+
+**Precondiciones:**
+- Documento existente (`DocumentoNoEncontradoException` si no existe).
+- La plantilla del documento requiere numeracion (`si_requiere_numeracion = true`).
+- Documento no anulado y en estado compatible con la operacion.
+- Actor autenticado obtenido del token Bearer (JWT `sub`) via `ActorContextHolder`.
+- `MomentoNumeracionDocu.AL_FIRMAR` para una primera numeracion solicitada por la aplicacion de Firmas.
+- Documentos ya numerados en momentos anteriores se devuelven idempotentemente.
+- Politica, ambito y talonario vigentes resolubles para el documento.
+
+**Efectos:**
+- Si el documento ya esta numerado (`nroDocu != null`): devuelve el mismo numero sin consumir correlativo ni duplicar movimiento de talonario ni evento; `yaEstabaNumerado = true`.
+- Si corresponde numerar: delega en la capacidad central de numeracion; asigna `nroDocu`, `idTalonario` y `nroTalonarioUsado`; registra el movimiento de talonario correspondiente.
+- No genera un segundo evento principal independiente de la operacion documental envolvente.
+- Preserva el orden obligatorio: numerar -> contenido definitivo/hash -> firma.
+
+**Concurrencia:**
+- InMemory actual: `synchronized` en `numerarDocumentoParaFirmas`; serializa llamadas dentro de una unica instancia JVM. No constituye un mecanismo de concurrencia multiinstancia.
+- MariaDB (adapter futuro): `SEQUENCE` asociada al talonario para obtener el correlativo electronico; transaccion que vincule el numero al documento y registre el movimiento de talonario; control optimista mediante `fal_documento.version_row`; constraints unicas del modelo; recarga posterior a conflicto OCC. Garantia observable: un unico numero definitivo por documento, valido en multiples instancias de la API.
+
+**Errores reales existentes:**
+- `DocumentoNoEncontradoException` -> HTTP 404.
+- `PrecondicionVioladaException` -> HTTP 422 (plantilla sin numeracion, momento incompatible, estado incompatible, talonario no vigente).
+
+## R-08 — Tiempo determinista (cerrado 2026-07-09)
+- Toda operacion productiva obtiene fecha/hora desde FaltasClock inyectado.
+- Una operacion atomica usa un unico LocalDateTime ahora = faltasClock.now() compartido entre entidad, evento, snapshot y auditoria cuando corresponde.
+- Prohibido LocalDateTime.now() / LocalDate.now() / Instant.now() directo en src/main/java fuera de allowlist.

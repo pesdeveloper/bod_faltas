@@ -28,6 +28,7 @@ import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
 import ar.gob.malvinas.faltas.core.repository.PersonaDomicilioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -77,8 +78,10 @@ public class DocumentoRedaccionService {
     private final PagoVoluntarioRepository pagoRepository;
     private PersonaRepository personaRepository;
     private PersonaDomicilioRepository domicilioRepository;
+    private final FaltasClock faltasClock;
 
     @Autowired
+
     public DocumentoRedaccionService(
             DocumentoRepository documentoRepository,
             DocumentoPlantillaDefaultService defaultService,
@@ -87,7 +90,9 @@ public class DocumentoRedaccionService {
             DocumentoCombinacionService combinacionService,
             ActaRepository actaRepository,
             FalloActaRepository falloRepository,
-            PagoVoluntarioRepository pagoRepository) {
+            PagoVoluntarioRepository pagoRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.documentoRepository = documentoRepository;
         this.defaultService = defaultService;
         this.contenidoRepository = contenidoRepository;
@@ -107,12 +112,12 @@ public class DocumentoRedaccionService {
             DocumentoPlantillaDefaultService defaultService,
             DocumentoPlantillaContenidoRepository contenidoRepository,
             DocumentoRedaccionRepository redaccionRepository,
-            DocumentoCombinacionService combinacionService) {
+            DocumentoCombinacionService combinacionService,
+            FaltasClock faltasClock) {
         this(documentoRepository, defaultService, contenidoRepository,
-                redaccionRepository, combinacionService, null, null, null);
+                redaccionRepository, combinacionService, null, null, null, faltasClock);
     }
-
-    /** 10-arg constructor for tests with PersonaRepository and PersonaDomicilioRepository. */
+    /** 12-arg constructor for tests with PersonaRepository and PersonaDomicilioRepository. */
     public DocumentoRedaccionService(
             DocumentoRepository documentoRepository,
             DocumentoPlantillaDefaultService defaultService,
@@ -123,10 +128,11 @@ public class DocumentoRedaccionService {
             FalloActaRepository falloRepository,
             PagoVoluntarioRepository pagoRepository,
             PersonaRepository personaRepository,
-            PersonaDomicilioRepository domicilioRepository) {
+            PersonaDomicilioRepository domicilioRepository,
+            FaltasClock faltasClock) {
         this(documentoRepository, defaultService, contenidoRepository,
                 redaccionRepository, combinacionService, actaRepository,
-                falloRepository, pagoRepository);
+                falloRepository, pagoRepository, faltasClock);
         this.personaRepository = personaRepository;
         this.domicilioRepository = domicilioRepository;
     }
@@ -137,7 +143,7 @@ public class DocumentoRedaccionService {
         documentoRepository.buscarPorId(cmd.idDocumento())
                 .orElseThrow(() -> new DocumentoNoEncontradoException(cmd.idDocumento()));
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         FalDocumentoPlantillaDefault plantillaDefault = defaultService.resolverDefault(
                 cmd.accionDocumental(), cmd.tipoActa(), cmd.idDependencia(), ahora);
@@ -226,7 +232,7 @@ public class DocumentoRedaccionService {
                 : null;
 
         Map<String, Object> contexto =
-                DocumentoVariableContextBuilder.buildDesdeActa(acta, documento, fallo, pago, null);
+                DocumentoVariableContextBuilder.buildDesdeActa(acta, documento, fallo, pago, null, faltasClock.now());
 
         CrearRedaccionDocumentoCommand cmd = new CrearRedaccionDocumentoCommand(
                 idDocumento, idActa, accionDocumental,

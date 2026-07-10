@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalObservacion;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ObservacionRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.EnumMap;
@@ -36,7 +37,11 @@ public class ObservacionService {
             EntidadTipoObservada.MOVIMIENTO_TALONARIO
     );
 
-    public ObservacionService(ObservacionRepository repo, ActaRepository actaRepo) {
+        private final FaltasClock faltasClock;
+
+    public ObservacionService(ObservacionRepository repo, ActaRepository actaRepo,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.repo = repo;
         this.validadores = new EnumMap<>(EntidadTipoObservada.class);
         registrarValidador(EntidadTipoObservada.ACTA,
@@ -81,7 +86,7 @@ public class ObservacionService {
         validadores.get(tipo).validar(entidadId);
         Long id = repo.nextId();
         FalObservacion obs = new FalObservacion(id, tipo, entidadId, null, texto.trim(), origen,
-                LocalDateTime.now(), idUserAlta);
+                faltasClock.now(), idUserAlta);
         return repo.guardar(obs);
     }
 
@@ -99,7 +104,7 @@ public class ObservacionService {
         validarTexto(texto);
         Long id = repo.nextId();
         FalObservacion obs = new FalObservacion(id, tipo, entidadId, null, texto.trim(), origen,
-                LocalDateTime.now(), idUserAlta);
+                faltasClock.now(), idUserAlta);
         return repo.guardar(obs);
     }
 

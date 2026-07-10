@@ -13,6 +13,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaTransitoRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,11 +26,14 @@ public class ActaTransitoService {
 
     private final ActaTransitoRepository transitoRepository;
     private final ActaTransitoAlcoholemiaRepository alcoholemiaRepository;
+    private final FaltasClock faltasClock;
 
     public ActaTransitoService(ActaTransitoRepository transitoRepository,
-                               ActaTransitoAlcoholemiaRepository alcoholemiaRepository) {
+                               ActaTransitoAlcoholemiaRepository alcoholemiaRepository,
+                               FaltasClock faltasClock) {
         this.transitoRepository = transitoRepository;
         this.alcoholemiaRepository = alcoholemiaRepository;
+        this.faltasClock = faltasClock;
     }
 
     public FalActaTransito registrarTransito(Long actaId) {
@@ -68,7 +72,7 @@ public class ActaTransitoService {
             throw new IllegalStateException("Ya existe medicion con orden " + ordenMedicion + " para actaId=" + actaId);
         Long id = alcoholemiaRepository.nextId();
         FalActaTransitoAlcoholemia medicion = new FalActaTransitoAlcoholemia(
-                id, actaId, ordenMedicion, tipoPrueba, LocalDateTime.now(), idUserAlta);
+                id, actaId, ordenMedicion, tipoPrueba, faltasClock.now(), idUserAlta);
         medicion.setResultadoCualitativo(resultadoCualitativo);
         medicion.setResultadoNumerico(resultadoNumerico, unidadMedida);
         medicion.setAlcoholimetro(idAlcoholimetro, verAlcoholimetro);

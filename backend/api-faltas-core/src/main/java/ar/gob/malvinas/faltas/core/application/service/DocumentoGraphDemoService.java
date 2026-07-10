@@ -15,6 +15,7 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ public class DocumentoGraphDemoService {
     private final DocumentoRepository documentoRepository;
     private final DocumentoRedaccionService redaccionService;
     private final DocumentoGeneracionMockService generacionService;
+    private final FaltasClock faltasClock;
 
     public DocumentoGraphDemoService(
             ActaRepository actaRepository,
@@ -88,7 +90,9 @@ public class DocumentoGraphDemoService {
             PagoVoluntarioRepository pagoRepository,
             DocumentoRepository documentoRepository,
             DocumentoRedaccionService redaccionService,
-            DocumentoGeneracionMockService generacionService) {
+            DocumentoGeneracionMockService generacionService,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.falloRepository = falloRepository;
         this.pagoRepository = pagoRepository;
@@ -98,7 +102,7 @@ public class DocumentoGraphDemoService {
     }
 
     public DocumentoGraphDemoResultado ejecutar() {
-        LocalDateTime fhInicio = LocalDateTime.now();
+        LocalDateTime fhInicio = faltasClock.now();
 
         FalActa acta = actaRepository.guardar(
                 GraphDemoActaFactory.crearActaDemo(actaRepository.nextId()));
@@ -107,16 +111,16 @@ public class DocumentoGraphDemoService {
 
         List<DocumentoGraphDemoCasoResultado> resultados = new ArrayList<>();
         for (CasoDefinicion caso : CASOS) {
-            resultados.add(ejecutarCaso(caso, acta.getId()));
+            resultados.add(ejecutarCaso(caso, acta.getId(), fhInicio));
         }
 
         return DocumentoGraphDemoResultado.de(resultados, fhInicio);
     }
 
-    private DocumentoGraphDemoCasoResultado ejecutarCaso(CasoDefinicion caso, Long actaId) {
+    private DocumentoGraphDemoCasoResultado ejecutarCaso(CasoDefinicion caso, Long actaId, LocalDateTime ahora) {
         try {
             Long docId = documentoRepository.nextId();
-            FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(docId, actaId, caso.tipoDocu());
+            FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(docId, actaId, caso.tipoDocu(), ahora);
             documentoRepository.guardar(doc);
 
             DocumentoRedaccionResponse borrador = redaccionService.crearRedaccionConContextoActa(

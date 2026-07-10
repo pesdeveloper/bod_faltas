@@ -16,6 +16,7 @@ import ar.gob.malvinas.faltas.core.repository.BloqueanteMaterialRepository;
 import ar.gob.malvinas.faltas.core.repository.MedidaPreventivaRepository;
 import org.springframework.stereotype.Service;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,18 +33,21 @@ public class ActaMedidaPreventivaAplicadaService {
     private final ArticuloMedidaPreventivaRepository articuloMedidaRepository;
     private final MedidaPreventivaRepository catalogoRepository;
     private final BloqueanteMaterialRepository bloqueanteMaterialRepository;
+    private final FaltasClock faltasClock;
 
     public ActaMedidaPreventivaAplicadaService(
             ActaMedidaPreventivaRepository medidaRepository,
             ActaArticuloInfringidoRepository articuloRepository,
             ArticuloMedidaPreventivaRepository articuloMedidaRepository,
             MedidaPreventivaRepository catalogoRepository,
-            BloqueanteMaterialRepository bloqueanteMaterialRepository) {
+            BloqueanteMaterialRepository bloqueanteMaterialRepository,
+            FaltasClock faltasClock) {
         this.medidaRepository = medidaRepository;
         this.articuloRepository = articuloRepository;
         this.articuloMedidaRepository = articuloMedidaRepository;
         this.catalogoRepository = catalogoRepository;
         this.bloqueanteMaterialRepository = bloqueanteMaterialRepository;
+        this.faltasClock = faltasClock;
     }
 
     /**
@@ -80,7 +84,7 @@ public class ActaMedidaPreventivaAplicadaService {
         Long medidaId = medidaRepository.nextId();
         FalActaMedidaPreventiva medida = new FalActaMedidaPreventiva(
                 medidaId, actaId, actaArticuloId, medidaPreventivaId,
-                siGeneraBloqueante, LocalDateTime.now(), idUserAlta);
+                siGeneraBloqueante, faltasClock.now(), idUserAlta);
         if (medPrevTxt != null) medida.setMedPrevTxt(medPrevTxt);
 
         // Si genera bloqueante, crear bloqueante material atomicamente
@@ -92,7 +96,7 @@ public class ActaMedidaPreventivaAplicadaService {
                     ? catalogo.getTipoBloqueanteDefault()
                     : OrigenBloqueanteMaterial.MEDIDA_PREVENTIVA;
             Long bloqId = bloqueanteMaterialRepository.nextId();
-            FalBloqueanteMaterial bloqueante = new FalBloqueanteMaterial(bloqId, actaId);
+            FalBloqueanteMaterial bloqueante = new FalBloqueanteMaterial(bloqId, actaId, faltasClock.now());
             bloqueante.setOrigen(origen);
             bloqueante.setDescripcion("Medida preventiva id=" + medidaId);
             // Guardar bloqueante primero
@@ -133,7 +137,7 @@ public class ActaMedidaPreventivaAplicadaService {
                     .ifPresent(b -> {
                         b.setSiActivo(false);
                         b.setEstado(EstadoBloqueanteMaterial.CUMPLIDO);
-                        b.setFechaCierre(LocalDateTime.now());
+                        b.setFechaCierre(faltasClock.now());
                         bloqueanteMaterialRepository.guardar(b);
                     });
         }

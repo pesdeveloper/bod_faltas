@@ -1,5 +1,9 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento;
+
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPlanPago;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoMovimientoPago;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoObligacionPago;
@@ -73,9 +77,9 @@ class PlanPagoMovimientoConcurrenciaTest {
         @Test
         void estadoPlan_todosLosCodigos() {
             assertThat(EstadoPlanPago.ACTIVO.codigo()).isEqualTo((short) 1);
-            assertThat(EstadoPlanPago.EN_MORA.codigo()).isEqualTo((short) 2);
-            assertThat(EstadoPlanPago.CAIDO.codigo()).isEqualTo((short) 4);
-            assertThat(EstadoPlanPago.CANCELADO.codigo()).isEqualTo((short) 5);
+            assertThat(EstadoPlanPago.FINALIZADO_POR_PAGO.codigo()).isEqualTo((short) 2);
+            assertThat(EstadoPlanPago.ANULADO.codigo()).isEqualTo((short) 3);
+            assertThat(EstadoPlanPago.REFINANCIADO.codigo()).isEqualTo((short) 4);
         }
 
         @Test
@@ -144,7 +148,7 @@ class PlanPagoMovimientoConcurrenciaTest {
                     try {
                         start.await();
                         FalActaObligacionPago snapshot = repo.findById(1L).get();
-                        snapshot.cancelar(LocalDateTime.now());
+                        snapshot.cancelar(FaltasClockTestSupport.FIXED.now());
                         repo.save(snapshot);
                         exitos.incrementAndGet();
                     } catch (ConcurrenciaConflictoException e) {
@@ -178,12 +182,12 @@ class PlanPagoMovimientoConcurrenciaTest {
         @Test
         @DisplayName("misma referenciaExterna y tipo: devuelve el original sin excepcion")
         void idempotencia_mismaTipoRef_devuelveOriginal() {
-            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.PAGO_PROCESADO, AHORA, AHORA, "USR1")
+            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1")
                     .referenciaExterna("EXT-42").build();
             repoMov.append(m1);
-            FalActaPagoMovimiento m1dup = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_PROCESADO, AHORA, AHORA, "USR1")
+            FalActaPagoMovimiento m1dup = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1")
                     .referenciaExterna("EXT-42").build();
-            FalActaPagoMovimiento result = repoMov.append(m1dup);
+            FalActaPagoMovimiento result = repoMov.append(m1dup).movimiento();
             assertThat(result.getId()).isEqualTo(1L);
             assertThat(repoMov.findByObligacionPagoId(1L)).hasSize(1);
         }
@@ -191,21 +195,21 @@ class PlanPagoMovimientoConcurrenciaTest {
         @Test
         @DisplayName("referenciaExterna con tipo diferente: lanza conflicto")
         void idempotencia_diferenteTipo_lanzaConflicto() {
-            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.PAGO_PROCESADO, AHORA, AHORA, "USR1")
+            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1")
                     .referenciaExterna("EXT-42").build();
             repoMov.append(m1);
-            FalActaPagoMovimiento mConflict = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_CONFIRMADO_TESORERIA, AHORA, AHORA, "USR1")
+            FalActaPagoMovimiento mConflict = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_CONFIRMADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1")
                     .referenciaExterna("EXT-42").build();
-            assertThatThrownBy(() -> repoMov.append(mConflict))
-                    .isInstanceOf(MovimientoPagoDuplicadoException.class);
+            var outcome = repoMov.append(mConflict);
+            assertThat(outcome.resultado().name()).isEqualTo("CONFLICT");
         }
 
         @Test
         @DisplayName("multiples movimientos distintos para misma obligacion")
         void multiplesTipos_mismaObligacion() {
-            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.DEUDA_EMITIDA, AHORA, AHORA, "USR1").build();
-            FalActaPagoMovimiento m2 = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_PROCESADO, AHORA, AHORA, "USR1").build();
-            FalActaPagoMovimiento m3 = new FalActaPagoMovimiento.Builder(3L, 1L, TipoMovimientoPago.PAGO_CONFIRMADO_TESORERIA, AHORA, AHORA, "USR1").build();
+            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1").build();
+            FalActaPagoMovimiento m2 = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1").build();
+            FalActaPagoMovimiento m3 = new FalActaPagoMovimiento.Builder(3L, 1L, TipoMovimientoPago.PAGO_CONFIRMADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1").build();
             repoMov.append(m1);
             repoMov.append(m2);
             repoMov.append(m3);
@@ -215,9 +219,9 @@ class PlanPagoMovimientoConcurrenciaTest {
         @Test
         @DisplayName("movimientos para multiples obligaciones: findByObligacionPagoId filtra correctamente")
         void multipleObligaciones_filtranCorrectamente() {
-            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.DEUDA_EMITIDA, AHORA, AHORA, "USR1").build();
-            FalActaPagoMovimiento m2 = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_PROCESADO, AHORA, AHORA, "USR1").build();
-            FalActaPagoMovimiento m3 = new FalActaPagoMovimiento.Builder(3L, 2L, TipoMovimientoPago.DEUDA_EMITIDA, AHORA, AHORA, "USR1").build();
+            FalActaPagoMovimiento m1 = new FalActaPagoMovimiento.Builder(1L, 1L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1").build();
+            FalActaPagoMovimiento m2 = new FalActaPagoMovimiento.Builder(2L, 1L, TipoMovimientoPago.PAGO_PROCESADO, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1").build();
+            FalActaPagoMovimiento m3 = new FalActaPagoMovimiento.Builder(3L, 2L, TipoMovimientoPago.DEUDA_EMITIDA, ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento.INGRESOS, AHORA, AHORA, "USR1").build();
             repoMov.append(m1);
             repoMov.append(m2);
             repoMov.append(m3);

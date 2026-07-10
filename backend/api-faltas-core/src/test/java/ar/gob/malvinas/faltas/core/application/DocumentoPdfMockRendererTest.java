@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.result.DocumentoRenderizadoMock;
 import ar.gob.malvinas.faltas.core.application.service.DocumentoPdfMockRenderer;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
@@ -29,13 +31,13 @@ class DocumentoPdfMockRendererTest {
 
     @BeforeEach
     void setUp() {
-        renderer = new DocumentoPdfMockRenderer();
+        renderer = new DocumentoPdfMockRenderer(FaltasClockTestSupport.FIXED);
     }
 
     private FalDocumento docDemo(Long id, Long actaId) {
         return new FalDocumento(
-                id, actaId, TipoDocu.ACTO_ADMINISTRATIVO, LocalDateTime.now(), "Fallo Admin",
-                EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null);
+                id, actaId, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Fallo Admin",
+                EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
     }
 
     private FalDocumentoRedaccion redaccionConfirmada(Long id, Long docId, String contenido) {

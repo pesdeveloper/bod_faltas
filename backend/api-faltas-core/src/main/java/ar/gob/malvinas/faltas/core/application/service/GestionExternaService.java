@@ -29,6 +29,7 @@ import ar.gob.malvinas.faltas.core.repository.GestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -60,6 +61,7 @@ public class GestionExternaService {
     private final GestionExternaRepository gestionExternaRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final BloqueantesMaterialesChecker bloqueantesChecker;
+    private final FaltasClock faltasClock;
 
     public GestionExternaService(
             ActaRepository actaRepository,
@@ -68,7 +70,9 @@ public class GestionExternaService {
             PagoCondenaRepository pagoCondenaRepository,
             GestionExternaRepository gestionExternaRepository,
             SnapshotRecalculador snapshotRecalculador,
-            BloqueantesMaterialesChecker bloqueantesChecker) {
+            BloqueantesMaterialesChecker bloqueantesChecker,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -98,15 +102,16 @@ public class GestionExternaService {
 
         Optional<FalActaSnapshot> snapActual = snapshotRepository.buscarPorActa(cmd.actaId());
 
+        LocalDateTime ahora = faltasClock.now();
         Long gestionId = gestionExternaRepository.nextId();
-        FalGestionExterna gestion = new FalGestionExterna(gestionId, cmd.actaId(), LocalDateTime.now(), "SYS");
+        FalGestionExterna gestion = new FalGestionExterna(gestionId, cmd.actaId(), ahora, "SYS");
         gestion.setTipoGestionExterna(cmd.tipoGestionExterna());
         gestion.setEstadoGestionExterna(EstadoGestionExterna.DERIVADA);
         gestion.setResultadoGestionExterna(ResultadoGestionExterna.SIN_RESULTADO);
         gestion.setModoReingresoGestionExterna(null);
         gestion.setMotivoDerivacion(cmd.motivoDerivacion());
         if (cmd.observaciones() != null) gestion.setObservacionesDerivacion(cmd.observaciones());
-        gestion.setFechaDerivacion(LocalDateTime.now());
+        gestion.setFechaDerivacion(ahora);
         gestion.setSiActiva(true);
 
         gestion.setBloqueOrigen(bloqueOrigen);
@@ -168,7 +173,7 @@ public class GestionExternaService {
         gestion.setEstadoGestionExterna(EstadoGestionExterna.REINGRESADA);
         gestion.setModoReingresoGestionExterna(cmd.modoReingresoGestionExterna());
         gestion.setMotivoReingreso(cmd.motivoReingreso());
-        gestion.setFechaReingreso(LocalDateTime.now());
+        gestion.setFechaReingreso(faltasClock.now());
         if (cmd.resultadoGestionExterna() != null) {
             gestion.setResultadoGestionExterna(cmd.resultadoGestionExterna());
         }
@@ -239,7 +244,7 @@ public class GestionExternaService {
         gestion.setSiActiva(false);
         gestion.setEstadoGestionExterna(EstadoGestionExterna.CERRADA_EXTERNA);
         gestion.setResultadoGestionExterna(ResultadoGestionExterna.PAGO_REGISTRADO);
-        gestion.setFechaCierreGestionExterna(LocalDateTime.now());
+        gestion.setFechaCierreGestionExterna(faltasClock.now());
         gestionExternaRepository.guardar(gestion);
 
         // Asignar resultado final (siempre, independiente de bloqueantes)
@@ -287,7 +292,7 @@ public class GestionExternaService {
     }
 
     // -------------------------------------------------------------------------
-    // Validaciones ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø derivar
+    // Validaciones - derivar
     // -------------------------------------------------------------------------
 
     private void validarSituacionPermiteDerivacion(FalActa acta) {
@@ -360,7 +365,7 @@ public class GestionExternaService {
     }
 
     // -------------------------------------------------------------------------
-    // Validaciones ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø reingresar
+    // Validaciones - reingresar
     // -------------------------------------------------------------------------
 
     private void validarModoReingresoNoNulo(ReingresarDesdeGestionExternaCommand cmd) {
@@ -626,7 +631,7 @@ public class GestionExternaService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)
@@ -640,4 +645,3 @@ public class GestionExternaService {
         return s != null ? s : "";
     }
 }
-

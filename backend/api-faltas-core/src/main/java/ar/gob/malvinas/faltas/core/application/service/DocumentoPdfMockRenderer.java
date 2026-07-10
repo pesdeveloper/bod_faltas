@@ -6,6 +6,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumentoRedaccion;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -40,6 +41,11 @@ public class DocumentoPdfMockRenderer {
 
     static final String MIME_TYPE = "application/x-faltas-pdf-mock";
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    private final FaltasClock faltasClock;
+
+    public DocumentoPdfMockRenderer(FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
+    }
 
     public DocumentoRenderizadoMock renderizar(FalDocumento documento, FalDocumentoRedaccion redaccion) {
         if (documento == null) throw new IllegalArgumentException("documento requerido");
@@ -50,7 +56,7 @@ public class DocumentoPdfMockRenderer {
                     + redaccion.getEstadoRedaccion());
         }
 
-        LocalDateTime fhGeneracion = LocalDateTime.now();
+        LocalDateTime fhGeneracion = faltasClock.now();
         String contenidoMock = buildContenidoMock(documento, redaccion, fhGeneracion);
         String hashMock = calcularHash(contenidoMock);
         long sizeBytes = contenidoMock.getBytes(StandardCharsets.UTF_8).length;

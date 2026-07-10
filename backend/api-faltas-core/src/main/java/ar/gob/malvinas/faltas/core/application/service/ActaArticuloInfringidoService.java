@@ -17,6 +17,7 @@ import ar.gob.malvinas.faltas.core.repository.ArticuloMedidaPreventivaRepository
 import ar.gob.malvinas.faltas.core.repository.NormativaRepository;
 import org.springframework.stereotype.Service;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,16 +34,19 @@ public class ActaArticuloInfringidoService {
     private final ActaRepository actaRepository;
     private final NormativaRepository normativaRepository;
     private final ArticuloMedidaPreventivaRepository articuloMedidaRepo;
+    private final FaltasClock faltasClock;
 
     public ActaArticuloInfringidoService(
             ActaArticuloInfringidoRepository articuloRepo,
             ActaRepository actaRepository,
             NormativaRepository normativaRepository,
-            ArticuloMedidaPreventivaRepository articuloMedidaRepo) {
+            ArticuloMedidaPreventivaRepository articuloMedidaRepo,
+            FaltasClock faltasClock) {
         this.articuloRepo = articuloRepo;
         this.actaRepository = actaRepository;
         this.normativaRepository = normativaRepository;
         this.articuloMedidaRepo = articuloMedidaRepo;
+        this.faltasClock = faltasClock;
     }
 
     public FalActaArticuloInfringido imputar(
@@ -68,7 +72,8 @@ public class ActaArticuloInfringidoService {
         if (!articulo.isSiActivo())
             throw new PrecondicionVioladaException("El artículo id=" + articuloId + " no está activo.");
 
-        LocalDate hoy = LocalDate.now();
+        LocalDateTime ahora = faltasClock.now();
+        LocalDate hoy = ahora.toLocalDate();
         if (!normativa.esVigenteEn(hoy))
             throw new PrecondicionVioladaException("La normativa id=" + normativaId + " no está vigente en la fecha actual.");
         if (!articulo.esVigenteEn(hoy))
@@ -79,7 +84,7 @@ public class ActaArticuloInfringidoService {
 
         Long id = articuloRepo.nextId();
         FalActaArticuloInfringido imp = new FalActaArticuloInfringido(
-                id, actaId, normativaId, articuloId, LocalDateTime.now(), idUser);
+                id, actaId, normativaId, articuloId, ahora, idUser);
         return articuloRepo.save(imp);
     }
 
@@ -89,7 +94,7 @@ public class ActaArticuloInfringidoService {
             String idUser) {
         FalActaArticuloInfringido imp = articuloRepo.findById(articuloImputadoId)
                 .orElseThrow(() -> new ActaArticuloInfringidoNoEncontradoException(articuloImputadoId));
-        imp.darDeBaja(motivo, LocalDateTime.now(), idUser);
+        imp.darDeBaja(motivo, faltasClock.now(), idUser);
         return articuloRepo.save(imp);
     }
 
@@ -104,7 +109,7 @@ public class ActaArticuloInfringidoService {
         if (!anterior.isSiActivo())
             throw new PrecondicionVioladaException("El artículo imputado id=" + articuloImputadoId + " ya está inactivo.");
 
-        anterior.darDeBaja(MotivoBajaArticuloInfringido.CORRECCION_IMPUTACION, LocalDateTime.now(), idUser);
+        anterior.darDeBaja(MotivoBajaArticuloInfringido.CORRECCION_IMPUTACION, faltasClock.now(), idUser);
         articuloRepo.save(anterior);
 
         return imputar(anterior.getActaId(), nuevaNormativaId, nuevoArticuloId, idUser);

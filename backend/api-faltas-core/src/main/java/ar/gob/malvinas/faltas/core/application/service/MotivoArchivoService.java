@@ -5,6 +5,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
 import ar.gob.malvinas.faltas.core.domain.model.FalMotivoArchivo;
 import ar.gob.malvinas.faltas.core.repository.MotivoArchivoRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,8 +22,11 @@ import java.util.Optional;
 public class MotivoArchivoService {
 
     private final MotivoArchivoRepository repo;
+    private final FaltasClock faltasClock;
 
-    public MotivoArchivoService(MotivoArchivoRepository repo) {
+    public MotivoArchivoService(MotivoArchivoRepository repo,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.repo = repo;
     }
 
@@ -32,7 +36,7 @@ public class MotivoArchivoService {
         Long id = repo.nextId();
         FalMotivoArchivo motivo = new FalMotivoArchivo(id, codigo, nombre, descripcion,
                 siNulidad, siPermiteReingreso, siRequiereObservacion, true,
-                LocalDateTime.now(), idUserAlta);
+                faltasClock.now(), idUserAlta);
         return repo.guardar(motivo);
     }
 
@@ -66,7 +70,7 @@ public class MotivoArchivoService {
         FalMotivoArchivo motivo = repo.buscarPorId(id)
                 .orElseThrow(() -> new MotivoArchivoNoEncontradoException(id));
         motivo.setSiActivo(false);
-        motivo.setFhUltMod(LocalDateTime.now());
+        motivo.setFhUltMod(faltasClock.now());
         motivo.setIdUserUltMod(idUserMod);
         return repo.actualizarAtomicamente(motivo);
     }
@@ -81,7 +85,7 @@ public class MotivoArchivoService {
         motivo.setSiNulidad(siNulidad);
         motivo.setSiPermiteReingreso(siPermiteReingreso);
         motivo.setSiRequiereObservacion(siRequiereObservacion);
-        motivo.setFhUltMod(LocalDateTime.now());
+        motivo.setFhUltMod(faltasClock.now());
         motivo.setIdUserUltMod(idUserMod);
         return repo.actualizarAtomicamente(motivo);
     }

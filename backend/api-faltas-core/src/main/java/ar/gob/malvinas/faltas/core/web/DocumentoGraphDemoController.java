@@ -5,6 +5,7 @@ import ar.gob.malvinas.faltas.core.application.service.DocumentoGraphDemoService
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * Slice 8F-4.
  */
+@ConditionalOnProperty(name = "faltas.demo.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/demo")
 public class DocumentoGraphDemoController {

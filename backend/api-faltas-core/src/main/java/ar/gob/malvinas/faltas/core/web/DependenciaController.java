@@ -12,9 +12,9 @@ import ar.gob.malvinas.faltas.core.web.dto.CrearDependenciaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.DependenciaResponse;
 import ar.gob.malvinas.faltas.core.web.dto.DependenciaVersionResponse;
 import ar.gob.malvinas.faltas.core.web.dto.VersionarDependenciaRequest;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/faltas/dependencias")
@@ -34,8 +33,11 @@ public class DependenciaController {
     private final DependenciaService dependenciaService;
     private final DependenciaRepository dependenciaRepository;
 
+    private final FaltasClock faltasClock;
+
     public DependenciaController(DependenciaService dependenciaService,
-                                  DependenciaRepository dependenciaRepository) {
+                                  DependenciaRepository dependenciaRepository, FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.dependenciaService = dependenciaService;
         this.dependenciaRepository = dependenciaRepository;
     }
@@ -47,7 +49,7 @@ public class DependenciaController {
                 req.tipoActa(), req.fhVigDesde(), req.idUserAlta());
         FalDependencia dep = dependenciaService.crear(cmd);
         FalDependenciaVersion version = dependenciaRepository
-                .findVersionVigente(dep.getIdDep(), LocalDate.now()).orElse(null);
+                .findVersionVigente(dep.getIdDep(), faltasClock.now().toLocalDate()).orElse(null);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(DependenciaResponse.de(dep, version));
     }
@@ -57,7 +59,7 @@ public class DependenciaController {
         List<DependenciaResponse> respuestas = dependenciaService.listarActivas().stream()
                 .map(dep -> {
                     FalDependenciaVersion version = dependenciaRepository
-                            .findVersionVigente(dep.getIdDep(), LocalDate.now()).orElse(null);
+                            .findVersionVigente(dep.getIdDep(), faltasClock.now().toLocalDate()).orElse(null);
                     return DependenciaResponse.de(dep, version);
                 })
                 .toList();
@@ -68,7 +70,7 @@ public class DependenciaController {
     public ResponseEntity<DependenciaResponse> obtener(@PathVariable Long id) {
         FalDependencia dep = dependenciaService.obtener(id);
         FalDependenciaVersion version = dependenciaRepository
-                .findVersionVigente(dep.getIdDep(), LocalDate.now()).orElse(null);
+                .findVersionVigente(dep.getIdDep(), faltasClock.now().toLocalDate()).orElse(null);
         return ResponseEntity.ok(DependenciaResponse.de(dep, version));
     }
 
@@ -83,15 +85,4 @@ public class DependenciaController {
         return ResponseEntity.ok(DependenciaVersionResponse.de(version));
     }
 
-    @ExceptionHandler(DependenciaNoEncontradaException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(DependenciaNoEncontradaException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(PrecondicionVioladaException.class)
-    public ResponseEntity<Map<String, String>> handlePrecondicion(PrecondicionVioladaException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(Map.of("error", ex.getMessage()));
-    }
 }

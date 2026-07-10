@@ -27,6 +27,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -62,6 +63,7 @@ public class PagoVoluntarioService {
     private final PagoVoluntarioRepository pagoVoluntarioRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final BloqueantesMaterialesChecker bloqueantesMaterialesChecker;
+    private final FaltasClock faltasClock;
 
     public PagoVoluntarioService(
             ActaRepository actaRepository,
@@ -69,7 +71,9 @@ public class PagoVoluntarioService {
             ActaSnapshotRepository snapshotRepository,
             PagoVoluntarioRepository pagoVoluntarioRepository,
             SnapshotRecalculador snapshotRecalculador,
-            BloqueantesMaterialesChecker bloqueantesMaterialesChecker) {
+            BloqueantesMaterialesChecker bloqueantesMaterialesChecker,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -100,7 +104,7 @@ public class PagoVoluntarioService {
         FalPagoVoluntario pago = pagoExistente.orElseGet(() ->
                 new FalPagoVoluntario(UUID.randomUUID().toString(), cmd.actaId()));
         pago.setEstadoPagoVoluntario(EstadoPagoVoluntario.SOLICITADO);
-        pago.setFechaSolicitud(LocalDateTime.now());
+        pago.setFechaSolicitud(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
@@ -141,7 +145,7 @@ public class PagoVoluntarioService {
 
         pago.setMonto(cmd.monto());
         pago.setEstadoPagoVoluntario(EstadoPagoVoluntario.MONTO_FIJADO);
-        pago.setFechaMontoFijado(LocalDateTime.now());
+        pago.setFechaMontoFijado(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
@@ -184,7 +188,7 @@ public class PagoVoluntarioService {
 
         pago.setReferenciaPago(cmd.referenciaPago());
         pago.setEstadoPagoVoluntario(EstadoPagoVoluntario.PENDIENTE_CONFIRMACION);
-        pago.setFechaInforme(LocalDateTime.now());
+        pago.setFechaInforme(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
@@ -221,7 +225,7 @@ public class PagoVoluntarioService {
         }
 
         pago.setEstadoPagoVoluntario(EstadoPagoVoluntario.CONFIRMADO);
-        pago.setFechaConfirmacion(LocalDateTime.now());
+        pago.setFechaConfirmacion(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
@@ -266,7 +270,7 @@ public class PagoVoluntarioService {
 
         pago.setEstadoPagoVoluntario(EstadoPagoVoluntario.OBSERVADO);
         pago.setMotivoObservacion(cmd.motivoObservacion());
-        pago.setFechaObservacion(LocalDateTime.now());
+        pago.setFechaObservacion(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
@@ -302,7 +306,7 @@ public class PagoVoluntarioService {
         }
 
         pago.setEstadoPagoVoluntario(EstadoPagoVoluntario.VENCIDO);
-        pago.setFechaVencimiento(LocalDateTime.now());
+        pago.setFechaVencimiento(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoVoluntarioRepository.guardar(pago);
 
@@ -371,7 +375,7 @@ public class PagoVoluntarioService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

@@ -15,6 +15,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Component;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 
 /**
@@ -43,16 +44,19 @@ public class CierreActaHelper {
     private final ActaEventoRepository eventoRepository;
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
 
     public CierreActaHelper(
             ActaRepository actaRepository,
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
         this.snapshotRecalculador = snapshotRecalculador;
+        this.faltasClock = faltasClock;
     }
 
     /**
@@ -90,7 +94,7 @@ public class CierreActaHelper {
                 .actaId(acta.getId())
                 .tipoEvt(TipoEventoActa.CIERRA)
                 .origenEvt(OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .actorTipo(ActorTipoEvento.SISTEMA)
                 .siEvtCierre(true)
                 .descripcionLegible(motivo)

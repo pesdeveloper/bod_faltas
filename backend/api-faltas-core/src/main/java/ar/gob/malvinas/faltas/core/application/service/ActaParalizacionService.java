@@ -18,6 +18,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 
 /**
@@ -40,12 +41,15 @@ public class ActaParalizacionService {
     private final ActaEventoRepository eventoRepository;
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
 
     public ActaParalizacionService(
             ActaRepository actaRepository,
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -108,7 +112,7 @@ public class ActaParalizacionService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .actorTipo(ActorTipoEvento.SISTEMA)
                 .descripcionLegible(descripcionLegible)
                 .build();

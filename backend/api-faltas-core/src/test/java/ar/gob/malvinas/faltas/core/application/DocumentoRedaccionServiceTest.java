@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableRegistry;
 import ar.gob.malvinas.faltas.core.application.command.CrearRedaccionDocumentoCommand;
@@ -45,7 +47,7 @@ class DocumentoRedaccionServiceTest {
     private DocumentoRedaccionRepository redaccionRepo;
     private DocumentoRedaccionService service;
 
-    private static final LocalDateTime AYER = LocalDateTime.now().minusDays(1);
+    private static final LocalDateTime AYER = FaltasClockTestSupport.FIXED.now().minusDays(1);
     private static final Long PLANTILLA_ID = 100L;
 
     @BeforeEach
@@ -59,15 +61,16 @@ class DocumentoRedaccionServiceTest {
         DocumentoPlantillaDefaultService defaultSvc =
                 new DocumentoPlantillaDefaultService(defaultRepo);
         service = new DocumentoRedaccionService(
-                docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion);
+                docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion,
+                FaltasClockTestSupport.FIXED);
     }
 
     private FalDocumento crearDocumento() {
         Long id = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
-                id, 1L, TipoDocu.ACTO_ADMINISTRATIVO, LocalDateTime.now(), "Fallo",
+                id, 1L, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Fallo",
                 ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.BORRADOR,
-                ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null);
+                ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
         return docRepo.guardar(doc);
     }
 
@@ -134,7 +137,7 @@ class DocumentoRedaccionServiceTest {
                     cmd(doc.getId(), Map.of(
                             "infractor.nombreCompleto", "Pedro",
                             "infractor.documento", "99",
-                            "acta.fechaLabrado", LocalDateTime.now())));
+                            "acta.fechaLabrado", FaltasClockTestSupport.FIXED.now())));
 
             assertThat(r.contenidoEditable()).isEqualTo("Infractor: Pedro");
         }
@@ -150,7 +153,7 @@ class DocumentoRedaccionServiceTest {
                     cmd(doc.getId(), Map.of(
                             "infractor.nombreCompleto", "Ana",
                             "infractor.documento", "11",
-                            "acta.fechaLabrado", LocalDateTime.now(),
+                            "acta.fechaLabrado", FaltasClockTestSupport.FIXED.now(),
                             "acta.nroActa", "ACT-001")));
 
             assertThat(r.variablesUsadas())

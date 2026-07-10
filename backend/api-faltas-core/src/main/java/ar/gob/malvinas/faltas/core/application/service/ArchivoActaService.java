@@ -29,6 +29,7 @@ import ar.gob.malvinas.faltas.core.repository.ObservacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,6 +61,7 @@ public class ArchivoActaService {
     private final MotivoArchivoRepository motivoArchivoRepository;
     private final ObservacionRepository observacionRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
 
     public ArchivoActaService(
             ActaRepository actaRepository,
@@ -69,7 +71,8 @@ public class ArchivoActaService {
             ActaParalizacionRepository paralizacionRepository,
             MotivoArchivoRepository motivoArchivoRepository,
             ObservacionRepository observacionRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -78,6 +81,7 @@ public class ArchivoActaService {
         this.motivoArchivoRepository = motivoArchivoRepository;
         this.observacionRepository = observacionRepository;
         this.snapshotRecalculador = snapshotRecalculador;
+        this.faltasClock = faltasClock;
     }
 
     public ComandoResultado archivar(ArchivarActaCommand cmd) {
@@ -96,7 +100,7 @@ public class ArchivoActaService {
         }
 
         String usuario = cmd.idUserOperacion() != null ? cmd.idUserOperacion() : "SYS";
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         Optional<FalActaSnapshot> snapActual = snapshotRepository.buscarPorActa(cmd.actaId());
 
@@ -190,7 +194,7 @@ public class ArchivoActaService {
         }
 
         String usuario = cmd.idUserOperacion() != null ? cmd.idUserOperacion() : "SYS";
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         FalActaArchivo cierre = archivoActivo.copia();
         cierre.setFhReingreso(ahora);
@@ -252,7 +256,7 @@ public class ArchivoActaService {
                 .actaId(actaId)
                 .tipoEvt(tipo)
                 .origenEvt(usuario != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idUserEvt(usuario)
                 .actorTipo(usuario != null ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
                 .descripcionLegible(descripcionLegible)

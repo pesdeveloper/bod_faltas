@@ -45,9 +45,12 @@ import ar.gob.malvinas.faltas.core.domain.model.FalActaObligacionPago;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaFormaPago;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaPlanPagoRef;
 import ar.gob.malvinas.faltas.core.application.service.PagoMovimientoReducer;
+import ar.gob.malvinas.faltas.core.repository.EconomiaProyeccionRepository;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaEconomiaProyeccion;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +83,7 @@ public class SnapshotRecalculador {
     private final FalloActaRepository falloActaRepository;
     private final ApelacionActaRepository apelacionActaRepository;
     private final PagoCondenaRepository pagoCondenaRepository;
+    private final FaltasClock faltasClock;
     private ValorizacionService valorizacionService;
 
     // Repositorios de satelites - 8F-11E (optional, no rompen tests anteriores)
@@ -107,6 +111,9 @@ public class SnapshotRecalculador {
     @Autowired(required = false)
     private PagoMovimientoReducer pagoMovimientoReducer;
 
+    @Autowired(required = false)
+    private EconomiaProyeccionRepository economiaProyeccionRepository;
+
     /**
      * Constructor usado por Spring (inyecta ValorizacionService).
      * El @Autowired en este constructor garantiza que Spring lo use cuando el bean
@@ -121,7 +128,8 @@ public class SnapshotRecalculador {
             FalloActaRepository falloActaRepository,
             ApelacionActaRepository apelacionActaRepository,
             PagoCondenaRepository pagoCondenaRepository,
-            ValorizacionService valorizacionService) {
+            ValorizacionService valorizacionService,
+            FaltasClock faltasClock) {
         this.eventoRepository = eventoRepository;
         this.documentoRepository = documentoRepository;
         this.notificacionRepository = notificacionRepository;
@@ -130,6 +138,7 @@ public class SnapshotRecalculador {
         this.apelacionActaRepository = apelacionActaRepository;
         this.pagoCondenaRepository = pagoCondenaRepository;
         this.valorizacionService = valorizacionService;
+        this.faltasClock = faltasClock;
     }
 
     /**
@@ -143,10 +152,11 @@ public class SnapshotRecalculador {
             PagoVoluntarioRepository pagoVoluntarioRepository,
             FalloActaRepository falloActaRepository,
             ApelacionActaRepository apelacionActaRepository,
-            PagoCondenaRepository pagoCondenaRepository) {
+            PagoCondenaRepository pagoCondenaRepository,
+            FaltasClock faltasClock) {
         this(eventoRepository, documentoRepository, notificacionRepository,
                 pagoVoluntarioRepository, falloActaRepository, apelacionActaRepository,
-                pagoCondenaRepository, null);
+                pagoCondenaRepository, null, faltasClock);
     }
 
     public FalActaSnapshot recalcular(FalActa acta) {
@@ -155,7 +165,7 @@ public class SnapshotRecalculador {
         snap.setEstadoProcesal(acta.getEstadoProcesal());
         snap.setSituacionAdministrativa(acta.getSituacionAdministrativa());
         snap.setResultadoFinal(acta.getResultadoFinal());
-        snap.setUltimaActualizacion(LocalDateTime.now());
+        snap.setUltimaActualizacion(faltasClock.now());
 
         List<FalDocumento> docs = documentoRepository.buscarPorActa(acta.getId());
         List<FalNotificacion> notifs = notificacionRepository.buscarPorActa(acta.getId());
@@ -203,7 +213,7 @@ public class SnapshotRecalculador {
         boolean tuvoPagoExterno = eventos.stream()
                 .anyMatch(e -> e.tipoEvt() == TipoEventoActa.PAGAPR);
 
-        // Proyectar valorizaciÃƒÂ³n operativa (solo cuando el servicio esta disponible)
+        // Proyectar valorización operativa (solo cuando el servicio esta disponible)
         proyectarValorizacion(snap, acta.getId());
 
         derivarBandejaYAccion(snap, acta, pagoOpt, falloOpt, ultimaApelacionOpt,
@@ -526,39 +536,7 @@ public class SnapshotRecalculador {
      * Tests sin estos repositorios no se ven afectados.
      */
     private void proyectarPagos(FalActaSnapshot snap, Long actaId) {
-        if (obligacionPagoRepository == null) return;
-        obligacionPagoRepository.findVigenteByActaId(actaId).ifPresent(obligacion -> {
-            snap.setTipoObligacionPago(obligacion.getTipoObligacion());
-            snap.setEstadoObligacionPago(obligacion.getEstadoObligacion());
-            snap.setMontoObligacionPago(obligacion.getMontoOriginal());
-            snap.setSiAptaIntimacion(obligacion.isSiAptaIntimacion());
-            snap.setMotivoAptaIntimacion(obligacion.getMotivoAptaIntimacion());
-            snap.setCantDiasMora(obligacion.getCantDiasMora());
-            snap.setCantCuotasMora(obligacion.getCantCuotasMora());
-            snap.setCantCuotasMoraConsec(obligacion.getCantCuotasMoraConsec());
-            snap.setFhUltSyncIngresos(obligacion.getFhUltSyncIngresos());
-
-            if (formaPagoRepository != null && obligacion.getFormaPagoVigenteId() != null) {
-                formaPagoRepository.findById(obligacion.getFormaPagoVigenteId()).ifPresent(forma -> {
-                    snap.setTipoFormaPagoVigente(forma.getTipoFormaPago());
-                    snap.setEstadoFormaPagoVigente(forma.getEstadoFormaPago());
-                    if (pagoMovimientoRepository != null && pagoMovimientoReducer != null) {
-                        var movimientos = pagoMovimientoRepository.findByObligacionPagoId(obligacion.getId());
-                        snap.setSiPagoProcesado(pagoMovimientoReducer.hayPagoProcesadoActivo(movimientos));
-                        snap.setSiPagoConfirmado(pagoMovimientoReducer.hayPagoConfirmadoActivo(movimientos));
-                    }
-                });
-            }
-
-            if (planPagoRefRepository != null) {
-                planPagoRefRepository.findVigenteByObligacionPagoId(obligacion.getId()).ifPresent(plan -> {
-                    snap.setSiPlanPago(true);
-                    snap.setEstadoPlanPago(plan.getEstadoPlan());
-                    snap.setCantCuotasPlan(plan.getCantidadCuotas());
-                    snap.setValorCuotaPlan(plan.getImporteCuotaRegular());
-                    snap.setCantCuotasPagadas(plan.getCantidadCuotasPagadas());
-                });
-            }
-        });
+        // Economia operativa: consultar FalActaEconomiaProyeccion; snapshot no duplica importes ni flags de pago.
     }
+
 }

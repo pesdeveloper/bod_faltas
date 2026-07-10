@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableRegistry;
 import ar.gob.malvinas.faltas.core.application.demo.GraphDemoActaFactory;
@@ -73,7 +75,7 @@ class DocumentoRedaccionGraphDemoTest {
                 new DocumentoPlantillaDefaultService(defaultRepo);
         service = new DocumentoRedaccionService(
                 docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion,
-                actaRepo, falloRepo, pagoRepo);
+                actaRepo, falloRepo, pagoRepo, FaltasClockTestSupport.FIXED);
 
         actaDemo = actaRepo.guardar(GraphDemoActaFactory.crearActaDemo(actaRepo.nextId()));
         falloDemo = falloRepo.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(actaDemo.getId()));
@@ -82,7 +84,7 @@ class DocumentoRedaccionGraphDemoTest {
 
     private FalDocumento crearDocDemo(TipoDocu tipoDocu) {
         Long id = docRepo.nextId();
-        FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(id, actaDemo.getId(), tipoDocu);
+        FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(id, actaDemo.getId(), tipoDocu, FaltasClockTestSupport.FIXED.now());
         return docRepo.guardar(doc);
     }
 

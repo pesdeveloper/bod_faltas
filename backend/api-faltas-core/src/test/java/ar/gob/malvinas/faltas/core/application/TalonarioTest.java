@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.AsignarTalonarioInspectorCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearInspectorCommand;
@@ -74,9 +76,9 @@ class TalonarioTest {
         talonarioRepo = new InMemoryTalonarioRepository();
         dependenciaRepo = new InMemoryDependenciaRepository();
         inspectorRepo = new InMemoryInspectorRepository();
-        talonarioService = new TalonarioService(talonarioRepo, dependenciaRepo, inspectorRepo);
-        dependenciaService = new DependenciaService(dependenciaRepo);
-        inspectorService = new InspectorService(inspectorRepo, dependenciaRepo);
+        talonarioService = new TalonarioService(talonarioRepo, dependenciaRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
+        dependenciaService = new DependenciaService(dependenciaRepo, FaltasClockTestSupport.FIXED);
+        inspectorService = new InspectorService(inspectorRepo, dependenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -87,21 +89,21 @@ class TalonarioTest {
         return talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 "POL-ACTA-01", "Politica actas transito", ClaseNumeracion.ACTA,
                 false, false, null, false, null, false, null,
-                "{NRO}", true, LocalDate.now(), null, "sistema"));
+                "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
     }
 
     private NumPolitica crearPoliticaActaConReinicioAnual() {
         return talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 "POL-ACTA-ANUAL", "Politica actas con reinicio anual", ClaseNumeracion.ACTA,
                 true, false, null, true, (short) 4, false, null,
-                "{ANIO}-{NRO}", true, LocalDate.now(), null, "sistema"));
+                "{ANIO}-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
     }
 
     private NumPolitica crearPoliticaDocSimple() {
         return talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 "POL-DOC-01", "Politica documentos", ClaseNumeracion.DOCUMENTO,
                 false, false, null, false, null, false, null,
-                "DOC-{NRO}", true, LocalDate.now(), null, "sistema"));
+                "DOC-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
     }
 
     private NumTalonario crearTalonarioElectronicoActa(Long politicaId) {
@@ -131,29 +133,29 @@ class TalonarioTest {
     private FalDependencia crearDependenciaTransito() {
         return dependenciaService.crear(new CrearDependenciaCommand(
                 "DEP-T-01", "Transito Central", null,
-                TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalInspector crearInspectorConVersion() {
         FalDependencia dep = crearDependenciaTransito();
         return inspectorService.crear(new CrearInspectorCommand(
                 "user-insp-01", 12345, "Juan Perez",
-                dep.getIdDep(), 1, LocalDate.now(), "sistema"));
+                dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalInspector crearInspectorConVersionExtra() {
         FalDependencia dep = dependenciaService.crear(new CrearDependenciaCommand(
                 "DEP-T-02", "Transito Norte", null,
-                TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
         return inspectorService.crear(new CrearInspectorCommand(
                 "user-insp-02", 67890, "Maria Lopez",
-                dep.getIdDep(), 1, LocalDate.now(), "sistema"));
+                dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
     private NumTalonarioAmbito crearAmbitoGlobal(Long talonarioId, ClaseNumeracion clase) {
         return talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                 talonarioId, clase, null, null,
                 null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                LocalDate.now(), null, true, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
     }
 
 
@@ -231,7 +233,7 @@ class TalonarioTest {
                     new CrearPoliticaNumeracionCommand(
                             null, "desc", ClaseNumeracion.ACTA,
                             false, false, null, false, null, false, null,
-                            "{NRO}", true, LocalDate.now(), null, "sistema")))
+                            "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("codigo");
         }
@@ -252,7 +254,7 @@ class TalonarioTest {
                     new CrearPoliticaNumeracionCommand(
                             "COD-X", null, ClaseNumeracion.ACTA,
                             false, false, null, false, null, false, null,
-                            "{NRO}", true, LocalDate.now(), null, "sistema")))
+                            "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("descripcion");
         }
@@ -264,7 +266,7 @@ class TalonarioTest {
                     new CrearPoliticaNumeracionCommand(
                             "COD-X", "desc", null,
                             false, false, null, false, null, false, null,
-                            "{NRO}", true, LocalDate.now(), null, "sistema")))
+                            "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("claseNumeracion");
         }
@@ -276,7 +278,7 @@ class TalonarioTest {
                     new CrearPoliticaNumeracionCommand(
                             "COD-X", "desc", ClaseNumeracion.ACTA,
                             false, false, null, false, null, false, null,
-                            null, true, LocalDate.now(), null, "sistema")))
+                            null, true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("formatoVisible");
         }
@@ -288,7 +290,7 @@ class TalonarioTest {
                     new CrearPoliticaNumeracionCommand(
                             "COD-X", "desc", ClaseNumeracion.ACTA,
                             false, true, null, false, null, false, null,
-                            "{NRO}", true, LocalDate.now(), null, "sistema")))
+                            "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("prefijo");
         }
@@ -440,7 +442,7 @@ class TalonarioTest {
             NumTalonarioAmbito a = talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
             assertThat(a.getId()).isNotNull();
             assertThat(a.getAlcance()).isEqualTo(AlcanceTalonario.GLOBAL);
         }
@@ -454,7 +456,7 @@ class TalonarioTest {
             NumTalonarioAmbito a = talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     dep.getIdDep(), (short) 1, AlcanceTalonario.DEPENDENCIA, (short) 5,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
             assertThat(a.getAlcance()).isEqualTo(AlcanceTalonario.DEPENDENCIA);
         }
 
@@ -464,7 +466,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     999L, ClaseNumeracion.ACTA, null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 0,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("999");
         }
@@ -477,7 +479,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.DOCUMENTO, null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("coincidir");
         }
@@ -490,7 +492,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     1L, null, AlcanceTalonario.DEPENDENCIA, (short) 5,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("verDep");
         }
@@ -503,7 +505,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     null, (short) 1, AlcanceTalonario.DEPENDENCIA, (short) 5,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idDep");
         }
@@ -516,7 +518,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     999L, (short) 1, AlcanceTalonario.DEPENDENCIA, (short) 5,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("999");
         }
@@ -529,7 +531,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     1L, (short) 1, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("GLOBAL");
         }
@@ -542,7 +544,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     null, null, AlcanceTalonario.DEPENDENCIA, (short) 5,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("DEPENDENCIA");
         }
@@ -559,7 +561,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.DOCUMENTO, null, null,
                     null, null, AlcanceTalonario.TRANSVERSAL_DOCUMENTO, (short) 3,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("tipoDocu");
         }
@@ -572,7 +574,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) -1,
-                    LocalDate.now(), null, true, "sistema")))
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("prioridad");
         }
@@ -598,7 +600,7 @@ class TalonarioTest {
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
             List<NumTalonarioAmbito> ambitos = talonarioService.listarAmbitosPorTalonario(t.getId());
             assertThat(ambitos).hasSize(1);
         }
@@ -611,7 +613,7 @@ class TalonarioTest {
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     t.getId(), ClaseNumeracion.ACTA, null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
             assertThat(t.getNroDesde()).isEqualTo(1);
         }
     }
@@ -673,7 +675,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThat(a.getId()).isNotNull();
             assertThat(a.getIdTalonario()).isEqualTo(t.getId());
             assertThat(a.getIdInsp()).isEqualTo(insp.getIdInsp());
@@ -688,7 +690,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThat(a.getEstadoAsignacion()).isEqualTo(EstadoAsignacionTalonario.ENTREGADO);
         }
 
@@ -701,7 +703,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThat(a.isSiActiva()).isTrue();
         }
 
@@ -714,7 +716,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThat(a.getTalonarioIdActivo()).isEqualTo(t.getId());
         }
 
@@ -741,7 +743,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "user-entrega-01"));
+                            FaltasClockTestSupport.FIXED.now(), "user-entrega-01"));
             assertThat(a.getIdUserEntrega()).isEqualTo("user-entrega-01");
         }
 
@@ -752,7 +754,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             999L, insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("999");
         }
@@ -770,7 +772,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("activo");
         }
@@ -788,7 +790,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("bloqueado");
         }
@@ -802,13 +804,13 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("MANUAL_FISICO");
         }
 
         @Test
-        @DisplayName("8B3-14: Permitir solo MANUAL_FISICO Ã¢â‚¬â€ verificar que ELECTRONICO falla")
+        @DisplayName("8B3-14: Permitir solo MANUAL_FISICO → verificar que ELECTRONICO falla")
         void solo_manual_fisico_permitido() {
             NumPolitica p = crearPoliticaActaSimple();
             NumTalonario elec = crearTalonarioElectronicoActa(p.getId());
@@ -817,12 +819,12 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             elec.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             manual.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThat(a.getId()).isNotNull();
         }
 
@@ -834,7 +836,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), 9999L, (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("9999");
         }
@@ -848,7 +850,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 99,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("99");
         }
@@ -861,7 +863,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), null, (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idInsp");
         }
@@ -873,7 +875,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             null, insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idTalonario");
         }
@@ -901,7 +903,7 @@ class TalonarioTest {
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), null)))
+                            FaltasClockTestSupport.FIXED.now(), null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idUserEntrega");
         }
@@ -916,11 +918,11 @@ class TalonarioTest {
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp1.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp2.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("activa");
         }
@@ -935,11 +937,11 @@ class TalonarioTest {
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp1.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThatThrownBy(() -> talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp2.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema")))
+                            FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -954,11 +956,11 @@ class TalonarioTest {
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t1.getId(), insp1.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t2.getId(), insp2.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             List<NumTalonarioInspector> activas = talonarioService.listarAsignacionesActivas();
             assertThat(activas).hasSize(2);
             assertThat(activas).allMatch(NumTalonarioInspector::isSiActiva);
@@ -975,11 +977,11 @@ class TalonarioTest {
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t1.getId(), insp1.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t2.getId(), insp2.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             List<NumTalonarioInspector> porInsp1 = talonarioService.listarAsignacionesPorInspector(insp1.getIdInsp());
             assertThat(porInsp1).hasSize(1);
             assertThat(porInsp1.get(0).getIdInsp()).isEqualTo(insp1.getIdInsp());
@@ -994,7 +996,7 @@ class TalonarioTest {
             talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             List<NumTalonarioInspector> porTalonario = talonarioService.listarAsignacionesPorTalonario(t.getId());
             assertThat(porTalonario).hasSize(1);
             assertThat(porTalonario.get(0).getIdTalonario()).isEqualTo(t.getId());
@@ -1018,10 +1020,10 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             NumTalonarioInspector dev = talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "user-dev-01"));
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "user-dev-01"));
             assertThat(dev.getId()).isEqualTo(a.getId());
         }
 
@@ -1034,10 +1036,10 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             NumTalonarioInspector dev = talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "user-dev-01"));
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "user-dev-01"));
             assertThat(dev.getEstadoAsignacion()).isEqualTo(EstadoAsignacionTalonario.DEVUELTO);
         }
 
@@ -1050,10 +1052,10 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             NumTalonarioInspector dev = talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "user-dev-01"));
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "user-dev-01"));
             assertThat(dev.isSiActiva()).isFalse();
         }
 
@@ -1066,10 +1068,10 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             NumTalonarioInspector dev = talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "user-dev-01"));
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "user-dev-01"));
             assertThat(dev.getTalonarioIdActivo()).isNull();
         }
 
@@ -1082,7 +1084,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             LocalDateTime fhDev = LocalDateTime.of(2026, 6, 30, 17, 0, 0);
             NumTalonarioInspector dev = talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(a.getId(), fhDev, "user-dev-01"));
@@ -1098,10 +1100,10 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             NumTalonarioInspector dev = talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "user-devolucion-xyz"));
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "user-devolucion-xyz"));
             assertThat(dev.getIdUserDevolucion()).isEqualTo("user-devolucion-xyz");
         }
 
@@ -1110,7 +1112,7 @@ class TalonarioTest {
         void rechazar_devolucion_asignacion_inexistente() {
             assertThatThrownBy(() -> talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            9999L, LocalDateTime.now(), "sistema")))
+                            9999L, FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("9999");
         }
@@ -1124,13 +1126,13 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "sistema"));
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThatThrownBy(() -> talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(
-                            a.getId(), LocalDateTime.now(), "sistema")))
+                            a.getId(), FaltasClockTestSupport.FIXED.now(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("activa");
         }
@@ -1144,7 +1146,7 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThatThrownBy(() -> talonarioService.devolverTalonarioInspector(
                     new DevolverTalonarioInspectorCommand(a.getId(), null, "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
@@ -1160,9 +1162,9 @@ class TalonarioTest {
             NumTalonarioInspector a = talonarioService.asignarTalonarioInspector(
                     new AsignarTalonarioInspectorCommand(
                             t.getId(), insp.getIdInsp(), (short) 1,
-                            LocalDateTime.now(), "sistema"));
+                            FaltasClockTestSupport.FIXED.now(), "sistema"));
             assertThatThrownBy(() -> talonarioService.devolverTalonarioInspector(
-                    new DevolverTalonarioInspectorCommand(a.getId(), LocalDateTime.now(), null)))
+                    new DevolverTalonarioInspectorCommand(a.getId(), FaltasClockTestSupport.FIXED.now(), null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idUserDevolucion");
         }
@@ -1272,7 +1274,7 @@ class TalonarioTest {
                     1L, 10L, 5, EstadoNumeroTalonario.USADO,
                     null, null, null, null,
                     100L, (short) 1, null, null,
-                    LocalDateTime.now(), "user-01");
+                    FaltasClockTestSupport.FIXED.now(), "user-01");
             assertThat(m.getId()).isEqualTo(1L);
             assertThat(m.getIdTalonario()).isEqualTo(10L);
             assertThat(m.getNroTalonario()).isEqualTo(5);
@@ -1296,7 +1298,7 @@ class TalonarioTest {
 
             EmitirNumeroActaCommand cmd = new EmitirNumeroActaCommand(
                     999L, (short) 1, null, null, null,
-                    null, LocalDateTime.now(), "user-01");
+                    null, FaltasClockTestSupport.FIXED.now(), "user-01");
             talonarioService.emitirNumeroActa(cmd);
             talonarioService.emitirNumeroActa(cmd);
 
@@ -1312,7 +1314,7 @@ class TalonarioTest {
             NumTalonarioMovimiento m1 = new NumTalonarioMovimiento(
                     1L, 10L, 5, EstadoNumeroTalonario.USADO,
                     null, null, null, null, 100L, (short) 1, null, null,
-                    LocalDateTime.now(), "user-01");
+                    FaltasClockTestSupport.FIXED.now(), "user-01");
             talonarioRepo.guardarMovimiento(m1);
 
             assertThat(talonarioRepo.existeMovimientoTalonarioNumero(10L, 5)).isTrue();
@@ -1342,7 +1344,7 @@ class TalonarioTest {
         @DisplayName("8B4-12: Primer numero emitido usa nroDesde (=1)")
         void primer_numero_usa_nroDesde() {
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    999L, (short) 1, null, null, null, null, LocalDateTime.now(), "user-01"));
+                    999L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "user-01"));
             assertThat(r.nroTalonarioUsado()).isEqualTo(1);
         }
 
@@ -1350,9 +1352,9 @@ class TalonarioTest {
         @DisplayName("8B4-13: Segundo numero incrementa correlativo")
         void segundo_numero_incrementa() {
             talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    999L, (short) 1, null, null, null, null, LocalDateTime.now(), "user-01"));
+                    999L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "user-01"));
             NumeroActaEmitidoResponse r2 = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    999L, (short) 1, null, null, null, null, LocalDateTime.now(), "user-01"));
+                    999L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "user-01"));
             assertThat(r2.nroTalonarioUsado()).isEqualTo(2);
         }
 
@@ -1362,7 +1364,7 @@ class TalonarioTest {
             NumPolitica pol = talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-H", "Politica con limite", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario talLimitado = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-LIM", "Talonario limitado",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1372,14 +1374,14 @@ class TalonarioTest {
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     talLimitado.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
 
             talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    999L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1"));
+                    999L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1"));
             talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    999L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1"));
+                    999L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1"));
             assertThatThrownBy(() -> talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    999L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    999L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nroHasta");
         }
@@ -1389,11 +1391,11 @@ class TalonarioTest {
         void rechazar_si_sin_ambito_compatible() {
             // Fresh service - no setUp talonario to interfere
             InMemoryTalonarioRepository freshRepo = new InMemoryTalonarioRepository();
-            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository());
+            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
             NumPolitica pol = freshSvc.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-SA", "Politica sin ambito", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             freshSvc.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-SIN-AMB", "Sin ambito",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1401,7 +1403,7 @@ class TalonarioTest {
                     true, false, null, null, "sistema"));
 
             assertThatThrownBy(() -> freshSvc.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    888L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    888L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("No hay talonario ACTA compatible");
         }
@@ -1410,11 +1412,11 @@ class TalonarioTest {
         @DisplayName("8B4-16: Rechazar si talonario esta inactivo")
         void rechazar_si_talonario_inactivo() {
             InMemoryTalonarioRepository freshRepo = new InMemoryTalonarioRepository();
-            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository());
+            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
             NumPolitica pol = freshSvc.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-IN", "Politica inactivo", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario talInactivo = freshSvc.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-INAC", "Talonario inactivo",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1423,10 +1425,10 @@ class TalonarioTest {
             freshSvc.crearAmbito(new CrearTalonarioAmbitoCommand(
                     talInactivo.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
 
             assertThatThrownBy(() -> freshSvc.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    777L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    777L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -1434,11 +1436,11 @@ class TalonarioTest {
         @DisplayName("8B4-17: Rechazar si talonario esta bloqueado")
         void rechazar_si_talonario_bloqueado() {
             InMemoryTalonarioRepository freshRepo = new InMemoryTalonarioRepository();
-            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository());
+            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
             NumPolitica pol = freshSvc.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-BL", "Politica bloqueado", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario talBloqueado = freshSvc.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-BLQ", "Talonario bloqueado",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1447,10 +1449,10 @@ class TalonarioTest {
             freshSvc.crearAmbito(new CrearTalonarioAmbitoCommand(
                     talBloqueado.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
 
             assertThatThrownBy(() -> freshSvc.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    666L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    666L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -1458,11 +1460,11 @@ class TalonarioTest {
         @DisplayName("8B4-18: Rechazar si ambito esta inactivo")
         void rechazar_si_ambito_inactivo() {
             InMemoryTalonarioRepository freshRepo = new InMemoryTalonarioRepository();
-            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository());
+            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
             NumPolitica pol = freshSvc.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-AI", "Politica ambito inactivo", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario tal = freshSvc.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-AMB-INAC", "Talonario ambito inactivo",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1472,10 +1474,10 @@ class TalonarioTest {
             freshSvc.crearAmbito(new CrearTalonarioAmbitoCommand(
                     tal.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, false, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, false, "sistema"));
 
             assertThatThrownBy(() -> freshSvc.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    555L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    555L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -1483,11 +1485,11 @@ class TalonarioTest {
         @DisplayName("8B4-19: Rechazar si ambito no esta vigente")
         void rechazar_si_ambito_no_vigente() {
             InMemoryTalonarioRepository freshRepo = new InMemoryTalonarioRepository();
-            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository());
+            TalonarioService freshSvc = new TalonarioService(freshRepo, new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
             NumPolitica pol = freshSvc.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-ACTA-AV", "Politica ambito vencido", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario tal = freshSvc.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-AMB-VEN", "Talonario ambito vencido",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1497,10 +1499,10 @@ class TalonarioTest {
             freshSvc.crearAmbito(new CrearTalonarioAmbitoCommand(
                     tal.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now().minusDays(10), LocalDate.now().minusDays(1), true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(10), FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), true, "sistema"));
 
             assertThatThrownBy(() -> freshSvc.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    444L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    444L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -1511,7 +1513,7 @@ class TalonarioTest {
             NumPolitica pol = talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-PRI", "Politica prioridades", ClaseNumeracion.ACTA,
                     false, true, "PRI", false, null, false, null,
-                    "PRI-{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "PRI-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario tal5 = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-PRI5", "Talonario prioridad 5",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1526,14 +1528,14 @@ class TalonarioTest {
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     tal5.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     tal10.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 10,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
 
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    100L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1"));
+                    100L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1"));
             assertThat(r.idTalonario()).isEqualTo(tal5.getId());
         }
 
@@ -1543,7 +1545,7 @@ class TalonarioTest {
             NumPolitica pol = talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-EMP", "Politica empate", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
-                    "{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario talA = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-EMP-A", "Empate A",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1558,14 +1560,14 @@ class TalonarioTest {
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     talA.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     talB.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
 
             assertThatThrownBy(() -> talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
-                    200L, (short) 1, null, null, null, null, LocalDateTime.now(), "u1")))
+                    200L, (short) 1, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("Ambiguedad");
         }
@@ -1575,7 +1577,7 @@ class TalonarioTest {
         void registrar_movimiento_usado_al_emitir() {
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     999L, (short) 1, null, null, null, null,
-                    LocalDateTime.now(), "user-01"));
+                    FaltasClockTestSupport.FIXED.now(), "user-01"));
             assertThat(r.movimientoId()).isNotNull();
             List<NumTalonarioMovimiento> movs = talonarioService.listarMovimientosPorTalonario(talonarioActa.getId());
             assertThat(movs).hasSize(1);
@@ -1588,7 +1590,7 @@ class TalonarioTest {
         void movimiento_conserva_dep_e_insp() {
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     999L, (short) 2, null, 50L, (short) 1,
-                    null, LocalDateTime.now(), "user-02"));
+                    null, FaltasClockTestSupport.FIXED.now(), "user-02"));
             List<NumTalonarioMovimiento> movs = talonarioService.listarMovimientosPorTalonario(talonarioActa.getId());
             NumTalonarioMovimiento m = movs.get(0);
             assertThat(m.getIdDep()).isEqualTo(999L);
@@ -1602,7 +1604,7 @@ class TalonarioTest {
         void documentoId_es_null_en_emision_acta() {
             talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     999L, (short) 1, null, null, null, null,
-                    LocalDateTime.now(), "user-01"));
+                    FaltasClockTestSupport.FIXED.now(), "user-01"));
             NumTalonarioMovimiento m = talonarioService.listarMovimientosPorTalonario(talonarioActa.getId()).get(0);
             assertThat(m.getDocumentoId()).isNull();
         }
@@ -1612,7 +1614,7 @@ class TalonarioTest {
         void emision_retorna_tipos_correctos() {
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     999L, (short) 1, null, null, null, null,
-                    LocalDateTime.now(), "user-01"));
+                    FaltasClockTestSupport.FIXED.now(), "user-01"));
             assertThat(r.nroActa()).isInstanceOf(String.class).isNotBlank();
             assertThat(r.nroTalonarioUsado()).isInstanceOf(Integer.class);
             assertThat(r.idTalonario()).isEqualTo(talonarioActa.getId());
@@ -1623,7 +1625,7 @@ class TalonarioTest {
         void nroActa_generado_como_string() {
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     999L, (short) 1, null, null, null, null,
-                    LocalDateTime.now(), "user-01"));
+                    FaltasClockTestSupport.FIXED.now(), "user-01"));
             assertThat(r.nroActa()).isEqualTo("1");
         }
 
@@ -1633,7 +1635,7 @@ class TalonarioTest {
             NumPolitica pol = talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                     "POL-PREF", "Con prefijo y longitud", ClaseNumeracion.ACTA,
                     false, true, "ACT", false, null, false, (short) 6,
-                    "ACT-{NRO}", true, LocalDate.now(), null, "sistema"));
+                    "ACT-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
             NumTalonario tal = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-PREF", "Prefijo y longitud",
                     TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
@@ -1643,11 +1645,11 @@ class TalonarioTest {
             talonarioService.crearAmbito(new CrearTalonarioAmbitoCommand(
                     tal.getId(), pol.getClaseNumeracion(), null, null,
                     null, null, AlcanceTalonario.GLOBAL, (short) 5,
-                    LocalDate.now(), null, true, "sistema"));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, true, "sistema"));
 
             NumeroActaEmitidoResponse r = talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     101L, (short) 1, null, null, null, null,
-                    LocalDateTime.now(), "user-01"));
+                    FaltasClockTestSupport.FIXED.now(), "user-01"));
             assertThat(r.nroActa()).isEqualTo("ACT-000001");
         }
 
@@ -1656,7 +1658,7 @@ class TalonarioTest {
         void rechazar_sin_idDep() {
             assertThatThrownBy(() -> talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     null, (short) 1, null, null, null, null,
-                    LocalDateTime.now(), "u1")))
+                    FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idDep");
         }
@@ -1666,7 +1668,7 @@ class TalonarioTest {
         void rechazar_sin_verDep() {
             assertThatThrownBy(() -> talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     100L, null, null, null, null, null,
-                    LocalDateTime.now(), "u1")))
+                    FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("verDep");
         }
@@ -1676,7 +1678,7 @@ class TalonarioTest {
         void rechazar_idInsp_sin_verInsp() {
             assertThatThrownBy(() -> talonarioService.emitirNumeroActa(new EmitirNumeroActaCommand(
                     999L, (short) 1, null, 10L, null, null,
-                    LocalDateTime.now(), "u1")))
+                    FaltasClockTestSupport.FIXED.now(), "u1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("verInsp");
         }
@@ -1724,7 +1726,7 @@ class TalonarioTest {
         @DisplayName("8B4-33: FalActa.nroActa arranca null y es setteable")
         void falActa_nroActa_nullable_y_setteable() {
             FalActa acta = new FalActa(1L, "uuid1", "TRANSITO", "dep1", "insp1",
-                    LocalDate.now(), LocalDateTime.now(), null, null, null,
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), null, null, null,
                     null, null, null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
             assertThat(acta.getNroActa()).isNull();
@@ -1736,7 +1738,7 @@ class TalonarioTest {
         @DisplayName("8B4-34: FalActa.idTalonario y nroTalonarioUsado son seteables")
         void falActa_idTalonario_y_nroTalonarioUsado_seteables() {
             FalActa acta = new FalActa(2L, "uuid2", "TRANSITO", "dep1", "insp1",
-                    LocalDate.now(), LocalDateTime.now(), null, null, null,
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), null, null, null,
                     null, null, null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
             assertThat(acta.getIdTalonario()).isNull();

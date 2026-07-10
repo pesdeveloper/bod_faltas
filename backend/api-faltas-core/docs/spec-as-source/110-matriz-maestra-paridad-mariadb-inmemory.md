@@ -1,32 +1,32 @@
-# 110 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Matriz Maestra de Paridad MariaDB ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â InMemory
+# 110 — Matriz Maestra de Paridad MariaDB ↔ InMemory
 
-Slice: 8F-11A + 8F-11A-R1 + 8F-11F (correcci??n documental) / 8F-11D + 8F-11D-R1 (valorizacion + invariantes) / 8F-11F (fallo + apelacion + firmeza) / **8F-11G (observacion + paralizacion + archivo + motivo_archivo)**  
-**Fecha:** 2026-07-04 (8F-11A) / 2026-07-05 (8F-11A-R1, 8F-11B, 8F-11C) / 2026-07-06 (8F-11D, 8F-11D-R1, 8F-11E, 8F-11F)  
-**Tipo:** AuditorÃƒÆ’Ã‚Â­a y documentaciÃƒÆ’Ã‚Â³n exhaustiva. Sin cambios funcionales Java.  
-**MÃƒÆ’Ã‚Â³dulo:** backend/api-faltas-core  
-**Build base:** 1976 tests, 0 failures, 0 errors, BUILD SUCCESS (verificado en 8F-11F)  
-**Fuente vigente:** este documento reemplaza a 109 como matriz de paridad activa. El 109 queda como historial de auditorÃƒÆ’Ã‚Â­a de 8F-9/8F-10. Corregido en 8F-11A-R1: conteos (62/29 INMEMORY). 8F-11B cerrado: identidades, enums, versionRow. 8F-11C cerrado: FalPersona+FalPersonaDomicilio ALINEADOS (27ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢21 FALTA_EN_INMEMORY), P1 cerrada (SMALLINT 0-4), P2 cerrada (firmeza en fallo), catÃƒÆ’Ã‚Â¡logos, roadmap. 8F-11D+R1 cerrado: 6 tablas normativa/valorizacion ALINEADOS (21 FALTA_EN_INMEMORY), 30 tests nuevos, 1785 total. Correccion 8F-11D-R1-DOC: FALTA_EN_INMEMORY canonicas=21. 8F-11E cerrado: combinacion documental, DocumentoVariableContextBuilder. 8F-11F cerrado: fal_acta_fallo + fal_acta_apelacion ALINEADOS, fal_acta_apelacion_documento NUEVO ALINEADO, firmeza inline, multi-fallo, 4 tipos resolucion, 1976 tests, 39 tests nuevos. **8F-11I cerrado: fal_notificacion_intento + fal_notificacion_acuse + fal_lote_correo ALINEADOS (1 FALTA_EN_INMEMORY restante), 2247 tests, +140 tests.** **8F-11J cerrado: fal_acta_documento ALINEADO (FalActaDocumento+ActaDocumentoId+RolDocuActa+InMemoryActaDocumentoRepository+ActaDocumentoService, idDocuUlt en snapshot), 2280 tests, +33 tests. RELACION_INCOMPLETA=0.** **8F-11K cerrado: fal_acta_qr_acceso ALINEADO (FalActaQrAcceso+CanalAccesoQr+ResultadoAccesoQr+QrAccesoRepository+InMemoryQrAccesoRepository+QrActaService+AesGcmQrTokenProtector), codigoQr en FalActa, 59 ALINEADO, 0 FALTA_EN_INMEMORY.**
+Slice: 8F-11A + 8F-11A-R1 + 8F-11F (corrección documental) / 8F-11D + 8F-11D-R1 (valorizacion + invariantes) / 8F-11F (fallo + apelacion + firmeza) / **8F-11G (observacion + paralizacion + archivo + motivo_archivo)**
+**Fecha:** 2026-07-04 (8F-11A) / 2026-07-05 (8F-11A-R1, 8F-11B, 8F-11C) / 2026-07-06 (8F-11D, 8F-11D-R1, 8F-11E, 8F-11F)
+**Tipo:** Auditoría y documentación exhaustiva. Sin cambios funcionales Java.
+**Módulo:** backend/api-faltas-core
+**Build base:** 1976 tests, 0 failures, 0 errors, BUILD SUCCESS (verificado en 8F-11F)
+**Fuente vigente:** este documento reemplaza a 109 como matriz de paridad activa. El 109 queda como historial de auditoría de 8F-9/8F-10. Corregido en 8F-11A-R1: conteos (62/29 INMEMORY). 8F-11B cerrado: identidades, enums, versionRow. 8F-11C cerrado: FalPersona+FalPersonaDomicilio ALINEADOS (27→21 FALTA_EN_INMEMORY), P1 cerrada (SMALLINT 0-4), P2 cerrada (firmeza en fallo), catálogos, roadmap. 8F-11D+R1 cerrado: 6 tablas normativa/valorizacion ALINEADOS (21 FALTA_EN_INMEMORY), 30 tests nuevos, 1785 total. Correccion 8F-11D-R1-DOC: FALTA_EN_INMEMORY canonicas=21. 8F-11E cerrado: combinacion documental, DocumentoVariableContextBuilder. 8F-11F cerrado: fal_acta_fallo + fal_acta_apelacion ALINEADOS, fal_acta_apelacion_documento NUEVO ALINEADO, firmeza inline, multi-fallo, 4 tipos resolucion, 1976 tests, 39 tests nuevos. **8F-11I cerrado: fal_notificacion_intento + fal_notificacion_acuse + fal_lote_correo ALINEADOS (1 FALTA_EN_INMEMORY restante), 2247 tests, +140 tests.** **8F-11J cerrado: fal_acta_documento ALINEADO (FalActaDocumento+ActaDocumentoId+RolDocuActa+InMemoryActaDocumentoRepository+ActaDocumentoService, idDocuUlt en snapshot), 2280 tests, +33 tests. RELACION_INCOMPLETA=0.** **8F-11M-B1 cerrado: fal_acta_economia_proyeccion + modelo pagos InMemory ALINEADOS (importe_aplicado_total, enums canonicos), 2374 tests.** **8F-11K cerrado: fal_acta_qr_acceso ALINEADO (FalActaQrAcceso+CanalAccesoQr+ResultadoAccesoQr+QrAccesoRepository+InMemoryQrAccesoRepository+QrActaService+AesGcmQrTokenProtector), codigoQr en FalActa, 59 ALINEADO, 0 FALTA_EN_INMEMORY.** **8F-11M-B1-R2 cerrado: economia InMemory endurecida (movimiento append-only con vinculo canonico unico movimientoOrigenId, conciliacion solo agregada reconstruida desde input absoluto de Tesoreria sin historia local por movimiento, snapshot sin economia, reversos que reviven obligacion/forma, JWT obligatorio en /api/faltas/pagos, idempotencia completa, plan finalizado atomico), 2400 tests.** **8F-11M-B1-R2-R1 aplicado: reverso atomico revertirMovimiento (1 mov + 1 PAGREV + recalculo automatico, endpoint generico bloqueado), siPagoConfirmado vigente (hayPagoConfirmadoActivo), idempotencia reforzada (ref obligatoria, motivo validado, nextId lazy), bypass plan bloqueado, snapshot absoluto reemplazable (reemplazarEstadoAbsoluto+snapshotActual), 2418 tests.**
 
 ---
 
 ## 0. Objetivo y guardrails
 
-Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad entre el modelo MariaDB lÃƒÆ’Ã‚Â³gico documentado y la implementaciÃƒÆ’Ã‚Â³n InMemory actual.
+Este documento es la fuente única de verdad sobre la paridad entre el modelo MariaDB lógico documentado y la implementación InMemory actual.
 
-**Criterio de completitud:** Toda tabla MariaDB tiene estado. Toda entidad persistible InMemory tiene tabla candidata. Toda diferencia tiene acciÃƒÆ’Ã‚Â³n y slice asignado.
+**Criterio de completitud:** Toda tabla MariaDB tiene estado. Toda entidad persistible InMemory tiene tabla candidata. Toda diferencia tiene acción y slice asignado.
 
 **Guardrails de este slice:**
 - NO implementar JDBC, MariaDB real, SQL ejecutable, Flyway, Liquibase
 - NO usar `@Entity`, `JpaRepository`, `EntityManager`
 - NO implementar frontend Angular, PDF real, storage real
 - NO crear endpoints productivos nuevos
-- NO reabrir decisiones D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“D9 ya cerradas
+- NO reabrir decisiones D1–D9 ya cerradas
 
 ---
 
 ## 1. Resumen ejecutivo de paridad
 
-| CategorÃƒÆ’Ã‚Â­a | Cantidad |
+| Categoría | Cantidad |
 |-----------|----------|
 | Tablas MariaDB auditadas | 62 |
 | Entidades InMemory persistibles | 31 |
@@ -36,7 +36,7 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 | FALTA_EN_MARIADB | 0 |
 | IDENTIDAD_INCOMPATIBLE | 0 (5 resueltas en 8F-11B) |
 | TIPO_INCOMPATIBLE | 0 (3 resueltos en 8F-11B) |
-| **PARCIAL** | **0 tablas** (cerrado en 8F-11L) (fal_acta, fal_acta_evento ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â fal_acta_fallo y fal_acta_apelacion ahora ALINEADOS por 8F-11F) |
+| **PARCIAL** | **0 tablas** (cerrado en 8F-11L) (fal_acta, fal_acta_evento — fal_acta_fallo y fal_acta_apelacion ahora ALINEADOS por 8F-11F) |
 | SEMANTICA_INCOMPATIBLE | 0 (resuelta en 8F-11H) |
 | ENUM_SIN_CODIGO | 0 (2 resueltos en 8F-11B) |
 | **RELACION_INCOMPLETA** | **0 tablas** (GAP-12 cerrado en 8F-11J) |
@@ -44,103 +44,103 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 | *Suma (categorias excluyentes)* | *33 + 21 + 4 + 0 + 1 + 3 = 62* |
 | NULABILIDAD_INCOMPATIBLE | 0 |
 | SOLO_DEMO_TEST | 21 clases Java |
-| SOLO_INFRAESTRUCTURA | 2 categorÃƒÆ’Ã‚Â­as |
+| SOLO_INFRAESTRUCTURA | 2 categorías |
 | NO_PERSISTIBLE entidades | 25+ (servicios, DTOs, enums puro Java) |
 
 
 ---
 
-## 2. Inventario canÃƒÆ’Ã‚Â³nico MariaDB ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fase 1
+## 2. Inventario canónico MariaDB — Fase 1
 
-### SecciÃƒÆ’Ã‚Â³n 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Dependencias
+### Sección 1 — Dependencias
 
 #### `fal_dependencia`
-- **PropÃƒÆ’Ã‚Â³sito:** Unidades administrativas (organismos/dependencias)
+- **Propósito:** Unidades administrativas (organismos/dependencias)
 - **PK:** id BIGINT AUTO_INCREMENT
 - **Campos clave:** codigo_dependencia VARCHAR(20), nombre VARCHAR(200), tipo_acta SMALLINT, si_activo BOOLEAN
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
-- **Entidad Java esperada:** FalDependencia ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe
+- **Auditoría:** fh_alta, id_user_alta
+- **Entidad Java esperada:** FalDependencia ✓ existe
 - **Estado InMemory:** ALINEADO
 
 #### `fal_dependencia_version`
-- **PropÃƒÆ’Ã‚Â³sito:** Versiones de la dependencia con datos cambiantes
+- **Propósito:** Versiones de la dependencia con datos cambiantes
 - **PK:** id_dependencia + version_dep (compuesta)
-- **FK:** id_dependencia ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_dependencia
+- **FK:** id_dependencia → fal_dependencia
 - **Campos clave:** nombre_version, tipo_acta SMALLINT, si_activo, fh_vig_desde, fh_vig_hasta
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
-- **Entidad Java esperada:** FalDependenciaVersion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe
+- **Auditoría:** fh_alta, id_user_alta
+- **Entidad Java esperada:** FalDependenciaVersion ✓ existe
 - **Estado InMemory:** ALINEADO
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Inspectores
+### Sección 2 — Inspectores
 
 #### `fal_inspector`
-- **PropÃƒÆ’Ã‚Â³sito:** Inspectores/agentes del organismo
+- **Propósito:** Inspectores/agentes del organismo
 - **PK:** id BIGINT AUTO_INCREMENT
 - **Campos clave:** legajo VARCHAR(20), apellido, nombre, si_activo BOOLEAN
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
-- **Entidad Java esperada:** FalInspector ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe
+- **Auditoría:** fh_alta, id_user_alta
+- **Entidad Java esperada:** FalInspector ✓ existe
 - **Estado InMemory:** ALINEADO (base)
 
 #### `fal_inspector_version`
-- **PropÃƒÆ’Ã‚Â³sito:** VersiÃƒÆ’Ã‚Â³n del inspector con datos del perÃƒÆ’Ã‚Â­odo
+- **Propósito:** Versión del inspector con datos del período
 - **PK:** id_inspector + version_insp (compuesta)
-- **FK:** id_inspector ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_inspector
+- **FK:** id_inspector → fal_inspector
 - **Campos clave:** apellido, nombre, id_dependencia, ver_dependencia, si_activo, fh_vig_desde, fh_vig_hasta
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
-- **Entidad Java esperada:** FalInspectorVersion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe
+- **Auditoría:** fh_alta, id_user_alta
+- **Entidad Java esperada:** FalInspectorVersion ✓ existe
 - **Estado InMemory:** COMPLETO
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Firmantes
+### Sección 3 — Firmantes
 
 #### `fal_firmante`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **Entidad Java:** FalFirmante ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO (8A-3D)
+- **Entidad Java:** FalFirmante ✓ existe — **Estado:** ALINEADO (8A-3D)
 
 #### `fal_firmante_version`
 - **PK:** id_firmante + ver_firmante (compuesta)
-- **FK:** id_firmante ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_firmante
-- **Entidad Java:** FalFirmanteVersion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **FK:** id_firmante → fal_firmante
+- **Entidad Java:** FalFirmanteVersion ✓ existe — **Estado:** ALINEADO
 
 #### `fal_firmante_version_habilitacion`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_firmante + ver_firmante ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_firmante_version
+- **FK:** id_firmante + ver_firmante → fal_firmante_version
 - **Campos clave:** tipo_docu SMALLINT, rol_firma_req SMALLINT, mecanismo_firma_req SMALLINT
-- **Entidad Java:** FalFirmanteVersionHabilitacion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalFirmanteVersionHabilitacion ✓ existe — **Estado:** ALINEADO
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Personas y domicilios
+### Sección 4 — Personas y domicilios
 
 #### `fal_persona`
-- **PropÃƒÆ’Ã‚Â³sito:** Maestro de personas (infractores, presentantes)
+- **Propósito:** Maestro de personas (infractores, presentantes)
 - **PK:** id BIGINT AUTO_INCREMENT
 - **Campos clave:** nro_documento VARCHAR(20), tipo_documento SMALLINT, nombre_completo VARCHAR(300), fh_nacimiento DATE NULL, sexo SMALLINT NULL, si_identificado BOOLEAN, si_extranjero BOOLEAN, id_ign BIGINT NULL, id_indec BIGINT NULL, id_local BIGINT NULL
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta, fh_mod, id_user_mod
-- **Entidad Java esperada:** `FalPersona` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **EXISTE**
-- **Estado InMemory:** ALINEADO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â InMemoryPersonaRepository ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 8F-11C CERRADO (2026-07-05)
+- **Auditoría:** fh_alta, id_user_alta, fh_mod, id_user_mod
+- **Entidad Java esperada:** `FalPersona` — **EXISTE**
+- **Estado InMemory:** ALINEADO — InMemoryPersonaRepository — 8F-11C CERRADO (2026-07-05)
 
 #### `fal_persona_domicilio`
-- **PropÃƒÆ’Ã‚Â³sito:** Domicilios de personas
+- **Propósito:** Domicilios de personas
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_persona ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_persona
+- **FK:** id_persona → fal_persona
 - **Campos clave:** tipo_domicilio SMALLINT, id_calle_version BIGINT NULL FK, nro_puerta VARCHAR(10) NULL, piso VARCHAR(5) NULL, dpto VARCHAR(5) NULL, localidad_id BIGINT NULL, texto_libre VARCHAR(500) NULL, si_principal TINYINT(1), id_tca BIGINT NULL, id_loc BIGINT NULL
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
-- **Entidad Java esperada:** `FalPersonaDomicilio` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **EXISTE**
-- **Estado InMemory:** ALINEADO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â InMemoryPersonaDomicilioRepository ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 8F-11C CERRADO (2026-07-05)
+- **Auditoría:** fh_alta, id_user_alta
+- **Entidad Java esperada:** `FalPersonaDomicilio` — **EXISTE**
+- **Estado InMemory:** ALINEADO — InMemoryPersonaDomicilioRepository — 8F-11C CERRADO (2026-07-05)
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Acta core
+### Sección 5 — Acta core
 
 #### `fal_acta`
-- **PropÃƒÆ’Ã‚Â³sito:** Entidad central del expediente de faltas
+- **Propósito:** Entidad central del expediente de faltas
 - **PK:** id BIGINT AUTO_INCREMENT
 - **UK:** uuid_tecnico CHAR(36)
-- **FK:** id_talonario ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ num_talonario, id_inspector + ver_inspector ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_inspector_version, id_dependencia + ver_dependencia ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_dependencia_version, id_persona ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_persona (futuro)
+- **FK:** id_talonario → num_talonario, id_inspector + ver_inspector → fal_inspector_version, id_dependencia + ver_dependencia → fal_dependencia_version, id_persona → fal_persona (futuro)
 - **Campos:**
   - nro_acta VARCHAR(20) NULL
   - tipo_acta SMALLINT NOT NULL (enum TipoActa)
@@ -150,37 +150,37 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
   - resultado_firma_infractor SMALLINT NOT NULL
   - bloque_actual SMALLINT NOT NULL, estado_procesal SMALLINT NOT NULL
   - situacion_administrativa SMALLINT NOT NULL
-  - resultado_final SMALLINT NOT NULL (o VARCHAR(30) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â decisiÃƒÆ’Ã‚Â³n P1)
+  - resultado_final SMALLINT NOT NULL (o VARCHAR(30) — decisión P1)
   - id_persona BIGINT NULL FK
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta, fh_mod, id_user_mod
-- **Entidad Java:** FalActa ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ existe
-- **Estado InMemory:** ALINEADO (8F-11L: todos los campos del modelo MariaDB incorporados, OrigenCaptura, ver_dep, ver_insp, geolocation, location local, qrPayloadVersion, fhCierre, fhArchivo) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â gaps: tipoActa String, resultadoFinal tipo, datos persona embebidos, sin auditorÃƒÆ’Ã‚Â­a
+- **Auditoría:** fh_alta, id_user_alta, fh_mod, id_user_mod
+- **Entidad Java:** FalActa ✓ existe
+- **Estado InMemory:** ALINEADO (8F-11L: todos los campos del modelo MariaDB incorporados, OrigenCaptura, ver_dep, ver_insp, geolocation, location local, qrPayloadVersion, fhCierre, fhArchivo) — gaps: tipoActa String, resultadoFinal tipo, datos persona embebidos, sin auditoría
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Eventos, snapshot, evidencias y observaciones
+### Sección 6 — Eventos, snapshot, evidencias y observaciones
 
 #### `fal_acta_evento`
-- **PropÃƒÆ’Ã‚Â³sito:** Log append-only de eventos del expediente
-- **PK:** id BIGINT AUTO_INCREMENT (o UUID ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â verificar modelo final)
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **Propósito:** Log append-only de eventos del expediente
+- **PK:** id BIGINT AUTO_INCREMENT (o UUID — verificar modelo final)
+- **FK:** id_acta → fal_acta
 - **Campos clave:** tipo_evt SMALLINT NOT NULL, fecha_evento DATETIME(6), orden_logico INT, id_documento BIGINT NULL, id_notificacion BIGINT NULL, id_operador CHAR(36), descripcion TEXT NULL, payload JSON NULL
 - **Entidad Java:** FalActaEvento → si (class final con Builder, id Long) → **Estado:** ALINEADO (8F-11L: reescrita record→class+Builder, id Long, origenEvt, bloqueFunc, estProcAnt/Nvo, sitAdmAnt/Nva, actorTipo, actorId, actorRef, idDocuRel, idNotifRel, idPresRel, idUserEvt, siEvtCierre, siEvtExt, siPermiteReing, descripcionLegible, correlacionId)
 
 #### `fal_acta_snapshot`
-- **PropÃƒÆ’Ã‚Â³sito:** ProyecciÃƒÆ’Ã‚Â³n operativa derivada del expediente (1:1 con acta)
+- **Propósito:** Proyección operativa derivada del expediente (1:1 con acta)
 - **PK:** id_acta BIGINT FK
-- **Entidad Java:** FalActaSnapshot ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalActaSnapshot ✓ — **Estado:** ALINEADO
 
 #### `fal_acta_evidencia`
-- **PropÃƒÆ’Ã‚Â³sito:** Evidencias del acta
+- **Propósito:** Evidencias del acta
 - **PK:** id BIGINT AUTO_INCREMENT
-- **Entidad Java:** FalActaEvidencia ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalActaEvidencia ✓ — **Estado:** ALINEADO
 
 #### `fal_observacion`
-- **PropÃƒÆ’Ã‚Â³sito:** Observaciones tipificadas por entidad
+- **Propósito:** Observaciones tipificadas por entidad
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **FK:** id_acta → fal_acta
 - **Campos clave:** entidad_tipo SMALLINT, entidad_id BIGINT, texto TEXT, id_user_alta, fh_alta
 - **Entidad Java:** NO EXISTE
 - **Entidad Java:** FalObservacion -- EXISTE (8F-11G)
@@ -188,106 +188,106 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Normativa
+### Sección 7 — Normativa
 
 #### `fal_dependencia_normativa`
-- **Entidad Java:** FalDependenciaNormativa ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalDependenciaNormativa ✓ — **Estado:** ALINEADO
 
 #### `fal_normativa_faltas`
-- **Entidad Java:** FalNormativaFaltas ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalNormativaFaltas ✓ — **Estado:** ALINEADO
 
 #### `fal_articulo_normativa_faltas`
-- **Entidad Java:** FalArticuloNormativaFaltas ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalArticuloNormativaFaltas ✓ — **Estado:** ALINEADO
 
 #### `fal_tarifario_unidad_faltas`
-- **PropÃƒÆ’Ã‚Â³sito:** Valores unitarios por artÃƒÆ’Ã‚Â­culo para cÃƒÆ’Ã‚Â¡lculo de valorizaciÃƒÆ’Ã‚Â³n
+- **Propósito:** Valores unitarios por artículo para cálculo de valorización
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_articulo ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_articulo_normativa_faltas
+- **FK:** id_articulo → fal_articulo_normativa_faltas
 - **Campos clave:** fh_vig_desde DATE, fh_vig_hasta DATE NULL, valor_unitario DECIMAL(14,4)
 - **Entidad Java:** NO EXISTE
-- **Estado InMemory:** ALINEADO (8F-11D + R1-D) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sin solapamiento de rangos activos
+- **Estado InMemory:** ALINEADO (8F-11D + R1-D) — sin solapamiento de rangos activos
 
 #### `fal_medida_preventiva`
-- **Entidad Java:** FalMedidaPreventiva EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â version atomica, una activa por codigo
+- **Entidad Java:** FalMedidaPreventiva EXISTE — version atomica, una activa por codigo
 - **Estado:** ALINEADO (8F-11D + R1-D)
 
 #### `fal_articulo_medida_preventiva`
-- **Entidad Java:** FalArticuloMedidaPreventiva EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â PK compuesta record, sin reactivacion silenciosa
+- **Entidad Java:** FalArticuloMedidaPreventiva EXISTE — PK compuesta record, sin reactivacion silenciosa
 - **Estado:** ALINEADO (8F-11D + R1-D)
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 8 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ArtÃƒÆ’Ã‚Â­culos infringidos y valorizaciÃƒÆ’Ã‚Â³n
+### Sección 8 — Artículos infringidos y valorización
 
 #### `fal_acta_articulo_infringido`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta, id_articulo ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_articulo_normativa_faltas
+- **FK:** id_acta → fal_acta, id_articulo → fal_articulo_normativa_faltas
 - **Entidad Java:** NO EXISTE
-- **Estado InMemory:** ALINEADO (8F-11D + R1-D) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â UK activo (actaId, articuloId)
+- **Estado InMemory:** ALINEADO (8F-11D + R1-D) — UK activo (actaId, articuloId)
 
 #### `fal_acta_valorizacion`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **FK:** id_acta → fal_acta
 - **Campos:** monto_total DECIMAL(14,2), fh_calculo DATETIME(6), si_vigente BOOLEAN
-- **Entidad Java:** FalActaValorizacion EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â confirmarVigenteAtomico garantiza una sola vigente CONFIRMADA por acta+tipo
+- **Entidad Java:** FalActaValorizacion EXISTE — confirmarVigenteAtomico garantiza una sola vigente CONFIRMADA por acta+tipo
 - **Estado InMemory:** ALINEADO (8F-11D + R1-B)
 
 #### `fal_acta_valorizacion_item`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_valorizacion ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_valorizacion
-- **Entidad Java:** FalActaValorizacionItem EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â inmutable post-confirmacion (R1-C)
+- **FK:** id_valorizacion → fal_acta_valorizacion
+- **Entidad Java:** FalActaValorizacionItem EXISTE — inmutable post-confirmacion (R1-C)
 - **Estado:** ALINEADO (8F-11D + R1-C)
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SatÃƒÆ’Ã‚Â©lites del acta
+### Sección 9 — Satélites del acta
 
 #### `fal_acta_transito`
 - **PK:** id_acta BIGINT (1:1)
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** **ALINEADO** (8F-11E)
+- **Entidad Java:** NO EXISTE — **Estado:** **ALINEADO** (8F-11E)
 
 #### `fal_acta_transito_alcoholemia`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** **ALINEADO** (8F-11E)
+- **Entidad Java:** NO EXISTE — **Estado:** **ALINEADO** (8F-11E)
 
 #### `fal_acta_vehiculo`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** **ALINEADO** (8F-11E)
+- **Entidad Java:** NO EXISTE — **Estado:** **ALINEADO** (8F-11E)
 
 #### `fal_acta_contravencion`
 - **PK:** id_acta BIGINT (1:1)
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** **ALINEADO** (8F-11E)
+- **Entidad Java:** NO EXISTE — **Estado:** **ALINEADO** (8F-11E)
 
 #### `fal_acta_sustancias_alimenticias`
 - **PK:** id_acta BIGINT (1:1)
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** **ALINEADO** (8F-11E)
+- **Entidad Java:** NO EXISTE — **Estado:** **ALINEADO** (8F-11E)
 
 #### `fal_acta_medida_preventiva`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta, id_medida ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_medida_preventiva
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** **ALINEADO** (8F-11E)
+- **FK:** id_acta → fal_acta, id_medida → fal_medida_preventiva
+- **Entidad Java:** NO EXISTE — **Estado:** **ALINEADO** (8F-11E)
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 10 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Bloqueantes
+### Sección 10 — Bloqueantes
 
 #### `fal_acta_bloqueante_cierre_material`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **FK:** id_acta → fal_acta
 - **Campos:** origen SMALLINT, estado SMALLINT, si_activo BOOLEAN, descripcion TEXT NULL, fh_alta DATETIME(6), fh_cierre DATETIME(6) NULL
-- **Entidad Java:** FalBloqueanteMaterial ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“, **id String (UUID)**
+- **Entidad Java:** FalBloqueanteMaterial ✓, **id String (UUID)**
 - **Estado InMemory:** ALINEADO (8F-11B)
 
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 11 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Documentos, plantillas y firma
+### Sección 11 — Documentos, plantillas y firma
 
 #### `fal_documento`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta, id_plantilla ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento_plantilla
+- **FK:** id_acta → fal_acta, id_plantilla → fal_documento_plantilla
 - **Campos:** tipo_docu SMALLINT, nro_docu VARCHAR(30) NULL, estado_docu SMALLINT, storage_key VARCHAR(500) NULL, hash_docu VARCHAR(128) NULL, tipo_firma_req SMALLINT, fh_alta, id_user_alta
-- **Entidad Java:** FalDocumento ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO (auditado 8C-6E)
+- **Entidad Java:** FalDocumento ✓ — **Estado:** ALINEADO (auditado 8C-6E)
 
 #### `fal_acta_documento`
 - **Propósito:** Tabla pivot relación canónica acta-documento (pertenencia funcional)
@@ -302,58 +302,58 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 
 #### `fal_documento_firma`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_documento ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento, id_firmante + ver_firmante ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_firmante_version
+- **FK:** id_documento → fal_documento, id_firmante + ver_firmante → fal_firmante_version
 - **Campos:** estado_firma SMALLINT, seq_firma_req SMALLINT, tipo_firma SMALLINT, storage_key VARCHAR(500) NULL, hash_firma VARCHAR(128) NULL, fh_firma DATETIME(6) NULL
-- **Entidad Java:** FalDocumentoFirma ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO (refactor 8C-6B-1)
+- **Entidad Java:** FalDocumentoFirma ✓ — **Estado:** ALINEADO (refactor 8C-6B-1)
 
 #### `fal_documento_firma_req`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_documento ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento
-- **Entidad Java:** FalDocumentoFirmaReq ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **FK:** id_documento → fal_documento
+- **Entidad Java:** FalDocumentoFirmaReq ✓ — **Estado:** ALINEADO
 
 #### `fal_documento_plantilla`
 - **PK:** id BIGINT AUTO_INCREMENT
 - **Campos:** codigo VARCHAR(50), nombre VARCHAR(200), tipo_docu SMALLINT, accion_documental SMALLINT, tipo_acta SMALLINT NULL, tipo_firma_req SMALLINT, si_requiere_numeracion BOOLEAN, momento_numeracion_docu SMALLINT, si_notificable BOOLEAN, si_genera_pdf BOOLEAN, si_seleccionable BOOLEAN, si_activa BOOLEAN, fh_vig_desde DATE, fh_vig_hasta DATE NULL, fh_alta DATETIME(6), id_user_alta CHAR(36)
-- **Entidad Java:** FalDocumentoPlantilla ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalDocumentoPlantilla ✓ — **Estado:** ALINEADO
 
 #### `fal_documento_plantilla_firma_req`
 - **PK:** id_plantilla + seq_firma_req (compuesta)
-- **Entidad Java:** FalDocumentoPlantillaFirmaReq ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalDocumentoPlantillaFirmaReq ✓ — **Estado:** ALINEADO
 
 #### `fal_documento_plantilla_contenido` (nueva en 8F-10)
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_plantilla ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento_plantilla
+- **FK:** id_plantilla → fal_documento_plantilla
 - **Campos:**
   - version_contenido SMALLINT NOT NULL
   - titulo VARCHAR(200) NOT NULL
-  - cuerpo_markdown TEXT NOT NULL ÃƒÂ¢Ã¢â‚¬Â Ã‚Â renombrado desde cuerpo_template (8F-10-R1)
-  - encabezado_markdown TEXT NULL ÃƒÂ¢Ã¢â‚¬Â Ã‚Â renombrado desde encabezado_template (8F-10-R1)
-  - pie_markdown TEXT NULL ÃƒÂ¢Ã¢â‚¬Â Ã‚Â renombrado desde pie_template (8F-10-R1)
+  - cuerpo_markdown TEXT NOT NULL ← renombrado desde cuerpo_template (8F-10-R1)
+  - encabezado_markdown TEXT NULL ← renombrado desde encabezado_template (8F-10-R1)
+  - pie_markdown TEXT NULL ← renombrado desde pie_template (8F-10-R1)
   - variables_declaradas_json JSON NOT NULL DEFAULT '[]' (D4)
   - si_activo BOOLEAN NOT NULL
   - fh_vig_desde DATETIME(6) NOT NULL, fh_vig_hasta DATETIME(6) NULL
   - fh_alta DATETIME(6) NOT NULL, id_user_alta CHAR(36) NOT NULL
 - **Nota:** formato/FormatoPlantillaContenido ELIMINADO en 8F-10-R1
-- **Entidad Java:** FalDocumentoPlantillaContenido ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO (8F-10-R2)
+- **Entidad Java:** FalDocumentoPlantillaContenido ✓ — **Estado:** ALINEADO (8F-10-R2)
 
 #### `fal_documento_plantilla_default` (nueva en 8F-10)
 - **PK:** id BIGINT AUTO_INCREMENT
-- **ÃƒÆ’Ã‚Ândice:** (accion_documental, tipo_acta, id_dependencia)
+- **Índice:** (accion_documental, tipo_acta, id_dependencia)
 - **Campos:**
   - accion_documental SMALLINT NOT NULL
-  - tipo_acta SMALLINT NULL (NULL = genÃƒÆ’Ã‚Â©rico)
+  - tipo_acta SMALLINT NULL (NULL = genérico)
   - tipo_docu SMALLINT NOT NULL
   - id_dependencia BIGINT NULL, ver_dependencia SMALLINT NULL
-  - id_plantilla BIGINT NOT NULL FK ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento_plantilla
+  - id_plantilla BIGINT NOT NULL FK → fal_documento_plantilla
   - prioridad SMALLINT NOT NULL (D9)
   - fh_vig_desde DATETIME(6) NOT NULL, fh_vig_hasta DATETIME(6) NULL
   - si_activo BOOLEAN NOT NULL
   - fh_alta DATETIME(6) NOT NULL, id_user_alta CHAR(36) NOT NULL
-- **Entidad Java:** FalDocumentoPlantillaDefault ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** FalDocumentoPlantillaDefault ✓ — **Estado:** ALINEADO
 
 #### `fal_documento_redaccion` (nueva en 8F-10)
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_documento ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento, id_plantilla_contenido ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento_plantilla_contenido, redaccion_origen_id ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento_redaccion (self)
+- **FK:** id_documento → fal_documento, id_plantilla_contenido → fal_documento_plantilla_contenido, redaccion_origen_id → fal_documento_redaccion (self)
 - **UK:** id_documento + nro_revision
 - **Campos:**
   - nro_revision SMALLINT NOT NULL
@@ -367,29 +367,29 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
   - fh_ultima_edicion DATETIME(6) NULL, id_user_ultima_edicion CHAR(36) NULL
   - fh_confirmacion DATETIME(6) NULL, id_user_confirmacion CHAR(36) NULL
   - fh_anulacion DATETIME(6) NULL, id_user_anulacion CHAR(36) NULL, motivo_anulacion TEXT NULL
-- **Nota:** estado REABIERTA ELIMINADO en 8F-10-R1. 8F-10-R2 alineÃƒÆ’Ã‚Â³ entidad Java completamente.
-- **Entidad Java:** FalDocumentoRedaccion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO (8F-10-R2) ÃƒÂ¢Ã¢â‚¬Â Ã‚Â COMPLETAMENTE ALINEADA
+- **Nota:** estado REABIERTA ELIMINADO en 8F-10-R1. 8F-10-R2 alineó entidad Java completamente.
+- **Entidad Java:** FalDocumentoRedaccion ✓ — **Estado:** ALINEADO (8F-10-R2) ← COMPLETAMENTE ALINEADA
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 12 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Notificaciones
+### Sección 12 — Notificaciones
 
 #### `fal_notificacion`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta, id_documento ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento
+- **FK:** id_acta → fal_acta, id_documento → fal_documento
 - **Campos:** tipo_docu_notificado SMALLINT, canal VARCHAR(50), fecha_envio DATETIME(6), estado SMALLINT, resultado SMALLINT NULL, fecha_resultado DATETIME(6) NULL, intentos INT, observaciones TEXT NULL
-- **Entidad Java:** FalNotificacion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“, **id String (UUID)**
+- **Entidad Java:** FalNotificacion ✓, **id String (UUID)**
 - **Estado InMemory:** ALINEADO (8F-11B)
 
 #### `fal_notificacion_intento`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_notificacion ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_notificacion
+- **FK:** id_notificacion → fal_notificacion
 - **Campos:** nro_intento SMALLINT, canal VARCHAR(50), fecha_intento DATETIME(6), resultado SMALLINT, detalle TEXT NULL
 - **Entidad Java:** FalNotificacionIntento -- **Estado:** ALINEADO (8F-11I)
 
 #### `fal_notificacion_acuse`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_notificacion ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_notificacion
+- **FK:** id_notificacion → fal_notificacion
 - **Entidad Java:** FalNotificacionAcuse -- **Estado:** ALINEADO (8F-11I)
 
 #### `fal_lote_correo`
@@ -399,11 +399,11 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 13 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fallo y firmeza
+### Sección 13 — Fallo y firmeza
 
 #### `fal_acta_fallo`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta, valorizacion_id ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_valorizacion, fallo_reemplazado_id ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_fallo (self), documento_id ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento
+- **FK:** id_acta → fal_acta, valorizacion_id → fal_acta_valorizacion, fallo_reemplazado_id → fal_acta_fallo (self), documento_id → fal_documento
 - **Campos:**
   - tipo_fallo SMALLINT NOT NULL, estado_fallo SMALLINT NOT NULL
   - monto_condena DECIMAL(14,2) NULL, resultado_fallo SMALLINT NULL
@@ -417,20 +417,20 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
   - fh_firmeza DATETIME(6) NULL (D1)
   - origen_firmeza SMALLINT NULL (D1: 1=VENCIMIENTO_PLAZO_APELACION, 2=APELACION_RECHAZADA)
   - version_row INT NOT NULL DEFAULT 0
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta, fh_mod, id_user_mod
-- **Entidad Java:** FalActaFallo ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“, **id String (UUID)**
-- **Estado InMemory:** IDENTIDAD_INCOMPATIBLE + mÃƒÆ’Ã‚Âºltiples campos FALTA_EN_INMEMORY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Slice 8F-11B (id), 8F-11F (campos)
+- **Auditoría:** fh_alta, id_user_alta, fh_mod, id_user_mod
+- **Entidad Java:** FalActaFallo ✓, **id String (UUID)**
+- **Estado InMemory:** IDENTIDAD_INCOMPATIBLE + múltiples campos FALTA_EN_INMEMORY — Slice 8F-11B (id), 8F-11F (campos)
 
 > **Nota D1:** FalActaFirmezaCondena NO tiene tabla propia. Los campos de firmeza van en fal_acta_fallo.
-> La entidad Java FalActaFirmezaCondena existe actualmente; ver decisiÃƒÆ’Ã‚Â³n P2.
+> La entidad Java FalActaFirmezaCondena existe actualmente; ver decisión P2.
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 14 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ApelaciÃƒÆ’Ã‚Â³n
+### Sección 14 — Apelación
 
 #### `fal_acta_apelacion`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta, id_fallo ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_fallo, documento_resolucion_id ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento
+- **FK:** id_acta → fal_acta, id_fallo → fal_acta_fallo, documento_resolucion_id → fal_documento
 - **Campos:**
   - fallo_id BIGINT NOT NULL FK
   - estado_apelacion SMALLINT NOT NULL, fecha_presentacion DATETIME(6) NOT NULL
@@ -440,99 +440,141 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
   - fecha_resolucion DATETIME(6) NULL, fundamentos_resolucion TEXT NULL
   - observaciones_resolucion TEXT NULL, documento_resolucion_id BIGINT NULL FK
   - version_row INT NOT NULL DEFAULT 0
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta, fh_mod, id_user_mod
-- **Entidad Java:** FalActaApelacion ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“, **id String (UUID), falloId String**
-- **Estado InMemory:** IDENTIDAD_INCOMPATIBLE + mÃƒÆ’Ã‚Âºltiples campos FALTA_EN_INMEMORY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Slice 8F-11B, 8F-11F
+- **Auditoría:** fh_alta, id_user_alta, fh_mod, id_user_mod
+- **Entidad Java:** FalActaApelacion ✓, **id String (UUID), falloId String**
+- **Estado InMemory:** IDENTIDAD_INCOMPATIBLE + múltiples campos FALTA_EN_INMEMORY — Slice 8F-11B, 8F-11F
 
 #### `fal_acta_apelacion_documento`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_apelacion ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_apelacion, id_documento ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_documento
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** FALTA_EN_INMEMORY, Slice 8F-11F
+- **FK:** id_apelacion → fal_acta_apelacion, id_documento → fal_documento
+- **Entidad Java:** NO EXISTE — **Estado:** FALTA_EN_INMEMORY, Slice 8F-11F
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 15 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ParalizaciÃƒÆ’Ã‚Â³n
+### Sección 15 — Paralización
 
 #### `fal_acta_paralizacion`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **FK:** id_acta → fal_acta
 - **Campos:** motivo SMALLINT NOT NULL, descripcion TEXT NULL, id_user_inicio CHAR(36) NOT NULL, fh_inicio DATETIME(6) NOT NULL, id_user_cierre CHAR(36) NULL, fh_cierre DATETIME(6) NULL, motivo_cierre SMALLINT NULL, si_activa BOOLEAN NOT NULL
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
+- **Auditoría:** fh_alta, id_user_alta
 - **Entidad Java:** NO EXISTE (FalActaParalizacion)
 - **Entidad Java:** FalActaParalizacion -- EXISTE (8F-11G)
 - **Estado InMemory:** ALINEADO -- ActaParalizacionRepository + InMemoryActaParalizacionRepository + ParalizacionActaService -- 8F-11G
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 16 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Archivo
+### Sección 16 — Archivo
 
 #### `fal_acta_archivo`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **FK:** id_acta → fal_acta
 - **Campos:** motivo_archivo SMALLINT NOT NULL, descripcion TEXT NULL, id_user_archivo CHAR(36) NOT NULL, fh_archivo DATETIME(6) NOT NULL, id_user_reingreso CHAR(36) NULL, fh_reingreso DATETIME(6) NULL, motivo_reingreso SMALLINT NULL, si_archivado BOOLEAN NOT NULL
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta
+- **Auditoría:** fh_alta, id_user_alta
 - **Entidad Java:** NO EXISTE (FalActaArchivo)
 - **Entidad Java:** FalActaArchivo -- EXISTE (8F-11G)
 - **Estado InMemory:** ALINEADO -- ActaArchivoRepository + InMemoryActaArchivoRepository + ArchivoActaService -- 8F-11G
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 17 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â GestiÃƒÆ’Ã‚Â³n externa
+### Sección 17 — Gestión externa
 
 #### `fal_acta_gestion_externa`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
-- **Entidad Java:** FalGestionExterna ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“, **id String (UUID)**
+- **FK:** id_acta → fal_acta
+- **Entidad Java:** FalGestionExterna ✓, **id String (UUID)**
 - **Estado InMemory:** ALINEADO (8F-11B)
-- **Campos InMemory:** completamente alineados excepto id y auditorÃƒÆ’Ã‚Â­a (fh_alta, id_user_alta)
+- **Campos InMemory:** completamente alineados excepto id y auditoría (fh_alta, id_user_alta)
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 18 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pagos
+### Sección 18 — Pagos
 
 #### `fal_acta_obligacion_pago`
-- **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
-- **Campos:** tipo_obligacion SMALLINT NOT NULL (1=PAGO_VOLUNTARIO, 2=CONDENA), estado SMALLINT NOT NULL, monto DECIMAL(14,2) NULL, referencia_pago VARCHAR(200) NULL, observaciones TEXT NULL, motivo_observacion TEXT NULL, fechas varios DATETIME(6)
-- **AuditorÃƒÆ’Ã‚Â­a:** fh_alta, id_user_alta, fh_mod, id_user_mod
-- **Entidad Java:** FalPagoVoluntario (tipo=1) y FalPagoCondena (tipo=2) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â id String
-- **Estado InMemory:** SEMANTICA_INCOMPATIBLE (D2 cerrada) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â dos clases separadas vs tabla ÃƒÆ’Ã‚Âºnica ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Slice 8F-11H
+- **Entidad Java:** `FalActaObligacionPago` + `ObligacionPagoRepository` / `InMemoryObligacionPagoRepository`
+- **Enums:** `TipoObligacionPago`, `EstadoObligacionPago`
+- **Estado InMemory:** **ALINEADO (8F-11M-B1)**
 
 #### `fal_acta_forma_pago`
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** FALTA_EN_INMEMORY, Slice 8F-11H
+- **Entidad Java:** `FalActaFormaPago` + repos InMemory
+- **Enums:** `TipoFormaPago`, `EstadoFormaPago`
+- **Estado InMemory:** **ALINEADO (8F-11M-B1)**
 
 #### `fal_acta_plan_pago_ref`
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** FALTA_EN_INMEMORY, Slice 8F-11H
+- **Entidad Java:** `FalActaPlanPagoRef` + repos InMemory
+- **Enums:** `EstadoPlanPago`, `MotivoPlanCaidoCalculado`, `MotivoAptitudIntimacion`
+- **Estado InMemory:** **ALINEADO (8F-11M-B1)**
 
 #### `fal_acta_pago_movimiento`
-- **Entidad Java:** NO EXISTE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** FALTA_EN_INMEMORY, Slice 8F-11H
+- **Entidad Java:** `FalActaPagoMovimiento` append-only + `PagoMovimientoRepository`
+- **Enums:** `TipoMovimientoPago`, `OrigenMovimiento`, `ClasificacionPago`, `EstadoConciliacionActual`, `OrigenUltimaActualizacion`
+- **Estado InMemory:** **ALINEADO (8F-11M-B1)**
+
+#### `fal_acta_economia_proyeccion`
+- **Campo:** `importe_aplicado_total` DECIMAL(14,2) NOT NULL DEFAULT 0
+- **Entidad Java:** `FalActaEconomiaProyeccion` + `EconomiaProyeccionRepository` / `InMemoryEconomiaProyeccionRepository`
+- **Servicios:** `EconomiaProyeccionRecalculador`, `ProcesoNocturnoEconomicoService`
+- **Estado InMemory:** **ALINEADO (8F-11M-B1)**
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 19 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Talonarios y numeraciÃƒÆ’Ã‚Â³n
+### Sección 19 — Talonarios y numeración
 
 #### `num_politica`
-- **Entidad Java:** NumPolitica ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO (deuda DDL fh_alta/id_user_alta en modelo MariaDB)
+- **Entidad Java:** NumPolitica ✓ — **Estado:** ALINEADO (deuda DDL fh_alta/id_user_alta en modelo MariaDB)
 
 #### `num_talonario`
-- **Entidad Java:** NumTalonario ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** NumTalonario ✓ — **Estado:** ALINEADO
 
 #### `num_talonario_ambito`
-- **Entidad Java:** NumTalonarioAmbito ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** NumTalonarioAmbito ✓ — **Estado:** ALINEADO
 
 #### `num_talonario_inspector`
-- **Entidad Java:** NumTalonarioInspector ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** NumTalonarioInspector ✓ — **Estado:** ALINEADO
 
 #### `num_talonario_movimiento`
-- **Entidad Java:** NumTalonarioMovimiento ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â **Estado:** ALINEADO
+- **Entidad Java:** NumTalonarioMovimiento ✓ — **Estado:** ALINEADO
+
+
+### Subseccion 19B - Paridad de concurrencia/idempotencia para numeracion documental (CIERRE-D14-D18)
+
+Esta subseccion documenta la equivalencia entre la implementacion InMemory vigente y las garantias
+productivas requeridas en el adapter MariaDB para el endpoint `POST /api/faltas/documentos/{id}/numerar`.
+
+#### InMemory vigente (CIERRE-D14-D18)
+
+| Aspecto | Implementacion InMemory |
+|---------|------------------------|
+| Exclusion | `synchronized` en `DocumentoService.numerarDocumentoParaFirmas` |
+| Alcance | Una sola instancia JVM; no es mecanismo multiinstancia |
+| Idempotencia | `nroDocu != null` -> devolver numero existente; `yaEstabaNumerado = true` |
+| Evidencia | `DocumentoNumeracionFirmasTest` 17 casos; concurrencia testeada en instancia unica |
+| Estado | ALINEADO con contrato observable |
+
+#### MariaDB requerido (pendiente de implementacion en adapter JDBC)
+
+| Aspecto | Requisito MariaDB |
+|---------|------------------|
+| Correlativo | `NEXT VALUE FOR <secuencia>` donde `<secuencia>` es `num_talonario.nombre_secuencia` |
+| Unicidad | Constraint unica `(id_talonario, nro_talonario)` en `num_talonario_movimiento` |
+| OCC documento | Actualizar `fal_documento.version_row` con condicion; rechazar si cambiado |
+| Transaccion | Todo en una unica transaccion de negocio: movimiento + asociacion + OCC |
+| Idempotencia | Verificar `nro_docu IS NOT NULL` antes de consumir otra SEQUENCE; recargar tras conflicto |
+| Multiinstancia | Sin dependencia de locks JVM; SEQUENCE garantiza atomicidad entre instancias |
+| Saltos tecnicos | Una SEQUENCE puede tener saltos por rollback/cache/reinicio; aceptables para electronicos |
+| Estado | CONTRATO_FUNCIONAL_INMEMORY_ALINEADO / GARANTIA_PRODUCTIVA_PENDIENTE_ADAPTER_MARIADB |
+
+**Diferencia clave electronico vs manual fisico:**
+- Talonario electronico: atomicidad/unicidad garantizada por SEQUENCE + constraints; pueden existir saltos tecnicos aceptables.
+- Talonario manual fisico: control exhaustivo de rangos fisicos; cada numero usado, anulado, devuelto o justificado debe estar contabilizado.
 
 ---
 
-### SecciÃƒÆ’Ã‚Â³n 20 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â QR y portal
+### Sección 20 — QR y portal
 
 #### `fal_acta_qr_acceso`
 - **PK:** id BIGINT AUTO_INCREMENT
-- **FK:** id_acta ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta
+- **FK:** id_acta → fal_acta
 - **Campos:** token_qr VARCHAR(200), url_acceso VARCHAR(500), fh_generacion DATETIME(6), fh_vencimiento DATETIME(6) NULL, si_activo BOOLEAN
 - **Entidad Java:** FalActaQrAcceso (8F-11K)
 - **Estado InMemory:** **ALINEADO** - FalActaQrAcceso + CanalAccesoQr + ResultadoAccesoQr + QrAccesoRepository + InMemoryQrAccesoRepository + QrActaService + AesGcmQrTokenProtector. Slice 8F-11K.
@@ -540,7 +582,7 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 
 ---
 
-## 3. Inventario canÃƒÆ’Ã‚Â³nico InMemory ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fase 2
+## 3. Inventario canónico InMemory — Fase 2
 
 ### A. Entidades de dominio persistibles
 
@@ -548,39 +590,39 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 |---|---|---|---|---|
 | `FalActa` | `fal_acta` | Long → si | BIGINT → si | ALINEADO (8F-11L: todos los campos de MariaDB incorporados; gaps arquitecturales aceptados: tipo_acta String, persona embebida, sin auditoria DB) |
 | `FalActaEvento` | `fal_acta_evento` | Long | ALINEADO | ALINEADO |
-| `FalActaSnapshot` | `fal_acta_snapshot` | Long (idActa) | BIGINT PK ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalActaEvidencia` | `fal_acta_evidencia` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
+| `FalActaSnapshot` | `fal_acta_snapshot` | Long (idActa) | BIGINT PK ✓ | ALINEADO |
+| `FalActaEvidencia` | `fal_acta_evidencia` | Long ✓ | BIGINT ✓ | ALINEADO |
 | `FalActaFallo` | `fal_acta_fallo` | **Long | ALINEADO id (8F-11B) + campos (8F-11F) |
 | `FalActaApelacion` | `fal_acta_apelacion` | **Long | ALINEADO id (8F-11B) + campos (8F-11F) |
-| `FalActaFirmezaCondena` | campos en `fal_acta_fallo` (D1) | String | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sin tabla propia | SEMANTICA_INCOMPATIBLE |
-| `FalBloqueanteMaterial` | `fal_acta_bloqueante_cierre_material` | **String** | **BIGINT** ÃƒÂ¢Ã…â€œÃ¢â‚¬â€ | IDENTIDAD_INCOMPATIBLE |
-| `FalDependencia` | `fal_dependencia` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDependenciaVersion` | `fal_dependencia_version` | Long+short | BIGINT+SMALLINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumento` | `fal_documento` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumentoFirma` | `fal_documento_firma` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumentoFirmaReq` | `fal_documento_firma_req` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumentoPlantilla` | `fal_documento_plantilla` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumentoPlantillaFirmaReq` | `fal_documento_plantilla_firma_req` | Long+short | BIGINT+SMALLINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumentoPlantillaContenido` | `fal_documento_plantilla_contenido` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO (8F-10-R2) |
-| `FalDocumentoPlantillaDefault` | `fal_documento_plantilla_default` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDocumentoRedaccion` | `fal_documento_redaccion` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO (8F-10-R2) |
-| `FalFirmante` | `fal_firmante` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalFirmanteVersion` | `fal_firmante_version` | Long+short | BIGINT+SMALLINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalFirmanteVersionHabilitacion` | `fal_firmante_version_habilitacion` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalGestionExterna` | `fal_acta_gestion_externa` | **String** | **BIGINT** ÃƒÂ¢Ã…â€œÃ¢â‚¬â€ | IDENTIDAD_INCOMPATIBLE |
-| `FalInspector` | `fal_inspector` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalInspectorVersion` | `fal_inspector_version` | Long+short | BIGINT+SMALLINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | PARCIAL (faltan campos firma) |
-| `FalNormativaFaltas` | `fal_normativa_faltas` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalArticuloNormativaFaltas` | `fal_articulo_normativa_faltas` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `FalDependenciaNormativa` | `fal_dependencia_normativa` | Long+Long | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
+| `FalActaFirmezaCondena` | campos en `fal_acta_fallo` (D1) | String | — sin tabla propia | SEMANTICA_INCOMPATIBLE |
+| `FalBloqueanteMaterial` | `fal_acta_bloqueante_cierre_material` | **String** | **BIGINT** ✗ | IDENTIDAD_INCOMPATIBLE |
+| `FalDependencia` | `fal_dependencia` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDependenciaVersion` | `fal_dependencia_version` | Long+short | BIGINT+SMALLINT ✓ | ALINEADO |
+| `FalDocumento` | `fal_documento` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDocumentoFirma` | `fal_documento_firma` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDocumentoFirmaReq` | `fal_documento_firma_req` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDocumentoPlantilla` | `fal_documento_plantilla` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDocumentoPlantillaFirmaReq` | `fal_documento_plantilla_firma_req` | Long+short | BIGINT+SMALLINT ✓ | ALINEADO |
+| `FalDocumentoPlantillaContenido` | `fal_documento_plantilla_contenido` | Long ✓ | BIGINT ✓ | ALINEADO (8F-10-R2) |
+| `FalDocumentoPlantillaDefault` | `fal_documento_plantilla_default` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDocumentoRedaccion` | `fal_documento_redaccion` | Long ✓ | BIGINT ✓ | ALINEADO (8F-10-R2) |
+| `FalFirmante` | `fal_firmante` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalFirmanteVersion` | `fal_firmante_version` | Long+short | BIGINT+SMALLINT ✓ | ALINEADO |
+| `FalFirmanteVersionHabilitacion` | `fal_firmante_version_habilitacion` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalGestionExterna` | `fal_acta_gestion_externa` | **String** | **BIGINT** ✗ | IDENTIDAD_INCOMPATIBLE |
+| `FalInspector` | `fal_inspector` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalInspectorVersion` | `fal_inspector_version` | Long+short | BIGINT+SMALLINT ✓ | PARCIAL (faltan campos firma) |
+| `FalNormativaFaltas` | `fal_normativa_faltas` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalArticuloNormativaFaltas` | `fal_articulo_normativa_faltas` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `FalDependenciaNormativa` | `fal_dependencia_normativa` | Long+Long | — ✓ | ALINEADO |
 | `FalNotificacion` | `fal_notificacion` | **Long | ALINEADO (8F-11B) |
-| `FalPagoVoluntario` | `fal_acta_obligacion_pago` (tipo=1) | String | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬â€ | SEMANTICA_INCOMPATIBLE (D2 cerrada) |
-| `FalPagoCondena` | `fal_acta_obligacion_pago` (tipo=2) | String | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬â€ | SEMANTICA_INCOMPATIBLE (D2 cerrada) |
-| `NumPolitica` | `num_politica` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `NumTalonario` | `num_talonario` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `NumTalonarioAmbito` | `num_talonario_ambito` | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â compuesta | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â compuesta ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `NumTalonarioInspector` | `num_talonario_inspector` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
-| `NumTalonarioMovimiento` | `num_talonario_movimiento` | Long ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | BIGINT ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ | ALINEADO |
+| `FalPagoVoluntario` | `fal_acta_obligacion_pago` (tipo=1) | String | BIGINT ✗ | SEMANTICA_INCOMPATIBLE (D2 cerrada) |
+| `FalPagoCondena` | `fal_acta_obligacion_pago` (tipo=2) | String | BIGINT ✗ | SEMANTICA_INCOMPATIBLE (D2 cerrada) |
+| `NumPolitica` | `num_politica` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `NumTalonario` | `num_talonario` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `NumTalonarioAmbito` | `num_talonario_ambito` | — compuesta | — compuesta ✓ | ALINEADO |
+| `NumTalonarioInspector` | `num_talonario_inspector` | Long ✓ | BIGINT ✓ | ALINEADO |
+| `NumTalonarioMovimiento` | `num_talonario_movimiento` | Long ✓ | BIGINT ✓ | ALINEADO |
 
 ### B. Repositorios existentes (25 interfaces + 25 InMemory)
 
@@ -611,21 +653,21 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 | `PagoVoluntarioRepository` | `InMemoryPagoVoluntarioRepository` | FalPagoVoluntario |
 | `TalonarioRepository` | `InMemoryTalonarioRepository` | NumPolitica/Talonario/Ambito/Inspector/Movimiento |
 
-**Repositorios pendientes de crear (22 entidades FALTA_EN_INMEMORY):** PersonaRepository, PersonaDomicilioRepository, ActaParalizacionRepository, ActaArchivoRepository, ObservacionRepository, NotificacionIntentoRepository, NotificacionAcuseRepository, LoteCorreoRepository, TarifarioUnidadRepository, MedidaPreventiva, ArticuloMedida, ActaArticuloInfringidoRepository, ActaValorizacionRepository, ActaValorizacionItemRepository, ActaDocumentoRepository, ActaApelacionDocumentoRepository, ActaObligacionPagoRepository (modelo real), ActaFormaPagoRepository, ActaPlanPagoRepository, ActaPagoMovimientoRepository, satÃƒÆ’Ã‚Â©lites (6), QrAccesoRepository.
+**Repositorios pendientes de crear (22 entidades FALTA_EN_INMEMORY):** PersonaRepository, PersonaDomicilioRepository, ActaParalizacionRepository, ActaArchivoRepository, ObservacionRepository, NotificacionIntentoRepository, NotificacionAcuseRepository, LoteCorreoRepository, TarifarioUnidadRepository, MedidaPreventiva, ArticuloMedida, ActaArticuloInfringidoRepository, ActaValorizacionRepository, ActaValorizacionItemRepository, ActaDocumentoRepository, ActaApelacionDocumentoRepository, ActaObligacionPagoRepository (modelo real), ActaFormaPagoRepository, ActaPlanPagoRepository, ActaPagoMovimientoRepository, satélites (6), QrAccesoRepository.
 
-### C. Enums de dominio ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â estado de cÃƒÆ’Ã‚Â³digo numÃƒÆ’Ã‚Â©rico
+### C. Enums de dominio — estado de código numérico
 
-| Enum | CÃƒÆ’Ã‚Â³digo numÃƒÆ’Ã‚Â©rico | Columna MariaDB | Estado |
+| Enum | Código numérico | Columna MariaDB | Estado |
 |---|---|---|---|
-| `TipoActa` (TRANSITO, CONTRAVENCION, SUSTANCIAS_ALIMENTICIAS, COMERCIO) | **NO** | tipo_acta SMALLINT | ENUM_SIN_CODIGO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â agregar 1-4 en 8F-11B |
-| `EstadoRedaccionDocumento` (BORRADOR=1, CONFIRMADA=2, ANULADA=3) | **SÃƒÆ’Ã‚Â** | estado_redaccion SMALLINT | ALINEADO |
-| `OrigenFirmezaCondena` (VENCIMIENTO_PLAZO_APELACION, APELACION_RECHAZADA) | **NO** | origen_firmeza SMALLINT NULL | ENUM_SIN_CODIGO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â agregar 1=VENCIMIENTO, 2=RECHAZADA en 8F-11F |
-| `ResultadoFinalActa` (0=SIN_RESULTADO_FINAL, 1=PAGO_VOLUNTARIO_PAGADO, 2=ABSUELTO, 3=CONDENA_FIRME, 4=ANULADO) | **SMALLINT** (pendiente implementaciÃƒÆ’Ã‚Â³n) | resultado_final SMALLINT NOT NULL | TIPO_INCOMPATIBLE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â P1 CERRADA; implementar en 8F-11B |
-| DemÃƒÆ’Ã‚Â¡s enums funcionales | verificar | columnas SMALLINT | verificar por enum en 8F-11B |
+| `TipoActa` (TRANSITO, CONTRAVENCION, SUSTANCIAS_ALIMENTICIAS, COMERCIO) | **NO** | tipo_acta SMALLINT | ENUM_SIN_CODIGO — agregar 1-4 en 8F-11B |
+| `EstadoRedaccionDocumento` (BORRADOR=1, CONFIRMADA=2, ANULADA=3) | **SÍ** | estado_redaccion SMALLINT | ALINEADO |
+| `OrigenFirmezaCondena` (VENCIMIENTO_PLAZO_APELACION, APELACION_RECHAZADA) | **NO** | origen_firmeza SMALLINT NULL | ENUM_SIN_CODIGO — agregar 1=VENCIMIENTO, 2=RECHAZADA en 8F-11F |
+| `ResultadoFinalActa` (0=SIN_RESULTADO_FINAL, 1=PAGO_VOLUNTARIO_PAGADO, 2=ABSUELTO, 3=CONDENA_FIRME, 4=ANULADO) | **SMALLINT** (pendiente implementación) | resultado_final SMALLINT NOT NULL | TIPO_INCOMPATIBLE — P1 CERRADA; implementar en 8F-11B |
+| Demás enums funcionales | verificar | columnas SMALLINT | verificar por enum en 8F-11B |
 
 ### D. Clases NO persistibles
 
-| CategorÃƒÆ’Ã‚Â­a | Clases |
+| Categoría | Clases |
 |---|---|
 | SOLO_DEMO | PlantillasMockSeeder, DemoActaMaterializadorService, DemoHealthService, DocumentoGraphDemoService, DocumentoGeneracionMockService, DocumentoPdfMockRenderer |
 | SOLO_DEMO_DEV | DevInMemoryResetService, DevResetController, DevResetResponse |
@@ -641,135 +683,135 @@ Este documento es la fuente ÃƒÆ’Ã‚Âºnica de verdad sobre la paridad en
 
 ---
 
-## 4. Matriz maestra campo por campo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fase 3
+## 4. Matriz maestra campo por campo — Fase 3
 
 ### Leyenda de estados
 
 | Estado | Significado |
 |---|---|
-| `ALINEADO` | Campo existe en ambos lados con tipo y semÃƒÆ’Ã‚Â¡ntica equivalente |
+| `ALINEADO` | Campo existe en ambos lados con tipo y semántica equivalente |
 | `FALTA_EN_INMEMORY` | Campo existe en tabla MariaDB pero no en entidad Java |
 | `FALTA_EN_MARIADB` | Campo existe en Java pero no hay tabla/columna MariaDB |
 | `TIPO_INCOMPATIBLE` | Existe en ambos con tipo diferente |
 | `NULABILIDAD_INCOMPATIBLE` | Difiere la nulabilidad |
 | `IDENTIDAD_INCOMPATIBLE` | ID en Java es String/UUID, debe ser Long/BIGINT |
 | `RELACION_INCOMPLETA` | FK o tabla pivot faltante en InMemory |
-| `ENUM_SIN_CODIGO` | Enum sin cÃƒÆ’Ã‚Â³digo numÃƒÆ’Ã‚Â©rico para SMALLINT |
-| `SEMANTICA_INCOMPATIBLE` | Modelado diferente (decisiÃƒÆ’Ã‚Â³n cerrada) |
+| `ENUM_SIN_CODIGO` | Enum sin código numérico para SMALLINT |
+| `SEMANTICA_INCOMPATIBLE` | Modelado diferente (decisión cerrada) |
 | `SOLO_DEMO_TEST` | Solo para demo/test, no persistir |
 | `SOLO_INFRAESTRUCTURA` | Infraestructura InMemory, no persistir |
-| `NO_PERSISTIBLE` | Servicio, DTO, enum puro Java ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sin tabla |
+| `NO_PERSISTIBLE` | Servicio, DTO, enum puro Java — sin tabla |
 
 ---
 
 ### Matriz: FalActa / fal_acta
 
-| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | AcciÃƒÆ’Ã‚Â³n | Slice |
+| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | Acción | Slice |
 |---|---|---|---|---|---|---|---|---|
-| id | BIGINT AUTO_INCREMENT | NO | id | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| uuid_tecnico | CHAR(36) | NO | uuidTecnico | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| nro_acta | VARCHAR(20) | YES | nroActa | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
+| id | BIGINT AUTO_INCREMENT | NO | id | Long | ALINEADO | — | — |
+| uuid_tecnico | CHAR(36) | NO | uuidTecnico | String | ALINEADO | — | — |
+| nro_acta | VARCHAR(20) | YES | nroActa | String | ALINEADO | — | — |
 | tipo_acta | SMALLINT NOT NULL | NO | tipoActa | **TipoActa | ALINEADO (8F-11B) |
-| id_talonario | BIGINT | YES | idTalonario | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| nro_talonario_usado | INT | YES | nroTalonarioUsado | Integer | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_acta | DATE | NO | fechaActa | LocalDate | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_labrado | DATETIME(6) | NO | fechaLabrado | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| domicilio_hecho | VARCHAR(500) | YES | domicilioHecho | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| lat_infr | DOUBLE | YES | latInfr | Double | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| lon_infr | DOUBLE | YES | lonInfr | Double | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| resultado_firma_infractor | SMALLINT | NO | resultadoFirmaInfractor | ResultadoFirmaInfractor | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| bloque_actual | SMALLINT | NO | bloqueActual | BloqueActual | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| estado_procesal | SMALLINT | NO | estadoProcesal | EstadoProcesalActa | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| situacion_administrativa | SMALLINT | NO | situacionAdministrativa | SituacionAdministrativaActa | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
+| id_talonario | BIGINT | YES | idTalonario | Long | ALINEADO | — | — |
+| nro_talonario_usado | INT | YES | nroTalonarioUsado | Integer | ALINEADO | — | — |
+| fecha_acta | DATE | NO | fechaActa | LocalDate | ALINEADO | — | — |
+| fecha_labrado | DATETIME(6) | NO | fechaLabrado | LocalDateTime | ALINEADO | — | — |
+| domicilio_hecho | VARCHAR(500) | YES | domicilioHecho | String | ALINEADO | — | — |
+| lat_infr | DOUBLE | YES | latInfr | Double | ALINEADO | — | — |
+| lon_infr | DOUBLE | YES | lonInfr | Double | ALINEADO | — | — |
+| resultado_firma_infractor | SMALLINT | NO | resultadoFirmaInfractor | ResultadoFirmaInfractor | ALINEADO | — | — |
+| bloque_actual | SMALLINT | NO | bloqueActual | BloqueActual | ALINEADO | — | — |
+| estado_procesal | SMALLINT | NO | estadoProcesal | EstadoProcesalActa | ALINEADO | — | — |
+| situacion_administrativa | SMALLINT | NO | situacionAdministrativa | SituacionAdministrativaActa | ALINEADO | — | — |
 | resultado_final | SMALLINT NOT NULL | NO | resultadoFinal | ResultadoFinalActa | ALINEADO (8F-11B) |
-| id_persona | BIGINT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar cuando FalPersona exista | 8F-11C |
+| id_persona | BIGINT | YES | — | — | FALTA_EN_INMEMORY | Agregar cuando FalPersona exista | 8F-11C |
 | id_inspector | BIGINT | NO | idInspector | **Long | ALINEADO (8F-11B) |
 | id_dependencia | BIGINT | NO | idDependencia | **Long | ALINEADO (8F-11B) |
-| infractor_nombre | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (va a fal_persona) | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | infractorNombre | String | SEMANTICA_INCOMPATIBLE | Mover a FalPersona.nombre_completo | 8F-11C |
-| infractor_documento | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (va a fal_persona) | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | infractorDocumento | String | SEMANTICA_INCOMPATIBLE | Mover a FalPersona.nro_documento | 8F-11C |
-| domicilio_infractor | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â (va a fal_persona_domicilio) | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | domicilioInfractor | String | SEMANTICA_INCOMPATIBLE | Mover a FalPersonaDomicilio.texto_libre | 8F-11C |
-| fh_alta | DATETIME(6) | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ALINEADO (8F-11B) |
-| id_user_alta | CHAR(36) | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ALINEADO (8F-11B) |
-| fh_mod | DATETIME(6) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ALINEADO (8F-11B) |
-| id_user_mod | CHAR(36) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ALINEADO (8F-11B) |
+| infractor_nombre | — (va a fal_persona) | — | infractorNombre | String | SEMANTICA_INCOMPATIBLE | Mover a FalPersona.nombre_completo | 8F-11C |
+| infractor_documento | — (va a fal_persona) | — | infractorDocumento | String | SEMANTICA_INCOMPATIBLE | Mover a FalPersona.nro_documento | 8F-11C |
+| domicilio_infractor | — (va a fal_persona_domicilio) | — | domicilioInfractor | String | SEMANTICA_INCOMPATIBLE | Mover a FalPersonaDomicilio.texto_libre | 8F-11C |
+| fh_alta | DATETIME(6) | NO | — | — | ALINEADO (8F-11B) |
+| id_user_alta | CHAR(36) | NO | — | — | ALINEADO (8F-11B) |
+| fh_mod | DATETIME(6) | YES | — | — | ALINEADO (8F-11B) |
+| id_user_mod | CHAR(36) | YES | — | — | ALINEADO (8F-11B) |
 
 ### Matriz: FalActaFallo / fal_acta_fallo
 
-| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | AcciÃƒÆ’Ã‚Â³n | Slice |
+| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | Acción | Slice |
 |---|---|---|---|---|---|---|---|---|
 | id | BIGINT AUTO_INCREMENT | NO | id | **Long | ALINEADO (8F-11B) |
-| id_acta | BIGINT | NO | actaId | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| tipo_fallo | SMALLINT | NO | tipoFallo | TipoFalloActa | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| estado_fallo | SMALLINT | NO | estadoFallo | EstadoFalloActa | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
+| id_acta | BIGINT | NO | actaId | Long | ALINEADO | — | — |
+| tipo_fallo | SMALLINT | NO | tipoFallo | TipoFalloActa | ALINEADO | — | — |
+| estado_fallo | SMALLINT | NO | estadoFallo | EstadoFalloActa | ALINEADO | — | — |
 | monto_condena | DECIMAL(14,2) | YES | montoCondena | BigDecimal | ALINEADO (simplificado) | Vincular a valorizacion_id en 8F-11D | 8F-11F |
-| resultado_fallo | SMALLINT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar enum ResultadoFalloActa o SMALLINT | 8F-11F |
-| fundamentos | TEXT | YES | fundamentos | String | ALINEADO (D5) | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| documento_id | BIGINT | YES | documentoId | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| valorizacion_id | BIGINT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar Long valorizacionId | 8F-11F |
-| fallo_reemplazado_id | BIGINT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar Long falloReemplazadoId | 8F-11F |
-| fecha_dictado | DATETIME(6) | NO | fechaDictado | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_notificacion | DATETIME(6) | YES | fechaNotificacion | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_resultado_final | DATETIME(6) | YES | fechaResultadoFinal | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fh_firma | DATETIME(6) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar LocalDateTime fhFirma | 8F-11F |
-| fh_vto_apelacion | DATETIME(6) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar LocalDateTime fhVtoApelacion | 8F-11F |
-| si_activo | BOOLEAN | NO | siActivo | boolean | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| si_firme | BOOLEAN | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar boolean siFirme (D1) | 8F-11F |
-| fh_firmeza | DATETIME(6) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar LocalDateTime fhFirmeza (D1) | 8F-11F |
-| origen_firmeza | SMALLINT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar OrigenFirmezaCondena con cÃƒÆ’Ã‚Â³digo (D1) | 8F-11F |
-| version_row | INT | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar int versionRow | 8F-11F |
-| fh_alta | DATETIME(6) | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | AuditorÃƒÆ’Ã‚Â­a | 8F-11B |
-| id_user_alta | CHAR(36) | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | AuditorÃƒÆ’Ã‚Â­a | 8F-11B |
-| fh_mod | DATETIME(6) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | AuditorÃƒÆ’Ã‚Â­a | 8F-11B |
-| id_user_mod | CHAR(36) | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | AuditorÃƒÆ’Ã‚Â­a | 8F-11B |
+| resultado_fallo | SMALLINT | YES | — | — | FALTA_EN_INMEMORY | Agregar enum ResultadoFalloActa o SMALLINT | 8F-11F |
+| fundamentos | TEXT | YES | fundamentos | String | ALINEADO (D5) | — | — |
+| documento_id | BIGINT | YES | documentoId | Long | ALINEADO | — | — |
+| valorizacion_id | BIGINT | YES | — | — | FALTA_EN_INMEMORY | Agregar Long valorizacionId | 8F-11F |
+| fallo_reemplazado_id | BIGINT | YES | — | — | FALTA_EN_INMEMORY | Agregar Long falloReemplazadoId | 8F-11F |
+| fecha_dictado | DATETIME(6) | NO | fechaDictado | LocalDateTime | ALINEADO | — | — |
+| fecha_notificacion | DATETIME(6) | YES | fechaNotificacion | LocalDateTime | ALINEADO | — | — |
+| fecha_resultado_final | DATETIME(6) | YES | fechaResultadoFinal | LocalDateTime | ALINEADO | — | — |
+| fh_firma | DATETIME(6) | YES | — | — | FALTA_EN_INMEMORY | Agregar LocalDateTime fhFirma | 8F-11F |
+| fh_vto_apelacion | DATETIME(6) | YES | — | — | FALTA_EN_INMEMORY | Agregar LocalDateTime fhVtoApelacion | 8F-11F |
+| si_activo | BOOLEAN | NO | siActivo | boolean | ALINEADO | — | — |
+| si_firme | BOOLEAN | NO | — | — | FALTA_EN_INMEMORY | Agregar boolean siFirme (D1) | 8F-11F |
+| fh_firmeza | DATETIME(6) | YES | — | — | FALTA_EN_INMEMORY | Agregar LocalDateTime fhFirmeza (D1) | 8F-11F |
+| origen_firmeza | SMALLINT | YES | — | — | FALTA_EN_INMEMORY | Agregar OrigenFirmezaCondena con código (D1) | 8F-11F |
+| version_row | INT | NO | — | — | FALTA_EN_INMEMORY | Agregar int versionRow | 8F-11F |
+| fh_alta | DATETIME(6) | NO | — | — | FALTA_EN_INMEMORY | Auditoría | 8F-11B |
+| id_user_alta | CHAR(36) | NO | — | — | FALTA_EN_INMEMORY | Auditoría | 8F-11B |
+| fh_mod | DATETIME(6) | YES | — | — | FALTA_EN_INMEMORY | Auditoría | 8F-11B |
+| id_user_mod | CHAR(36) | YES | — | — | FALTA_EN_INMEMORY | Auditoría | 8F-11B |
 
 ### Matriz: FalActaApelacion / fal_acta_apelacion
 
-| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | AcciÃƒÆ’Ã‚Â³n | Slice |
+| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | Acción | Slice |
 |---|---|---|---|---|---|---|---|---|
 | id | BIGINT AUTO_INCREMENT | NO | id | **Long | ALINEADO (8F-11B) |
-| id_acta | BIGINT | NO | actaId | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
+| id_acta | BIGINT | NO | actaId | Long | ALINEADO | — | — |
 | fallo_id | BIGINT | NO | falloId | **String** | IDENTIDAD_INCOMPATIBLE | Cambiar a Long | 8F-11F |
-| estado_apelacion | SMALLINT | NO | estadoApelacion | EstadoApelacionActa | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_presentacion | DATETIME(6) | NO | fechaPresentacion | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| canal_apelacion | SMALLINT | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar enum/SMALLINT canalApelacion | 8F-11F |
-| tipo_presentacion | SMALLINT | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar enum/SMALLINT tipoPresentacion | 8F-11F |
-| texto_apelacion | TEXT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar String textoApelacion | 8F-11F |
-| presentante | VARCHAR(300) | YES | presentante | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fundamentos | TEXT | YES | fundamentos | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| observaciones | TEXT | YES | observaciones | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| si_activa | BOOLEAN | NO | siActiva | boolean | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_resolucion | DATETIME(6) | YES | fechaResolucion | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fundamentos_resolucion | TEXT | YES | fundamentosResolucion | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| observaciones_resolucion | TEXT | YES | observacionesResolucion | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| documento_resolucion_id | BIGINT | YES | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar Long documentoResolucionId | 8F-11F |
-| version_row | INT | NO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | FALTA_EN_INMEMORY | Agregar int versionRow | 8F-11F |
-| fh_alta, id_user_alta, fh_mod, id_user_mod | DATETIME(6)/CHAR(36) | varios | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ALINEADO (8F-11B) |
+| estado_apelacion | SMALLINT | NO | estadoApelacion | EstadoApelacionActa | ALINEADO | — | — |
+| fecha_presentacion | DATETIME(6) | NO | fechaPresentacion | LocalDateTime | ALINEADO | — | — |
+| canal_apelacion | SMALLINT | NO | — | — | FALTA_EN_INMEMORY | Agregar enum/SMALLINT canalApelacion | 8F-11F |
+| tipo_presentacion | SMALLINT | NO | — | — | FALTA_EN_INMEMORY | Agregar enum/SMALLINT tipoPresentacion | 8F-11F |
+| texto_apelacion | TEXT | YES | — | — | FALTA_EN_INMEMORY | Agregar String textoApelacion | 8F-11F |
+| presentante | VARCHAR(300) | YES | presentante | String | ALINEADO | — | — |
+| fundamentos | TEXT | YES | fundamentos | String | ALINEADO | — | — |
+| observaciones | TEXT | YES | observaciones | String | ALINEADO | — | — |
+| si_activa | BOOLEAN | NO | siActiva | boolean | ALINEADO | — | — |
+| fecha_resolucion | DATETIME(6) | YES | fechaResolucion | LocalDateTime | ALINEADO | — | — |
+| fundamentos_resolucion | TEXT | YES | fundamentosResolucion | String | ALINEADO | — | — |
+| observaciones_resolucion | TEXT | YES | observacionesResolucion | String | ALINEADO | — | — |
+| documento_resolucion_id | BIGINT | YES | — | — | FALTA_EN_INMEMORY | Agregar Long documentoResolucionId | 8F-11F |
+| version_row | INT | NO | — | — | FALTA_EN_INMEMORY | Agregar int versionRow | 8F-11F |
+| fh_alta, id_user_alta, fh_mod, id_user_mod | DATETIME(6)/CHAR(36) | varios | — | — | ALINEADO (8F-11B) |
 
 ### Matriz: FalNotificacion / fal_notificacion
 
-| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | AcciÃƒÆ’Ã‚Â³n | Slice |
+| Campo MariaDB | Tipo MariaDB | Null | Campo Java | Tipo Java | Estado | Acción | Slice |
 |---|---|---|---|---|---|---|---|---|
 | id | BIGINT AUTO_INCREMENT | NO | id | **Long | ALINEADO (8F-11B) |
-| id_acta | BIGINT | NO | idActa | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| id_documento | BIGINT | NO | idDocumento | Long | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| tipo_docu_notificado | SMALLINT | NO | tipoDocumentoNotificado | TipoDocu | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| canal | VARCHAR(50) | NO | canal | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_envio | DATETIME(6) | NO | fechaEnvio | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| estado | SMALLINT | NO | estado | EstadoNotificacion | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| resultado | SMALLINT | YES | resultado | ResultadoNotificacion | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
-| fecha_resultado | DATETIME(6) | YES | fechaResultado | LocalDateTime | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
+| id_acta | BIGINT | NO | idActa | Long | ALINEADO | — | — |
+| id_documento | BIGINT | NO | idDocumento | Long | ALINEADO | — | — |
+| tipo_docu_notificado | SMALLINT | NO | tipoDocumentoNotificado | TipoDocu | ALINEADO | — | — |
+| canal | VARCHAR(50) | NO | canal | String | ALINEADO | — | — |
+| fecha_envio | DATETIME(6) | NO | fechaEnvio | LocalDateTime | ALINEADO | — | — |
+| estado | SMALLINT | NO | estado | EstadoNotificacion | ALINEADO | — | — |
+| resultado | SMALLINT | YES | resultado | ResultadoNotificacion | ALINEADO | — | — |
+| fecha_resultado | DATETIME(6) | YES | fechaResultado | LocalDateTime | ALINEADO | — | — |
 | intentos | INT | NO | intentos | int | ALINEADO (simplificado) | Separar a fal_notificacion_intento en 8F-11I | 8F-11I |
-| observaciones | TEXT | YES | observaciones | String | ALINEADO | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â | ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â |
+| observaciones | TEXT | YES | observaciones | String | ALINEADO | — | — |
 
 ### Matrices alineadas (sin gaps de campo)
 
-Las siguientes entidades estÃƒÆ’Ã‚Â¡n completamente alineadas; se omite el detalle de campo por campo:
+Las siguientes entidades están completamente alineadas; se omite el detalle de campo por campo:
 
 | Entidad | Tabla | Verificado en |
 |---|---|---|
-| FalDocumentoPlantillaContenido | fal_documento_plantilla_contenido | 8F-10-R2 (ver secciÃƒÆ’Ã‚Â³n 2) |
-| FalDocumentoPlantillaDefault | fal_documento_plantilla_default | 8F-10-R1 (ver secciÃƒÆ’Ã‚Â³n 2) |
-| FalDocumentoRedaccion | fal_documento_redaccion | 8F-10-R2 (ver secciÃƒÆ’Ã‚Â³n 2) |
+| FalDocumentoPlantillaContenido | fal_documento_plantilla_contenido | 8F-10-R2 (ver sección 2) |
+| FalDocumentoPlantillaDefault | fal_documento_plantilla_default | 8F-10-R1 (ver sección 2) |
+| FalDocumentoRedaccion | fal_documento_redaccion | 8F-10-R2 (ver sección 2) |
 | FalDependencia / FalDependenciaVersion | fal_dependencia* | 8C-6E |
 | FalInspector (base) | fal_inspector | 8C-6E |
 | FalFirmante / FalFirmanteVersion / FalFirmanteVersionHabilitacion | fal_firmante* | 8A-3D |
@@ -784,58 +826,58 @@ Las siguientes entidades estÃƒÆ’Ã‚Â¡n completamente alineadas; se omit
 
 ---
 
-## 5. Gaps conocidos verificados ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fase 4
+## 5. Gaps conocidos verificados — Fase 4
 
 ### GAP-1 CERRADO en 8F-10
 Las tres tablas nuevas de 8F (fal_documento_plantilla_contenido, fal_documento_plantilla_default, fal_documento_redaccion) fueron incorporadas al modelo MariaDB en 8F-10. Las entidades Java fueron completamente alineadas en 8F-10-R2. **No hay gap.**
 
 ### GAP-2 APLICADO en 8F-10 (D1 cerrada)
-origen_firmeza SMALLINT NULL incorporado en fal_acta_fallo del modelo MariaDB. **Pendiente en InMemory:** agregar si_firme, fh_firmeza, origen_firmeza (con cÃƒÆ’Ã‚Â³digo) a FalActaFallo Java ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Slice 8F-11F.
+origen_firmeza SMALLINT NULL incorporado en fal_acta_fallo del modelo MariaDB. **Pendiente en InMemory:** agregar si_firme, fh_firmeza, origen_firmeza (con código) a FalActaFallo Java — Slice 8F-11F.
 
 ### GAP-3 DECISION CERRADA D2
-FalPagoVoluntario y FalPagoCondena ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_obligacion_pago con tipo. **Pendiente:** implementar modelo real de pagos en 8F-11H.
+FalPagoVoluntario y FalPagoCondena → fal_acta_obligacion_pago con tipo. **Pendiente:** implementar modelo real de pagos en 8F-11H.
 
-### GAP-4 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalActaParalizacion faltante
+### GAP-4 ACTIVO — FalActaParalizacion faltante
 No existe FalActaParalizacion ni repo. D3 cerrada: implementar InMemory antes de JDBC. **Slice: 8F-11G.**
 
-### GAP-5 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalActaArchivo faltante
+### GAP-5 ACTIVO — FalActaArchivo faltante
 No existe FalActaArchivo ni repo. **Slice: 8F-11G.**
 
-### GAP-6 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalPersona / FalPersonaDomicilio faltantes
+### GAP-6 ACTIVO — FalPersona / FalPersonaDomicilio faltantes
 Datos de persona embebidos en FalActa. D6 cerrada: implementar InMemory antes de JDBC. **Slice: 8F-11C.**
 
-### GAP-7 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ValorizaciÃƒÆ’Ã‚Â³n y artÃƒÆ’Ã‚Â­culos faltantes
+### GAP-7 ACTIVO — Valorización y artículos faltantes
 No existen: FalTarifarioUnidadFaltas, FalActaArticuloInfringido, FalActaValorizacion, FalActaValorizacionItem. FalActaFallo.montoCondena es placeholder. **Slice: 8F-11D.**
 
 ### GAP-8 ELIMINADO (8F-11B)
 Decision de diseno (8F-11B): `firma_storage_key`, `firma_hash`, `fh_firma_registrada` eliminados definitivamente del modelo MariaDB y del modelo Java. La firma maestra del inspector no se registra.
 
-### GAP-9 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalActaFallo campos faltantes
-Faltan: valorizacion_id, resultado_fallo, fh_firma, fh_vto_apelacion, fallo_reemplazado_id, si_firme, fh_firmeza, origen_firmeza, version_row, auditorÃƒÆ’Ã‚Â­a. Ver matriz secciÃƒÆ’Ã‚Â³n 4. **Slice: 8F-11F.**
+### GAP-9 ACTIVO — FalActaFallo campos faltantes
+Faltan: valorizacion_id, resultado_fallo, fh_firma, fh_vto_apelacion, fallo_reemplazado_id, si_firme, fh_firmeza, origen_firmeza, version_row, auditoría. Ver matriz sección 4. **Slice: 8F-11F.**
 
-### GAP-10 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalActaApelacion campos faltantes
-Faltan: canal_apelacion, tipo_presentacion, texto_apelacion, documento_resolucion_id, version_row, auditorÃƒÆ’Ã‚Â­a; falloId debe ser Long. Ver matriz secciÃƒÆ’Ã‚Â³n 4. **Slice: 8F-11F.**
+### GAP-10 ACTIVO — FalActaApelacion campos faltantes
+Faltan: canal_apelacion, tipo_presentacion, texto_apelacion, documento_resolucion_id, version_row, auditoría; falloId debe ser Long. Ver matriz sección 4. **Slice: 8F-11F.**
 
-### GAP-11 DIFERIBLE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalObservacion faltante
+### GAP-11 DIFERIBLE — FalObservacion faltante
 PAGAPR usa evento.descripcion transitoriamente. **Slice: 8F-11G.**
 
-### GAP-12 DIFERIBLE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â fal_acta_documento pivot faltante
+### GAP-12 DIFERIBLE — fal_acta_documento pivot faltante
 FalDocumento.idActa cubre caso simple. **Slice: 8F-11J.**
 
-### GAP-13 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Enums sin cÃƒÆ’Ã‚Â³digo numÃƒÆ’Ã‚Â©rico
+### GAP-13 ACTIVO — Enums sin código numérico
 - TipoActa: necesita TRANSITO=1, CONTRAVENCION=2, SUSTANCIAS_ALIMENTICIAS=3, COMERCIO=4 (D8 cerrada). **Slice: 8F-11B.**
 - OrigenFirmezaCondena: necesita 1=VENCIMIENTO_PLAZO_APELACION, 2=APELACION_RECHAZADA (D1 cerrada). **Slice: 8F-11F.**
 
-### GAP-14 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Identidades String en 5 entidades
-FalActaFallo.id, FalActaApelacion.id, FalNotificacion.id, FalBloqueanteMaterial.id, FalGestionExterna.id ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â todos deben migrar a Long. **Slice: 8F-11B.**
+### GAP-14 ACTIVO — Identidades String en 5 entidades
+FalActaFallo.id, FalActaApelacion.id, FalNotificacion.id, FalBloqueanteMaterial.id, FalGestionExterna.id — todos deben migrar a Long. **Slice: 8F-11B.**
 
-### GAP-15 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â AuditorÃƒÆ’Ã‚Â­a ausente en entidades clave
+### GAP-15 ACTIVO — Auditoría ausente en entidades clave
 FalActa, FalActaFallo, FalActaApelacion, FalGestionExterna carecen de fh_alta, id_user_alta, fh_mod, id_user_mod. **Slice: 8F-11B.**
 
-### GAP-16 ACTIVO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SatÃƒÆ’Ã‚Â©lites de acta faltantes
-No existen: FalActaTransito, FalActaAlcoholemia, FalActaVehiculo, FalActaContravenciÃƒÆ’Ã‚Â³n, FalActaSustanciasAlimenticias, FalActaMedidaPreventiva. **Slice: 8F-11E.**
+### GAP-16 ACTIVO — Satélites de acta faltantes
+No existen: FalActaTransito, FalActaAlcoholemia, FalActaVehiculo, FalActaContravención, FalActaSustanciasAlimenticias, FalActaMedidaPreventiva. **Slice: 8F-11E.**
 
-### GAP-17 DIFERIBLE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Notificaciones ciclo completo faltante
+### GAP-17 DIFERIBLE — Notificaciones ciclo completo faltante
 FalNotificacionIntento, FalNotificacionAcuse, FalLoteCorreo no implementados. **Slice: 8F-11I.**
 
 ### GAP-18 CERRADO - QR portal
@@ -845,19 +887,19 @@ fal_acta_qr_acceso ALINEADO. FalActaQrAcceso + InMemoryQrAccesoRepository + QrAc
 
 ## 6. Decisiones cerradas P1 y P2 - Fase 5
 
-Ambas decisiones estÃƒÆ’Ã‚Â¡n cerradas. No reabrir.
+Ambas decisiones están cerradas. No reabrir.
 
 ---
 
-### DecisiÃƒÆ’Ã‚Â³n P1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ResultadoFinalActa: CERRADA
+### Decisión P1 — ResultadoFinalActa: CERRADA
 
-**DecisiÃƒÆ’Ã‚Â³n aprobada:** columna MariaDB `resultado_final SMALLINT NOT NULL`; enum Java con cÃƒÆ’Ã‚Â³digo explÃƒÆ’Ã‚Â­cito.
+**Decisión aprobada:** columna MariaDB `resultado_final SMALLINT NOT NULL`; enum Java con código explícito.
 
 **No usar:** ordinal Java, `name()`, VARCHAR, CHAR(6).
 
 **Valores definitivos:**
 
-| CÃƒÆ’Ã‚Â³digo | Valor |
+| Código | Valor |
 |---:|---|
 | 0 | `SIN_RESULTADO_FINAL` |
 | 1 | `PAGO_VOLUNTARIO_PAGADO` |
@@ -865,77 +907,77 @@ Ambas decisiones estÃƒÆ’Ã‚Â¡n cerradas. No reabrir.
 | 3 | `CONDENA_FIRME` |
 | 4 | `ANULADO` |
 
-**SemÃƒÆ’Ã‚Â¡ntica:**
+**Semántica:**
 
-- `ResultadoFinalActa` expresa la forma definitiva en que fue resuelta el acta, no el ÃƒÆ’Ã‚Âºltimo estado transitorio.
+- `ResultadoFinalActa` expresa la forma definitiva en que fue resuelta el acta, no el último estado transitorio.
 - Una solicitud de pago voluntario pendiente conserva `SIN_RESULTADO_FINAL`.
 - Solo el pago voluntario efectivamente acreditado produce `PAGO_VOLUNTARIO_PAGADO`.
 - El pago posterior de una condena no cambia `CONDENA_FIRME`.
-- El estado del pago vive en la obligaciÃƒÆ’Ã‚Â³n y sus movimientos.
-- GestiÃƒÆ’Ã‚Â³n externa no es un resultado final.
+- El estado del pago vive en la obligación y sus movimientos.
+- Gestión externa no es un resultado final.
 - `PRESCRIPTO` no existe en el dominio aprobado.
-- Archivo no equivale automÃƒÆ’Ã‚Â¡ticamente a resultado final.
+- Archivo no equivale automáticamente a resultado final.
 
-**Valores eliminados del enum (no deben existir en la implementaciÃƒÆ’Ã‚Â³n Java final):**
-- `PAGO_VOLUNTARIO_CONFIRMADO` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â eliminado; reemplazado por `PAGO_VOLUNTARIO_PAGADO`
-- `CONDENA_FIRME_PAGADA` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â eliminado; el pago no cambia `ResultadoFinalActa`
-- `FALLO_CONDENATORIO_PAGADO` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â eliminado
-- `FALLO_CONDENATORIO_GESTION_EXTERNA` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â eliminado; gestiÃƒÆ’Ã‚Â³n externa no es resultado final
-- `PRESCRIPTO` ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â eliminado; no existe en el dominio aprobado
-**ImplementaciÃƒÆ’Ã‚Â³n Java:** Slice 8F-11B.
+**Valores eliminados del enum (no deben existir en la implementación Java final):**
+- `PAGO_VOLUNTARIO_CONFIRMADO` — eliminado; reemplazado por `PAGO_VOLUNTARIO_PAGADO`
+- `CONDENA_FIRME_PAGADA` — eliminado; el pago no cambia `ResultadoFinalActa`
+- `FALLO_CONDENATORIO_PAGADO` — eliminado
+- `FALLO_CONDENATORIO_GESTION_EXTERNA` — eliminado; gestión externa no es resultado final
+- `PRESCRIPTO` — eliminado; no existe en el dominio aprobado
+**Implementación Java:** Slice 8F-11B.
 
-**Impacto en secciÃƒÆ’Ã‚Â³n 11.2:** La interpretaciÃƒÆ’Ã‚Â³n anterior de CHAR(6) queda reemplazada por esta decisiÃƒÆ’Ã‚Â³n. Ver correcciÃƒÆ’Ã‚Â³n en 11.2.
+**Impacto en sección 11.2:** La interpretación anterior de CHAR(6) queda reemplazada por esta decisión. Ver corrección en 11.2.
 
 ---
 
-### DecisiÃƒÆ’Ã‚Â³n P2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalActaFirmezaCondena: CERRADA (OpciÃƒÆ’Ã‚Â³n B)
+### Decisión P2 — FalActaFirmezaCondena: CERRADA (Opción B)
 
-**DecisiÃƒÆ’Ã‚Â³n aprobada:** refactor en 8F-11F.
+**Decisión aprobada:** refactor en 8F-11F.
 
-**Fuente de verdad jurÃƒÆ’Ã‚Â­dica:** la firmeza pertenece al fallo concreto y se persiste en `fal_acta_fallo`:
+**Fuente de verdad jurídica:** la firmeza pertenece al fallo concreto y se persiste en `fal_acta_fallo`:
 - `si_firme`
 - `fh_firmeza`
 - `origen_firmeza`
 
-**Estado operativo del acta:** la situaciÃƒÆ’Ã‚Â³n de firmeza vigente debe proyectarse en `FalActaSnapshot`.
+**Estado operativo del acta:** la situación de firmeza vigente debe proyectarse en `FalActaSnapshot`.
 
 **En 8F-11F:**
 - Completar `FalActaFallo` con siFirme, fhFirmeza, origenFirmeza.
 - Refactorizar servicios para escribir la firmeza sobre el fallo.
 - Eliminar `FalActaFirmezaCondena` como entidad persistible separada.
 - Eliminar `FirmezaCondenaRepository`.
-- Mantener proyecciÃƒÆ’Ã‚Â³n en snapshot.
+- Mantener proyección en snapshot.
 - No duplicar segunda fuente de verdad en `FalActa`.
 
 ---
 
-> No hay otras decisiones abiertas. D1 a D9 estÃƒÆ’Ã‚Â¡n cerradas y no deben reabrirse. P1 y P2 cerradas en 8F-11A-R1.
-## 7. Plan finito de implementaciÃƒÆ’Ã‚Â³n ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fase 6
+> No hay otras decisiones abiertas. D1 a D9 están cerradas y no deben reabrirse. P1 y P2 cerradas en 8F-11A-R1.
+## 7. Plan finito de implementación — Fase 6
 
-### 8F-11B ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Identidades, enums, auditorÃƒÆ’Ã‚Â­a, versionRow y campos core
-**Objetivo:** Eliminar todos los ids String, agregar cÃƒÆ’Ã‚Â³digos a enums core, agregar auditorÃƒÆ’Ã‚Â­a, corregir tipos de FK.
+### 8F-11B — Identidades, enums, auditoría, versionRow y campos core
+**Objetivo:** Eliminar todos los ids String, agregar códigos a enums core, agregar auditoría, corregir tipos de FK.
 
 **Entidades afectadas:**
-- FalActaFallo.id: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long
-- FalActaApelacion.id: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long
-- FalNotificacion.id: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long (D7)
-- FalBloqueanteMaterial.id: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long
-- FalGestionExterna.id: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long
-- FalActa.tipoActa: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ enum TipoActa con cÃƒÆ’Ã‚Â³digo SMALLINT (D8) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â valores 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4
-- `ResultadoFinalActa`: SMALLINT 0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4 definitivo (P1 CERRADA)
-- FalActa.idInspector, idDependencia: String ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long
-- Campos de auditorÃƒÆ’Ã‚Â­a en FalActa, FalActaFallo, FalActaApelacion, FalGestionExterna
+- FalActaFallo.id: String → Long
+- FalActaApelacion.id: String → Long
+- FalNotificacion.id: String → Long (D7)
+- FalBloqueanteMaterial.id: String → Long
+- FalGestionExterna.id: String → Long
+- FalActa.tipoActa: String → enum TipoActa con código SMALLINT (D8) — valores 1–4
+- `ResultadoFinalActa`: SMALLINT 0–4 definitivo (P1 CERRADA)
+- FalActa.idInspector, idDependencia: String → Long
+- Campos de auditoría en FalActa, FalActaFallo, FalActaApelacion, FalGestionExterna
 - `FalInspectorVersion`: campos de firma eliminados del modelo (GAP-8 ELIMINADO)
 - `versionRow INT` en FalActa, FalDocumento, FalNotificacion, FalGestionExterna y otras entidades existentes que lo requieran
 
-**Repositorios:** todos los mencionados arriba ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â actualizar AtomicLong counters
-**Tests:** todos los que usen ids de fallo/apelaciÃƒÆ’Ã‚Â³n/notificaciÃƒÆ’Ã‚Â³n/bloqueante/gestiÃƒÆ’Ã‚Â³n como String
-**DocumentaciÃƒÆ’Ã‚Â³n:** actualizar matriz 110 con ALINEADO para los campos corregidos
+**Repositorios:** todos los mencionados arriba — actualizar AtomicLong counters
+**Tests:** todos los que usen ids de fallo/apelación/notificación/bloqueante/gestión como String
+**Documentación:** actualizar matriz 110 con ALINEADO para los campos corregidos
 **Criterio de cierre:** Build >= 1509 tests, 0 failures; 0 entidades persistibles con id String (excepto uuid_tecnico en FalActa)
 
 ---
 
-### 8F-11C ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â FalPersona y FalPersonaDomicilio
+### 8F-11C — FalPersona y FalPersonaDomicilio
 **Objetivo:** Implementar entidades de persona separadas de FalActa.
 
 **Entidades a crear:** FalPersona (con tipo_persona, Id_Suj, Id_Bie), FalPersonaDomicilio (con modo_domicilio, refs geo)
@@ -946,72 +988,72 @@ Ambas decisiones estÃƒÆ’Ã‚Â¡n cerradas. No reabrir.
 
 ---
 
-### 8F-11D ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Normativa, tarifario, medidas y valorizaciÃƒÆ’Ã‚Â³n
-**Objetivo:** Implementar el modelo de cÃƒÆ’Ã‚Â¡lculo de montos.
+### 8F-11D — Normativa, tarifario, medidas y valorización
+**Objetivo:** Implementar el modelo de cálculo de montos.
 
 **Entidades a crear:** FalTarifarioUnidadFaltas, FalMedidaPreventiva, FalArticuloMedidaPreventiva, FalActaArticuloInfringido, FalActaValorizacion, FalActaValorizacionItem
 **Repositorios:** 6 repos + InMemory
 **Impacto:** FalActaFallo.montoCondena vinculado a FalActaValorizacion.id
-**Criterio de cierre:** ValorizaciÃƒÆ’Ã‚Â³n calculada desde artÃƒÆ’Ã‚Â­culos; build verde
+**Criterio de cierre:** Valorización calculada desde artículos; build verde
 
 ---
 
-### 8F-11E ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SatÃƒÆ’Ã‚Â©lites de acta y catÃƒÆ’Ã‚Â¡logos relacionados
-**Objetivo:** Implementar datos especÃƒÆ’Ã‚Â­ficos de cada tipo de acta y catÃƒÆ’Ã‚Â¡logos de soporte.
+### 8F-11E — Satélites de acta y catálogos relacionados
+**Objetivo:** Implementar datos específicos de cada tipo de acta y catálogos de soporte.
 
-**Entidades a crear ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â satÃƒÆ’Ã‚Â©lites:**
+**Entidades a crear — satélites:**
 - FalActaTransito, FalActaTransitoAlcoholemia, FalActaVehiculo
 - FalActaContravencion, FalActaSustanciasAlimenticias, FalActaMedidaPreventiva
 
-**Entidades a crear ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â catÃƒÆ’Ã‚Â¡logos:**
-- FalVehiculoMarca (id, descripcion, si_activo; CRUD; baja lÃƒÆ’Ã‚Â³gica)
-- FalVehiculoModelo (id, marca_vehiculo_id, descripcion, si_activo; modelo pertenece a marca; sin descripciÃƒÆ’Ã‚Â³n duplicada por marca)
-- FalRubroVersion (conservar versionado: row_hash, previous_row_hash, source_operation, close_operation, si_version_actual, valid_from, valid_to, synced_at; consultar por Id_Rub; recuperar versiÃƒÆ’Ã‚Â³n vigente)
+**Entidades a crear — catálogos:**
+- FalVehiculoMarca (id, descripcion, si_activo; CRUD; baja lógica)
+- FalVehiculoModelo (id, marca_vehiculo_id, descripcion, si_activo; modelo pertenece a marca; sin descripción duplicada por marca)
+- FalRubroVersion (conservar versionado: row_hash, previous_row_hash, source_operation, close_operation, si_version_actual, valid_from, valid_to, synced_at; consultar por Id_Rub; recuperar versión vigente)
 
-**Repositorios:** 6 + 3 catÃƒÆ’Ã‚Â¡logos + InMemory
-**Guardrail:** tipo_acta determina quÃƒÆ’Ã‚Â© satÃƒÆ’Ã‚Â©lite existe
+**Repositorios:** 6 + 3 catálogos + InMemory
+**Guardrail:** tipo_acta determina qué satélite existe
 **Dependencias:** 8F-11B (tipoActa correcto)
-**Criterio de cierre:** Cada tipo tiene satÃƒÆ’Ã‚Â©lite; guardrail activo; catÃƒÆ’Ã‚Â¡logos con repos InMemory; build verde
+**Criterio de cierre:** Cada tipo tiene satélite; guardrail activo; catálogos con repos InMemory; build verde
 
 ---
 
-### 8F-11F ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Fallo, firmeza y apelaciÃƒÆ’Ã‚Â³n
-**Objetivo:** Completar FalActaFallo y FalActaApelacion; refactorizar firmeza (P2 CERRADA OpciÃƒÆ’Ã‚Â³n B).
+### 8F-11F — Fallo, firmeza y apelación
+**Objetivo:** Completar FalActaFallo y FalActaApelacion; refactorizar firmeza (P2 CERRADA Opción B).
 
-**Cambios en FalActaFallo:** id ya Long (8F-11B); agregar valorizacionId, resultadoFallo, fhFirma, fhVtoApelacion, falloReemplazadoId, siFirme, fhFirmeza, origenFirmeza, versionRow, auditorÃƒÆ’Ã‚Â­a
-**Cambios en FalActaApelacion:** id ya Long (8F-11B); falloId ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Long; agregar canalApelacion, tipoPresentacion, textoApelacion, documentoResolucionId, versionRow, auditorÃƒÆ’Ã‚Â­a
+**Cambios en FalActaFallo:** id ya Long (8F-11B); agregar valorizacionId, resultadoFallo, fhFirma, fhVtoApelacion, falloReemplazadoId, siFirme, fhFirmeza, origenFirmeza, versionRow, auditoría
+**Cambios en FalActaApelacion:** id ya Long (8F-11B); falloId → Long; agregar canalApelacion, tipoPresentacion, textoApelacion, documentoResolucionId, versionRow, auditoría
 **Nuevas entidades:** FalActaApelacionDocumento
-**Firmeza (P2 CERRADA):** eliminar FalActaFirmezaCondena y FirmezaCondenaRepository; agregar siFirme, fhFirmeza, origenFirmeza (con cÃƒÆ’Ã‚Â³digo) a FalActaFallo; proyecciÃƒÆ’Ã‚Â³n en snapshot
+**Firmeza (P2 CERRADA):** eliminar FalActaFirmezaCondena y FirmezaCondenaRepository; agregar siFirme, fhFirmeza, origenFirmeza (con código) a FalActaFallo; proyección en snapshot
 **Dependencias:** 8F-11B (ids), 8F-11D (valorizacion_id)
-**Criterio de cierre:** FalActaFallo con todos los campos del modelo; apelaciÃƒÆ’Ã‚Â³n completa; firmeza resuelta; build verde
+**Criterio de cierre:** FalActaFallo con todos los campos del modelo; apelación completa; firmeza resuelta; build verde
 
 ---
 
-### 8F-11G ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ParalizaciÃƒÆ’Ã‚Â³n, archivo, motivos, observaciones y gestiÃƒÆ’Ã‚Â³n externa
-**Objetivo:** Implementar ciclos de paralizaciÃƒÆ’Ã‚Â³n y archivo; crear observaciones; completar gestiÃƒÆ’Ã‚Â³n externa.
+### 8F-11G — Paralización, archivo, motivos, observaciones y gestión externa
+**Objetivo:** Implementar ciclos de paralización y archivo; crear observaciones; completar gestión externa.
 
-**Entidades a crear:** FalActaParalizacion, FalActaArchivo, FalMotivoArchivo (id, descripcion, si_activo; FK desde fal_acta_archivo; motivos inactivos vÃƒÆ’Ã‚Â¡lidos histÃƒÆ’Ã‚Â³ricamente), FalObservacion
+**Entidades a crear:** FalActaParalizacion, FalActaArchivo, FalMotivoArchivo (id, descripcion, si_activo; FK desde fal_acta_archivo; motivos inactivos válidos históricamente), FalObservacion
 **Repos:** 4 repos + InMemory
 **Refactor:** PAGAPR escribe en FalObservacion en lugar de evento.descripcion
-**Dependencias:** 8F-11B (ids Long en gestiÃƒÆ’Ã‚Â³n externa ya corregidos)
-**Criterio de cierre:** Ciclo paralizaciÃƒÆ’Ã‚Â³n/cierre funciona; FalActaArchivo registra archivo; FalObservacion captura PAGAPR; FalMotivoArchivo con CRUD; build verde
+**Dependencias:** 8F-11B (ids Long en gestión externa ya corregidos)
+**Criterio de cierre:** Ciclo paralización/cierre funciona; FalActaArchivo registra archivo; FalObservacion captura PAGAPR; FalMotivoArchivo con CRUD; build verde
 
 ---
 
-### 8F-11H ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pagos reales unificados (D2 CERRADA)
+### 8F-11H — Pagos reales unificados (D2 CERRADA)
 **Objetivo:** Implementar modelo real de pagos unificado.
 
 **Entidades a crear:** FalActaObligacionPago, FalActaFormaPago, FalActaPlanPagoRef, FalActaPagoMovimiento
 **Enum aprobado:** OrigenObligacionPago (PAGO_VOLUNTARIO=1, CONDENA=2)
 **Repos:** 4 repos + InMemory; PagoVoluntarioRepository y PagoCondenaRepository eliminados o wrappers transitorios
-**MigraciÃƒÆ’Ã‚Â³n:** FalPagoVoluntario y FalPagoCondena ya no son entidades persistibles separadas
-**Dependencias:** 8F-11D (valorizaciÃƒÆ’Ã‚Â³n)
+**Migración:** FalPagoVoluntario y FalPagoCondena ya no son entidades persistibles separadas
+**Dependencias:** 8F-11D (valorización)
 **Criterio de cierre:** FalActaObligacionPago unifica ambos tipos de pago; ciclos de pago funcionan; build verde
 
 ---
 
-### 8F-11I ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Notificaciones completas
-**Objetivo:** Ciclo completo de notificaciÃƒÆ’Ã‚Â³n con intentos y acuses.
+### 8F-11I — Notificaciones completas
+**Objetivo:** Ciclo completo de notificación con intentos y acuses.
 
 **Entidades a crear:** FalNotificacionIntento, FalNotificacionAcuse, FalLoteCorreo
 **Repos:** 3 repos + InMemory
@@ -1020,7 +1062,7 @@ Ambas decisiones estÃƒÆ’Ã‚Â¡n cerradas. No reabrir.
 
 ---
 
-### 8F-11J ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Documentos y relaciones restantes
+### 8F-11J — Documentos y relaciones restantes
 **Objetivo:** Completar relaciones documentales.
 
 **Pendientes:** FalActaDocumento (pivot); FalDocumento campos faltantes (plantilla_id); no implementar PDF/storage real
@@ -1029,50 +1071,50 @@ Ambas decisiones estÃƒÆ’Ã‚Â¡n cerradas. No reabrir.
 
 ---
 
-### 8F-11K ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Portal QR y auditorÃƒÆ’Ã‚Â­a final de paridad cero
+### 8F-11K — Portal QR y auditoría final de paridad cero
 **Objetivo:** Implementar QrAcceso; verificar 62 tablas a 0 gaps.
 
 **Entidades a crear:** FalActaQrAcceso
 **Actividades:**
 - Recorrer la matriz 110 y confirmar: todos los estados son ALINEADO, SOLO_DEMO_TEST, SOLO_INFRAESTRUCTURA o NO_PERSISTIBLE
-- RevisiÃƒÆ’Ã‚Â³n final de las 62 tablas ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 0 gaps no justificados
+- Revisión final de las 62 tablas — 0 gaps no justificados
 - Actualizar 110 con estados finales
-- Verificar guardrails: Test-Path docs\spec-as-source desde raÃƒÆ’Ã‚Â­z = FALSE; sin @Entity; sin JpaRepository; sin SQL
+- Verificar guardrails: Test-Path docs\spec-as-source desde raíz = FALSE; sin @Entity; sin JpaRepository; sin SQL
 - Build final completo
 
 **Criterio de cierre (paridad total):**
-- 0 FALTA_EN_INMEMORY sin clasificaciÃƒÆ’Ã‚Â³n
+- 0 FALTA_EN_INMEMORY sin clasificación
 - 0 IDENTIDAD_INCOMPATIBLE
-- 0 TIPO_INCOMPATIBLE sin justificaciÃƒÆ’Ã‚Â³n
-- Matriz 110 al 100% ALINEADO o clasificaciÃƒÆ’Ã‚Â³n justificada
+- 0 TIPO_INCOMPATIBLE sin justificación
+- Matriz 110 al 100% ALINEADO o clasificación justificada
 - Build >= 1509 tests, 0 failures
 
 ---
-## 8. Tabla de decisiones cerradas D1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“D9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â referencia rÃƒÆ’Ã‚Â¡pida
+## 8. Tabla de decisiones cerradas D1–D9 — referencia rápida
 
 No volver a mostrar estas decisiones como pendientes.
 
-| # | DecisiÃƒÆ’Ã‚Â³n | DescripciÃƒÆ’Ã‚Â³n | Estado |
+| # | Decisión | Descripción | Estado |
 |---|---|---|---|
 | D1 | Firmeza | FalActaFirmezaCondena sin tabla; campos en fal_acta_fallo (fh_firmeza, si_firme, origen_firmeza SMALLINT NULL) | CERRADA |
-| D2 | Pagos | FalPagoVoluntario + FalPagoCondena ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ fal_acta_obligacion_pago con tipo_obligacion | CERRADA |
-| D3 | ParalizaciÃƒÆ’Ã‚Â³n | FalActaParalizacion: implementar InMemory antes de JDBC | CERRADA |
-| D4 | JSON | Campos JSON documentales ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ JSON nativo MariaDB 12.3.2 | CERRADA |
-| D5 | Fundamentos fallo | FalActaFallo.fundamentos ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ TEXT NULL directamente en fal_acta_fallo | CERRADA |
+| D2 | Pagos | FalPagoVoluntario + FalPagoCondena → fal_acta_obligacion_pago con tipo_obligacion | CERRADA |
+| D3 | Paralización | FalActaParalizacion: implementar InMemory antes de JDBC | CERRADA |
+| D4 | JSON | Campos JSON documentales → JSON nativo MariaDB 12.3.2 | CERRADA |
+| D5 | Fundamentos fallo | FalActaFallo.fundamentos → TEXT NULL directamente en fal_acta_fallo | CERRADA |
 | D6 | Persona | FalPersona + FalPersonaDomicilio: implementar InMemory antes de JDBC | CERRADA |
-| D7 | NotificaciÃƒÆ’Ã‚Â³n PK | FalNotificacion.id ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ BIGINT AUTO_INCREMENT sin UUID | CERRADA |
-| D8 | TipoActa | FalActa.tipoActa ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ enum TipoActa con cÃƒÆ’Ã‚Â³digo SMALLINT | CERRADA |
-| D9 | Prioridad default | fal_documento_plantilla_default.prioridad ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SMALLINT | CERRADA |
+| D7 | Notificación PK | FalNotificacion.id → BIGINT AUTO_INCREMENT sin UUID | CERRADA |
+| D8 | TipoActa | FalActa.tipoActa → enum TipoActa con código SMALLINT | CERRADA |
+| D9 | Prioridad default | fal_documento_plantilla_default.prioridad → SMALLINT | CERRADA |
 | GAP-1 | 3 tablas 8F | fal_documento_plantilla_contenido/default y fal_documento_redaccion en modelo MariaDB + Java alineado 8F-10-R2 | CERRADA |
 
 ---
 
-## 9. Checklist de validaciÃƒÆ’Ã‚Â³n ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 8F-11A (original) + 8F-11A-R1 (correcciÃƒÆ’Ã‚Â³n)
+## 9. Checklist de validación — 8F-11A (original) + 8F-11A-R1 (corrección)
 
-| ÃƒÆ’Ã‚Âtem | Estado |
+| Ítem | Estado |
 |------|--------|
 | Build ejecutado: 1509 tests, 0 failures, BUILD SUCCESS | VERIFICADO |
-| Test-Path docs\spec-as-source desde raÃƒÆ’Ã‚Â­z = FALSE (guardrail) | VERIFICADO |
+| Test-Path docs\spec-as-source desde raíz = FALSE (guardrail) | VERIFICADO |
 | Sin @Entity nuevo | VERIFICADO |
 | Sin JpaRepository | VERIFICADO |
 | Sin EntityManager | VERIFICADO |
@@ -1086,16 +1128,16 @@ No volver a mostrar estas decisiones como pendientes.
 | 31 entidades InMemory persistibles inventariadas | COMPLETADO |
 | 0 tablas sin estado asignado | COMPLETADO |
 | 0 entidades persistibles sin tabla candidata | COMPLETADO |
-| D1-D9 marcadas CERRADA en secciÃƒÆ’Ã‚Â³n 8 | COMPLETADO |
+| D1-D9 marcadas CERRADA en sección 8 | COMPLETADO |
 | 0 TODOs vagos sin slice asignado | COMPLETADO |
-| **P1 CERRADA: ResultadoFinalActa SMALLINT 0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4** | COMPLETADO (8F-11A-R1) |
+| **P1 CERRADA: ResultadoFinalActa SMALLINT 0–4** | COMPLETADO (8F-11A-R1) |
 | **P2 CERRADA: firmeza en fallo, refactor en 8F-11F** | COMPLETADO (8F-11A-R1) |
-| **29 tablas FALTA_EN_INMEMORY enumeradas explÃƒÆ’Ã‚Â­citamente** | COMPLETADO (8F-11A-R1) |
+| **29 tablas FALTA_EN_INMEMORY enumeradas explícitamente** | COMPLETADO (8F-11A-R1) |
 | Roadmap finito 8F-11B a 8F-11K con 9 slices | COMPLETADO |
-| SecciÃƒÆ’Ã‚Â³n 11.2 corregida (sin CHAR(6) incorrecto) | COMPLETADO (8F-11A-R1) |
+| Sección 11.2 corregida (sin CHAR(6) incorrecto) | COMPLETADO (8F-11A-R1) |
 
 ---
-## 10. Entrega final del slice ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 8F-11A (original) + 8F-11A-R1 (correcciÃƒÆ’Ã‚Â³n documental)
+## 10. Entrega final del slice — 8F-11A (original) + 8F-11A-R1 (corrección documental)
 
 | Indicador | Valor |
 |---|---|
@@ -1109,61 +1151,61 @@ No volver a mostrar estas decisiones como pendientes.
 | **FALTA_EN_INMEMORY (tablas completas)** | **29 tablas sin entidad Java** |
 | **IDENTIDAD_INCOMPATIBLE** | 0 (5 resueltas en 8F-11B) |
 | **TIPO_INCOMPATIBLE (campos)** | 0 (3 resueltos en 8F-11B) |
-| **SEMANTICA_INCOMPATIBLE** | 2 (FalPagoVoluntarioÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢D2, FalPagoCondenaÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢D2) + FalActaFirmezaCondenaÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢P2 CERRADA |
+| **SEMANTICA_INCOMPATIBLE** | 2 (FalPagoVoluntario→D2, FalPagoCondena→D2) + FalActaFirmezaCondena→P2 CERRADA |
 | **ENUM_SIN_CODIGO** | 0 (2 resueltos en 8F-11B) |
 | **RELACION_INCOMPLETA** | 3 (fal_acta_documento, fal_acta_apelacion_documento, inspector firma FK) |
 | **SOLO_DEMO_TEST** | 21 clases |
-| **SOLO_INFRAESTRUCTURA** | 2 categorÃƒÆ’Ã‚Â­as |
+| **SOLO_INFRAESTRUCTURA** | 2 categorías |
 | **NO_PERSISTIBLE** | 25+ (servicios, DTOs, enums puro Java) |
-| **P1 CERRADA: ResultadoFinalActa** | SMALLINT NOT NULL; 5 valores (0=SIN_RESULTADO_FINAL ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ 4=ANULADO) |
+| **P1 CERRADA: ResultadoFinalActa** | SMALLINT NOT NULL; 5 valores (0=SIN_RESULTADO_FINAL … 4=ANULADO) |
 | **P2 CERRADA: Firmeza** | siFirme/fhFirmeza/origenFirmeza en fal_acta_fallo; refactor en 8F-11F |
 | **Modelo unificado de pagos** | FalActaObligacionPago + OrigenObligacionPago; implementar en 8F-11H |
-| **4 catÃƒÆ’Ã‚Â¡logos confirmados** | VehiculoMarca, VehiculoModelo, RubroVersion (versionado), MotivoArchivo |
-| **Roadmap de cierre** | 8F-11B a 8F-11K ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 9 slices finitos |
+| **4 catálogos confirmados** | VehiculoMarca, VehiculoModelo, RubroVersion (versionado), MotivoArchivo |
+| **Roadmap de cierre** | 8F-11B a 8F-11K — 9 slices finitos |
 | **Proximo slice recomendado** | **8F-11C** - FalPersona y FalPersonaDomicilio |
 
 ---
 
-> **Criterio de cierre verificado (8F-11A-R1):** existen las 62 tablas inventariadas; las 29 tablas FALTA_EN_INMEMORY estÃƒÆ’Ã‚Â¡n enumeradas explÃƒÆ’Ã‚Â­citamente; P1 y P2 estÃƒÆ’Ã‚Â¡n cerradas; el roadmap cubre el 100% de las tablas persistibles (8F-11B a 8F-11K); el modelo MariaDB refleja `resultado_final SMALLINT NOT NULL`; build y guardrails verdes.
+> **Criterio de cierre verificado (8F-11A-R1):** existen las 62 tablas inventariadas; las 29 tablas FALTA_EN_INMEMORY están enumeradas explícitamente; P1 y P2 están cerradas; el roadmap cubre el 100% de las tablas persistibles (8F-11B a 8F-11K); el modelo MariaDB refleja `resultado_final SMALLINT NOT NULL`; build y guardrails verdes.
 
 ---
-## 11. Correcciones post-auditorÃƒÆ’Ã‚Â­a ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 8F-11A y 8F-11A-R1
+## 11. Correcciones post-auditoría — 8F-11A y 8F-11A-R1
 
 ### 11.1 Recuento de tablas corregido
 
 El modelo MariaDB final tiene **62 tablas** en el dominio Faltas, no 55.
 
-Las 7 tablas adicionales identificadas en la auditorÃƒÆ’Ã‚Â­a:
+Las 7 tablas adicionales identificadas en la auditoría:
 
-| Tabla adicional | ÃƒÆ’Ã‚Ârea | Estado InMemory |
+| Tabla adicional | Área | Estado InMemory |
 |---|---|---|
-| `fal_vehiculo_marca` | CatÃƒÆ’Ã‚Â¡logo de vehÃƒÆ’Ã‚Â­culos ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â trÃƒÆ’Ã‚Â¡nsito | **ALINEADO** (8F-11E) |
-| `fal_vehiculo_modelo` | CatÃƒÆ’Ã‚Â¡logo de vehÃƒÆ’Ã‚Â­culos ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â trÃƒÆ’Ã‚Â¡nsito | **ALINEADO** (8F-11E) |
-| `fal_rubro_version` | CatÃƒÆ’Ã‚Â¡logo rubros versionado ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â contravenciÃƒÆ’Ã‚Â³n | **ALINEADO** (8F-11E) |
-| `fal_motivo_archivo` | CatÃƒÆ’Ã‚Â¡logo motivo de archivo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â administrable | FALTA_EN_INMEMORY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Slice 8F-11G |
-| `stor_backend` | Storage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â infraestructura tÃƒÆ’Ã‚Â©cnica | NO_PERSISTIBLE desde dominio Faltas |
-| `stor_politica` | Storage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â infraestructura tÃƒÆ’Ã‚Â©cnica | NO_PERSISTIBLE desde dominio Faltas |
-| `stor_objeto` | Storage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â referencia binarios | NO_PERSISTIBLE (storage_key en entidades de dominio) |
+| `fal_vehiculo_marca` | Catálogo de vehículos — tránsito | **ALINEADO** (8F-11E) |
+| `fal_vehiculo_modelo` | Catálogo de vehículos — tránsito | **ALINEADO** (8F-11E) |
+| `fal_rubro_version` | Catálogo rubros versionado — contravención | **ALINEADO** (8F-11E) |
+| `fal_motivo_archivo` | Catálogo motivo de archivo — administrable | FALTA_EN_INMEMORY — Slice 8F-11G |
+| `stor_backend` | Storage — infraestructura técnica | NO_PERSISTIBLE desde dominio Faltas |
+| `stor_politica` | Storage — infraestructura técnica | NO_PERSISTIBLE desde dominio Faltas |
+| `stor_objeto` | Storage — referencia binarios | NO_PERSISTIBLE (storage_key en entidades de dominio) |
 
-**Nota:** `fal_rubro_version` es una tabla de dominio Faltas con sincronizaciÃƒÆ’Ã‚Â³n externa (Informix). No es infraestructura tÃƒÆ’Ã‚Â©cnica. Requiere entidad `FalRubroVersion` con InMemory, respetando el modelo de versionado (`row_hash`, `previous_row_hash`, `source_operation`, `close_operation`, `si_version_actual`, `valid_from`, `valid_to`, `synced_at`).
+**Nota:** `fal_rubro_version` es una tabla de dominio Faltas con sincronización externa (Informix). No es infraestructura técnica. Requiere entidad `FalRubroVersion` con InMemory, respetando el modelo de versionado (`row_hash`, `previous_row_hash`, `source_operation`, `close_operation`, `si_version_actual`, `valid_from`, `valid_to`, `synced_at`).
 
-Tablas geogrÃƒÆ’Ã‚Â¡ficas `geo_*` (geo_ign_*, geo_indec_*, geo_bahra_*, geo_malv_*): externas a Faltas, no administradas por este mÃƒÆ’Ã‚Â³dulo. Clasificadas NO_PERSISTIBLE a efectos de paridad Faltas.
+Tablas geográficas `geo_*` (geo_ign_*, geo_indec_*, geo_bahra_*, geo_malv_*): externas a Faltas, no administradas por este módulo. Clasificadas NO_PERSISTIBLE a efectos de paridad Faltas.
 
 ---
 
-### 11.2 DecisiÃƒÆ’Ã‚Â³n P1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â CERRADA (correcciÃƒÆ’Ã‚Â³n 8F-11A-R1)
+### 11.2 Decisión P1 — CERRADA (corrección 8F-11A-R1)
 
-**ÃƒÂ¢Ã…Â¡Ã‚Â  CorrecciÃƒÆ’Ã‚Â³n:** La secciÃƒÆ’Ã‚Â³n 11.2 original decÃƒÆ’Ã‚Â­a que `resultado_final` era `CHAR(6)` (incorrecto). Esa interpretaciÃƒÆ’Ã‚Â³n era incorrecta. La decisiÃƒÆ’Ã‚Â³n aprobada de dominio reemplaza esa definiciÃƒÆ’Ã‚Â³n.
+**⚠ Corrección:** La sección 11.2 original decía que `resultado_final` era `CHAR(6)` (incorrecto). Esa interpretación era incorrecta. La decisión aprobada de dominio reemplaza esa definición.
 
-**DecisiÃƒÆ’Ã‚Â³n definitiva aprobada:**
+**Decisión definitiva aprobada:**
 
 `resultado_final SMALLINT NOT NULL` en `fal_acta`.
 
-**Por quÃƒÆ’Ã‚Â© no CHAR(6):** Aunque otros campos de estado del acta usan CHAR(4/6) como cÃƒÆ’Ã‚Â³digo corto de texto (`bloque_actual CHAR(4)`, `est_proc_act CHAR(4)`, `sit_adm_act CHAR(4)`), `resultado_final` es diferente en naturaleza: es el resultado final de resoluciÃƒÆ’Ã‚Â³n del expediente, con un dominio cerrado de 5 valores enteros, y se persiste con un cÃƒÆ’Ã‚Â³digo numÃƒÆ’Ã‚Â©rico explÃƒÆ’Ã‚Â­cito para garantizar estabilidad, eficiencia de ÃƒÆ’Ã‚Â­ndice y compatibilidad con la capa JDBC.
+**Por qué no CHAR(6):** Aunque otros campos de estado del acta usan CHAR(4/6) como código corto de texto (`bloque_actual CHAR(4)`, `est_proc_act CHAR(4)`, `sit_adm_act CHAR(4)`), `resultado_final` es diferente en naturaleza: es el resultado final de resolución del expediente, con un dominio cerrado de 5 valores enteros, y se persiste con un código numérico explícito para garantizar estabilidad, eficiencia de índice y compatibilidad con la capa JDBC.
 
 **Valores definitivos:**
 
-| CÃƒÆ’Ã‚Â³digo SMALLINT | Constante Java |
+| Código SMALLINT | Constante Java |
 |---:|---|
 | 0 | `SIN_RESULTADO_FINAL` |
 | 1 | `PAGO_VOLUNTARIO_PAGADO` |
@@ -1175,26 +1217,26 @@ Tablas geogrÃƒÆ’Ã‚Â¡ficas `geo_*` (geo_ign_*, geo_indec_*, geo_bahra_*
 - Una solicitud de pago voluntario pendiente conserva `SIN_RESULTADO_FINAL`.
 - Solo el pago voluntario efectivamente acreditado produce `PAGO_VOLUNTARIO_PAGADO`.
 - El pago posterior de una condena no cambia `CONDENA_FIRME`.
-- GestiÃƒÆ’Ã‚Â³n externa no es un resultado final.
+- Gestión externa no es un resultado final.
 - `PRESCRIPTO` no existe.
-- Archivo no equivale automÃƒÆ’Ã‚Â¡ticamente a resultado final.
+- Archivo no equivale automáticamente a resultado final.
 
 **Enum eliminado:** `PAGO_VOLUNTARIO_CONFIRMADO`, `CONDENA_FIRME_PAGADA`, `FALLO_CONDENATORIO_PAGADO`, `FALLO_CONDENATORIO_GESTION_EXTERNA`, `PRESCRIPTO` no deben existir en el enum final.
 
-**ImplementaciÃƒÆ’Ã‚Â³n Java:** Slice 8F-11B.
+**Implementación Java:** Slice 8F-11B.
 
 ---
 
 ### 11.3 Correcciones de tipo en FalActa
 
-| Campo Java | Tipo Java actual | Tipo MariaDB real | CorrecciÃƒÆ’Ã‚Â³n |
+| Campo Java | Tipo Java actual | Tipo MariaDB real | Corrección |
 |---|---|---|---|
-| `tipoActa` | String | `tipo_acta SMALLINT` | TIPO_INCOMPATIBLE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â agregar TipoActa enum con short 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4 |
+| `tipoActa` | String | `tipo_acta SMALLINT` | TIPO_INCOMPATIBLE — agregar TipoActa enum con short 1–4 |
 | `bloqueActual` | BloqueActual (enum) | `bloque_actual CHAR(4)` | ALINEADO si el enum usa String CAPT/ENRI/etc. |
-| `estadoProcesal` | EstadoProcesalActa | `est_proc_act CHAR(4)` | verificar cÃƒÆ’Ã‚Â³digos en 8F-11B |
-| `situacionAdministrativa` | SituacionAdministrativaActa | `sit_adm_act CHAR(4)` | verificar cÃƒÆ’Ã‚Â³digos en 8F-11B |
-| `resultadoFinal` | ResultadoFinalActa | `resultado_final SMALLINT NOT NULL` | TIPO_INCOMPATIBLE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â P1 CERRADA; implementar short 0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4 en 8F-11B |
-| `resultadoFirmaInfractor` | ResultadoFirmaInfractor | `resultado_firma_infractor SMALLINT` | ALINEADO (short 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“5 ya en enum) |
+| `estadoProcesal` | EstadoProcesalActa | `est_proc_act CHAR(4)` | verificar códigos en 8F-11B |
+| `situacionAdministrativa` | SituacionAdministrativaActa | `sit_adm_act CHAR(4)` | verificar códigos en 8F-11B |
+| `resultadoFinal` | ResultadoFinalActa | `resultado_final SMALLINT NOT NULL` | TIPO_INCOMPATIBLE — P1 CERRADA; implementar short 0–4 en 8F-11B |
+| `resultadoFirmaInfractor` | ResultadoFirmaInfractor | `resultado_firma_infractor SMALLINT` | ALINEADO (short 1–5 ya en enum) |
 
 ---
 
@@ -1209,37 +1251,37 @@ El modelo exige `version_row INT NOT NULL DEFAULT 0` en al menos:
 
 **Entidades existentes con versionRow (8F-11B CERRADO):** FalActa, FalDocumento, FalNotificacion, FalGestionExterna, FalActaFallo, FalActaApelacion.
 
-**Entidades futuras que nacerÃƒÆ’Ã‚Â¡n con versionRow** (en cada slice de creaciÃƒÆ’Ã‚Â³n): FalActaValorizacion (8F-11D), FalActaParalizacion (8F-11G), FalActaArchivo (8F-11G), FalActaObligacionPago (8F-11H), FalActaFormaPago (8F-11H), FalActaPlanPagoRef (8F-11H).
+**Entidades futuras que nacerán con versionRow** (en cada slice de creación): FalActaValorizacion (8F-11D), FalActaParalizacion (8F-11G), FalActaArchivo (8F-11G), FalActaObligacionPago (8F-11H), FalActaFormaPago (8F-11H), FalActaPlanPagoRef (8F-11H).
 
 ---
 
-### 11.5 FalPersona mÃƒÆ’Ã‚Â¡s compleja de lo documentado
+### 11.5 FalPersona más compleja de lo documentado
 
 `fal_persona` incluye:
 - `tipo_persona` SMALLINT (FISICA=1, JURIDICA=2)
-- `Id_Suj`, `Id_Bie` BIGINT ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â integraciÃƒÆ’Ã‚Â³n Ingresos
+- `Id_Suj`, `Id_Bie` BIGINT — integración Ingresos
 - `SujBieEstado` SMALLINT (sin cuenta / activa / inactiva)
-- `fh_ult_mod`, `id_user_ult_mod` (auditorÃƒÆ’Ã‚Â­a completa)
+- `fh_ult_mod`, `id_user_ult_mod` (auditoría completa)
 
-`fal_persona_domicilio` es mÃƒÆ’Ã‚Â¡s compleja:
+`fal_persona_domicilio` es más compleja:
 - `modo_domicilio` (MALVINAS_LOCAL / EXTERNO)
 - refs geo versionadas Malvinas
-- `origen_domicilio`, mÃƒÆ’Ã‚Âºltiples FKs geo
+- `origen_domicilio`, múltiples FKs geo
 
 Impacto en 8F-11C: `FalPersona` necesita campos de Ingresos y tipo_persona; `FalPersonaDomicilio` necesita modo_domicilio y refs geo simplificadas para InMemory.
 
 ---
 
-### 11.6 Enums que ya tienen cÃƒÆ’Ã‚Â³digo short (confirmado en auditorÃƒÆ’Ã‚Â­a 8F-11A)
+### 11.6 Enums que ya tienen código short (confirmado en auditoría 8F-11A)
 
 Con `short codigo()` implementado:
-`AccionDocumental` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“11), `AlcanceTalonario` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3), `ClaseNumeracion` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“2), `EstadoAsignacionTalonario` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4), `EstadoDocu` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“7), `EstadoFirma` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“6), `EstadoFirmaReq` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“5), `EstadoNumeroTalonario` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“5), `EstadoRedaccionDocumento` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3), `MomentoNumeracionDocu` (0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4), `MotivoAnulacionTalonario` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“5), `ResultadoFirmaInfractor` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“5), `TipoDocu` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“12), `TipoEvidenciaActa` (6), `TipoFirma` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4), `TipoFirmaReq` (0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“5), `TipoTalonario` (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“2).
+`AccionDocumental` (1–11), `AlcanceTalonario` (1–3), `ClaseNumeracion` (1–2), `EstadoAsignacionTalonario` (1–4), `EstadoDocu` (1–7), `EstadoFirma` (1–6), `EstadoFirmaReq` (1–5), `EstadoNumeroTalonario` (1–5), `EstadoRedaccionDocumento` (1–3), `MomentoNumeracionDocu` (0–4), `MotivoAnulacionTalonario` (1–5), `ResultadoFirmaInfractor` (1–5), `TipoDocu` (1–12), `TipoEvidenciaActa` (6), `TipoFirma` (1–4), `TipoFirmaReq` (0–5), `TipoTalonario` (1–2).
 
-Con valores String directos (CHAR(4/6) en MariaDB ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â patrÃƒÆ’Ã‚Â³n correcto):
+Con valores String directos (CHAR(4/6) en MariaDB — patrón correcto):
 `BloqueActual`, `TipoEventoActa`, `EstadoProcesalActa`, `SituacionAdministrativaActa`.
 
-Sin cÃƒÆ’Ã‚Â³digo confirmado (verificar en 8F-11B):
-`EstadoApelacionActa`, `EstadoBloqueanteMaterial`, `EstadoFalloActa`, `EstadoGestionExterna`, `EstadoNotificacion`, `EstadoPagoCondena`, `EstadoPagoVoluntario`, `ModoReingresoGestionExterna`, `OrigenBloqueanteMaterial`, `ResultadoGestionExterna`, `ResultadoNotificacion`, `TipoActa` (pendiente SMALLINT 1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4), `TipoGestionExterna`, `TipoUnidad`.
+Sin código confirmado (verificar en 8F-11B):
+`EstadoApelacionActa`, `EstadoBloqueanteMaterial`, `EstadoFalloActa`, `EstadoGestionExterna`, `EstadoNotificacion`, `EstadoPagoCondena`, `EstadoPagoVoluntario`, `ModoReingresoGestionExterna`, `OrigenBloqueanteMaterial`, `ResultadoGestionExterna`, `ResultadoNotificacion`, `TipoActa` (pendiente SMALLINT 1–4), `TipoGestionExterna`, `TipoUnidad`.
 
 ---
 
@@ -1326,15 +1368,15 @@ Delta 1755 -> 1785 = 30 tests, todos en ValorizacionInvariantesR1Test. Explicaci
 
 ---
 
-## ActualizaciÃƒÆ’Ã‚Â³n 8F-11D (2026-07-05)
+## Actualización 8F-11D (2026-07-05)
 
 ### Tablas alineadas (6)
-1. fal_tarifario_unidad_faltas ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FalTarifarioUnidadFaltas
-2. fal_medida_preventiva ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FalMedidaPreventiva
-3. fal_articulo_medida_preventiva ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FalArticuloMedidaPreventiva (PK compuesta via ArticuloMedidaPreventivaId)
-4. fal_acta_articulo_infringido ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FalActaArticuloInfringido
-5. fal_acta_valorizacion ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FalActaValorizacion (versionRow, optimistic locking)
-6. fal_acta_valorizacion_item ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ FalActaValorizacionItem
+1. fal_tarifario_unidad_faltas → FalTarifarioUnidadFaltas
+2. fal_medida_preventiva → FalMedidaPreventiva
+3. fal_articulo_medida_preventiva → FalArticuloMedidaPreventiva (PK compuesta via ArticuloMedidaPreventivaId)
+4. fal_acta_articulo_infringido → FalActaArticuloInfringido
+5. fal_acta_valorizacion → FalActaValorizacion (versionRow, optimistic locking)
+6. fal_acta_valorizacion_item → FalActaValorizacionItem
 
 ### Enums nuevos con short codigo()
 - TipoUnidadFaltas: 1=SALARIO, 2=UNIDAD_FIJA, 3=MONTO
@@ -1347,9 +1389,9 @@ Delta 1755 -> 1785 = 30 tests, todos en ValorizacionInvariantesR1Test. Explicaci
 - MotivoManualizacionValorizacion: 1=CRITERIO_AUTORIDAD ... 5=OTRO_FUNDADO
 
 ### Conteo actualizado
-- **27 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ 21 tablas FALTA_EN_INMEMORY** (29 originales - 2 de 8F-11C - 6 de 8F-11D = 21)
-- Tests: 1660 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ **1755** (8F-11D) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ **1785** (8F-11D-R1: +30 tests en ValorizacionInvariantesR1Test)
-- PrÃƒÆ’Ã‚Â³ximo slice: **8F-11E**
+- **27 → 21 tablas FALTA_EN_INMEMORY** (29 originales - 2 de 8F-11C - 6 de 8F-11D = 21)
+- Tests: 1660 → **1755** (8F-11D) → **1785** (8F-11D-R1: +30 tests en ValorizacionInvariantesR1Test)
+- Próximo slice: **8F-11E**
 
 ---
 
@@ -1390,3 +1432,75 @@ Delta 1755 -> 1785 = 30 tests, todos en ValorizacionInvariantesR1Test. Explicaci
 > 8F-11D-R1 CERRADO 8F-11D-R1 - 1785 tests - 32 ALINEADO - 21 FALTA_EN_INMEMORY - 4 PARCIAL
 CERRADO 8F-11E - 1901 tests - 41 ALINEADO - 12 FALTA_EN_INMEMORY - 4 PARCIAL RELACION_INCOMPLETA - 3 NO_PERSISTIBLE stor_* - Total: 62 tablas explicadas.
 
+| Aspecto temporal | InMemory | MariaDB |
+|---|---|---|
+| Origen timestamp funcional | FaltasClock (servicio) | Mismo valor recibido del servicio |
+| Tests deterministas | Clock.fixed via FaltasClockTestSupport | Mismos asserts con reloj fijo |
+| Regresion | FaltasClockUsageGuardTest | N/A (misma regla de origen) |
+
+
+### Garantias OCC - CIERRE-OCC-INMEMORY-PRE-R11 (2026-07-09)
+
+| Garantia | InMemory | MariaDB |
+|---|---|---|
+| OCC | `ConcurrentHashMap.compute()` - CAS atomico por `idActa` | `UPDATE ... WHERE id=? AND version_row=?` |
+| Ganador | Primer thread cuya lambda en `compute` pasa el check | Primera transaccion que actualiza la fila |
+| Perdedor | `ConcurrenciaConflictoException` (RuntimeException) | `rowsAffected==0` -> misma excepcion |
+| Incremento | `versionRow = esperado + 1` (exactamente una vez) | `version_row = version_row + 1` (exactamente una vez) |
+| Aislamiento | Por `idActa`: actas distintas no se bloquean entre si | Por `id_acta`: filas distintas no se bloquean entre si |
+| Estado parcial del perdedor | Ninguno: mapa sin cambios | Ninguno: fila sin cambios (rollback implicito) |
+
+---
+
+## Cierre pre-MariaDB — R-08, OCC y R-11
+
+### R-08 — Tiempo determinista con `FaltasClock`
+
+Estado: **CERRADO**.
+
+- `FaltasClock` es la abstracción temporal canónica del módulo.
+- Zona funcional: `America/Argentina/Buenos_Aires`.
+- Un único instante por operación.
+- Eliminadas lecturas directas de tiempo en los flujos auditados.
+- Tests de reloj inyectable e instante único por operación.
+
+### OCC InMemory — Concurrencia optimista
+
+Estado: **CERRADO**.
+
+- Control de concurrencia optimista atómico en repositorios InMemory.
+- `ActaConcurrenciaTest`: **50/50 PASS**.
+- Suite previa a R-11: **2461 tests, 0 failures, 0 errors**.
+- No quedó una falla aislada atribuible solo a la suite completa.
+
+### R-11 — Contrato global de errores HTTP
+
+Estado: **CERRADO**.
+
+- DTO canónico: `ErrorResponse`.
+- Advice global: `GlobalFaltasControllerAdvice`.
+- Eliminados handlers locales duplicados en 21 controladores.
+- Cobertura arquitectural de 50 excepciones de dominio.
+- OCC: HTTP 409.
+- Precondiciones: HTTP 422.
+- Validaciones/request inválido: HTTP 400.
+- No encontrado: HTTP 404.
+- Método/media type: HTTP 405/415.
+- 401/403 preservados por Spring Security.
+- Fallback 500 seguro, sin exposición de stack trace.
+- Suite final: **2478 tests, 0 failures, 0 errors**.
+- Sin cambios de dominio, rutas, eventos, estados ni transiciones.
+- Sin JDBC/JPA/MariaDB/DDL en este cierre.
+
+### Estado de preparación para persistencia
+
+Precondiciones cumplidas:
+- tiempo determinista;
+- OCC estabilizado;
+- contrato global de errores;
+- suite completa verde;
+- modelo InMemory preservado como referencia de paridad.
+
+Siguiente slice autorizado:
+
+> **8F-12A / Slice 9 — Infraestructura y DDL MariaDB**

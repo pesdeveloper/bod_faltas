@@ -73,8 +73,8 @@ class ObligacionPagoTest {
         @Test
         void estadoObligacionPago_todosLosCodigos() {
             assertThat(EstadoObligacionPago.DETERMINADA.codigo()).isEqualTo((short) 1);
-            assertThat(EstadoObligacionPago.CANCELADA.codigo()).isEqualTo((short) 6);
-            assertThat(EstadoObligacionPago.ANULADA.codigo()).isEqualTo((short) 7);
+            assertThat(EstadoObligacionPago.CANCELADA_POR_PAGO.codigo()).isEqualTo((short) 4);
+            assertThat(EstadoObligacionPago.DEJADA_SIN_EFECTO.codigo()).isEqualTo((short) 6);
         }
         @Test
         void esVoluntaria_esCondena() {
@@ -94,7 +94,7 @@ class ObligacionPagoTest {
         void cancelar_transicion_correcta() {
             FalActaObligacionPago o = nueva(1L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
             o.cancelar(AHORA);
-            assertThat(o.estaCancelada()).isTrue();
+            assertThat(o.estaCanceladaPorPago()).isTrue();
             assertThat(o.getFhCancelacion()).isEqualTo(AHORA);
         }
         @Test
@@ -112,8 +112,8 @@ class ObligacionPagoTest {
         @Test
         void anular_desactivaVigente() {
             FalActaObligacionPago o = nueva(1L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
-            o.anular();
-            assertThat(o.estaAnulada()).isTrue();
+            o.dejarSinEfecto();
+            assertThat(o.estaDejadaSinEfecto()).isTrue();
             assertThat(o.isSiVigente()).isFalse();
         }
     }
@@ -143,9 +143,9 @@ class ObligacionPagoTest {
             repo.save(o);
             FalActaObligacionPago v0 = repo.findById(1L).get();
             FalActaObligacionPago v0b = repo.findById(1L).get();
-            v0.setEstadoObligacion(EstadoObligacionPago.DEUDA_EMITIDA);
+            v0.setEstadoObligacion(EstadoObligacionPago.PENDIENTE_FORMA_PAGO);
             repo.save(v0);
-            v0b.setEstadoObligacion(EstadoObligacionPago.CANCELADA);
+            v0b.setEstadoObligacion(EstadoObligacionPago.CANCELADA_POR_PAGO);
             assertThatThrownBy(() -> repo.save(v0b))
                     .isInstanceOf(ConcurrenciaConflictoException.class);
         }

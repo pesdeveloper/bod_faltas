@@ -28,6 +28,7 @@ import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -66,6 +67,7 @@ public class PagoCondenaService {
     private final PagoCondenaRepository pagoCondenaRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final BloqueantesMaterialesChecker bloqueantesMaterialesChecker;
+    private final FaltasClock faltasClock;
 
     public PagoCondenaService(
             ActaRepository actaRepository,
@@ -74,7 +76,9 @@ public class PagoCondenaService {
             FalloActaRepository falloActaRepository,
             PagoCondenaRepository pagoCondenaRepository,
             SnapshotRecalculador snapshotRecalculador,
-            BloqueantesMaterialesChecker bloqueantesMaterialesChecker) {
+            BloqueantesMaterialesChecker bloqueantesMaterialesChecker,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -111,7 +115,7 @@ public class PagoCondenaService {
         pago.setMonto(cmd.monto());
         pago.setReferenciaPago(cmd.referenciaPago());
         pago.setEstadoPagoCondena(EstadoPagoCondena.INFORMADO);
-        pago.setFechaInforme(LocalDateTime.now());
+        pago.setFechaInforme(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoCondenaRepository.guardar(pago);
 
@@ -146,7 +150,7 @@ public class PagoCondenaService {
         boolean hayBloqueantes = bloqueantesMaterialesChecker.tieneBloqueantesActivos(cmd.actaId());
 
         pago.setEstadoPagoCondena(EstadoPagoCondena.CONFIRMADO);
-        pago.setFechaConfirmacion(LocalDateTime.now());
+        pago.setFechaConfirmacion(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoCondenaRepository.guardar(pago);
 
@@ -201,7 +205,7 @@ public class PagoCondenaService {
 
         pago.setEstadoPagoCondena(EstadoPagoCondena.OBSERVADO);
         pago.setMotivoObservacion(cmd.motivoObservacion());
-        pago.setFechaObservacion(LocalDateTime.now());
+        pago.setFechaObservacion(faltasClock.now());
         if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
         pagoCondenaRepository.guardar(pago);
 
@@ -283,7 +287,7 @@ public class PagoCondenaService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

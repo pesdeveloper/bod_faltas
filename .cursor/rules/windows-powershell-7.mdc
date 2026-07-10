@@ -1,0 +1,51 @@
+---
+description: Reglas obligatorias de PowerShell, codificación y Git para Bod-Faltas en Windows
+globs:
+alwaysApply: true
+---
+
+# PowerShell y terminal en Windows
+
+Cuando el entorno sea Windows:
+
+- Usar exclusivamente PowerShell 7 mediante `pwsh.exe`.
+- No ejecutar `powershell.exe` ni Windows PowerShell 5.1.
+- Para scripts, usar `pwsh -NoProfile -File <script.ps1>`.
+- Cuando sea relevante, verificar que:
+  - `$PSVersionTable.PSEdition` sea `Core`.
+  - `$PSVersionTable.PSVersion.Major` sea igual o mayor que `7`.
+  - El proceso corresponda a `C:\Program Files\PowerShell\7\pwsh.exe`.
+- Si `pwsh` no está disponible en PATH, usar:
+  `C:\Program Files\PowerShell\7\pwsh.exe`.
+
+# Codificación
+
+- Tratar todos los archivos activos de texto como UTF-8.
+- Para Java, XML, YAML, Markdown, SQL, JSON, TXT y CSV, preservar LF.
+- Respetar siempre `.gitattributes`.
+- No convertir archivos masivamente entre CRLF y LF.
+- No aplicar recodificaciones globales o ciegas.
+- No reemplazar mojibake, `??` o `�` sin verificar el contenido original o una fuente confiable.
+- Al escribir archivos mediante PowerShell, usar explícitamente UTF-8 cuando exista riesgo de ambigüedad.
+- No usar Windows PowerShell 5.1 para generar o modificar archivos Unicode.
+
+# Git
+
+- No ejecutar `git add -A`, `git add .` ni staging global.
+- Usar staging selectivo por archivo o directorio previamente auditado.
+- No ejecutar `git commit` ni `git push` sin autorización explícita del usuario.
+- No ejecutar `git reset --hard`.
+- No descartar cambios existentes que no pertenezcan al slice actual.
+- Antes de cerrar un trabajo, mostrar:
+  - `git status --short`
+  - `git diff --cached --stat`
+  - `git diff --cached --check`
+- Excluir del staging artefactos locales, logs, backups, recuperaciones, `__pycache__`, `.pyc` y scripts temporales.
+
+# Bod-Faltas
+
+- El repositorio principal es `S:\Source\Repos\Bod-Faltas`.
+- La spec-as-source activa debe permanecer íntegra y en UTF-8.
+- El modelo InMemory es el oráculo de paridad durante la incorporación de MariaDB.
+- No modificar reglas de dominio, estados, eventos, transiciones o contratos fuera del alcance explícito del slice.
+- No iniciar JDBC, JPA, MariaDB o DDL salvo que el slice lo autorice expresamente.

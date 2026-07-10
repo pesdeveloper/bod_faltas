@@ -13,6 +13,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalNormativaFaltas;
 import ar.gob.malvinas.faltas.core.repository.DependenciaRepository;
 import ar.gob.malvinas.faltas.core.repository.NormativaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,7 +25,11 @@ public class NormativaService {
     private final DependenciaRepository dependenciaRepository;
     private final AtomicLong secNormativa = new AtomicLong(1);
     private final AtomicLong secArticulo = new AtomicLong(1);
-    public NormativaService(NormativaRepository normativaRepository, DependenciaRepository dependenciaRepository) {
+        private final FaltasClock faltasClock;
+
+    public NormativaService(NormativaRepository normativaRepository, DependenciaRepository dependenciaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.normativaRepository = normativaRepository;
         this.dependenciaRepository = dependenciaRepository;
     }
@@ -37,11 +42,12 @@ public class NormativaService {
             throw new PrecondicionVioladaException("nombreNorma es obligatorio.");
         if (normativaRepository.existsNormativaByCodigoYVersion(cmd.codigoNorma(), cmd.versionNorma()))
             throw new PrecondicionVioladaException("Ya existe normativa con codigoNorma=" + cmd.codigoNorma() + " versionNorma=" + cmd.versionNorma());
-        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : LocalDate.now();
+        LocalDateTime ahoraNorm = faltasClock.now();
+        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : ahoraNorm.toLocalDate();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
         FalNormativaFaltas n = new FalNormativaFaltas(secNormativa.getAndIncrement(),
                 cmd.codigoNorma(), cmd.versionNorma(), cmd.nombreNorma(),
-                fhVigDesde, LocalDateTime.now(), idUserAlta);
+                fhVigDesde, ahoraNorm, idUserAlta);
         n.setDescripcionNorma(cmd.descripcionNorma());
         return normativaRepository.guardarNormativa(n);
     }
@@ -75,13 +81,14 @@ public class NormativaService {
             if (cmd.tipoUnidadPagoVoluntario() == null)
                 throw new PrecondicionVioladaException("tipoUnidadPagoVoluntario es requerido cuando siTienePagoVoluntario=true.");
         }
-        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : LocalDate.now();
+        LocalDateTime ahoraArt = faltasClock.now();
+        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : ahoraArt.toLocalDate();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
         FalArticuloNormativaFaltas a = new FalArticuloNormativaFaltas(
                 secArticulo.getAndIncrement(), cmd.normativaId(),
                 cmd.codigoArticulo(), cmd.versionArticulo(), cmd.nombreArticulo(),
                 cmd.cantidadUnidades(), cmd.tipoUnidad(), cmd.siTienePagoVoluntario(),
-                fhVigDesde, LocalDateTime.now(), idUserAlta);
+                fhVigDesde, ahoraArt, idUserAlta);
         a.setDescripcionArticulo(cmd.descripcionArticulo());
         if (cmd.siTienePagoVoluntario()) {
             a.setCantidadUnidadesPagoVoluntario(cmd.cantidadUnidadesPagoVoluntario());
@@ -113,7 +120,7 @@ public class NormativaService {
             throw new PrecondicionVioladaException("Ya existe vinculo activo entre dependencia " + cmd.idDep() + " v" + cmd.verDep() + " y normativa " + cmd.normativaId());
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
         FalDependenciaNormativa rel = new FalDependenciaNormativa(
-                cmd.idDep(), cmd.verDep(), cmd.normativaId(), LocalDateTime.now(), idUserAlta);
+                cmd.idDep(), cmd.verDep(), cmd.normativaId(), faltasClock.now(), idUserAlta);
         return normativaRepository.guardarDependenciaNormativa(rel);
     }
     public List<FalDependenciaNormativa> listarNormativasByDepVersion(Long idDep, int verDep) {

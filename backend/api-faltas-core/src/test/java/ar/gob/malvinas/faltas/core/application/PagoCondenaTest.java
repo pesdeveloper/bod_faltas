@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarPagoCondenaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
@@ -120,32 +122,32 @@ class PagoCondenaTest {
         pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository());
+        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoPlantillaRepository(),
 
-                        new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository()),
+                        new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository());
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker());
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
         falloService = new FalloActaService(
-                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc);
+                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
         apelacionService = new ApelacionActaService(
                 actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
         pagoCondenaService = new PagoCondenaService(
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -155,7 +157,7 @@ class PagoCondenaTest {
     private Long crearActaConCondenaFirme(String doc) {
         LabrarActaCommand cmd = new LabrarActaCommand(
                 "TRANSITO", "DEP-001", "INS-001",
-                LocalDate.now(), "Av. Argentina 123", "San Martin 456",
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
                 null, null, null, "Infractor Test", doc,
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
         Long actaId = actaService.labrar(cmd).idActa();
@@ -305,8 +307,8 @@ class PagoCondenaTest {
 
             PagoCondenaService servicioConBloqueantes = new PagoCondenaService(
                     actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo),
-                    actaId2 -> true);
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    actaId2 -> true, FaltasClockTestSupport.FIXED);
 
             servicioConBloqueantes.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -389,7 +391,7 @@ class PagoCondenaTest {
         void no_pago_condena_sin_condena_firme() {
             LabrarActaCommand cmd = new LabrarActaCommand(
                     "TRANSITO", "DEP-001", "INS-001",
-                    LocalDate.now(), "Av. Argentina 123", "San Martin 456",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
                     null, null, null, "Infractor Test", "50000008",
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
             Long actaId = actaService.labrar(cmd).idActa();
@@ -406,7 +408,7 @@ class PagoCondenaTest {
             // Simular acta con resultado CONDENA_FIRME pero sin fallo activo (caso borde)
             LabrarActaCommand cmd = new LabrarActaCommand(
                     "TRANSITO", "DEP-001", "INS-001",
-                    LocalDate.now(), "Av. Argentina 123", "San Martin 456",
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
                     null, null, null, "Infractor Test", "50000009",
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
             Long actaId = actaService.labrar(cmd).idActa();

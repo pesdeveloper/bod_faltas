@@ -12,6 +12,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.BloqueanteMaterialRepository;
 import org.springframework.stereotype.Service;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 
 
@@ -40,11 +41,14 @@ public class BloqueanteMaterialService {
     private final BloqueanteMaterialRepository bloqueanteMaterialRepository;
     private final ActaRepository actaRepository;
     private final CierreActaHelper cierreActaHelper;
+    private final FaltasClock faltasClock;
 
     public BloqueanteMaterialService(
             BloqueanteMaterialRepository bloqueanteMaterialRepository,
             ActaRepository actaRepository,
-            CierreActaHelper cierreActaHelper) {
+            CierreActaHelper cierreActaHelper,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.bloqueanteMaterialRepository = bloqueanteMaterialRepository;
         this.actaRepository = actaRepository;
         this.cierreActaHelper = cierreActaHelper;
@@ -57,7 +61,7 @@ public class BloqueanteMaterialService {
         if (cmd.origen() == null) {
             throw new PrecondicionVioladaException("El origen es obligatorio para registrar un bloqueante material.");
         }
-        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepository.nextId(), cmd.actaId());
+        FalBloqueanteMaterial b = new FalBloqueanteMaterial(bloqueanteMaterialRepository.nextId(), cmd.actaId(), faltasClock.now());
         b.setOrigen(cmd.origen());
         return bloqueanteMaterialRepository.guardar(b);
     }
@@ -79,7 +83,7 @@ public class BloqueanteMaterialService {
         }
         b.setEstado(EstadoBloqueanteMaterial.CUMPLIDO);
         b.setSiActivo(false);
-        b.setFechaCierre(LocalDateTime.now());
+        b.setFechaCierre(faltasClock.now());
         FalBloqueanteMaterial guardado = bloqueanteMaterialRepository.guardar(b);
 
         intentarCierreDiferido(guardado.getActaId());
@@ -104,7 +108,7 @@ public class BloqueanteMaterialService {
         }
         b.setEstado(EstadoBloqueanteMaterial.ANULADO);
         b.setSiActivo(false);
-        b.setFechaCierre(LocalDateTime.now());
+        b.setFechaCierre(faltasClock.now());
         FalBloqueanteMaterial guardado = bloqueanteMaterialRepository.guardar(b);
 
         intentarCierreDiferido(guardado.getActaId());

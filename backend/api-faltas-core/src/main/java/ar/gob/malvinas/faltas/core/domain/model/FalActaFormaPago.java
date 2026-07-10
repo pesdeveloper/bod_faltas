@@ -144,12 +144,12 @@ public class FalActaFormaPago {
     public LocalDateTime getFhAlta() { return fhAlta; }
     public String getIdUserAlta() { return idUserAlta; }
 
-    public boolean estaConfirmada() {
-        return estadoFormaPago == EstadoFormaPago.CONFIRMADA;
+    public boolean estaPagada() {
+        return estadoFormaPago == EstadoFormaPago.PAGADA;
     }
-    public boolean esProcesada() {
-        return estadoFormaPago == EstadoFormaPago.PROCESADA
-                || estadoFormaPago == EstadoFormaPago.CONFIRMADA;
+    public boolean esVigenteOPagada() {
+        return estadoFormaPago == EstadoFormaPago.VIGENTE
+                || estadoFormaPago == EstadoFormaPago.PAGADA;
     }
     public boolean esPlan() {
         return tipoFormaPago == TipoFormaPago.PLAN_PAGO

@@ -25,6 +25,7 @@ import ar.gob.malvinas.faltas.core.repository.NotificacionIntentoRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,7 @@ public class NotificacionIntentoService {
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final LoteCorreoRepository loteCorreoRepository;
+    private final FaltasClock faltasClock;
 
     public NotificacionIntentoService(
             NotificacionIntentoRepository intentoRepository,
@@ -52,7 +54,9 @@ public class NotificacionIntentoService {
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
             SnapshotRecalculador snapshotRecalculador,
-            LoteCorreoRepository loteCorreoRepository) {
+            LoteCorreoRepository loteCorreoRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.intentoRepository = intentoRepository;
         this.notificacionRepository = notificacionRepository;
         this.actaRepository = actaRepository;
@@ -90,7 +94,7 @@ public class NotificacionIntentoService {
                     "Ya existe un intento con referenciaExterna=" + referenciaExterna);
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         short nroIntento = intentoRepository.siguienteNroIntento(notificacionId);
         Long id = intentoRepository.nextId();
 
@@ -144,7 +148,7 @@ public class NotificacionIntentoService {
 
         validarCanalDestino(canal, domicilioNotifId, destinoDigital);
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         short nroIntento = intentoRepository.siguienteNroIntento(notificacionId);
         Long id = intentoRepository.nextId();
 
@@ -187,7 +191,7 @@ public class NotificacionIntentoService {
         if (resultado == null)
             throw new PrecondicionVioladaException("El resultado no puede ser null al registrar resultado de intento");
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         EstadoNotificacion estadoResultante;
         switch (resultado) {
             case POSITIVO -> estadoResultante = EstadoNotificacion.CON_ACUSE_POSITIVO;
@@ -218,7 +222,7 @@ public class NotificacionIntentoService {
         if (notif.getResultado() == ResultadoNotificacion.POSITIVO)
             throw new PrecondicionVioladaException("La notificacion " + notificacionId + " ya tiene resultado POSITIVO.");
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         List<FalNotificacionIntento> intentosActivos = intentoRepository.buscarPorNotificacion(notificacionId)
                 .stream().filter(i -> !i.tieneResultado()).toList();
@@ -289,7 +293,7 @@ public class NotificacionIntentoService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.SERVICIO_NOTIFICACION)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUser)
                 .actorTipo(ActorTipoEvento.NOTIFICADOR)

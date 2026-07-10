@@ -23,6 +23,7 @@ import ar.gob.malvinas.faltas.core.repository.NotificacionIntentoRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class LoteCorreoService {
     private final ActaEventoRepository eventoRepository;
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
 
     public LoteCorreoService(
             LoteCorreoRepository loteCorreoRepository,
@@ -54,7 +56,9 @@ public class LoteCorreoService {
             ActaRepository actaRepository,
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.loteCorreoRepository = loteCorreoRepository;
         this.notificacionRepository = notificacionRepository;
         this.intentoRepository = intentoRepository;
@@ -69,7 +73,7 @@ public class LoteCorreoService {
             if (loteCorreoRepository.existeCodigo(loteCodigo))
                 throw new LoteCodigoDuplicadoException(loteCodigo);
 
-            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime ahora = faltasClock.now();
             Long id = loteCorreoRepository.nextId();
             FalLoteCorreo lote = new FalLoteCorreo(id, loteCodigo, ahora, ahora, idUser);
             if (referenciaExterna != null) lote.setReferenciaExterna(referenciaExterna);
@@ -89,7 +93,7 @@ public class LoteCorreoService {
         if (notificacionIds == null || notificacionIds.isEmpty())
             throw new PrecondicionVioladaException("Debe indicar al menos una notificacion para generar el lote");
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         Long loteId = loteCorreoRepository.nextId();
         FalLoteCorreo lote = new FalLoteCorreo(loteId, loteCodigo, ahora, ahora, idUser);
         if (referenciaExterna != null) lote.setReferenciaExterna(referenciaExterna);
@@ -194,7 +198,7 @@ public class LoteCorreoService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.LOTE_CORREO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .actorTipo(ActorTipoEvento.NOTIFICADOR)
                 .idUserEvt(idUser)
                 .correlacionId(idRef != null ? String.valueOf(idRef) : null)

@@ -10,6 +10,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalInspectorVersion;
 import ar.gob.malvinas.faltas.core.repository.DependenciaRepository;
 import ar.gob.malvinas.faltas.core.repository.InspectorRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,9 +37,12 @@ public class InspectorService {
     private final InspectorRepository inspectorRepository;
     private final DependenciaRepository dependenciaRepository;
     private final AtomicLong secuencia = new AtomicLong(1);
+    private final FaltasClock faltasClock;
 
     public InspectorService(InspectorRepository inspectorRepository,
-                            DependenciaRepository dependenciaRepository) {
+                            DependenciaRepository dependenciaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.inspectorRepository = inspectorRepository;
         this.dependenciaRepository = dependenciaRepository;
     }
@@ -54,13 +58,14 @@ public class InspectorService {
         validarNomInsp(cmd.nomInsp());
         validarDependenciaVersion(cmd.idDep(), cmd.verDep());
 
-        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : LocalDate.now();
+        LocalDateTime ahora = faltasClock.now();
+        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : ahora.toLocalDate();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
 
         Long idInsp = secuencia.getAndIncrement();
         FalInspector inspector = new FalInspector(
                 idInsp, cmd.idUser(), cmd.legajoInsp(), cmd.nomInsp(),
-                LocalDateTime.now(), idUserAlta);
+                ahora, idUserAlta);
         inspectorRepository.guardar(inspector);
 
         FalInspectorVersion version = new FalInspectorVersion(
@@ -83,7 +88,7 @@ public class InspectorService {
         validarNomInsp(cmd.nomInsp());
         validarDependenciaVersion(cmd.idDep(), cmd.verDep());
 
-        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : LocalDate.now();
+        LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : faltasClock.now().toLocalDate();
 
         inspectorRepository.findVersionVigente(cmd.idInsp(), fhVigDesde).ifPresent(anterior -> {
             anterior.setSiActivo(false);

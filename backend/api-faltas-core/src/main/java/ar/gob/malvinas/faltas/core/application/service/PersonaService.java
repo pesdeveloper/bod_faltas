@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PersonaNoEncontradaException
 import ar.gob.malvinas.faltas.core.domain.model.FalPersona;
 import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,8 +33,11 @@ import java.util.Optional;
 public class PersonaService {
 
     private final PersonaRepository personaRepository;
+    private final FaltasClock faltasClock;
 
-    public PersonaService(PersonaRepository personaRepository) {
+    public PersonaService(PersonaRepository personaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.personaRepository = personaRepository;
     }
 
@@ -53,7 +57,7 @@ public class PersonaService {
             String telefonoPrincipal,
             String idUserAlta) {
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         Long id = personaRepository.nextId();
 
         FalPersona persona = new FalPersona(id, tipoPersona, ahora, idUserAlta);
@@ -73,7 +77,7 @@ public class PersonaService {
      * Para compatibilidad con flujos legacy que aun no informan idPersonaInfractor.
      */
     public FalPersona crearMinimal(String nroDoc, String nombreMostrar, String idUserAlta) {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         Long id = personaRepository.nextId();
         FalPersona persona = new FalPersona(id, TipoPersona.FISICA, ahora, idUserAlta);
         if (nroDoc != null && !nroDoc.isBlank()) {
@@ -124,7 +128,7 @@ public class PersonaService {
         aplicarContacto(persona, emailPrincipal, telefonoPrincipal);
         validarIdentificacion(persona);
 
-        persona.setFhUltMod(LocalDateTime.now());
+        persona.setFhUltMod(faltasClock.now());
         persona.setIdUserUltMod(idUserMod);
 
         return personaRepository.guardar(persona);
@@ -179,7 +183,7 @@ public class PersonaService {
         persona.setIdSuj(idSuj);
         persona.setIdBie(idBie);
         persona.setFhSujBieCreacion(fhSujBieCreacion);
-        persona.setFhUltMod(LocalDateTime.now());
+        persona.setFhUltMod(faltasClock.now());
         persona.setIdUserUltMod(idUserMod);
 
         return personaRepository.guardar(persona);

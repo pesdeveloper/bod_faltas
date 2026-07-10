@@ -33,6 +33,7 @@ import ar.gob.malvinas.faltas.core.repository.InspectorRepository;
 import ar.gob.malvinas.faltas.core.repository.TalonarioRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,10 +70,13 @@ public class TalonarioService {
     private final TalonarioRepository talonarioRepository;
     private final DependenciaRepository dependenciaRepository;
     private final InspectorRepository inspectorRepository;
+    private final FaltasClock faltasClock;
 
     public TalonarioService(TalonarioRepository talonarioRepository,
                              DependenciaRepository dependenciaRepository,
-                             InspectorRepository inspectorRepository) {
+                             InspectorRepository inspectorRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.talonarioRepository = talonarioRepository;
         this.dependenciaRepository = dependenciaRepository;
         this.inspectorRepository = inspectorRepository;
@@ -106,7 +110,7 @@ public class TalonarioService {
         }
 
         long id = nextPoliticaId();
-        LocalDateTime fhAlta = LocalDateTime.now();
+        LocalDateTime fhAlta = faltasClock.now();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
 
         NumPolitica politica = new NumPolitica(
@@ -195,7 +199,7 @@ public class TalonarioService {
         }
 
         long id = nextTalonarioId();
-        LocalDateTime fhAlta = LocalDateTime.now();
+        LocalDateTime fhAlta = faltasClock.now();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
 
         NumTalonario talonario = new NumTalonario(
@@ -297,7 +301,7 @@ public class TalonarioService {
         }
 
         long id = nextAmbitoId();
-        LocalDateTime fhAlta = LocalDateTime.now();
+        LocalDateTime fhAlta = faltasClock.now();
 
         NumTalonarioAmbito ambito = new NumTalonarioAmbito(
                 id,

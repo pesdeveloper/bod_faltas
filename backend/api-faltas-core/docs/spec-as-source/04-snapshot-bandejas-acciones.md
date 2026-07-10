@@ -177,13 +177,15 @@ La diferencia es semantica (razon del reingreso), no tecnica.
 
 ### Invariante de snapshot post-PAGAPR
 
-- esultadoFinal = CONDENA_FIRME_PAGADA en ambos casos.
+-
+esultadoFinal = CONDENA_FIRME_PAGADA en ambos casos.
 - Sin bloqueantes: situacionAdministrativa = CERRADA, loqueActual = CERR.
 - Con bloqueantes: situacionAdministrativa = ACTIVA, loqueActual = ANAL (transitorio).
 
 ### Routing en SnapshotRecalculador para CONDENA_FIRME_PAGADA + ACTIVA
 
-Cuando esultadoFinal == CONDENA_FIRME_PAGADA y situacionAdministrativa == ACTIVA:
+Cuando
+esultadoFinal == CONDENA_FIRME_PAGADA y situacionAdministrativa == ACTIVA:
 - Bandeja: PENDIENTE_ANALISIS
 - Accion: NINGUNA
 - Precedencia: se evalua despues de ABSUELTO y antes de CONDENA_FIRME.
@@ -258,3 +260,12 @@ Cuando el cierre diferido se dispara al resolver el ultimo bloqueante:
 
 No hay bandeja transitoria especifica para "cierre pendiente por bloqueantes": el acta queda en
 `PENDIENTE_ANALISIS` mientras tiene bloqueantes activos y resultado cerrable pendiente de cierre.
+
+---
+
+## Slice 8F-11M-B1 + B1-R2: Snapshot y proyeccion economica (verdad vigente)
+
+- El snapshot activo NO transporta datos economicos: estado/monto de obligacion, estado de forma, estado de plan, cuotas, mora, saldo, importes procesados/confirmados/aplicados, conciliacion, flags de pago ni plan caido.
+- `SnapshotRecalculador.proyectarPagos` es un no-op: las lecturas economicas se resuelven directamente desde `FalActaEconomiaProyeccion`.
+- La proyeccion economica no es fuente primaria juridica; los movimientos y eventos append-only si.
+- `montoOperativoVigente` puede permanecer solo como valorizacion UX, no como dato de pagos.

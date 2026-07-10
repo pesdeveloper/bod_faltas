@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionResultado;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableContextBuilder;
@@ -60,7 +62,7 @@ class DocumentoPlantillasMockTest {
     @Test
     @DisplayName("2. Existen exactamente 8 contenidos vigentes")
     void existen_8_contenidos() {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         long count = plantillaRepo.listar().stream()
                 .mapToLong(p -> contenidoRepo.buscarContenidoVigente(p.getId(), ahora).size())
                 .sum();
@@ -85,7 +87,7 @@ class DocumentoPlantillasMockTest {
         "EMITIR_RESOLUTORIO_BLOQUEANTE"
     })
     void existe_default_para_cada_accion(AccionDocumental accion) {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         FalDocumentoPlantillaDefault def = defaultService.resolverDefault(accion, null, null, ahora);
         assertThat(def).isNotNull();
         assertThat(def.getAccionDocumental()).isEqualTo(accion);
@@ -103,7 +105,7 @@ class DocumentoPlantillasMockTest {
         "EMITIR_RESOLUTORIO_BLOQUEANTE"
     })
     void default_resuelve_sin_ambiguedad(AccionDocumental accion) {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         FalDocumentoPlantillaDefault def = defaultService.resolverDefault(accion, null, null, ahora);
         assertThat(def.getPlantillaId()).isNotNull();
     }
@@ -120,7 +122,7 @@ class DocumentoPlantillasMockTest {
         "EMITIR_RESOLUTORIO_BLOQUEANTE"
     })
     void contenido_vigente_existe(AccionDocumental accion) {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         FalDocumentoPlantillaDefault def = defaultService.resolverDefault(accion, null, null, ahora);
         List<FalDocumentoPlantillaContenido> contenidos =
                 contenidoRepo.buscarContenidoVigente(def.getPlantillaId(), ahora);
@@ -139,7 +141,7 @@ class DocumentoPlantillasMockTest {
         "EMITIR_RESOLUTORIO_BLOQUEANTE"
     })
     void template_usa_solo_variables_registradas(AccionDocumental accion) {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         FalDocumentoPlantillaDefault def = defaultService.resolverDefault(accion, null, null, ahora);
         FalDocumentoPlantillaContenido contenido =
                 contenidoRepo.buscarContenidoVigente(def.getPlantillaId(), ahora).get(0);
@@ -168,12 +170,12 @@ class DocumentoPlantillasMockTest {
         FalActa acta = GraphDemoActaFactory.crearActaDemo(1L);
         Map<String, Object> contexto = DocumentoVariableContextBuilder.buildDesdeActa(
                 acta,
-                GraphDemoActaFactory.crearDocumentoDemo(10L, 1L, ar.gob.malvinas.faltas.core.domain.enums.TipoDocu.ACTO_ADMINISTRATIVO),
+                GraphDemoActaFactory.crearDocumentoDemo(10L, 1L, ar.gob.malvinas.faltas.core.domain.enums.TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now()),
                 GraphDemoActaFactory.crearFalloCondenatorioDemo(1L),
                 GraphDemoActaFactory.crearPagoVoluntarioDemo(1L),
-                null);
+                null, FaltasClockTestSupport.FIXED.now());
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         FalDocumentoPlantillaDefault def = defaultService.resolverDefault(accion, null, null, ahora);
         FalDocumentoPlantillaContenido contenido =
                 contenidoRepo.buscarContenidoVigente(def.getPlantillaId(), ahora).get(0);
@@ -198,7 +200,7 @@ class DocumentoPlantillasMockTest {
     @Test
     @DisplayName("9. Todos los defaults estan activos y vigentes ahora")
     void todos_defaults_activos_y_vigentes() {
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
         defaultRepo.listar().forEach(d ->
             assertThat(d.vigente(ahora))
                 .as("Default %s debe estar vigente", d.getAccionDocumental())

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarRedaccionYGenerarDocumentoMockCommand;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableRegistry;
@@ -76,10 +78,10 @@ class DocumentoGeneracionMockGraphDemoTest {
                 new DocumentoPlantillaDefaultService(defaultRepo);
         redaccionService = new DocumentoRedaccionService(
                 docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion,
-                actaRepo, falloRepo, pagoRepo);
+                actaRepo, falloRepo, pagoRepo, FaltasClockTestSupport.FIXED);
 
         generacionService = new DocumentoGeneracionMockService(
-                redaccionRepo, docRepo, new DocumentoPdfMockRenderer());
+                redaccionRepo, docRepo, new DocumentoPdfMockRenderer(FaltasClockTestSupport.FIXED), FaltasClockTestSupport.FIXED);
 
         actaDemo = actaRepo.guardar(GraphDemoActaFactory.crearActaDemo(actaRepo.nextId()));
         falloRepo.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(actaDemo.getId()));
@@ -88,7 +90,7 @@ class DocumentoGeneracionMockGraphDemoTest {
 
     private DocumentoGeneracionMockResponse crearYGenerarMock(TipoDocu tipoDocu, AccionDocumental accion) {
         Long docId = docRepo.nextId();
-        FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(docId, actaDemo.getId(), tipoDocu);
+        FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(docId, actaDemo.getId(), tipoDocu, FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
         DocumentoRedaccionResponse borrador = redaccionService.crearRedaccionConContextoActa(
                 actaDemo.getId(), docId, accion, null, null, null, "usr");
@@ -235,7 +237,7 @@ class DocumentoGeneracionMockGraphDemoTest {
         @DisplayName("16. El flujo completo: BORRADOR sin storage -> CONFIRMADA con storage mock")
         void flujo_completo_borrador_a_confirmada() {
             Long docId = docRepo.nextId();
-            FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(docId, actaDemo.getId(), TipoDocu.ANEXO);
+            FalDocumento doc = GraphDemoActaFactory.crearDocumentoDemo(docId, actaDemo.getId(), TipoDocu.ANEXO, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             // Verificar BORRADOR sin storage

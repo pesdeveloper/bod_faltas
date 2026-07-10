@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.AgregarFirmaReqPlantillaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDocumentoPlantillaCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoDesdePlantillaCommand;
@@ -80,15 +82,15 @@ class DocumentoGeneracionDesdePlantillaTest {
 
         ar.gob.malvinas.faltas.core.repository.NotificacionRepository notifRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo, plantillaRepo,
-                new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository()),
+                new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                 new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository());
-        plantillaService = new DocumentoPlantillaService(plantillaRepo);
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+        plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
     }
 
     // -------------------------------------------------------------------------
@@ -100,7 +102,7 @@ class DocumentoGeneracionDesdePlantillaTest {
         FalActa acta = new FalActa(
                 id, UUID.randomUUID().toString(),
                 "TRANSITO", "DEP-001", "INS-001",
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
         actaRepo.guardar(acta);
@@ -114,7 +116,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
                 false, false, true,
-                LocalDate.now(), null, "sistema");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
         FalDocumentoPlantilla p = plantillaService.crear(cmd);
         return plantillaService.activar(p.getId());
     }
@@ -126,7 +128,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                 TipoFirmaReq.FIRMA_AUTORIDAD,
                 true, MomentoNumeracionDocu.AL_ENVIAR_A_FIRMA,
                 false, true, true,
-                LocalDate.now(), null, "sistema");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
         FalDocumentoPlantilla p = plantillaService.crear(cmd);
         AgregarFirmaReqPlantillaCommand firmaReq = new AgregarFirmaReqPlantillaCommand(
                 p.getId(), (short) 1, (short) 1, null, true, true, "sistema");
@@ -141,7 +143,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                 TipoFirmaReq.FIRMA_MULTIPLE,
                 true, MomentoNumeracionDocu.AL_FIRMAR,
                 false, true, true,
-                LocalDate.now(), null, "sistema");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
         FalDocumentoPlantilla p = plantillaService.crear(cmd);
         AgregarFirmaReqPlantillaCommand req1 = new AgregarFirmaReqPlantillaCommand(
                 p.getId(), (short) 1, (short) 1, null, true, true, "sistema");
@@ -159,7 +161,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                 TipoFirmaReq.FIRMA_INSPECTOR,
                 false, MomentoNumeracionDocu.NO_APLICA,
                 false, false, true,
-                LocalDate.now(), null, "sistema");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
         FalDocumentoPlantilla p = plantillaService.crear(cmd);
         AgregarFirmaReqPlantillaCommand req = new AgregarFirmaReqPlantillaCommand(
                 p.getId(), (short) 1, (short) 2, null, true, true, "sistema");
@@ -332,7 +334,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,
                     false, false, true,
-                    LocalDate.now(), null, "sistema");
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
             FalDocumentoPlantilla plantilla = plantillaService.crear(cmdP);
 
             assertThatThrownBy(() ->
@@ -417,7 +419,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                     TipoFirmaReq.FIRMA_INSPECTOR,
                     true, MomentoNumeracionDocu.AL_CREAR,
                     false, false, true,
-                    LocalDate.now(), null, "sistema");
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
             FalDocumentoPlantilla plantilla = plantillaService.crear(cmdP);
             plantilla.setSiActiva(true);
 
@@ -450,7 +452,7 @@ class DocumentoGeneracionDesdePlantillaTest {
                     TipoFirmaReq.FIRMA_AUTORIDAD,
                     true, MomentoNumeracionDocu.AL_EMITIR,
                     false, true, true,
-                    LocalDate.now(), null, "sistema");
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema");
             FalDocumentoPlantilla p = plantillaService.crear(cmdP);
             AgregarFirmaReqPlantillaCommand req = new AgregarFirmaReqPlantillaCommand(
                     p.getId(), (short) 1, (short) 1, null, true, true, "sistema");

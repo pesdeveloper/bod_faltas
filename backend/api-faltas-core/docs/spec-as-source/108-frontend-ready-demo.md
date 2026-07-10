@@ -1,15 +1,15 @@
-# 108 - Frontend-Ready Demo: AuditorÃ­a de Endpoints, Payloads y Flujo
+# 108 - Frontend-Ready Demo: Auditoría de Endpoints, Payloads y Flujo
 
 **Slice:** 8F-6
 **Fecha:** 2026-07-03
-**MÃ³dulo:** backend/api-faltas-core (in-memory, sin MariaDB)
+**Módulo:** backend/api-faltas-core (in-memory, sin MariaDB)
 
 ---
 
 ## Objetivo
 
-AuditorÃ­a backend-only, frontend-ready.
-Dejar el backend listo para que un frontend Angular consuma los endpoints demo sin adivinar contratos, estados, errores o pasos de navegaciÃ³n.
+Auditoría backend-only, frontend-ready.
+Dejar el backend listo para que un frontend Angular consuma los endpoints demo sin adivinar contratos, estados, errores o pasos de navegación.
 
 ---
 
@@ -17,7 +17,7 @@ Dejar el backend listo para que un frontend Angular consuma los endpoints demo s
 
 ### Endpoints bajo /demo (frontend-consumibles)
 
-| MÃ©todo | Path | Controller | Servicio | Guarda |
+| Método | Path | Controller | Servicio | Guarda |
 |--------|------|-----------|---------|--------|
 | GET | /demo/documentos/graph | DocumentoGraphDemoController | DocumentoGraphDemoService | ninguna (siempre activo) |
 | GET | /demo/actas/dataset-funcional | DatasetFuncionalDemoController | DatasetFuncionalDominioCatalog | ninguna (siempre activo) |
@@ -25,13 +25,13 @@ Dejar el backend listo para que un frontend Angular consuma los endpoints demo s
 
 ### Endpoint operativo de referencia (para contexto)
 
-El frontend tambiÃ©n necesitarÃ¡ consumir los endpoints operativos bajo /api/faltas para acciones reales.
-Estos estÃ¡n documentados en 05-api-core-endpoints.md.
-La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
+El frontend también necesitará consumir los endpoints operativos bajo /api/faltas para acciones reales.
+Estos están documentados en 05-api-core-endpoints.md.
+La auditoría de este slice se focaliza en los 3 endpoints /demo.
 
 ---
 
-## AnÃ¡lisis de payloads
+## Análisis de payloads
 
 ### GET /demo/documentos/graph
 
@@ -66,14 +66,14 @@ La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
 }
 ```
 
-**EvaluaciÃ³n frontend:**
-- [OK] IDs estables por ejecuciÃ³n: actaId, documentoId, redaccionId presentes
-- [OK] CÃ³digo y descripciÃ³n legible para presentar en lista
-- [OK] Estado tÃ©cnico: estadoRedaccion, redaccionCompleta, exitoso
+**Evaluación frontend:**
+- [OK] IDs estables por ejecución: actaId, documentoId, redaccionId presentes
+- [OK] Código y descripción legible para presentar en lista
+- [OK] Estado técnico: estadoRedaccion, redaccionCompleta, exitoso
 - [OK] Metadatos mock: storageKey y hashDocu siempre mock:// / sha256-mock-
 - [OK] errorMensaje null cuando exitoso, presente cuando fallido
-- [OK] Conteos agregados en raÃ­z: totalCasos, casosExitosos, casosFallidos, completo
-- [GAP-1] accionDocumental y tipoDocu son enums tÃ©cnicos sin label presentacional
+- [OK] Conteos agregados en raíz: totalCasos, casosExitosos, casosFallidos, completo
+- [GAP-1] accionDocumental y tipoDocu son enums técnicos sin label presentacional
 - [GAP-2] No hay campo "label" o "nombre" derivado para mostrar en UI sin mapeo en frontend
 
 ### GET /demo/actas/dataset-funcional
@@ -89,7 +89,7 @@ La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
   "actas": [
     {
       "codigo": "ACT-001-LABRADA",
-      "titulo": "Acta reciÃ©n labrada en captura",
+      "titulo": "Acta recién labrada en captura",
       "descripcion": "...",
       "casoUsoPrincipal": "Slice 1 - LabrarActa",
       "casosUsoCubiertos": ["Slice 1 - LabrarActa", ...],
@@ -113,15 +113,15 @@ La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
 }
 ```
 
-**EvaluaciÃ³n frontend:**
-- [OK] CÃ³digos estables: codigo es clave estable y Ãºnica
-- [OK] TÃ­tulos y descripciones legibles
-- [OK] Estados tÃ©cnicos: bloqueEsperado, situacionEsperada, resultadoFinalEsperado, bandejaEsperada
+**Evaluación frontend:**
+- [OK] Códigos estables: codigo es clave estable y única
+- [OK] Títulos y descripciones legibles
+- [OK] Estados técnicos: bloqueEsperado, situacionEsperada, resultadoFinalEsperado, bandejaEsperada
 - [OK] Flags booleanos para drill-down: cerrableEsperado, requiereFallo, requierePago, etc.
-- [OK] Conteos en raÃ­z: totalActasMock, totalCasosUsoCubiertos, totalDocumentosEsperados
+- [OK] Conteos en raíz: totalActasMock, totalCasosUsoCubiertos, totalDocumentosEsperados
 - [OK] coberturaCompletaSegunDominioActual para banner de estado
 - [GAP-3] No hay endpoint GET /demo/actas/{codigo} para drill-down por acta individual
-- [GAP-4] bloqueEsperado, situacionEsperada, bandejaEsperada son enums tÃ©cnicos sin labels presentacionales
+- [GAP-4] bloqueEsperado, situacionEsperada, bandejaEsperada son enums técnicos sin labels presentacionales
 - [GAP-5] Las actas del dataset son definiciones declarativas, no instancias reales en repositorio
   (un GET /actas/{id} real no existe para estas actas mock)
 
@@ -145,13 +145,13 @@ La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
 }
 ```
 
-**EvaluaciÃ³n frontend:**
-- [OK] ejecutado=true confirma Ã©xito
+**Evaluación frontend:**
+- [OK] ejecutado=true confirma éxito
 - [OK] modo="memory" identifica perfil activo
-- [OK] fhReset provee timestamp de la Ãºltima operaciÃ³n de reset
+- [OK] fhReset provee timestamp de la última operación de reset
 - [OK] Conteos de repos y plantillas para confirmar estado post-reset
 - [OK] casosDatasetFuncional=31 confirma dataset de referencia intacto
-- [OK] errores=0 para verificaciÃ³n de integridad
+- [OK] errores=0 para verificación de integridad
 - [OK] 404 cuando disabled (faltas.demo.reset.enabled=false, default)
 - [GAP-6] actasDemoDisponibles siempre 0 post-reset (las actas del dataset son declarativas, no instanciadas)
 
@@ -161,24 +161,24 @@ La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
 
 ```
 1. INICIO
-   â””â”€â”€ GET /demo/actas/dataset-funcional
-       â””â”€â”€ Obtener catÃ¡logo de 31 actas mock: cÃ³digos, tÃ­tulos, estados, bloques, bandejas
-       â””â”€â”€ Mostrar resumen de cobertura
+   └── GET /demo/actas/dataset-funcional
+       └── Obtener catálogo de 31 actas mock: códigos, títulos, estados, bloques, bandejas
+       └── Mostrar resumen de cobertura
 
 2. DEMO DOCUMENTAL
-   â””â”€â”€ GET /demo/documentos/graph
-       â””â”€â”€ Ejecutar los 8 casos documentales de punta a punta
-       â””â”€â”€ Mostrar estado de cada caso: exitoso/fallido, storageKey mock, hash mock
+   └── GET /demo/documentos/graph
+       └── Ejecutar los 8 casos documentales de punta a punta
+       └── Mostrar estado de cada caso: exitoso/fallido, storageKey mock, hash mock
 
 3. RESET (solo si habilitado en entorno demo/dev)
-   â””â”€â”€ POST /demo/dev/reset
-       â””â”€â”€ Si responde 200: estado limpio, continuar con pasos 1 y 2
-       â””â”€â”€ Si responde 404: reset no habilitado; continuar leyendo endpoints de solo lectura
-       â””â”€â”€ NUNCA depender del reset para que los endpoints GET funcionen
+   └── POST /demo/dev/reset
+       └── Si responde 200: estado limpio, continuar con pasos 1 y 2
+       └── Si responde 404: reset no habilitado; continuar leyendo endpoints de solo lectura
+       └── NUNCA depender del reset para que los endpoints GET funcionen
 
-4. EXPLORACIÃ“N OPERATIVA
-   â””â”€â”€ Los endpoints /api/faltas/actas/* estÃ¡n disponibles para flujos reales
-       â””â”€â”€ Ver 05-api-core-endpoints.md para detalle
+4. EXPLORACIÓN OPERATIVA
+   └── Los endpoints /api/faltas/actas/* están disponibles para flujos reales
+       └── Ver 05-api-core-endpoints.md para detalle
 ```
 
 ### Reglas del flujo
@@ -192,30 +192,30 @@ La auditorÃ­a de este slice se focaliza en los 3 endpoints /demo.
 
 ## Errores HTTP - contrato actual
 
-| Caso | CÃ³digo | Body |
+| Caso | Código | Body |
 |------|--------|------|
-| Reset deshabilitado | 404 | (cuerpo vacÃ­o) |
+| Reset deshabilitado | 404 | (cuerpo vacío) |
 | Acta no encontrada (API) | 404 | {"error": "mensaje"} |
-| PrecondiciÃ³n violada (API) | 422 | {"error": "mensaje"} |
-| ValidaciÃ³n de request (API) | 400 | Spring default (BindingResult) |
-| MÃ©todo incorrecto | 405 | Spring default |
+| Precondición violada (API) | 422 | {"error": "mensaje"} |
+| Validación de request (API) | 400 | Spring default (BindingResult) |
+| Método incorrecto | 405 | Spring default |
 
 **Notas:**
 - No existe un `@ControllerAdvice` global. Cada controller operativo tiene sus propios `@ExceptionHandler`.
-- El patrÃ³n de error es consistente: `Map<String, String>` con clave "error".
+- El patrón de error es consistente: `Map<String, String>` con clave "error".
 - Los endpoints /demo solo devuelven 200 o 404 (para reset disabled). No hay 422 en demo.
-- [GAP-7] No existe un DTO global de error. El patrÃ³n Map<String,String> no estÃ¡ documentado como contrato.
+- [GAP-7] No existe un DTO global de error. El patrón Map<String,String> no está documentado como contrato.
 - [GAP-8] No existe endpoint de health/demo-readiness para que el frontend verifique disponibilidad.
 
 ---
 
 ## CORS
 
-Desde Slice 8F-6 se agregÃ³ `DemoCorsConfig` (WebMvcConfigurer):
+Desde Slice 8F-6 se agregó `DemoCorsConfig` (WebMvcConfigurer):
 - Cubre `/demo/**` y `/api/**`
-- MÃ©todos: GET, POST, PUT, DELETE, OPTIONS
-- Origins: configurable vÃ­a `faltas.demo.cors.allowed-origins` (default `*`)
-- Para producciÃ³n: configurar con la URL real del frontend Angular
+- Métodos: GET, POST, PUT, DELETE, OPTIONS
+- Origins: configurable vía `faltas.demo.cors.allowed-origins` (default `*`)
+- Para producción: configurar con la URL real del frontend Angular
 
 ---
 
@@ -225,38 +225,38 @@ Desde Slice 8F-6 se agregÃ³ `DemoCorsConfig` (WebMvcConfigurer):
 
 | ID | Gap | Impacto |
 |----|-----|---------|
-| GAP-3 | No hay `GET /demo/actas/{codigo}` para drill-down de acta individual | Un frontend que necesite mostrar detalle de una acta especÃ­fica no puede navegar a ella desde el dataset |
-| GAP-5 | Las actas del dataset son definiciones declarativas, no instancias reales en repositorio | El frontend no puede mostrar la acta "real" correspondiente al cÃ³digo del dataset |
-| GAP-8 | No hay endpoint de health/demo-readiness | El frontend no puede verificar si el backend estÃ¡ listo antes de mostrar la UI |
+| GAP-3 | No hay `GET /demo/actas/{codigo}` para drill-down de acta individual | Un frontend que necesite mostrar detalle de una acta específica no puede navegar a ella desde el dataset |
+| GAP-5 | Las actas del dataset son definiciones declarativas, no instancias reales en repositorio | El frontend no puede mostrar la acta "real" correspondiente al código del dataset |
+| GAP-8 | No hay endpoint de health/demo-readiness | El frontend no puede verificar si el backend está listo antes de mostrar la UI |
 
 ### Gaps no bloqueantes (funciona, pero UX mejorable)
 
 | ID | Gap | Impacto |
 |----|-----|---------|
-| GAP-1 | accionDocumental y tipoDocu son enums tÃ©cnicos sin label | El frontend debe mapear en TypeScript para mostrar texto amigable |
+| GAP-1 | accionDocumental y tipoDocu son enums técnicos sin label | El frontend debe mapear en TypeScript para mostrar texto amigable |
 | GAP-2 | No hay campo label/nombre derivado en DocumentoGraphDemoCasoResultado | El frontend usa descripcionCaso como fallback (disponible) |
 | GAP-4 | bloqueEsperado, situacionEsperada, bandejaEsperada son enums sin labels | El frontend debe mapear para mostrar texto amigable |
-| GAP-6 | actasDemoDisponibles=0 siempre (actas declarativas, no instanciadas en repo) | El conteo puede ser confuso; la doc debe aclarar que es por diseÃ±o |
+| GAP-6 | actasDemoDisponibles=0 siempre (actas declarativas, no instanciadas en repo) | El conteo puede ser confuso; la doc debe aclarar que es por diseño |
 | GAP-7 | No hay DTO global de error documentado como contrato | El frontend debe manejar tanto Map<String,String> como Spring defaults |
 
 ### Gaps de slice futuro
 
 | ID | Gap | Slice sugerido |
 |----|-----|----------------|
-| GAP-9 | PaginaciÃ³n en GET /demo/actas/dataset-funcional (31 actas en un solo payload) | 8G o superior |
+| GAP-9 | Paginación en GET /demo/actas/dataset-funcional (31 actas en un solo payload) | 8G o superior |
 | GAP-10 | Labels/i18n de enums exportados desde el backend | 8G o superior |
 | GAP-11 | Endpoint GET /demo/actas/{codigo} con instancia real + eventos + documentos | 8G o superior |
-| GAP-12 | NormalizaciÃ³n de DTO de error global (@ControllerAdvice) | 9.x o superior |
-| GAP-13 | CORS de producciÃ³n con origins configurados por ambiente | Etapa 9 / infra |
+| GAP-12 | Normalización de DTO de error global (@ControllerAdvice) | 9.x o superior |
+| GAP-13 | CORS de producción con origins configurados por ambiente | Etapa 9 / infra |
 
 ---
 
 ## Decisiones de no alcance
 
-- No se creÃ³ Angular ni ningÃºn frontend dentro del mÃ³dulo backend.
-- No se modificÃ³ semÃ¡ntica funcional de los 31 casos.
+- No se creó Angular ni ningún frontend dentro del módulo backend.
+- No se modificó semántica funcional de los 31 casos.
 - No se introdujo JDBC, MariaDB, SQL, JPA ni storage real.
-- No se creÃ³ docs/spec-as-source en raÃ­z del repo.
+- No se creó docs/spec-as-source en raíz del repo.
 - No se inventaron enums ni eventos fuera del dominio.
 
 ---

@@ -4,6 +4,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.VehiculoMarcaNoEncontradaExc
 import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoMarca;
 import ar.gob.malvinas.faltas.core.repository.VehiculoMarcaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,8 +19,11 @@ import java.util.Optional;
 public class VehiculoMarcaService {
 
     private final VehiculoMarcaRepository marcaRepository;
+    private final FaltasClock faltasClock;
 
-    public VehiculoMarcaService(VehiculoMarcaRepository marcaRepository) {
+    public VehiculoMarcaService(VehiculoMarcaRepository marcaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.marcaRepository = marcaRepository;
     }
 
@@ -37,7 +41,7 @@ public class VehiculoMarcaService {
         if (marcaRepository.findByNombre(nombreTrim).isPresent())
             throw new IllegalStateException("Ya existe una marca con nombre: " + nombreTrim);
         Long id = marcaRepository.nextId();
-        FalVehiculoMarca marca = new FalVehiculoMarca(id, codigo, nombre, LocalDateTime.now(), idUserAlta);
+        FalVehiculoMarca marca = new FalVehiculoMarca(id, codigo, nombre, faltasClock.now(), idUserAlta);
         return marcaRepository.guardar(marca);
     }
 

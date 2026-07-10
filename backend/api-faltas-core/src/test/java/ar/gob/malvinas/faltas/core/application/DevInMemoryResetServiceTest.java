@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.demo.DatasetFuncionalDominioCatalog;
 import ar.gob.malvinas.faltas.core.application.demo.DevInMemoryResetService;
 import ar.gob.malvinas.faltas.core.application.demo.PlantillasMockSeeder;
@@ -55,7 +57,7 @@ class DevInMemoryResetServiceTest {
                 actaRepo, eventoRepo, documentoRepo, redaccionRepo,
                 notificacionRepo, plantillaRepo, contenidoRepo, defaultRepo);
 
-        service = new DevInMemoryResetService(repos, plantillaRepo, contenidoRepo, defaultRepo);
+        service = new DevInMemoryResetService(repos, plantillaRepo, contenidoRepo, defaultRepo, FaltasClockTestSupport.FIXED);
     }
 
     @Test

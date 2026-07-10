@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "faltas.demo.reset.enabled=true")
+@TestPropertySource(properties = {"faltas.demo.reset.enabled=true", "faltas.demo.enabled=true"})
 @DisplayName("IT 8F-5: POST /demo/dev/reset - reset in-memory")
 class DevResetControllerIT {
 
@@ -101,7 +101,7 @@ class DevResetControllerIT {
 
         mvc.perform(get("/demo/actas/dataset-funcional"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalActasMock").value(31));
+                .andExpect(jsonPath("$.totalActasMock").value(37));
     }
 
     @Test
@@ -129,11 +129,11 @@ class DevResetControllerIT {
     }
 
     @Test
-    @DisplayName("12. response contiene casosDatasetFuncional=31")
+    @DisplayName("12. response contiene casosDatasetFuncional=37")
     void response_casos_dataset_31() throws Exception {
         mvc.perform(post("/demo/dev/reset"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.casosDatasetFuncional").value(31));
+                .andExpect(jsonPath("$.casosDatasetFuncional").value(37));
     }
 
     @Test

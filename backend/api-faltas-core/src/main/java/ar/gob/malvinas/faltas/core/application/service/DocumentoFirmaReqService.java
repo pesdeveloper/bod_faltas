@@ -14,6 +14,7 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaReqRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoPlantillaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,11 +42,14 @@ public class DocumentoFirmaReqService {
     private final DocumentoRepository documentoRepository;
     private final DocumentoPlantillaRepository documentoPlantillaRepository;
     private final DocumentoFirmaReqRepository documentoFirmaReqRepository;
+    private final FaltasClock faltasClock;
 
     public DocumentoFirmaReqService(
             DocumentoRepository documentoRepository,
             DocumentoPlantillaRepository documentoPlantillaRepository,
-            DocumentoFirmaReqRepository documentoFirmaReqRepository) {
+            DocumentoFirmaReqRepository documentoFirmaReqRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.documentoRepository = documentoRepository;
         this.documentoPlantillaRepository = documentoPlantillaRepository;
         this.documentoFirmaReqRepository = documentoFirmaReqRepository;
@@ -113,7 +117,7 @@ public class DocumentoFirmaReqService {
                 .filter(FalDocumentoPlantillaFirmaReq::isSiActiva)
                 .toList();
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         List<FalDocumentoFirmaReq> materializados = new ArrayList<>();
 
         for (FalDocumentoPlantillaFirmaReq req : todosActivos) {

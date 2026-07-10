@@ -196,7 +196,7 @@ public class InMemoryActaValorizacionRepository
 
         // 4. Confirmar candidata
         FalActaValorizacion candidataConfirmada = candidata.copia();
-        candidataConfirmada.marcarConfirmada(fhConfirmacion, idUserConfirmacion);
+        candidataConfirmada.marcarPagada(fhConfirmacion, idUserConfirmacion);
         candidataConfirmada.setVersionRow(candidata.getVersionRow() + 1);
         store.put(candidataConfirmada.getId(), candidataConfirmada);
 

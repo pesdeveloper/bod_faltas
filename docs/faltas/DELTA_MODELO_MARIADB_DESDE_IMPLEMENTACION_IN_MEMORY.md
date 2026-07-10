@@ -624,7 +624,7 @@ Catálogo `estado_docu` (ahora explícito en modelo):
 
 ### Generacion de IDs
 
-- InMemoryActaRepository: agregado AtomicLong idCounter y metodo 
+- InMemoryActaRepository: agregado AtomicLong idCounter y metodo
 extId().
 - ActaRepository interface: agregado metodo Long nextId().
 - ActaService.labrar(): usa ctaRepository.nextId() en lugar de UUID.randomUUID().toString().
@@ -645,8 +645,8 @@ extId().
 ### Reglas preservadas
 
 - al_acta.nro_acta sigue siendo String visible administrativo.
-- 
-roActa no fue renombrado a 
+-
+roActa no fue renombrado a
 umeroActa.
 - Identificadores tipo ACTA-0001 eliminados como PK tecnica.
 - POL-ACTA-01 (codigo de politica de numeracion) es string funcional, no PK tecnica: se preserva.
@@ -664,7 +664,7 @@ rg "ACTA-[0-9]" src
 ### Deuda cerrada
 
 - FalActa.id: deuda de tipo String cerrada. Ahora es Long alineado con al_acta.id BIGINT AUTO_INCREMENT.
-- NumTalonarioMovimiento.actaId: deuda de tipo String cerrada. Ahora es Long alineado con 
+- NumTalonarioMovimiento.actaId: deuda de tipo String cerrada. Ahora es Long alineado con
 um_talonario_movimiento.acta_id BIGINT.
 - Preparacion completada para 8C-0A (FalDocumento contra modelo MariaDB) y 8C-1 (catalogos documentales).
 
@@ -800,9 +800,9 @@ Plantillas documentales in-memory implementadas.
 - domain/exception/DocumentoPlantillaNoEncontradaException
 - domain/exception/DocumentoPlantillaInvalidaException
 - domain/exception/DocumentoPlantillaDuplicadaException
-- 
+-
 epository/DocumentoPlantillaRepository — interfaz: nextPlantillaId, nextFirmaReqId, guardar, buscarPorId, buscarPorCodigo, listar, buscarPorAccion, buscarActivasPorAccion, guardarFirmaReq, listarFirmaReqPorPlantilla, buscarFirmaReqPorId.
-- 
+-
 epository/memory/InMemoryDocumentoPlantillaRepository — implementacion in-memory con ConcurrentHashMap y AtomicLong.
 - pplication/command/CrearDocumentoPlantillaCommand
 - pplication/command/AgregarFirmaReqPlantillaCommand
@@ -851,7 +851,7 @@ epository/memory/InMemoryDocumentoPlantillaRepository — implementacion in-memo
 
 ---
 
-## Delta 8C-3 � Generacion de FalDocumento snapshot desde plantilla [2026-07-01]
+## Delta 8C-3 — Generacion de FalDocumento snapshot desde plantilla [2026-07-01]
 
 ### Objetivo
 
@@ -864,14 +864,14 @@ Implementar creacion de FalDocumento concreto desde plantilla activa.
 - pplication/command/GenerarDocumentoDesdePlantillaCommand (record: idActa, plantillaId, idUserAlta)
 - web/dto/GenerarDocumentoDesdePlantillaRequest (record: idActa, plantillaId, idUserAlta)
 - web/dto/DocumentoResponse (record con factory rom(FalDocumento))
-- 	est/application/DocumentoGeneracionDesdePlantillaTest � 28 tests nuevos
+- 	est/application/DocumentoGeneracionDesdePlantillaTest → 28 tests nuevos
 
 #### Archivos modificados
 
-- domain/model/FalDocumento � segundo constructor (id, idActa, tipoDocu, fechaGeneracion, descripcion, estadoDocu, tipoFirmaReq, plantillaId)
-- pplication/service/DocumentoService � campo DocumentoPlantillaRepository inyectado + metodo generarDesdePlantilla(GenerarDocumentoDesdePlantillaCommand)
-- web/DocumentoController � endpoint POST /api/faltas/documentos/desde-plantilla, handlers para DocumentoPlantillaNoEncontradaException y DocumentoPlantillaInvalidaException
-- 7 tests existentes � constructor DocumentoService actualizado con 
+- domain/model/FalDocumento → segundo constructor (id, idActa, tipoDocu, fechaGeneracion, descripcion, estadoDocu, tipoFirmaReq, plantillaId)
+- pplication/service/DocumentoService → campo DocumentoPlantillaRepository inyectado + metodo generarDesdePlantilla(GenerarDocumentoDesdePlantillaCommand)
+- web/DocumentoController → endpoint POST /api/faltas/documentos/desde-plantilla, handlers para DocumentoPlantillaNoEncontradaException y DocumentoPlantillaInvalidaException
+- 7 tests existentes → constructor DocumentoService actualizado con
 ew InMemoryDocumentoPlantillaRepository()
 
 ### Reglas implementadas
@@ -904,7 +904,7 @@ ew InMemoryDocumentoPlantillaRepository()
 - 8C-5: Enviar documento a firma (BORRADOR -> PENDIENTE_FIRMA, materializar firma_req).
 - Slice posterior: Numeracion documental (resolver num_talonario_ambito clase DOCUMENTO, generar nroDocu).
 
-## Micro-slice 8C-4 � FalDocumentoFirmaReq snapshot de requisitos de firma [COMPLETADO 2026-07-01]
+## Micro-slice 8C-4 — FalDocumentoFirmaReq snapshot de requisitos de firma [COMPLETADO 2026-07-01]
 
 ### Diagnostico modelo
 
@@ -1179,9 +1179,9 @@ Enum Java `TipoFirma` no existe todavia. Se crea en 8C-6B-1.
 Clase refactorizada desde modelo naive (record con String id) a clase Java alineada con MariaDB:
 - id: Long (antes: String UUID)
 - idActa: eliminado (derivable desde FalDocumento.idActa)
-- Agregados: seqFirmaReq, idFirmante, erFirmante, idUserFirma, 
-olFirmante, 
-ombreFirmante, TipoFirma tipoFirma, hashDocumento, 
+- Agregados: seqFirmaReq, idFirmante, erFirmante, idUserFirma,
+olFirmante,
+ombreFirmante, TipoFirma tipoFirma, hashDocumento,
 eferenciaFirmaExt, storageKey, mensajeError, hFirma, hAlta, idUserAlta
 - Validaciones de entidad en constructor (id, idDocumento, tipoFirma, estadoFirma, fhFirma, fhAlta, idUserFirma, etc.)
 - Si tipoFirma=DIGITAL: hashDocumento y referenciaFirmaExt obligatorios
@@ -1378,7 +1378,7 @@ Agregar en 8C-6C-1: `DOCEMI("DOCEMI", "Documento emitido formalmente")`.
 | hashDocu | Obligatorio |
 | hGeneracion | Seteado al momento de incorporacion (fecha de alta del registro) |
 | echaGeneracion | Fecha tecnica de alta del registro en base (h_alta) |
-| 
+|
 roDocu | Null por defecto. Sin numeracion automatica al incorporar |
 | 	ipoFirmaReq | NO_REQUIERE por defecto. Puede ser otro si se configura explicitamente |
 | plantillaId | Null para adjuntos externos (aceptado por modelo MariaDB) |
@@ -1441,20 +1441,20 @@ FalDocumentoFirma ya tiene todos los campos necesarios:
 | Campo | Uso en convalidacion |
 |---|---|
 | 	ipoFirma = OLOGRAFA | Tipo de firma convalidada |
-| 
+|
 eferenciaFirmaExt | Referencia a la firma visible dentro del escaneo (coordenada, anotacion, pagina) |
 | storageKey | Clave del archivo escaneado (mismo que FalDocumento.storageKey) |
 | hashDocumento | Hash del archivo escaneado (mismo que FalDocumento.hashDocu) |
 | idFirmante | FK al firmante/convalidador institucional |
 | erFirmante | Version vigente del firmante al momento de convalidar |
-| 
+|
 olFirmante | Rol institucional del convalidador |
-| 
+|
 ombreFirmante | Snapshot del nombre del convalidador |
 | estadoFirma = FIRMADA | Estado final: convalidacion aceptada |
 
 **Observacion tecnica sobre referenciaFirmaExt:**
-Actualmente 
+Actualmente
 eferenciaFirmaExt solo es obligatorio para TipoFirma.DIGITAL en DocumentoService.
 Para TipoFirma.OLOGRAFA en convalidacion, se recomienda que sea opcional pero utilizable
 para indicar la ubicacion/referencia de la firma manuscrita en el documento escaneado.
@@ -1463,7 +1463,7 @@ para indicar la ubicacion/referencia de la firma manuscrita en el documento esca
 El firmante/convalidador debe:
 - Existir en FalFirmante / FalFirmanteVersion
 - Tener version vigente a la fecha
-- Tener habilitacion activa para el 	ipoDocu y 
+- Tener habilitacion activa para el 	ipoDocu y
 olFirmaReq del documento si se quiere cumplir un requisito
 
 Si el documento adjunto no tiene FalDocumentoFirmaReq, la firma se registra igualmente
@@ -1480,7 +1480,7 @@ Una firma escaneada/convalidada puede cumplir un FalDocumentoFirmaReq si:
 1. El documento existe y tiene storageKey y hashDocu.
 2. El requisito existe, esta activo (siActiva=true) y en estado PENDIENTE.
 3. El firmante/convalidador existe con version vigente.
-4. El firmante tiene habilitacion activa para el 	ipoDocu y 
+4. El firmante tiene habilitacion activa para el 	ipoDocu y
 olFirmaReq del requisito.
 5. Si el requisito tiene mecanismoFirmaReq != null, debe ser compatible con olografa/convalidada.
 6. Se crea FalDocumentoFirma con TipoFirma.OLOGRAFA.
@@ -1595,7 +1595,7 @@ Campos obligatorios:
 
 Campos opcionales:
 - seqFirmaReq: Short (null si no hay requisito formal)
-- 
+-
 eferenciaFirmaExt: String (referencia a firma visible en escaneo)
 - storageKey: String (si se provee, apunta al archivo escaneado)
 - hashDocumento: String (hash del archivo escaneado)
@@ -1607,7 +1607,7 @@ eferenciaFirmaExt: String (referencia a firma visible en escaneo)
 4. Firmante existe y tiene version vigente.
 5. Si seqFirmaReq no null:
    a. Requisito existe y esta activo y en estado PENDIENTE.
-   b. Firmante tiene habilitacion activa para el 	ipoDocu y 
+   b. Firmante tiene habilitacion activa para el 	ipoDocu y
 olFirmaReq del requisito.
    c. Si mecanismoFirmaReq != null, verificar compatibilidad.
 6. Crear FalDocumentoFirma con TipoFirma.OLOGRAFA y estadoFirma = FIRMADA.
@@ -1661,7 +1661,7 @@ Antes de implementar, decidir si la transicion ADJUNTO -> FIRMADO es:
 
 #### Nuevos commands/requests/responses
 - IncorporarDocumentoEscaneadoCommand: idActa, 	ipoDocu, storageKey, hashDocu, idUserAlta, plantillaId nullable.
-- ConvalidarFirmaEscaneadaCommand: documentoId, seqFirmaReq (Short nullable), idFirmante, idUserFirma, 
+- ConvalidarFirmaEscaneadaCommand: documentoId, seqFirmaReq (Short nullable), idFirmante, idUserFirma,
 eferenciaFirmaExt.
 - IncorporarDocumentoEscaneadoRequest: DTO con validaciones @NotNull/@NotBlank.
 - ConvalidarFirmaEscaneadaRequest: DTO. seqFirmaReq nullable.
@@ -1670,12 +1670,12 @@ eferenciaFirmaExt.
 
 #### DocumentoService
 - incorporarDocumentoEscaneado(IncorporarDocumentoEscaneadoCommand): crea documento en ADJUNTO, registra DOCADJ, no numera, no emite, no firma.
-- convalidarFirmaEscaneada(ConvalidarFirmaEscaneadaCommand): 
+- convalidarFirmaEscaneada(ConvalidarFirmaEscaneadaCommand):
   - Sin seqFirmaReq: trazabilidad simple, DOCFIR event, documento permanece ADJUNTO. No crea FalDocumentoFirma.
   - Con seqFirmaReq: crea FalDocumentoFirma con TipoFirma.OLOGRAFA, marca requisito FIRMADO, si todos obligatorios activos firmados -> ADJUNTO -> FIRMADO, registra DOCFIR.
-- Helpers privados extraidos: 
-esolverFirmante, 
-esolverVersionVigente, 
+- Helpers privados extraidos:
+esolverFirmante,
+esolverVersionVigente,
 esolverHabilitacion, alidarMecanismo, alidarOrdenFirma.
 
 #### DocumentoController

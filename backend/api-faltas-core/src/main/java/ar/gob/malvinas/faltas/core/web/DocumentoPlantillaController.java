@@ -14,7 +14,6 @@ import ar.gob.malvinas.faltas.core.web.dto.DocumentoPlantillaResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/faltas/documentos/plantillas")
@@ -101,21 +99,4 @@ public class DocumentoPlantillaController {
         return ResponseEntity.ok(DocumentoPlantillaResponse.from(service.desactivar(id)));
     }
 
-    @ExceptionHandler(DocumentoPlantillaNoEncontradaException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(DocumentoPlantillaNoEncontradaException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(DocumentoPlantillaDuplicadaException.class)
-    public ResponseEntity<Map<String, String>> handleDuplicated(DocumentoPlantillaDuplicadaException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(DocumentoPlantillaInvalidaException.class)
-    public ResponseEntity<Map<String, String>> handleInvalid(DocumentoPlantillaInvalidaException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(Map.of("error", ex.getMessage()));
-    }
 }

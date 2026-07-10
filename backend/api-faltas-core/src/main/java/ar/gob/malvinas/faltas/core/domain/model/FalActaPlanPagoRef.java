@@ -1,7 +1,6 @@
 package ar.gob.malvinas.faltas.core.domain.model;
 
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPlanPago;
-import ar.gob.malvinas.faltas.core.domain.enums.MotivoAptitudIntimacion;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -14,7 +13,7 @@ import java.time.LocalDateTime;
  * idTdocPlan = 1 segun modelo vigente.
  * Par (idTdocPlan, idDocPlan) unico.
  * Un plan vigente por obligacion.
- * Caches de cuotas/mora son auxiliares; la verdad es en Ingresos.
+ * Cabecera estructural resumida; mora y cuotas dinamicas viven en proyeccion.
  */
 public class FalActaPlanPagoRef {
 
@@ -29,19 +28,11 @@ public class FalActaPlanPagoRef {
     private final short cantidadCuotas;
     private final BigDecimal importeTotalPlan;
     private BigDecimal importeCuotaRegular;
-    private Short cantidadCuotasPagadas;
-    private Short cantidadCuotasVencidas;
-    private Short cantidadCuotasEnMora;
-    private Short cantidadCuotasMoraConsec;
-    private Short diasMoraMax;
     private LocalDateTime fhUltimoPago;
-    private LocalDateTime fhCaida;
+    private LocalDateTime fhFinalizacionPago;
     private LocalDateTime fhCancelacion;
     private LocalDateTime fhRefinanciacion;
     private Long planRefinanciadoId;
-    private boolean siAptoIntimacion;
-    private LocalDateTime fhAptoIntimacion;
-    private MotivoAptitudIntimacion motivoAptaIntimacion;
     private boolean siExcluirEscaneo;
     private LocalDateTime fhUltSyncIngresos;
     private boolean siVigente;
@@ -91,35 +82,16 @@ public class FalActaPlanPagoRef {
             throw new IllegalArgumentException("importeCuotaRegular no puede ser negativo");
         this.importeCuotaRegular = (v == null) ? null : v.setScale(2, RoundingMode.HALF_UP);
     }
-    public Short getCantidadCuotasPagadas() { return cantidadCuotasPagadas; }
-    public void setCantidadCuotasPagadas(Short v) {
-        if (v != null && v < 0) throw new IllegalArgumentException("cantidadCuotasPagadas no puede ser negativo");
-        this.cantidadCuotasPagadas = v;
-    }
-    public Short getCantidadCuotasVencidas() { return cantidadCuotasVencidas; }
-    public void setCantidadCuotasVencidas(Short v) { this.cantidadCuotasVencidas = v; }
-    public Short getCantidadCuotasEnMora() { return cantidadCuotasEnMora; }
-    public void setCantidadCuotasEnMora(Short v) { this.cantidadCuotasEnMora = v; }
-    public Short getCantidadCuotasMoraConsec() { return cantidadCuotasMoraConsec; }
-    public void setCantidadCuotasMoraConsec(Short v) { this.cantidadCuotasMoraConsec = v; }
-    public Short getDiasMoraMax() { return diasMoraMax; }
-    public void setDiasMoraMax(Short v) { this.diasMoraMax = v; }
     public LocalDateTime getFhUltimoPago() { return fhUltimoPago; }
     public void setFhUltimoPago(LocalDateTime v) { this.fhUltimoPago = v; }
-    public LocalDateTime getFhCaida() { return fhCaida; }
-    public void setFhCaida(LocalDateTime v) { this.fhCaida = v; }
+    public LocalDateTime getFhFinalizacionPago() { return fhFinalizacionPago; }
+    public void setFhFinalizacionPago(LocalDateTime v) { this.fhFinalizacionPago = v; }
     public LocalDateTime getFhCancelacion() { return fhCancelacion; }
     public void setFhCancelacion(LocalDateTime v) { this.fhCancelacion = v; }
     public LocalDateTime getFhRefinanciacion() { return fhRefinanciacion; }
     public void setFhRefinanciacion(LocalDateTime v) { this.fhRefinanciacion = v; }
     public Long getPlanRefinanciadoId() { return planRefinanciadoId; }
     public void setPlanRefinanciadoId(Long v) { this.planRefinanciadoId = v; }
-    public boolean isSiAptoIntimacion() { return siAptoIntimacion; }
-    public void setSiAptoIntimacion(boolean v) { this.siAptoIntimacion = v; }
-    public LocalDateTime getFhAptoIntimacion() { return fhAptoIntimacion; }
-    public void setFhAptoIntimacion(LocalDateTime v) { this.fhAptoIntimacion = v; }
-    public MotivoAptitudIntimacion getMotivoAptaIntimacion() { return motivoAptaIntimacion; }
-    public void setMotivoAptaIntimacion(MotivoAptitudIntimacion v) { this.motivoAptaIntimacion = v; }
     public boolean isSiExcluirEscaneo() { return siExcluirEscaneo; }
     public void setSiExcluirEscaneo(boolean v) { this.siExcluirEscaneo = v; }
     public LocalDateTime getFhUltSyncIngresos() { return fhUltSyncIngresos; }
@@ -128,8 +100,7 @@ public class FalActaPlanPagoRef {
     public void setSiVigente(boolean v) { this.siVigente = v; }
 
     public boolean estaActivo() { return estadoPlan == EstadoPlanPago.ACTIVO; }
-    public boolean estaCaido() { return estadoPlan == EstadoPlanPago.CAIDO; }
-    public boolean estaCancelado() { return estadoPlan == EstadoPlanPago.CANCELADO; }
+    public boolean estaAnulado() { return estadoPlan == EstadoPlanPago.ANULADO; }
     public boolean estaRefinanciado() { return estadoPlan == EstadoPlanPago.REFINANCIADO; }
 
     public FalActaPlanPagoRef copia() {
@@ -140,19 +111,12 @@ public class FalActaPlanPagoRef {
         c.estadoPlan = this.estadoPlan;
         c.fhGeneracionPlan = this.fhGeneracionPlan;
         c.importeCuotaRegular = this.importeCuotaRegular;
-        c.cantidadCuotasPagadas = this.cantidadCuotasPagadas;
-        c.cantidadCuotasVencidas = this.cantidadCuotasVencidas;
-        c.cantidadCuotasEnMora = this.cantidadCuotasEnMora;
-        c.cantidadCuotasMoraConsec = this.cantidadCuotasMoraConsec;
-        c.diasMoraMax = this.diasMoraMax;
         c.fhUltimoPago = this.fhUltimoPago;
-        c.fhCaida = this.fhCaida;
+        c.fhFinalizacionPago = this.fhFinalizacionPago;
+        c.fhFinalizacionPago = this.fhFinalizacionPago;
         c.fhCancelacion = this.fhCancelacion;
         c.fhRefinanciacion = this.fhRefinanciacion;
         c.planRefinanciadoId = this.planRefinanciadoId;
-        c.siAptoIntimacion = this.siAptoIntimacion;
-        c.fhAptoIntimacion = this.fhAptoIntimacion;
-        c.motivoAptaIntimacion = this.motivoAptaIntimacion;
         c.siExcluirEscaneo = this.siExcluirEscaneo;
         c.fhUltSyncIngresos = this.fhUltSyncIngresos;
         c.siVigente = this.siVigente;

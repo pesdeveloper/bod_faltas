@@ -13,6 +13,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalFirmanteVersionHabilitacion;
 import ar.gob.malvinas.faltas.core.repository.DependenciaRepository;
 import ar.gob.malvinas.faltas.core.repository.FirmanteRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,9 +41,12 @@ public class FirmanteService {
     private final FirmanteRepository firmanteRepository;
     private final DependenciaRepository dependenciaRepository;
     private final AtomicLong secuencia = new AtomicLong(1);
+    private final FaltasClock faltasClock;
 
     public FirmanteService(FirmanteRepository firmanteRepository,
-                           DependenciaRepository dependenciaRepository) {
+                           DependenciaRepository dependenciaRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.firmanteRepository = firmanteRepository;
         this.dependenciaRepository = dependenciaRepository;
     }
@@ -60,7 +64,7 @@ public class FirmanteService {
 
         LocalDate fhVigDesde = cmd.fhVigDesde();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         Long idFirmante = secuencia.getAndIncrement();
         FalFirmante firmante = new FalFirmante(
@@ -92,7 +96,7 @@ public class FirmanteService {
 
         LocalDate fhVigDesde = cmd.fhVigDesde();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         firmanteRepository.findVersionVigente(cmd.idFirmante(), fhVigDesde).ifPresent(anterior -> {
             anterior.setSiActivo(false);
@@ -148,7 +152,7 @@ public class FirmanteService {
         FalFirmanteVersionHabilitacion hab = new FalFirmanteVersionHabilitacion(
                 cmd.idFirmante(), cmd.verFirmante(),
                 cmd.tipoDocu(), cmd.rolFirmaReq(), cmd.mecanismoFirmaReq(),
-                LocalDateTime.now(), idUserAlta);
+                faltasClock.now(), idUserAlta);
         return firmanteRepository.guardarHabilitacion(hab);
     }
 

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.MotivoArchivoService;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalMotivoArchivo;
@@ -24,7 +26,7 @@ class MotivoArchivoTest {
     @BeforeEach
     void setUp() {
         repo = new InMemoryMotivoArchivoRepository();
-        service = new MotivoArchivoService(repo);
+        service = new MotivoArchivoService(repo, FaltasClockTestSupport.FIXED);
     }
 
     @Nested

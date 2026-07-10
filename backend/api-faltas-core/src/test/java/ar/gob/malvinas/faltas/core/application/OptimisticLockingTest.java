@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
 import ar.gob.malvinas.faltas.core.domain.model.*;
@@ -34,9 +36,9 @@ class OptimisticLockingTest {
         private FalActa crearActa() {
             Long id = repo.nextId();
             FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                    LocalDate.now(), LocalDateTime.now(),
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Calle", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                    LocalDateTime.now(), "TEST");
+                    FaltasClockTestSupport.FIXED.now(), "TEST");
             return repo.guardar(acta);
         }
 
@@ -151,7 +153,7 @@ class OptimisticLockingTest {
         private FalActaFallo crearFallo() {
             Long id = repo.nextId();
             FalActaFallo fallo = new FalActaFallo(id, actaIdFijo, TipoFalloActa.ABSOLUTORIO,
-                    LocalDateTime.now(), LocalDateTime.now(), "TEST");
+                    FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "TEST");
             return repo.guardar(fallo);
         }
 

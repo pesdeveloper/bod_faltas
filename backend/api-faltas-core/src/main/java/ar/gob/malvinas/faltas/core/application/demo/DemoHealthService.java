@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.web.dto.DemoHealthDocumentosDto;
 import ar.gob.malvinas.faltas.core.web.dto.DemoHealthEndpointDto;
 import ar.gob.malvinas.faltas.core.web.dto.DemoHealthResetDto;
 import ar.gob.malvinas.faltas.core.web.dto.DemoHealthResponse;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +40,10 @@ public class DemoHealthService {
     @Value("${faltas.demo.reset.enabled:false}")
     private boolean resetEnabled;
 
-    public DemoHealthService(DocumentoPlantillaRepository plantillaRepository) {
+    private final FaltasClock faltasClock;
+
+    public DemoHealthService(DocumentoPlantillaRepository plantillaRepository, FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.plantillaRepository = plantillaRepository;
     }
 
@@ -56,7 +60,7 @@ public class DemoHealthService {
         return new DemoHealthResponse(
                 "UP",
                 demoReady,
-                LocalDateTime.now().toString(),
+                faltasClock.now().toString(),
                 VERSION_DEMO,
                 datasetDto,
                 documentosDto,

@@ -4,6 +4,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.RubroVersionNoEncontradoExce
 import ar.gob.malvinas.faltas.core.domain.model.FalRubroVersion;
 import ar.gob.malvinas.faltas.core.repository.RubroVersionRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -20,8 +21,11 @@ import java.util.Optional;
 public class RubroVersionService {
 
     private final RubroVersionRepository rubroRepository;
+    private final FaltasClock faltasClock;
 
-    public RubroVersionService(RubroVersionRepository rubroRepository) {
+    public RubroVersionService(RubroVersionRepository rubroRepository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.rubroRepository = rubroRepository;
     }
 
@@ -32,7 +36,7 @@ public class RubroVersionService {
      */
     public FalRubroVersion sincronizar(int idRub, String nombre, short sidesabilitado, String idUser) {
         String hash = calcularHash(idRub, nombre, sidesabilitado);
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         Long rubroId = rubroRepository.nextId();
         FalRubroVersion nueva = new FalRubroVersion(
                 rubroId, idRub, nombre, sidesabilitado, hash, "INSERT", ahora, ahora);

@@ -3,62 +3,59 @@ package ar.gob.malvinas.faltas.core.application.service;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFormaPago;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoObligacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.MotivoBajaFormaPago;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenUltimaActualizacion;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFormaPago;
 import ar.gob.malvinas.faltas.core.domain.exception.FormaPagoNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaFormaPago;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaObligacionPago;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
+import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.FormaPagoRepository;
 import ar.gob.malvinas.faltas.core.repository.ObligacionPagoRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Servicio de dominio para FalActaFormaPago.
- * CONTADO: no tiene plan. PLAN_PAGO/REFINANCIACION: exige plan posterior.
- * Una forma vigente por obligacion. El historial se preserva.
- */
 @Service
 public class FormaPagoService {
 
     private final FormaPagoRepository formaPagoRepo;
     private final ObligacionPagoRepository obligacionRepo;
+    private final ActaEventoRepository eventoRepo;
+    private final EconomiaProyeccionRecalculador recalculador;
+    private final FaltasClock clock;
 
-    public FormaPagoService(FormaPagoRepository formaPagoRepo, ObligacionPagoRepository obligacionRepo) {
+    public FormaPagoService(FormaPagoRepository formaPagoRepo, ObligacionPagoRepository obligacionRepo,
+            ActaEventoRepository eventoRepo, EconomiaProyeccionRecalculador recalculador, FaltasClock clock) {
         this.formaPagoRepo = formaPagoRepo;
         this.obligacionRepo = obligacionRepo;
+        this.eventoRepo = eventoRepo;
+        this.recalculador = recalculador;
+        this.clock = clock;
     }
 
-    /**
-     * Registra una nueva forma de pago para la obligacion.
-     * Si ya existe forma vigente y es una refinanciacion, reemplaza la anterior.
-     * CONTADO: unica, no hay plan. PLAN/REFINANCIACION: se espera plan posterior.
-     */
-    public FalActaFormaPago generarForma(
-            Long obligacionPagoId,
-            TipoFormaPago tipoFormaPago,
-            BigDecimal montoForma,
-            String cmteEM, Short prefEM, Integer nroEM,
-            String cmtePG, Short prefPG, Integer nroPG,
-            String idUser) {
+    public FalActaFormaPago generarForma(Long obligacionPagoId, TipoFormaPago tipoFormaPago, BigDecimal montoForma,
+            String cmteEM, Short prefEM, Integer nroEM, String cmtePG, Short prefPG, Integer nroPG, String idUser) {
         FalActaObligacionPago obligacion = obligacionRepo.findById(obligacionPagoId)
                 .orElseThrow(() -> new PrecondicionVioladaException("Obligacion no encontrada: " + obligacionPagoId));
-        if (obligacion.estaAnulada() || obligacion.estaCancelada())
+        if (obligacion.estaDejadaSinEfecto() || obligacion.estaCanceladaPorPago())
             throw new PrecondicionVioladaException("No se puede generar forma de pago para obligacion en estado "
                     + obligacion.getEstadoObligacion());
 
         Optional<FalActaFormaPago> vigente = formaPagoRepo.findVigenteByObligacionPagoId(obligacionPagoId);
-
         long nroFormaActual = formaPagoRepo.findByObligacionPagoId(obligacionPagoId).size() + 1;
+        String actor = ActorContextHolder.subOr(idUser);
+        var ahora = clock.now();
         Long nuevoId = formaPagoRepo.nextId();
-        LocalDateTime ahora = LocalDateTime.now();
         FalActaFormaPago nueva = new FalActaFormaPago(
-                nuevoId, obligacionPagoId, (short) nroFormaActual,
-                tipoFormaPago, montoForma, ahora, ahora, idUser);
+                nuevoId, obligacionPagoId, (short) nroFormaActual, tipoFormaPago, montoForma, ahora, ahora, actor);
         nueva.setReferenciaEM(cmteEM, prefEM, nroEM);
         nueva.setReferenciaPG(cmtePG, prefPG, nroPG);
 
@@ -74,28 +71,31 @@ public class FormaPagoService {
         }
 
         obligacion.setFormaPagoVigenteId(guardada.getId());
-        obligacion.setEstadoObligacion(EstadoObligacionPago.CON_FORMA_PAGO);
+        obligacion.setEstadoObligacion(EstadoObligacionPago.CON_FORMA_PAGO_VIGENTE);
         obligacionRepo.save(obligacion);
+
+        TipoEventoActa evento = tipoFormaPago == TipoFormaPago.RECIBO_AL_COBRO ? TipoEventoActa.RCBGEN : null;
+        if (evento != null) emitirEvento(obligacion.getActaId(), evento, actor, "Forma de pago generada");
+        recalculador.recalcular(obligacion.getActaId(), OrigenUltimaActualizacion.TIEMPO_REAL, actor);
         return guardada;
     }
 
-    public FalActaFormaPago marcarProcesada(Long formaPagoId, LocalDateTime fhProcesado) {
+    public FalActaFormaPago marcarVigente(Long formaPagoId, java.time.LocalDateTime fhProcesado) {
         FalActaFormaPago forma = formaPagoRepo.findById(formaPagoId)
                 .orElseThrow(() -> new FormaPagoNoEncontradaException(formaPagoId));
-        forma.setEstadoFormaPago(EstadoFormaPago.PROCESADA);
-        forma.setFhPagoProcesado(fhProcesado != null ? fhProcesado : LocalDateTime.now());
+        forma.setEstadoFormaPago(EstadoFormaPago.VIGENTE);
+        forma.setFhPagoProcesado(fhProcesado != null ? fhProcesado : clock.now());
         return formaPagoRepo.save(forma);
     }
 
-    public FalActaFormaPago marcarConfirmada(Long formaPagoId, LocalDateTime fhConfirmado) {
+    public FalActaFormaPago marcarPagada(Long formaPagoId, java.time.LocalDateTime fhConfirmado) {
         FalActaFormaPago forma = formaPagoRepo.findById(formaPagoId)
                 .orElseThrow(() -> new FormaPagoNoEncontradaException(formaPagoId));
-        if (forma.getEstadoFormaPago() != EstadoFormaPago.PROCESADA
+        if (forma.getEstadoFormaPago() != EstadoFormaPago.VIGENTE
                 && forma.getEstadoFormaPago() != EstadoFormaPago.GENERADA)
-            throw new PrecondicionVioladaException(
-                    "No se puede confirmar forma en estado " + forma.getEstadoFormaPago());
-        forma.setEstadoFormaPago(EstadoFormaPago.CONFIRMADA);
-        forma.setFhPagoConfirmado(fhConfirmado != null ? fhConfirmado : LocalDateTime.now());
+            throw new PrecondicionVioladaException("No se puede marcar pagada forma en estado " + forma.getEstadoFormaPago());
+        forma.setEstadoFormaPago(EstadoFormaPago.PAGADA);
+        forma.setFhPagoConfirmado(fhConfirmado != null ? fhConfirmado : clock.now());
         return formaPagoRepo.save(forma);
     }
 
@@ -108,7 +108,12 @@ public class FormaPagoService {
     }
 
     public FalActaFormaPago buscarPorId(Long id) {
-        return formaPagoRepo.findById(id)
-                .orElseThrow(() -> new FormaPagoNoEncontradaException(id));
+        return formaPagoRepo.findById(id).orElseThrow(() -> new FormaPagoNoEncontradaException(id));
+    }
+
+    private void emitirEvento(Long actaId, TipoEventoActa tipo, String actor, String desc) {
+        eventoRepo.registrar(FalActaEvento.builder()
+                .actaId(actaId).tipoEvt(tipo).origenEvt(OrigenEvento.USUARIO_WEB)
+                .fhEvt(clock.now()).idUserEvt(actor).descripcionLegible(desc).build());
     }
 }

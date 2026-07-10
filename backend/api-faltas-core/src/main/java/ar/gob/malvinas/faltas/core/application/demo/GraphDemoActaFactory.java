@@ -116,13 +116,14 @@ public final class GraphDemoActaFactory {
     /**
      * Crea un documento demo en estado BORRADOR.
      */
-    public static FalDocumento crearDocumentoDemo(Long id, Long actaId, TipoDocu tipoDocu) {
+    public static FalDocumento crearDocumentoDemo(Long id, Long actaId, TipoDocu tipoDocu, LocalDateTime ahora) {
         return new FalDocumento(
                 id, actaId, tipoDocu,
-                LocalDateTime.now(),
+                ahora,
                 tipoDocu.name() + " - Demo",
                 EstadoDocu.BORRADOR,
                 TipoFirmaReq.NO_REQUIERE,
-                null);
+                null,
+                ahora);
     }
 }

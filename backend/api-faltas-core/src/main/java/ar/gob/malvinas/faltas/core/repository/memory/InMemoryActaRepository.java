@@ -25,22 +25,28 @@ public class InMemoryActaRepository implements ActaRepository, ResettableInMemor
 
     @Override
     public FalActa guardar(FalActa acta) {
-        FalActa existing = store.get(acta.getId());
-        if (existing == null) {
-            FalActa copia = acta.copia();
-            copia.setVersionRow(0);
-            store.put(acta.getId(), copia);
-            return copia;
-        } else {
-            if (existing.getVersionRow() != acta.getVersionRow()) {
-                throw new ConcurrenciaConflictoException("FalActa", acta.getId(),
-                        existing.getVersionRow(), acta.getVersionRow());
+        Long id = acta.getId();
+        // compute() garantiza atomicidad del CAS: lectura, comparacion y escritura
+        // ocurren en una unica seccion critica por clave.
+        // Equivalente InMemory del: UPDATE fal_acta SET ... WHERE id=? AND version_row=?
+        FalActa[] resultado = new FalActa[1];
+        store.compute(id, (clave, existente) -> {
+            if (existente == null) {
+                FalActa copia = acta.copia();
+                copia.setVersionRow(0);
+                resultado[0] = copia;
+                return copia;
+            }
+            if (existente.getVersionRow() != acta.getVersionRow()) {
+                throw new ConcurrenciaConflictoException("FalActa", id,
+                        existente.getVersionRow(), acta.getVersionRow());
             }
             FalActa copia = acta.copia();
-            copia.setVersionRow(existing.getVersionRow() + 1);
-            store.put(acta.getId(), copia);
+            copia.setVersionRow(existente.getVersionRow() + 1);
+            resultado[0] = copia;
             return copia;
-        }
+        });
+        return resultado[0];
     }
 
     @Override

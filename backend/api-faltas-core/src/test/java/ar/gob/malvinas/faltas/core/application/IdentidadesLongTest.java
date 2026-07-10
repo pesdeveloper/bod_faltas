@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
@@ -36,9 +38,9 @@ class IdentidadesLongTest {
 
     private FalActa crearActa(Long id) {
         return new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Calle 123", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
-                LocalDateTime.now(), "TEST_USER");
+                FaltasClockTestSupport.FIXED.now(), "TEST_USER");
     }
 
     @Nested
@@ -90,7 +92,7 @@ class IdentidadesLongTest {
         void id_es_long() {
             Long id = falloRepo.nextId();
             FalActaFallo fallo = new FalActaFallo(id, 100L, TipoFalloActa.ABSOLUTORIO,
-                    LocalDateTime.now(), LocalDateTime.now(), "TEST_USER");
+                    FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "TEST_USER");
             assertThat(fallo.getId()).isInstanceOf(Long.class);
             assertThat(fallo.getId()).isEqualTo(id);
         }
@@ -124,9 +126,9 @@ class IdentidadesLongTest {
             Long id = apelacionRepo.nextId();
             Long falloId = 10L;
             FalActaApelacion ap = new FalActaApelacion(id, 100L, falloId,
-                    EstadoApelacionActa.PRESENTADA, LocalDateTime.now(),
+                    EstadoApelacionActa.PRESENTADA, FaltasClockTestSupport.FIXED.now(),
                     "presentante", "fundamentos", null, true,
-                    LocalDateTime.now(), "TEST_USER");
+                    FaltasClockTestSupport.FIXED.now(), "TEST_USER");
             assertThat(ap.getId()).isInstanceOf(Long.class);
             assertThat(ap.getFalloId()).isInstanceOf(Long.class);
             assertThat(ap.getFalloId()).isEqualTo(falloId);
@@ -150,8 +152,8 @@ class IdentidadesLongTest {
         void id_es_long() {
             Long id = notifRepo.nextId();
             FalNotificacion n = new FalNotificacion(id, 100L, 200L,
-                    TipoDocu.ACTO_ADMINISTRATIVO, "POSTAL", LocalDateTime.now(),
-                    LocalDateTime.now(), "TEST_USER");
+                    TipoDocu.ACTO_ADMINISTRATIVO, "POSTAL", FaltasClockTestSupport.FIXED.now(),
+                    FaltasClockTestSupport.FIXED.now(), "TEST_USER");
             assertThat(n.getId()).isInstanceOf(Long.class);
         }
 
@@ -160,8 +162,8 @@ class IdentidadesLongTest {
         void buscarPorId_long() {
             Long id = notifRepo.nextId();
             FalNotificacion n = new FalNotificacion(id, 100L, 200L,
-                    TipoDocu.ACTO_ADMINISTRATIVO, "POSTAL", LocalDateTime.now(),
-                    LocalDateTime.now(), "TEST_USER");
+                    TipoDocu.ACTO_ADMINISTRATIVO, "POSTAL", FaltasClockTestSupport.FIXED.now(),
+                    FaltasClockTestSupport.FIXED.now(), "TEST_USER");
             notifRepo.guardar(n);
             assertThat(notifRepo.buscarPorId(id)).isPresent();
         }
@@ -183,7 +185,7 @@ class IdentidadesLongTest {
         @DisplayName("FalBloqueanteMaterial.id es Long")
         void id_es_long() {
             Long id = blocanteRepo.nextId();
-            FalBloqueanteMaterial b = new FalBloqueanteMaterial(id, 100L);
+            FalBloqueanteMaterial b = new FalBloqueanteMaterial(id, 100L, FaltasClockTestSupport.FIXED.now());
             assertThat(b.getId()).isInstanceOf(Long.class);
         }
 
@@ -191,7 +193,7 @@ class IdentidadesLongTest {
         @DisplayName("findById usa Long")
         void findById_long() {
             Long id = blocanteRepo.nextId();
-            FalBloqueanteMaterial b = new FalBloqueanteMaterial(id, 100L);
+            FalBloqueanteMaterial b = new FalBloqueanteMaterial(id, 100L, FaltasClockTestSupport.FIXED.now());
             blocanteRepo.guardar(b);
             assertThat(blocanteRepo.findById(id)).isPresent();
         }
@@ -213,7 +215,7 @@ class IdentidadesLongTest {
         @DisplayName("FalGestionExterna.id es Long")
         void id_es_long() {
             Long id = gestionRepo.nextId();
-            FalGestionExterna g = new FalGestionExterna(id, 100L, LocalDateTime.now(), "TEST_USER");
+            FalGestionExterna g = new FalGestionExterna(id, 100L, FaltasClockTestSupport.FIXED.now(), "TEST_USER");
             assertThat(g.getId()).isInstanceOf(Long.class);
         }
     }

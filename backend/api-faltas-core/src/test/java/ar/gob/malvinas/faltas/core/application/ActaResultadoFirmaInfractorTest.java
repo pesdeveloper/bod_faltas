@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.EvidenciaActaItem;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
@@ -56,14 +58,14 @@ class ActaResultadoFirmaInfractorTest {
                 new InMemoryFalloActaRepository(),
                 new InMemoryApelacionActaRepository(),
                 new InMemoryPagoCondenaRepository()
-        );
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalculador, evidenciaRepo);
+        , FaltasClockTestSupport.FIXED);
+        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalculador, evidenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     private LabrarActaCommand cmdLabrar(ResultadoFirmaInfractor resultado, List<EvidenciaActaItem> evidencias) {
         return new LabrarActaCommand(
                 "TRANSITO", "DEP-001", "INS-001",
-                LocalDate.now(), "Av. Belgrano 100", "San Martin 200",
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Belgrano 100", "San Martin 200",
                 null, null, null, "Juan Perez", "12345678",
                 resultado, evidencias
         );

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.AgregarHabilitacionFirmanteCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearFirmanteCommand;
@@ -55,9 +57,9 @@ class FirmanteTest {
     @BeforeEach
     void setUp() {
         dependenciaRepo = new InMemoryDependenciaRepository();
-        dependenciaService = new DependenciaService(dependenciaRepo);
+        dependenciaService = new DependenciaService(dependenciaRepo, FaltasClockTestSupport.FIXED);
         firmanteRepo = new InMemoryFirmanteRepository();
-        firmanteService = new FirmanteService(firmanteRepo, dependenciaRepo);
+        firmanteService = new FirmanteService(firmanteRepo, dependenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -67,19 +69,19 @@ class FirmanteTest {
     private FalDependencia crearDependencia() {
         return dependenciaService.crear(new CrearDependenciaCommand(
                 null, "Dependencia Test", null,
-                TipoActa.TRANSITO, LocalDate.now(), "sistema"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalFirmante crearFirmanteBasico(String idUser) {
         return firmanteService.crear(new CrearFirmanteCommand(
                 idUser, "Juan Firmante", null, null,
-                null, null, LocalDate.now(), "sistema"));
+                null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     private FalFirmante crearFirmanteConDep(String idUser, FalDependencia dep) {
         return firmanteService.crear(new CrearFirmanteCommand(
                 idUser, "Juan Firmante", "Secretario", "Jefe Dep",
-                dep.getIdDep(), 1, LocalDate.now(), "sistema"));
+                dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     // =========================================================================
@@ -143,7 +145,7 @@ class FirmanteTest {
         void sin_idUser_nulo_falla() {
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     null, "Nombre", null, null,
-                    null, null, LocalDate.now(), "sistema")))
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idUser");
         }
@@ -153,7 +155,7 @@ class FirmanteTest {
         void sin_idUser_blanco_falla() {
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "  ", "Nombre", null, null,
-                    null, null, LocalDate.now(), "sistema")))
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idUser");
         }
@@ -190,7 +192,7 @@ class FirmanteTest {
         void sin_nomFirmante_falla() {
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F005", null, null, null,
-                    null, null, LocalDate.now(), "sistema")))
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nomFirmante");
         }
@@ -200,7 +202,7 @@ class FirmanteTest {
         void sin_nomFirmante_blanco_falla() {
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F005B", "  ", null, null,
-                    null, null, LocalDate.now(), "sistema")))
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nomFirmante");
         }
@@ -219,7 +221,7 @@ class FirmanteTest {
         void sin_rolFirmante_es_valido() {
             FalFirmante f = firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F006", "Pedro Sin Rol", null, null,
-                    null, null, LocalDate.now(), "sistema"));
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
             assertThat(f).isNotNull();
             List<FalFirmanteVersion> vers = firmanteRepo.findVersionesByFirmante(f.getIdFirmante());
             assertThat(vers.get(0).getRolFirmante()).isNull();
@@ -239,7 +241,7 @@ class FirmanteTest {
         void sin_cargoFirmante_es_valido() {
             FalFirmante f = firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F007", "Maria Sin Cargo", "Secretaria", null,
-                    null, null, LocalDate.now(), "sistema"));
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
             assertThat(f).isNotNull();
             List<FalFirmanteVersion> vers = firmanteRepo.findVersionesByFirmante(f.getIdFirmante());
             assertThat(vers.get(0).getCargoFirmante()).isNull();
@@ -279,7 +281,7 @@ class FirmanteTest {
             FalDependencia dep = crearDependencia();
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F009", "Pablo Sin Ver", null, null,
-                    dep.getIdDep(), null, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("verDep");
         }
@@ -298,7 +300,7 @@ class FirmanteTest {
         void verDep_sin_idDep_falla() {
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F010", "Carlos Sin Id", null, null,
-                    null, 1, LocalDate.now(), "sistema")))
+                    null, 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("idDep");
         }
@@ -317,7 +319,7 @@ class FirmanteTest {
         void dep_inexistente_falla() {
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F011", "Firmante Dep Mala", null, null,
-                    9999L, 1, LocalDate.now(), "sistema")))
+                    9999L, 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
@@ -336,7 +338,7 @@ class FirmanteTest {
             FalDependencia dep = crearDependencia();
             assertThatThrownBy(() -> firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F012", "Firmante VerDep Mala", null, null,
-                    dep.getIdDep(), 99, LocalDate.now(), "sistema")))
+                    dep.getIdDep(), 99, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
@@ -373,7 +375,7 @@ class FirmanteTest {
             FalFirmante f = crearFirmanteBasico("USER-F014");
             FalFirmanteVersion v2 = firmanteService.versionar(new VersionarFirmanteCommand(
                     f.getIdFirmante(), "Nombre V2", null, null,
-                    null, null, LocalDate.now().plusDays(1), "admin"));
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1), "admin"));
             assertThat(v2.getVerFirmante()).isEqualTo(2);
         }
     }
@@ -390,7 +392,7 @@ class FirmanteTest {
         @DisplayName("Version anterior queda siActivo=false con fhVigHasta asignada")
         void versionar_cierra_version_anterior() {
             FalFirmante f = crearFirmanteBasico("USER-F015");
-            LocalDate fhV2 = LocalDate.now().plusDays(5);
+            LocalDate fhV2 = FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(5);
 
             firmanteService.versionar(new VersionarFirmanteCommand(
                     f.getIdFirmante(), "Nombre V2", null, null,
@@ -423,7 +425,7 @@ class FirmanteTest {
 
             FalFirmanteVersion v2 = firmanteService.versionar(new VersionarFirmanteCommand(
                     f.getIdFirmante(), "Nombre Nuevo", "Juez", "Magistrado",
-                    dep.getIdDep(), 1, LocalDate.now().plusDays(1), "admin"));
+                    dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1), "admin"));
 
             assertThat(v2.getNomFirmante()).isEqualTo("Nombre Nuevo");
             assertThat(v2.getRolFirmante()).isEqualTo("Juez");
@@ -453,7 +455,7 @@ class FirmanteTest {
             // versionar
             FalFirmanteVersion v2 = firmanteService.versionar(new VersionarFirmanteCommand(
                     f.getIdFirmante(), "Nombre V2", null, null,
-                    null, null, LocalDate.now().plusDays(1), "admin"));
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(1), "admin"));
 
             List<FalFirmanteVersionHabilitacion> habsV2 =
                     firmanteRepo.findHabilitacionesByVersion(f.getIdFirmante(), v2.getVerFirmante());
@@ -474,7 +476,7 @@ class FirmanteTest {
         void versionar_inexistente_falla() {
             assertThatThrownBy(() -> firmanteService.versionar(new VersionarFirmanteCommand(
                     9999L, "Nombre", null, null,
-                    null, null, LocalDate.now(), "admin")))
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "admin")))
                     .isInstanceOf(FirmanteNoEncontradoException.class)
                     .hasMessageContaining("9999");
         }
@@ -735,7 +737,7 @@ class FirmanteTest {
         void rolFirmante_no_otorga_habilitacion() {
             FalFirmante f = firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F030", "Firmante Con Rol", "Secretario", null,
-                    null, null, LocalDate.now(), "sistema"));
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
 
             // version tiene rolFirmante pero no hay habilitaciones
             List<FalFirmanteVersionHabilitacion> habs =
@@ -761,7 +763,7 @@ class FirmanteTest {
         void habilitacion_expresa_autorizacion_documental() {
             FalFirmante f = firmanteService.crear(new CrearFirmanteCommand(
                     "USER-F031", "Firmante Real", "Juez", "Magistrado",
-                    null, null, LocalDate.now(), "sistema"));
+                    null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
 
             firmanteService.agregarHabilitacion(new AgregarHabilitacionFirmanteCommand(
                     f.getIdFirmante(), 1, (short) 3, (short) 10, (short) 5, "admin"));

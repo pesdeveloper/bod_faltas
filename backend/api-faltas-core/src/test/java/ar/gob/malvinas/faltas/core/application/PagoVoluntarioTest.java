@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarPagoVoluntarioCommand;
 import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.FijarMontoPagoVoluntarioCommand;
@@ -91,11 +93,11 @@ class PagoVoluntarioTest {
 
 
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
-        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository());
+        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         pagoService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoRepo, recalc,
-                new NoOpBloqueantesMaterialesChecker());
+                new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
 
     // -------------------------------------------------------------------------
@@ -336,10 +338,10 @@ class PagoVoluntarioTest {
             Long idActa = labrarSolicitarEInformar();
 
             PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
-        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
             BloqueantesMaterialesChecker siempreBloqueado = actaId -> true;
             PagoVoluntarioService srvConBloqueantes = new PagoVoluntarioService(
-                    actaRepo, eventoRepo, snapshotRepo, pagoRepo, recalc, siempreBloqueado);
+                    actaRepo, eventoRepo, snapshotRepo, pagoRepo, recalc, siempreBloqueado, FaltasClockTestSupport.FIXED);
 
             List<FalActaEvento> eventosAntes = eventoRepo.buscarPorActa(idActa);
             int cantidadAntes = eventosAntes.size();
@@ -497,7 +499,7 @@ class PagoVoluntarioTest {
     private LabrarActaCommand cmdLabrar() {
         return new LabrarActaCommand(
                 "TRANSITO", "DEP-001", "INS-001",
-                LocalDate.now(), "Av. Argentina 123", "San Martin 456",
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
                 null, null, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null
         );

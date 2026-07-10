@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableRegistry;
 import ar.gob.malvinas.faltas.core.application.command.*;
@@ -79,26 +81,26 @@ class ActaFlujoDocumentalFuncionalTest {
         ApelacionActaRepository apelRepo = new InMemoryApelacionActaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
-                new InMemoryActaEvidenciaRepository());
+                new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo,
                 new TalonarioService(new InMemoryTalonarioRepository(),
-                        new InMemoryDependenciaRepository(), new InMemoryInspectorRepository()),
+                        new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new InMemoryDependenciaRepository(),
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository());
+                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker());
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
 
         falloService = new FalloActaService(
-                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc);
+                actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
 
         DocumentoCombinacionService combinacion =
                 new DocumentoCombinacionService(new DocumentoVariableRegistry());
@@ -107,10 +109,10 @@ class ActaFlujoDocumentalFuncionalTest {
 
         redaccionService = new DocumentoRedaccionService(
                 docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion,
-                actaRepo, falloRepo, pagoVolRepo);
+                actaRepo, falloRepo, pagoVolRepo, FaltasClockTestSupport.FIXED);
 
         mockGenService = new DocumentoGeneracionMockService(
-                redaccionRepo, docRepo, new DocumentoPdfMockRenderer());
+                redaccionRepo, docRepo, new DocumentoPdfMockRenderer(FaltasClockTestSupport.FIXED), FaltasClockTestSupport.FIXED);
 
         // Seed plantillas mock
         PlantillasMockSeeder.seedar(plantillaRepo, contenidoRepo, defaultRepo);

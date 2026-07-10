@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
@@ -47,19 +49,19 @@ class ActaDocumentoPivotIntegracionTest {
         falloRepo = new InMemoryFalloActaRepository();
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         pivotRepo = new InMemoryActaDocumentoRepository();
-        actaDocService = new ActaDocumentoService(pivotRepo, actaRepo, docRepo);
+        actaDocService = new ActaDocumentoService(pivotRepo, actaRepo, docRepo, FaltasClockTestSupport.FIXED);
 
         recalculador = new SnapshotRecalculador(
                 eventoRepo, docRepo, new InMemoryNotificacionRepository(),
                 pagoVolRepo, falloRepo, new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository());
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
         // Inyectar pivot via reflection (campo @Autowired(required=false))
         ReflectionTestUtils.setField(recalculador, "actaDocumentoRepository", pivotRepo);
 
         // FalloActaService sin ValorizacionService (OK para este test)
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo,
-                falloRepo, pagoVolRepo, recalculador);
+                falloRepo, pagoVolRepo, recalculador, FaltasClockTestSupport.FIXED);
         ReflectionTestUtils.setField(falloService, "actaDocumentoService", actaDocService);
     }
 

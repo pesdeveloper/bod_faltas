@@ -9,6 +9,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalMedidaPreventiva;
 import ar.gob.malvinas.faltas.core.repository.ArticuloMedidaPreventivaRepository;
 import ar.gob.malvinas.faltas.core.repository.MedidaPreventivaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,10 +25,13 @@ public class MedidaPreventivaService {
 
     private final MedidaPreventivaRepository medidaRepo;
     private final ArticuloMedidaPreventivaRepository articuloMedidaRepo;
+    private final FaltasClock faltasClock;
 
     public MedidaPreventivaService(
             MedidaPreventivaRepository medidaRepo,
-            ArticuloMedidaPreventivaRepository articuloMedidaRepo) {
+            ArticuloMedidaPreventivaRepository articuloMedidaRepo,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.medidaRepo = medidaRepo;
         this.articuloMedidaRepo = articuloMedidaRepo;
     }
@@ -50,7 +54,7 @@ public class MedidaPreventivaService {
 
         Long id = medidaRepo.nextId();
         FalMedidaPreventiva m = new FalMedidaPreventiva(
-                id, codigoNorm, (short) 1, descripcion, LocalDateTime.now(), idUser);
+                id, codigoNorm, (short) 1, descripcion, faltasClock.now(), idUser);
         m.setDescripcionDetalle(descripcionDetalle);
         if (idDep != null) m.setDependencia(idDep, verDep);
         m.setSiPuedeBloquearCierre(siPuedeBloquearCierre);
@@ -87,7 +91,7 @@ public class MedidaPreventivaService {
 
         Long id = medidaRepo.nextId();
         FalMedidaPreventiva m = new FalMedidaPreventiva(
-                id, codigoNorm, nuevaVersion, descripcion, LocalDateTime.now(), idUser);
+                id, codigoNorm, nuevaVersion, descripcion, faltasClock.now(), idUser);
         m.setDescripcionDetalle(descripcionDetalle);
         if (idDep != null) m.setDependencia(idDep, verDep);
         m.setSiPuedeBloquearCierre(siPuedeBloquearCierre);
@@ -138,7 +142,7 @@ public class MedidaPreventivaService {
                         "La medida id=" + medidaPreventivaId + " no existe o esta inactiva."));
 
         FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(
-                pkId, siObligatoria, LocalDateTime.now(), idUser);
+                pkId, siObligatoria, faltasClock.now(), idUser);
         return articuloMedidaRepo.save(rel);
     }
 

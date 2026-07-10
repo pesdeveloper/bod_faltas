@@ -20,6 +20,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.QrAccesoRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -59,6 +60,7 @@ public class QrActaService {
     private final QrAccesoRepository qrAccesoRepository;
     private final SnapshotRecalculador snapshotRecalculador;
     private final QrTokenProtector tokenProtector;
+    private final FaltasClock faltasClock;
 
     public QrActaService(
             ActaRepository actaRepository,
@@ -66,7 +68,9 @@ public class QrActaService {
             ActaSnapshotRepository snapshotRepository,
             QrAccesoRepository qrAccesoRepository,
             SnapshotRecalculador snapshotRecalculador,
-            QrTokenProtector tokenProtector) {
+            QrTokenProtector tokenProtector,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -113,7 +117,7 @@ public class QrActaService {
 
     private String emitirNuevoQr(FalActa acta, String idUser) {
         String nuevoToken = tokenProtector.generar(acta.getUuidTecnico());
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         for (int retry = 0; retry < 10; retry++) {
             try {
@@ -166,7 +170,7 @@ public class QrActaService {
         FalActa acta = actaRepository.buscarPorUuidTecnico(uuidTecnico)
                 .orElseThrow(QrTokenInvalidoException::new);
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         Long accId = qrAccesoRepository.nextId();
         FalActaQrAcceso acceso = new FalActaQrAcceso(
@@ -244,7 +248,7 @@ public class QrActaService {
                 .actaId(actaId)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.SISTEMA_QR)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idUserEvt(idUser)
                 .actorTipo(idUser != null && !"SYS".equals(idUser) ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)

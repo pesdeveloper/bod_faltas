@@ -702,7 +702,7 @@ public final class DatasetFuncionalDominioCatalog {
             ),
             List.of(TipoEventoActa.FALABS, TipoEventoActa.NOTPOS),
             List.of("BloqueanteMaterialService.cumplir()",
-                    "BloqueanteMaterialService.anular()", "CierreActaHelper"),
+                    "BloqueanteMaterialService.dejarSinEfecto()", "CierreActaHelper"),
             List.of("ABSUELTO pero ACTIVA por bloqueante. Al resolverse bloqueante se emite CIERRA.")
         ),
 

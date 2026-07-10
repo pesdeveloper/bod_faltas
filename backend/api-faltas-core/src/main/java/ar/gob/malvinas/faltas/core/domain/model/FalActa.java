@@ -181,7 +181,7 @@ public class FalActa {
         this.situacionAdministrativa = SituacionAdministrativaActa.ACTIVA;
         this.resultadoFinal = ResultadoFinalActa.SIN_RESULTADO_FINAL;
         this.versionRow = 0;
-        this.fhCaptura = fechaLabrado != null ? fechaLabrado : LocalDateTime.now();
+        this.fhCaptura = fechaLabrado;
         this.origenCaptura = OrigenCaptura.SISTEMA_AUTOMATICO;
         this.qrPayloadVersion = 0;
         this.siAlturaInfrEstimada = false;
@@ -206,7 +206,7 @@ public class FalActa {
                 fechaActa, fechaLabrado,
                 domicilioHecho, domicilioInfractor,
                 latInfr, lonInfr, resultadoFirmaInfractor,
-                idPersonaInfractor, LocalDateTime.now(), "SYS");
+                idPersonaInfractor, fechaLabrado, "SYS");
     }
 
     private static Long parseLongOrDefault(String s) {

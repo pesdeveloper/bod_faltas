@@ -5,7 +5,6 @@ import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCo
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
-import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoVoluntario;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
@@ -26,6 +25,7 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -57,6 +57,7 @@ public class FalloActaService {
     private final FalloActaRepository falloActaRepository;
     private final PagoVoluntarioRepository pagoVoluntarioRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
     @Autowired(required = false)
     private ActaDocumentoService actaDocumentoService;
 
@@ -67,7 +68,8 @@ public class FalloActaService {
             DocumentoRepository documentoRepository,
             FalloActaRepository falloActaRepository,
             PagoVoluntarioRepository pagoVoluntarioRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
         this.actaRepository = actaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
@@ -75,6 +77,7 @@ public class FalloActaService {
         this.falloActaRepository = falloActaRepository;
         this.pagoVoluntarioRepository = pagoVoluntarioRepository;
         this.snapshotRecalculador = snapshotRecalculador;
+        this.faltasClock = faltasClock;
     }
 
     // -------------------------------------------------------------------------
@@ -86,15 +89,16 @@ public class FalloActaService {
 
         validarPrecondicionesFallo(acta, cmd.actaId());
 
+        LocalDateTime ahora = faltasClock.now();
         Long idFallo = falloActaRepository.nextId();
         FalActaFallo fallo = new FalActaFallo(
-                idFallo, acta.getId(), TipoFalloActa.ABSOLUTORIO, LocalDateTime.now(), LocalDateTime.now(), "SYS");
+                idFallo, acta.getId(), TipoFalloActa.ABSOLUTORIO, ahora, ahora, "SYS");
         fallo.setFundamentos(cmd.fundamentos());
 
         Long idDoc = documentoRepository.nextId();
         FalDocumento doc = new FalDocumento(
                 idDoc, acta.getId(), TipoDocu.ACTO_ADMINISTRATIVO,
-                LocalDateTime.now(), "Fallo absolutorio");
+                ahora, "Fallo absolutorio");
         doc.setStorageKey("storage/" + acta.getId() + "/fallo/" + idDoc);
         documentoRepository.guardar(doc);
 
@@ -128,16 +132,17 @@ public class FalloActaService {
 
         validarPrecondicionesFallo(acta, cmd.actaId());
 
+        LocalDateTime ahora = faltasClock.now();
         Long idFallo = falloActaRepository.nextId();
         FalActaFallo fallo = new FalActaFallo(
-                idFallo, acta.getId(), TipoFalloActa.CONDENATORIO, LocalDateTime.now(), LocalDateTime.now(), "SYS");
+                idFallo, acta.getId(), TipoFalloActa.CONDENATORIO, ahora, ahora, "SYS");
         fallo.setMontoCondena(cmd.montoCondena());
         fallo.setFundamentos(cmd.fundamentos());
 
         Long idDoc = documentoRepository.nextId();
         FalDocumento doc = new FalDocumento(
                 idDoc, acta.getId(), TipoDocu.ACTO_ADMINISTRATIVO,
-                LocalDateTime.now(), "Fallo condenatorio");
+                ahora, "Fallo condenatorio");
         doc.setStorageKey("storage/" + acta.getId() + "/fallo/" + idDoc);
         documentoRepository.guardar(doc);
 
@@ -219,7 +224,7 @@ public class FalloActaService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

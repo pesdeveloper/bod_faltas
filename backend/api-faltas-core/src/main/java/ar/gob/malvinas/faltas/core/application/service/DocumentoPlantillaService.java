@@ -12,6 +12,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalDocumentoPlantilla;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumentoPlantillaFirmaReq;
 import ar.gob.malvinas.faltas.core.repository.DocumentoPlantillaRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,8 +30,11 @@ import java.util.List;
 public class DocumentoPlantillaService {
 
     private final DocumentoPlantillaRepository repository;
+    private final FaltasClock faltasClock;
 
-    public DocumentoPlantillaService(DocumentoPlantillaRepository repository) {
+    public DocumentoPlantillaService(DocumentoPlantillaRepository repository,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.repository = repository;
     }
 
@@ -89,7 +93,7 @@ public class DocumentoPlantillaService {
                 false,
                 cmd.fhVigDesde(),
                 cmd.fhVigHasta(),
-                LocalDateTime.now(),
+                faltasClock.now(),
                 cmd.idUserAlta()
         );
         return repository.guardar(plantilla);
@@ -128,7 +132,7 @@ public class DocumentoPlantillaService {
                 cmd.mecanismoFirmaReq(),
                 cmd.siObligatoria(),
                 cmd.siActiva(),
-                LocalDateTime.now(),
+                faltasClock.now(),
                 cmd.idUserAlta()
         );
         return repository.guardarFirmaReq(req);
@@ -139,7 +143,7 @@ public class DocumentoPlantillaService {
                 .orElseThrow(() -> new DocumentoPlantillaNoEncontradaException(plantillaId));
 
         if (plantilla.getFhVigHasta() != null
-                && plantilla.getFhVigHasta().isBefore(LocalDate.now())) {
+                && plantilla.getFhVigHasta().isBefore(faltasClock.now().toLocalDate())) {
             throw new DocumentoPlantillaInvalidaException(
                     "No se puede activar una plantilla cuya vigencia ya vencio (fhVigHasta="
                             + plantilla.getFhVigHasta() + ").");

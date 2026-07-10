@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.DocumentoPlantillaDefaultService;
 import ar.gob.malvinas.faltas.core.domain.enums.AccionDocumental;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
@@ -25,7 +27,7 @@ class DocumentoPlantillaDefaultTest {
     private DocumentoPlantillaDefaultRepository repo;
     private DocumentoPlantillaDefaultService service;
 
-    private static final LocalDateTime AHORA = LocalDateTime.now();
+    private static final LocalDateTime AHORA = FaltasClockTestSupport.FIXED.now();
     private static final LocalDateTime AYER = AHORA.minusDays(1);
     private static final LocalDateTime MANIANA = AHORA.plusDays(1);
 

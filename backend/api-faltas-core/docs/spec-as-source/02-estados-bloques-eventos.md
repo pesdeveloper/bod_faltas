@@ -295,7 +295,7 @@ Cuando el pago de condena es confirmado, el resultado final del acta pasa a:
 
 **Estado:** implementado en Slice 6B.
 
-### ModoReingresoGestionExterna � catalogo productivo (alineado Slice 6D-0)
+### ModoReingresoGestionExterna — catálogo productivo (alineado Slice 6D-0)
 
 Catalogo productivo modo_reingreso_gestion_ext. El campo es nullable: NULL antes del reingreso.
 
@@ -311,7 +311,7 @@ Catalogo productivo modo_reingreso_gestion_ext. El campo es nullable: NULL antes
 El campo modoReingresoGestionExterna es null mientras la gestion no se reingresia (estado DERIVADA o EN_CURSO).
 SIN_CAMBIOS empareja naturalmente con REINGRESO_PARA_REVISION.
 
-### EstadoGestionExterna � estados de reingreso
+### EstadoGestionExterna — estados de reingreso
 
 | Valor | Descripcion |
 |-------|-------------|
@@ -322,7 +322,7 @@ SIN_CAMBIOS empareja naturalmente con REINGRESO_PARA_REVISION.
 `PAGAPR` existe en `TipoEventoActa` y **se emite desde Slice 6C**:
 `Pago externo registrado en gestion externa (apremio / juzgado de paz / otra).`
 
-### Reglas de transicion � reingreso
+### Reglas de transición — reingreso
 
 - Reingreso NO cierra el acta.
 - Reingreso NO registra CIERRA.
@@ -383,7 +383,8 @@ Fundamentos y comentarios: por fal_observacion (pendiente hasta JDBC).
 
 ### ResultadoFinalActa: CONDENA_FIRME_PAGADA (via PAGAPR)
 
-PAGAPR asigna esultadoFinal = CONDENA_FIRME_PAGADA siempre (identico al pago interno PCOCNF).
+PAGAPR asigna
+esultadoFinal = CONDENA_FIRME_PAGADA siempre (identico al pago interno PCOCNF).
 La ruta es diferente (externa vs interna) pero el resultado juridico final es el mismo.
 
 FALLO_CONDENATORIO_GESTION_EXTERNA existe en el enum pero NO se usa en Slice 6C.
@@ -508,3 +509,34 @@ CONDENA_FIRME no habilita cierre diferido: requiere confirmacion de pago o gesti
 No se crea ningun evento nuevo para cumplir/anular bloqueante.
 El cierre diferido solo emite CIERRA (evento ya existente).
 
+---
+
+## Slice 8F-11M-B1: Eventos economicos canonicos (implementado)
+
+Catalogo vigente en `TipoEventoActa` para el circuito economico MariaDB/InMemory.
+No usar en spec activa los alias descartados: `DEBEMI`, `PAGPRC`, `PAGCFT`, `MOVPAG`, `PLNCAI`, `PAGANU`, ni sustitutos parciales (`OBLAUL`, `FPCGEN`, `FPPGEN`, `FPREFN`, `PLNCAN`).
+
+| Codigo | Descripcion |
+|--------|-------------|
+| OBLDET | Obligacion de pago determinada |
+| OBLSFE | Obligacion de pago dejada sin efecto |
+| OBLREP | Obligacion de pago reemplazada |
+| RCBGEN | Recibo al cobro generado |
+| PLNGEN | Plan de pago generado |
+| PLNREF | Plan de pago refinanciado |
+| PLNANU | Plan de pago anulado |
+| PAGREV | Pago revertido/contracargado |
+| EMIANU | Emision Ingresos anulada |
+| PAGANT | Pago aplicado a obligacion anterior |
+| PAGRES | Pago anterior resuelto administrativamente |
+
+Reglas:
+- `fal_acta_evento` permanece append-only; los hechos economicos se registran con estos codigos.
+- La proyeccion operativa (`fal_acta_economia_proyeccion`) y el snapshot leen la proyeccion economica; no duplican reglas de calculo en campos paralelos.
+
+### 8F-11M-B1-R2 (cierre economia InMemory)
+
+- `FalActaPagoMovimiento` es append-only con un unico vinculo canonico al original (`movimientoOrigenId`); un reverso (`PAGO_REVERTIDO`) o una anulacion (`EMISION_ANULADA`) referencian el movimiento origen por ese campo.
+- Un reverso que revive saldo hace que la obligacion deje de estar `CANCELADA_POR_PAGO` (vuelve a `CON_FORMA_PAGO_VIGENTE` si hay forma vigente o `PENDIENTE_FORMA_PAGO` si no) y que la forma deje de estar `PAGADA`.
+- `siPagoConfirmado` representa pago vigente: reverso total -> false; dos pagos con reverso de uno -> sigue true.
+- El plan finaliza solo mediante transicion atomica a `FINALIZADO_POR_PAGO` (`siVigente=false`, `fhFinalizacionPago`). No se usan `CUMPLIDO`, `CAIDO`, `fhCaida` ni `PLNCAI`.

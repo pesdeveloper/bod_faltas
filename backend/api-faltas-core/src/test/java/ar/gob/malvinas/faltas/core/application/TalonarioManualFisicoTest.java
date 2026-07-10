@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.AnularNumeroTalonarioCommand;
 import ar.gob.malvinas.faltas.core.application.command.AsignarTalonarioInspectorCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
@@ -68,9 +70,9 @@ class TalonarioManualFisicoTest {
         repo = new InMemoryTalonarioRepository();
         var dependenciaRepo = new InMemoryDependenciaRepository();
         var inspectorRepo = new InMemoryInspectorRepository();
-        service = new TalonarioService(repo, dependenciaRepo, inspectorRepo);
-        dependenciaService = new DependenciaService(dependenciaRepo);
-        inspectorService = new InspectorService(inspectorRepo, dependenciaRepo);
+        service = new TalonarioService(repo, dependenciaRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
+        dependenciaService = new DependenciaService(dependenciaRepo, FaltasClockTestSupport.FIXED);
+        inspectorService = new InspectorService(inspectorRepo, dependenciaRepo, FaltasClockTestSupport.FIXED);
 
         // Crear politica
         CrearPoliticaNumeracionCommand politicaCmd = new CrearPoliticaNumeracionCommand(
@@ -78,7 +80,7 @@ class TalonarioManualFisicoTest {
                 ClaseNumeracion.ACTA,
                 false, false, null, false, null, false,
                 (short) 6, "NRO", true,
-                LocalDate.now(), null, "test");
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "test");
         var politica = service.crearPolitica(politicaCmd);
 
         // Talonario MANUAL_FISICO con rango 1-5
@@ -100,15 +102,15 @@ class TalonarioManualFisicoTest {
         // Crear dependencia e inspector reales para las asignaciones
         FalDependencia dep = dependenciaService.crear(new CrearDependenciaCommand(
                 "DEP-TEST-01", "Dependencia Test", null,
-                TipoActa.TRANSITO, LocalDate.now(), "test"));
+                TipoActa.TRANSITO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "test"));
         inspector = inspectorService.crear(new CrearInspectorCommand(
                 "user-insp-test", 99001, "Inspector Test",
-                dep.getIdDep(), 1, LocalDate.now(), "test"));
+                dep.getIdDep(), 1, FaltasClockTestSupport.FIXED.now().toLocalDate(), "test"));
 
         // Asignar talonario manual al inspector real
         AsignarTalonarioInspectorCommand asigCmd = new AsignarTalonarioInspectorCommand(
                 idTalManual, inspector.getIdInsp(), (short) 1,
-                LocalDateTime.now(), "test");
+                FaltasClockTestSupport.FIXED.now(), "test");
         idAsignacion = service.asignarTalonarioInspector(asigCmd).getId();
     }
 
@@ -126,7 +128,7 @@ class TalonarioManualFisicoTest {
             NumTalonarioMovimiento mov = service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 3, MotivoAnulacionTalonario.ERROR_LABRADO,
                     "Formulario con error", null, null, inspector.getIdInsp(), (short) 1,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
             assertThat(mov).isNotNull();
             assertThat(mov.getEstadoNumero()).isEqualTo(EstadoNumeroTalonario.ANULADO);
             assertThat(mov.getNroTalonario()).isEqualTo(3);
@@ -138,7 +140,7 @@ class TalonarioManualFisicoTest {
             service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 2, MotivoAnulacionTalonario.ROTURA_FORMULARIO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
 
             var movs = repo.listarMovimientosPorTalonario(idTalManual);
             assertThat(movs).hasSize(1);
@@ -152,7 +154,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 1, null,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("motivoAnulacion");
         }
@@ -163,7 +165,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 1, MotivoAnulacionTalonario.OTRO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("observacion");
         }
@@ -174,7 +176,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     999L, 1, MotivoAnulacionTalonario.EXTRAVIO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("999");
         }
@@ -185,7 +187,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalElectronico, 1, MotivoAnulacionTalonario.ERROR_LABRADO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("MANUAL_FISICO");
         }
@@ -196,7 +198,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 0, MotivoAnulacionTalonario.ERROR_LABRADO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nroDesde");
         }
@@ -207,7 +209,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 99, MotivoAnulacionTalonario.ERROR_LABRADO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nroHasta");
         }
@@ -218,12 +220,12 @@ class TalonarioManualFisicoTest {
             service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 1, MotivoAnulacionTalonario.ERROR_LABRADO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
 
             assertThatThrownBy(() -> service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 1, MotivoAnulacionTalonario.DUPLICADO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "usuario2")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario2")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("movimiento");
         }
@@ -234,7 +236,7 @@ class TalonarioManualFisicoTest {
             NumTalonarioMovimiento mov = service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 4, MotivoAnulacionTalonario.EXTRAVIO,
                     "Extraviado en campo", null, null, null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
             assertThat(mov.getActaId()).isNull();
             assertThat(mov.getDocumentoId()).isNull();
         }
@@ -254,7 +256,7 @@ class TalonarioManualFisicoTest {
             NumTalonarioMovimiento mov = service.justificarNumeroTalonario(new JustificarNumeroTalonarioCommand(
                     idTalManual, 2, "Numero sin uso justificado por control",
                     null, null, inspector.getIdInsp(), (short) 1,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
             assertThat(mov).isNotNull();
             assertThat(mov.getEstadoNumero()).isEqualTo(EstadoNumeroTalonario.JUSTIFICADO);
         }
@@ -265,7 +267,7 @@ class TalonarioManualFisicoTest {
             service.justificarNumeroTalonario(new JustificarNumeroTalonarioCommand(
                     idTalManual, 3, "Control anual",
                     null, null, null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
 
             var movs = repo.listarMovimientosPorTalonario(idTalManual);
             assertThat(movs).hasSize(1);
@@ -278,7 +280,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.justificarNumeroTalonario(new JustificarNumeroTalonarioCommand(
                     idTalManual, 1, null,
                     null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("observacion");
         }
@@ -289,7 +291,7 @@ class TalonarioManualFisicoTest {
             NumTalonarioMovimiento mov = service.justificarNumeroTalonario(new JustificarNumeroTalonarioCommand(
                     idTalManual, 2, "Justificacion operativa",
                     null, null, null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
             assertThat(mov.getMotivoAnulacion()).isNull();
         }
 
@@ -299,7 +301,7 @@ class TalonarioManualFisicoTest {
             assertThatThrownBy(() -> service.justificarNumeroTalonario(new JustificarNumeroTalonarioCommand(
                     idTalManual, 10, "Fuera de rango",
                     null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -309,12 +311,12 @@ class TalonarioManualFisicoTest {
             service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 1, MotivoAnulacionTalonario.ERROR_LABRADO,
                     null, null, null, null, null,
-                    LocalDateTime.now(), "admin"));
+                    FaltasClockTestSupport.FIXED.now(), "admin"));
 
             assertThatThrownBy(() -> service.justificarNumeroTalonario(new JustificarNumeroTalonarioCommand(
                     idTalManual, 1, "Ya tiene movimiento",
                     null, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("movimiento");
         }
@@ -334,7 +336,7 @@ class TalonarioManualFisicoTest {
             NumTalonarioMovimiento mov = service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
                     idTalManual, 4, "No usado en temporada",
                     inspector.getIdInsp(), (short) 1,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
             assertThat(mov).isNotNull();
             assertThat(mov.getEstadoNumero()).isEqualTo(EstadoNumeroTalonario.DEVUELTO_SIN_USAR);
         }
@@ -345,7 +347,7 @@ class TalonarioManualFisicoTest {
             service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
                     idTalManual, 5, null,
                     null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
 
             var movs = repo.listarMovimientosPorTalonario(idTalManual);
             assertThat(movs.get(0).getEstadoNumero()).isEqualTo(EstadoNumeroTalonario.DEVUELTO_SIN_USAR);
@@ -359,11 +361,11 @@ class TalonarioManualFisicoTest {
         void rechaza_numero_con_movimiento_previo() {
             service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
                     idTalManual, 2, null, null, null,
-                    LocalDateTime.now(), "usuario1"));
+                    FaltasClockTestSupport.FIXED.now(), "usuario1"));
 
             assertThatThrownBy(() -> service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
                     idTalManual, 2, null, null, null,
-                    LocalDateTime.now(), "usuario2")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario2")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("movimiento");
         }
@@ -373,7 +375,7 @@ class TalonarioManualFisicoTest {
         void rechaza_nro_fuera_de_rango_en_devolucion() {
             assertThatThrownBy(() -> service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
                     idTalManual, 100, null, null, null,
-                    LocalDateTime.now(), "usuario1")))
+                    FaltasClockTestSupport.FIXED.now(), "usuario1")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
@@ -390,7 +392,7 @@ class TalonarioManualFisicoTest {
             for (int n : numeros) {
                 service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
                         idTalManual, n, null, null, null,
-                        LocalDateTime.now(), "admin"));
+                        FaltasClockTestSupport.FIXED.now(), "admin"));
             }
         }
 
@@ -401,7 +403,7 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 3, 5);
             CierreAsignacionTalonarioResponse resultado = service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null));
             assertThat(resultado.cerrada()).isFalse();
             assertThat(resultado.numerosFaltantes()).containsExactlyInAnyOrder(2, 4);
         }
@@ -412,7 +414,7 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 2);
             CierreAsignacionTalonarioResponse resultado = service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", "obs"));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", "obs"));
             assertThat(resultado.numerosFaltantes()).containsExactlyInAnyOrder(3, 4, 5);
             assertThat(resultado.cerrada()).isFalse();
         }
@@ -423,7 +425,7 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 2, 3, 4, 5);
             CierreAsignacionTalonarioResponse resultado = service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null));
             assertThat(resultado.cerrada()).isTrue();
             assertThat(resultado.numerosFaltantes()).isEmpty();
         }
@@ -434,7 +436,7 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 2, 3, 4, 5);
             CierreAsignacionTalonarioResponse resultado = service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null));
             assertThat(resultado.estadoAsignacion()).isEqualTo(EstadoAsignacionTalonario.CERRADO);
         }
 
@@ -444,7 +446,7 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 2, 3, 4, 5);
             service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null));
             NumTalonarioInspector asig = repo.buscarAsignacionInspectorPorId(idAsignacion).orElseThrow();
             assertThat(asig.isSiActiva()).isFalse();
         }
@@ -455,7 +457,7 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 2, 3, 4, 5);
             service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null));
             NumTalonarioInspector asig = repo.buscarAsignacionInspectorPorId(idAsignacion).orElseThrow();
             assertThat(asig.getTalonarioIdActivo()).isNull();
         }
@@ -465,7 +467,7 @@ class TalonarioManualFisicoTest {
         void rechaza_asignacion_inexistente() {
             assertThatThrownBy(() -> service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            9999L, LocalDateTime.now(), "admin", null)))
+                            9999L, FaltasClockTestSupport.FIXED.now(), "admin", null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("9999");
         }
@@ -476,11 +478,11 @@ class TalonarioManualFisicoTest {
             cubrirRango(1, 2, 3, 4, 5);
             service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null));
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null));
 
             assertThatThrownBy(() -> service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsignacion, LocalDateTime.now(), "admin", null)))
+                            idAsignacion, FaltasClockTestSupport.FIXED.now(), "admin", null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("activa");
         }
@@ -492,14 +494,14 @@ class TalonarioManualFisicoTest {
             // Creamos asignacion directa para simular el caso
             NumTalonarioInspector asigElec = new NumTalonarioInspector(
                     999L, idTalElectronico, 1L, (short) 1,
-                    LocalDateTime.now(), "test",
+                    FaltasClockTestSupport.FIXED.now(), "test",
                     null, null,
                     EstadoAsignacionTalonario.ENTREGADO, true, idTalElectronico);
             repo.guardarAsignacionInspector(asigElec);
 
             assertThatThrownBy(() -> service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            999L, LocalDateTime.now(), "admin", null)))
+                            999L, FaltasClockTestSupport.FIXED.now(), "admin", null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("MANUAL_FISICO");
         }
@@ -517,12 +519,12 @@ class TalonarioManualFisicoTest {
             Long idTalSinHasta = service.crearTalonario(sinHasta).getId();
 
             AsignarTalonarioInspectorCommand asig = new AsignarTalonarioInspectorCommand(
-                    idTalSinHasta, inspector.getIdInsp(), (short) 1, LocalDateTime.now(), "test");
+                    idTalSinHasta, inspector.getIdInsp(), (short) 1, FaltasClockTestSupport.FIXED.now(), "test");
             Long idAsigSinHasta = service.asignarTalonarioInspector(asig).getId();
 
             assertThatThrownBy(() -> service.cerrarAsignacionTalonarioInspector(
                     new CerrarAsignacionTalonarioInspectorCommand(
-                            idAsigSinHasta, LocalDateTime.now(), "admin", null)))
+                            idAsigSinHasta, FaltasClockTestSupport.FIXED.now(), "admin", null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("nroHasta");
         }
@@ -555,9 +557,9 @@ class TalonarioManualFisicoTest {
         void con_movimientos_parciales_devuelve_faltantes() {
             service.anularNumeroTalonario(new AnularNumeroTalonarioCommand(
                     idTalManual, 1, MotivoAnulacionTalonario.ERROR_LABRADO,
-                    null, null, null, null, null, LocalDateTime.now(), "admin"));
+                    null, null, null, null, null, FaltasClockTestSupport.FIXED.now(), "admin"));
             service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
-                    idTalManual, 3, null, null, null, LocalDateTime.now(), "admin"));
+                    idTalManual, 3, null, null, null, FaltasClockTestSupport.FIXED.now(), "admin"));
 
             List<Integer> faltantes = service.listarNumerosFaltantes(idTalManual);
             assertThat(faltantes).containsExactlyInAnyOrder(2, 4, 5);
@@ -568,7 +570,7 @@ class TalonarioManualFisicoTest {
         void rango_completo_cubierto_devuelve_vacio() {
             for (int n = 1; n <= 5; n++) {
                 service.devolverNumeroSinUsar(new DevolverNumeroSinUsarCommand(
-                        idTalManual, n, null, null, null, LocalDateTime.now(), "admin"));
+                        idTalManual, n, null, null, null, FaltasClockTestSupport.FIXED.now(), "admin"));
             }
             List<Integer> faltantes = service.listarNumerosFaltantes(idTalManual);
             assertThat(faltantes).isEmpty();

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.service.ActaDocumentoService;
 import ar.gob.malvinas.faltas.core.domain.enums.RolDocuActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
@@ -48,7 +50,7 @@ class ActaDocumentoConcurrenciaTest {
         actaRepo = new InMemoryActaRepository();
         docRepo = new InMemoryDocumentoRepository();
         pivotRepo = new InMemoryActaDocumentoRepository();
-        service = new ActaDocumentoService(pivotRepo, actaRepo, docRepo);
+        service = new ActaDocumentoService(pivotRepo, actaRepo, docRepo, FaltasClockTestSupport.FIXED);
         crearActa(1L);
     }
 

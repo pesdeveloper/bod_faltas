@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionResultado;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableRegistry;
@@ -45,7 +47,7 @@ class DocumentoCombinacionServiceTest {
             DocumentoCombinacionResultado r = service.combinar(
                     "{{infractor.nombreCompleto}} doc {{infractor.documento}}",
                     Map.of("infractor.nombreCompleto", "Juan", "infractor.documento", "123",
-                           "acta.fechaLabrado", LocalDateTime.now()));
+                           "acta.fechaLabrado", FaltasClockTestSupport.FIXED.now()));
             assertThat(r.contenidoCombinado()).isEqualTo("Juan doc 123");
             assertThat(r.completo()).isTrue();
         }

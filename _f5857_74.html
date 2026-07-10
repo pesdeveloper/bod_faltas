@@ -1,7 +1,0 @@
-$path = 'S:\Source\Repos\Bod-Faltas\apps\web-direccion-faltas\angular\src\app\core\models\prototipo-faltas.models.ts'
-$content = [System.IO.File]::ReadAllText($path, [System.Text.UTF8Encoding]::new($false))
-$lines = $content -split "`r`n"
-Write-Host ('LineCount=' + $lines.Length)
-Write-Host ('ByteLength=' + (Get-Item $path).Length)
-Write-Host '--- last 60 lines ---'
-$lines | Select-Object -Last 60 | ForEach-Object { Write-Host $_ }

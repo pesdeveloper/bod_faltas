@@ -5,6 +5,7 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoPlantillaDefaultRepositor
 import ar.gob.malvinas.faltas.core.repository.DocumentoPlantillaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.ResettableInMemoryRepository;
 import ar.gob.malvinas.faltas.core.web.dto.DevResetResponse;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -37,11 +38,14 @@ public class DevInMemoryResetService {
     private final DocumentoPlantillaContenidoRepository contenidoRepo;
     private final DocumentoPlantillaDefaultRepository defaultRepo;
 
+    private final FaltasClock faltasClock;
+
     public DevInMemoryResetService(
             List<ResettableInMemoryRepository> repositorios,
             DocumentoPlantillaRepository plantillaRepo,
             DocumentoPlantillaContenidoRepository contenidoRepo,
-            DocumentoPlantillaDefaultRepository defaultRepo) {
+            DocumentoPlantillaDefaultRepository defaultRepo, FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.repositorios = repositorios;
         this.plantillaRepo = plantillaRepo;
         this.contenidoRepo = contenidoRepo;
@@ -81,7 +85,7 @@ public class DevInMemoryResetService {
         return new DevResetResponse(
                 true,
                 "memory",
-                LocalDateTime.now(),
+                faltasClock.now(),
                 repositorios.size(),
                 PLANTILLAS_MOCK,
                 0,

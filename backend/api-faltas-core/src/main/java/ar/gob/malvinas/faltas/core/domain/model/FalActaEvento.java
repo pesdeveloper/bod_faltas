@@ -59,7 +59,7 @@ public final class FalActaEvento {
         this.actaId = Objects.requireNonNull(b.actaId, "actaId requerido");
         this.tipoEvt = Objects.requireNonNull(b.tipoEvt, "tipoEvt requerido");
         this.origenEvt = b.origenEvt != null ? b.origenEvt : OrigenEvento.PROCESO_AUTOMATICO;
-        this.fhEvt = b.fhEvt != null ? b.fhEvt : LocalDateTime.now();
+        this.fhEvt = Objects.requireNonNull(b.fhEvt, "fhEvt requerido");
         this.bloqueFunc = b.bloqueFunc;
         this.estProcAnt = b.estProcAnt;
         this.estProcNvo = b.estProcNvo;

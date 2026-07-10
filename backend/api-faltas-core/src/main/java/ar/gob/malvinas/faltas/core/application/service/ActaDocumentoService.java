@@ -13,6 +13,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import org.springframework.stereotype.Service;
 
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,14 +35,17 @@ public class ActaDocumentoService {
     private final ActaDocumentoRepository actaDocumentoRepository;
     private final ActaRepository actaRepository;
     private final DocumentoRepository documentoRepository;
+    private final FaltasClock faltasClock;
 
     public ActaDocumentoService(
             ActaDocumentoRepository actaDocumentoRepository,
             ActaRepository actaRepository,
-            DocumentoRepository documentoRepository) {
+            DocumentoRepository documentoRepository,
+            FaltasClock faltasClock) {
         this.actaDocumentoRepository = actaDocumentoRepository;
         this.actaRepository = actaRepository;
         this.documentoRepository = documentoRepository;
+        this.faltasClock = faltasClock;
     }
 
     /**
@@ -59,7 +63,7 @@ public class ActaDocumentoService {
                     "El rol " + rol + " no admite principalidad");
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         if (siPrincipal) {
             return actaDocumentoRepository.asociarComoPrincipalAtomico(
                     actaId, documentoId, rol, idUser, ahora);
@@ -83,7 +87,7 @@ public class ActaDocumentoService {
                     "El rol " + rol + " no admite principalidad");
         }
         return actaDocumentoRepository.asociarComoPrincipalAtomico(
-                actaId, documentoId, rol, idUser, LocalDateTime.now());
+                actaId, documentoId, rol, idUser, faltasClock.now());
     }
 
     /**
@@ -101,7 +105,7 @@ public class ActaDocumentoService {
                     "El rol " + rol + " no admite principalidad");
         }
         return actaDocumentoRepository.reemplazarPrincipalAtomico(
-                actaId, documentoIdNuevo, rol, idUser, LocalDateTime.now());
+                actaId, documentoIdNuevo, rol, idUser, faltasClock.now());
     }
 
     public List<FalActaDocumento> consultarPorActa(Long actaId) {

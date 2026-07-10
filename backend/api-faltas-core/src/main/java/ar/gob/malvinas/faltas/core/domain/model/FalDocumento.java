@@ -72,7 +72,8 @@ public class FalDocumento {
             String descripcion,
             EstadoDocu estadoDocu,
             TipoFirmaReq tipoFirmaReq,
-            Long plantillaId) {
+            Long plantillaId,
+            LocalDateTime fhAlta) {
         this.id = id;
         this.idActa = idActa;
         this.tipoDocu = tipoDocu;
@@ -93,7 +94,7 @@ public class FalDocumento {
             TipoFirmaReq tipoFirmaReq,
             Long plantillaId,
             String idUserAlta) {
-        this(id, idActa, tipoDocu, fechaGeneracion, descripcion, estadoDocu, tipoFirmaReq, plantillaId);
+        this(id, idActa, tipoDocu, fechaGeneracion, descripcion, estadoDocu, tipoFirmaReq, plantillaId, fechaGeneracion);
         this.idUserAlta = idUserAlta;
     }
 
@@ -114,7 +115,8 @@ public class FalDocumento {
             String storageKey,
             String hashDocu,
             LocalDateTime fhGeneracion,
-            Long plantillaId) {
+            Long plantillaId,
+            LocalDateTime fhAlta) {
         if (id == null) throw new IllegalArgumentException("id requerido para documento adjunto");
         if (idActa == null) throw new IllegalArgumentException("idActa requerido para documento adjunto");
         if (tipoDocu == null) throw new IllegalArgumentException("tipoDocu requerido para documento adjunto");
@@ -126,8 +128,8 @@ public class FalDocumento {
             throw new IllegalArgumentException("fhGeneracion requerido para documento adjunto");
 
         FalDocumento doc = new FalDocumento(
-                id, idActa, tipoDocu, LocalDateTime.now(), null,
-                EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, plantillaId);
+                id, idActa, tipoDocu, fhAlta, null,
+                EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, plantillaId, fhAlta);
         doc.storageKey = storageKey;
         doc.hashDocu = hashDocu;
         doc.fhGeneracion = fhGeneracion;
@@ -199,7 +201,8 @@ public class FalDocumento {
     public void setTipoFirmaReq(TipoFirmaReq tipoFirmaReq) { this.tipoFirmaReq = tipoFirmaReq; }
 
     public Long getPlantillaId() { return plantillaId; }
-    public void setPlantillaId(Long plantillaId) { this.plantillaId = plantillaId; }
+    public void setPlantillaId(Long plantillaId,
+            LocalDateTime fhAlta) { this.plantillaId = plantillaId; }
 
     public Long getIdTalonario() { return idTalonario; }
     public void setIdTalonario(Long idTalonario) { this.idTalonario = idTalonario; }

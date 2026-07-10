@@ -23,6 +23,7 @@ import ar.gob.malvinas.faltas.core.repository.ActaValorizacionRepository;
 import ar.gob.malvinas.faltas.core.repository.NormativaRepository;
 import ar.gob.malvinas.faltas.core.repository.TarifarioUnidadFaltasRepository;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,6 +48,7 @@ public class ValorizacionService {
     private final NormativaRepository normativaRepo;
     private final TarifarioUnidadFaltasRepository tarifarioRepo;
     private final ActaRepository actaRepo;
+    private final FaltasClock faltasClock;
 
     public ValorizacionService(
             ActaValorizacionRepository valorizacionRepo,
@@ -54,7 +56,9 @@ public class ValorizacionService {
             ActaArticuloInfringidoRepository articuloRepo,
             NormativaRepository normativaRepo,
             TarifarioUnidadFaltasRepository tarifarioRepo,
-            ActaRepository actaRepo) {
+            ActaRepository actaRepo,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.valorizacionRepo = valorizacionRepo;
         this.itemRepo = itemRepo;
         this.articuloRepo = articuloRepo;
@@ -76,7 +80,8 @@ public class ValorizacionService {
             throw new PrecondicionVioladaException(
                     "El acta id=" + actaId + " no tiene articulos imputados activos.");
 
-        LocalDate hoy = LocalDate.now();
+        LocalDateTime ahora = faltasClock.now();
+        LocalDate hoy = ahora.toLocalDate();
         List<FalActaValorizacionItem> items = new ArrayList<>();
         BigDecimal montoTotal = BigDecimal.ZERO;
 
@@ -122,8 +127,8 @@ public class ValorizacionService {
         Long valId = valorizacionRepo.nextId();
         FalActaValorizacion val = new FalActaValorizacion(
                 valId, actaId, TipoValorizacionActa.INFRACCION_BASE, OrigenValorizacion.SISTEMA,
-                CriterioTarifario.ULTIMO_VIGENTE, montoTotal, LocalDateTime.now(), idUser,
-                LocalDateTime.now(), idUser);
+                CriterioTarifario.ULTIMO_VIGENTE, montoTotal, ahora, idUser,
+                ahora, idUser);
         val.setMontoBaseArticulos(montoTotal);
         val.setTarifarioActualizado(true);
         FalActaValorizacion saved = valorizacionRepo.save(val);
@@ -188,7 +193,7 @@ public class ValorizacionService {
                 val.getVersionRow(),
                 vigenteAnterior.map(FalActaValorizacion::getId).orElse(null),
                 vigenteAnterior.map(v -> (Integer) v.getVersionRow()).orElse(null),
-                LocalDateTime.now(),
+                faltasClock.now(),
                 idUser);
     }
 

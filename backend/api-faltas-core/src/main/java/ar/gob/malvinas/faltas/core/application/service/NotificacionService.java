@@ -33,6 +33,7 @@ import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -70,6 +71,7 @@ public class NotificacionService {
     private final SnapshotRecalculador snapshotRecalculador;
     private final FalloActaRepository falloActaRepository;
     private final BloqueantesMaterialesChecker bloqueantesMaterialesChecker;
+    private final FaltasClock faltasClock;
 
     public NotificacionService(
             ActaRepository actaRepository,
@@ -79,7 +81,9 @@ public class NotificacionService {
             ActaSnapshotRepository snapshotRepository,
             SnapshotRecalculador snapshotRecalculador,
             FalloActaRepository falloActaRepository,
-            BloqueantesMaterialesChecker bloqueantesMaterialesChecker) {
+            BloqueantesMaterialesChecker bloqueantesMaterialesChecker,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
         this.documentoRepository = documentoRepository;
         this.notificacionRepository = notificacionRepository;
@@ -122,7 +126,7 @@ public class NotificacionService {
                 doc.getId(),
                 doc.getTipoDocu(),
                 cmd.canal(),
-                LocalDateTime.now()
+                faltasClock.now()
         );
         notif.setObservaciones(cmd.observaciones());
         notificacionRepository.guardar(notif);
@@ -156,7 +160,7 @@ public class NotificacionService {
 
         notif.setEstado(EstadoNotificacion.CON_ACUSE_POSITIVO);
         notif.setResultado(ResultadoNotificacion.POSITIVO);
-        notif.setFechaResultado(LocalDateTime.now());
+        notif.setFechaResultado(faltasClock.now());
         if (cmd.observaciones() != null) notif.setObservaciones(cmd.observaciones());
         notificacionRepository.guardar(notif);
 
@@ -195,7 +199,7 @@ public class NotificacionService {
 
         notif.setEstado(EstadoNotificacion.CON_ACUSE_NEGATIVO);
         notif.setResultado(ResultadoNotificacion.NEGATIVO);
-        notif.setFechaResultado(LocalDateTime.now());
+        notif.setFechaResultado(faltasClock.now());
         if (cmd.observaciones() != null) notif.setObservaciones(cmd.observaciones());
         notificacionRepository.guardar(notif);
 
@@ -232,7 +236,7 @@ public class NotificacionService {
 
         notif.setEstado(EstadoNotificacion.VENCIDA);
         notif.setResultado(ResultadoNotificacion.VENCIDO);
-        notif.setFechaResultado(LocalDateTime.now());
+        notif.setFechaResultado(faltasClock.now());
         if (cmd.observaciones() != null) notif.setObservaciones(cmd.observaciones());
         notificacionRepository.guardar(notif);
 
@@ -349,7 +353,7 @@ public class NotificacionService {
         Optional<FalActaFallo> falloOpt = falloActaRepository.buscarActivo(actaId);
         falloOpt.ifPresent(fallo -> {
             fallo.setEstadoFallo(EstadoFalloActa.NOTIFICADO);
-            fallo.setFechaNotificacion(LocalDateTime.now());
+            fallo.setFechaNotificacion(faltasClock.now());
             falloActaRepository.guardar(fallo);
         });
     }
@@ -361,7 +365,7 @@ public class NotificacionService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

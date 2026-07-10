@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.*;
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
@@ -66,16 +68,16 @@ class DocumentoFirmaRealTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository());
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
 
-        talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo);
-        depService = new DependenciaService(depRepo);
-        plantillaService = new DocumentoPlantillaService(plantillaRepo);
-        firmanteService = new FirmanteService(firmanteRepo, depRepo);
+        talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
+        depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
+        plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
+        firmanteService = new FirmanteService(firmanteRepo, depRepo, FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
-                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo);
+                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa() {
@@ -83,7 +85,7 @@ class DocumentoFirmaRealTest {
         FalActa acta = new FalActa(
                 id, UUID.randomUUID().toString(),
                 "TRANSITO", DEP_COD, "INS-001",
-                LocalDate.now(), LocalDateTime.now(),
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                 "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
         actaRepo.guardar(acta);
@@ -93,14 +95,14 @@ class DocumentoFirmaRealTest {
     private void crearDependencia() {
         depService.crear(new CrearDependenciaCommand(
                 DEP_COD, "Dep Firma", null, TipoActa.TRANSITO,
-                LocalDate.now().minusDays(30), "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(30), "sistema"));
     }
 
     private void crearTalonarioGlobalParaNotifActa() {
         NumPolitica pol = talonarioService.crearPolitica(new CrearPoliticaNumeracionCommand(
                 "POL-FIRMA-NOTIF", "Politica firma notif", ClaseNumeracion.DOCUMENTO,
                 false, false, null, false, null, false, null,
-                "{NRO}", true, LocalDate.now().minusDays(1), null, "sistema"));
+                "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, "sistema"));
         NumTalonario tal = talonarioService.crearTalonario(new CrearTalonarioCommand(
                 pol.getId(), "TAL-FIRMA-NOTIF", "Talonario firma notif",
                 TipoTalonario.ELECTRONICO, ClaseNumeracion.DOCUMENTO,
@@ -110,7 +112,7 @@ class DocumentoFirmaRealTest {
                 tal.getId(), ClaseNumeracion.DOCUMENTO,
                 TipoDocu.NOTIFICACION_ACTA.codigo(), null, null, null,
                 AlcanceTalonario.GLOBAL, (short) 10,
-                LocalDate.now().minusDays(1), null, true, "sistema"));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, true, "sistema"));
     }
 
     private FalDocumentoPlantilla crearPlantillaConReq(String codigo, MomentoNumeracionDocu momento, short rolFirmaReq) {
@@ -121,7 +123,7 @@ class DocumentoFirmaRealTest {
                 TipoFirmaReq.FIRMA_INTERNA,
                 requiereNum, momento,
                 false, false, true,
-                LocalDate.now().minusDays(1), null, USER));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
         plantillaService.agregarFirmaReq(new AgregarFirmaReqPlantillaCommand(
                 p.getId(), (short) 1, rolFirmaReq, null, true, true, USER));
         return plantillaService.activar(p.getId());
@@ -134,7 +136,7 @@ class DocumentoFirmaRealTest {
                 TipoFirmaReq.FIRMA_MULTIPLE,
                 false, MomentoNumeracionDocu.NO_APLICA,
                 false, false, true,
-                LocalDate.now().minusDays(1), null, USER));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
         plantillaService.agregarFirmaReq(new AgregarFirmaReqPlantillaCommand(
                 p.getId(), (short) 1, (short) 1, null, true, true, USER));
         plantillaService.agregarFirmaReq(new AgregarFirmaReqPlantillaCommand(
@@ -146,7 +148,7 @@ class DocumentoFirmaRealTest {
         FalFirmante f = firmanteService.crear(new CrearFirmanteCommand(
                 "user-" + UUID.randomUUID(), "Inspector Firmante",
                 "Inspector", "Cargo", null, null,
-                LocalDate.now().minusDays(30), USER));
+                FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(30), USER));
         firmanteService.agregarHabilitacion(new AgregarHabilitacionFirmanteCommand(
                 f.getIdFirmante(), 1, tipoDocu, rolFirmaReq, mecanismo, USER));
         return f;
@@ -412,7 +414,7 @@ class DocumentoFirmaRealTest {
             FalActa acta = crearActa();
             FalFirmante firmante = firmanteService.crear(new CrearFirmanteCommand(
                     "user-sv-01", "Sin Version", "Inspector", "Cargo", null, null,
-                    LocalDate.now().plusDays(999), USER));
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(999), USER));
             FalDocumentoPlantilla plantilla = crearPlantillaConReq("PL-H02", MomentoNumeracionDocu.NO_APLICA, (short) 1);
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
@@ -444,7 +446,7 @@ class DocumentoFirmaRealTest {
                     "PL-M01", "Plantilla mecanismo 5", null,
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
-                    false, false, true, LocalDate.now().minusDays(1), null, USER));
+                    false, false, true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
             plantillaService.agregarFirmaReq(new AgregarFirmaReqPlantillaCommand(
                     p.getId(), (short) 1, (short) 1, (short) 5, true, true, USER));
             FalDocumentoPlantilla plantilla = plantillaService.activar(p.getId());
@@ -466,7 +468,7 @@ class DocumentoFirmaRealTest {
                     "PL-M02", "Plantilla mecanismo OK", null,
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
-                    false, false, true, LocalDate.now().minusDays(1), null, USER));
+                    false, false, true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
             plantillaService.agregarFirmaReq(new AgregarFirmaReqPlantillaCommand(
                     p.getId(), (short) 1, (short) 1, (short) 5, true, true, USER));
             FalDocumentoPlantilla plantilla = plantillaService.activar(p.getId());

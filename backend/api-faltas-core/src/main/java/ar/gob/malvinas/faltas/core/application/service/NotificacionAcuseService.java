@@ -26,6 +26,7 @@ import ar.gob.malvinas.faltas.core.repository.NotificacionIntentoRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -53,6 +54,7 @@ public class NotificacionAcuseService {
     private final ActaEventoRepository eventoRepository;
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
+    private final FaltasClock faltasClock;
 
     public NotificacionAcuseService(
             NotificacionAcuseRepository acuseRepository,
@@ -61,7 +63,9 @@ public class NotificacionAcuseService {
             ActaRepository actaRepository,
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
-            SnapshotRecalculador snapshotRecalculador) {
+            SnapshotRecalculador snapshotRecalculador,
+            FaltasClock faltasClock) {
+        this.faltasClock = faltasClock;
         this.acuseRepository = acuseRepository;
         this.intentoRepository = intentoRepository;
         this.notificacionRepository = notificacionRepository;
@@ -89,7 +93,7 @@ public class NotificacionAcuseService {
                 throw new PrecondicionVioladaException("El intento " + intentoId + " no pertenece a la notificacion " + notificacionId);
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
         FalNotificacionAcuse acuse;
         // Atomic check+save for idempotency under concurrency
         synchronized (acuseRepository) {
@@ -192,7 +196,7 @@ public class NotificacionAcuseService {
             return;
         }
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = faltasClock.now();
 
         if (acuse.getIntentoId() != null) {
             intentoRepository.buscarPorId(acuse.getIntentoId()).ifPresent(intento -> {
@@ -226,7 +230,7 @@ public class NotificacionAcuseService {
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.SERVICIO_NOTIFICACION)
-                .fhEvt(LocalDateTime.now())
+                .fhEvt(faltasClock.now())
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUser)
                 .actorTipo(ActorTipoEvento.NOTIFICADOR)

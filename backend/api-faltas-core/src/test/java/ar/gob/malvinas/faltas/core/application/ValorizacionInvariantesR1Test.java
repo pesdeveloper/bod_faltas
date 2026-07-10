@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.application.command.CrearArticuloNormativaFaltasCommand;
 import ar.gob.malvinas.faltas.core.application.command.CrearNormativaFaltasCommand;
 import ar.gob.malvinas.faltas.core.application.service.ActaArticuloInfringidoService;
@@ -106,9 +108,9 @@ class ValorizacionInvariantesR1Test {
             valorizacionRepo = new InMemoryActaValorizacionRepository();
             itemRepo = new InMemoryActaValorizacionItemRepository();
             InMemoryArticuloMedidaPreventivaRepository articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository());
-            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo);
-            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo);
+            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository(), FaltasClockTestSupport.FIXED);
+            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
+            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo, FaltasClockTestSupport.FIXED);
 
             InMemoryActaEventoRepository eventoRepo = new InMemoryActaEventoRepository();
             InMemoryDocumentoRepository docRepo = new InMemoryDocumentoRepository();
@@ -120,23 +122,23 @@ class ValorizacionInvariantesR1Test {
 
             recalcConValorizacion = new SnapshotRecalculador(
                     eventoRepo, docRepo, notifRepo, pagoVRepo, falloRepo, apelacionRepo, pagoCondenaRepo,
-                    valorizacionService);
+                    valorizacionService, FaltasClockTestSupport.FIXED);
 
             recalcSinValorizacion = new SnapshotRecalculador(
-                    eventoRepo, docRepo, notifRepo, pagoVRepo, falloRepo, apelacionRepo, pagoCondenaRepo);
+                    eventoRepo, docRepo, notifRepo, pagoVRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
             acta = actaRepo.guardar(new FalActa(actaRepo.nextId(), "uuid-r1a", TipoActa.TRANSITO,
-                    1L, 1L, LocalDate.now(), LocalDateTime.now(), "Calle 1", null, null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "u1"));
+                    1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,
+                    ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "u1"));
 
             FalNormativaFaltas norm = normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand("ORD-R1A", 1, "Ord R1A", null, LocalDate.now(), "u1"));
+                    new CrearNormativaFaltasCommand("ORD-R1A", 1, "Ord R1A", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             FalArticuloNormativaFaltas art = normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(norm.getId(), "ART-R1A", 1, "Art R1A", null,
-                            new BigDecimal("2"), TipoUnidad.SALARIO, false, null, null, LocalDate.now(), "u1"));
+                            new BigDecimal("2"), TipoUnidad.SALARIO, false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
                     tarifarioRepo.nextId(), TipoUnidadFaltas.SALARIO, new BigDecimal("100000"),
-                    LocalDate.of(2020, 1, 1), LocalDateTime.now(), "sistema");
+                    LocalDate.of(2020, 1, 1), FaltasClockTestSupport.FIXED.now(), "sistema");
             tarifarioRepo.save(t);
             articuloService.imputar(acta.getId(), norm.getId(), art.getId(), "u1");
         }
@@ -218,22 +220,22 @@ class ValorizacionInvariantesR1Test {
             valorizacionRepo = new InMemoryActaValorizacionRepository();
             itemRepo = new InMemoryActaValorizacionItemRepository();
             InMemoryArticuloMedidaPreventivaRepository articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository());
-            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo);
-            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo);
+            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository(), FaltasClockTestSupport.FIXED);
+            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
+            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo, FaltasClockTestSupport.FIXED);
 
             acta = actaRepo.guardar(new FalActa(actaRepo.nextId(), "uuid-r1b", TipoActa.TRANSITO,
-                    1L, 1L, LocalDate.now(), LocalDateTime.now(), "Calle 2", null, null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "u1"));
+                    1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 2", null, null, null,
+                    ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "u1"));
 
             FalNormativaFaltas norm = normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand("ORD-R1B", 1, "Ord R1B", null, LocalDate.now(), "u1"));
+                    new CrearNormativaFaltasCommand("ORD-R1B", 1, "Ord R1B", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             FalArticuloNormativaFaltas art = normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(norm.getId(), "ART-R1B", 1, "Art R1B", null,
-                            new BigDecimal("1"), TipoUnidad.SALARIO, false, null, null, LocalDate.now(), "u1"));
+                            new BigDecimal("1"), TipoUnidad.SALARIO, false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
                     tarifarioRepo.nextId(), TipoUnidadFaltas.SALARIO, new BigDecimal("50000"),
-                    LocalDate.of(2020, 1, 1), LocalDateTime.now(), "sistema");
+                    LocalDate.of(2020, 1, 1), FaltasClockTestSupport.FIXED.now(), "sistema");
             tarifarioRepo.save(t);
             articuloService.imputar(acta.getId(), norm.getId(), art.getId(), "u1");
         }
@@ -245,7 +247,7 @@ class ValorizacionInvariantesR1Test {
             FalActaValorizacion prel2 = valorizacionService.calcularBasePreliminar(acta.getId(), "u1");
 
             // Primera confirmacion: sin vigente anterior -> OK
-            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
             valorizacionRepo.confirmarVigenteAtomico(prel1.getId(), prel1.getVersionRow(), null, null, ahora, "u1");
 
             // Segunda confirmacion: caller cree que no habia vigente -> ConcurrenciaConflictoException
@@ -260,7 +262,7 @@ class ValorizacionInvariantesR1Test {
             FalActaValorizacion prel1 = valorizacionService.calcularBasePreliminar(acta.getId(), "u1");
             FalActaValorizacion prel2 = valorizacionService.calcularBasePreliminar(acta.getId(), "u1");
 
-            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
             valorizacionRepo.confirmarVigenteAtomico(prel1.getId(), prel1.getVersionRow(), null, null, ahora, "u1");
             try {
                 valorizacionRepo.confirmarVigenteAtomico(prel2.getId(), prel2.getVersionRow(), null, null, ahora, "u2");
@@ -301,7 +303,7 @@ class ValorizacionInvariantesR1Test {
             CyclicBarrier barrier = new CyclicBarrier(2);
             AtomicInteger successes = new AtomicInteger(0);
             AtomicInteger conflicts = new AtomicInteger(0);
-            LocalDateTime ahora = LocalDateTime.now();
+            LocalDateTime ahora = FaltasClockTestSupport.FIXED.now();
 
             Runnable confirmar1 = () -> {
                 try {
@@ -371,22 +373,22 @@ class ValorizacionInvariantesR1Test {
             valorizacionRepo = new InMemoryActaValorizacionRepository();
             itemRepo = new InMemoryActaValorizacionItemRepository(valorizacionRepo);
             InMemoryArticuloMedidaPreventivaRepository articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository());
-            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo);
-            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo);
+            normativaService = new NormativaService(normativaRepo, new InMemoryDependenciaRepository(), FaltasClockTestSupport.FIXED);
+            articuloService = new ActaArticuloInfringidoService(articuloImputadoRepo, actaRepo, normativaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
+            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepo, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo, FaltasClockTestSupport.FIXED);
 
             acta = actaRepo.guardar(new FalActa(actaRepo.nextId(), "uuid-r1c", TipoActa.TRANSITO,
-                    1L, 1L, LocalDate.now(), LocalDateTime.now(), "Calle 3", null, null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null, LocalDateTime.now(), "u1"));
+                    1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 3", null, null, null,
+                    ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "u1"));
 
             FalNormativaFaltas norm = normativaService.crearNormativa(
-                    new CrearNormativaFaltasCommand("ORD-R1C", 1, "Ord R1C", null, LocalDate.now(), "u1"));
+                    new CrearNormativaFaltasCommand("ORD-R1C", 1, "Ord R1C", null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             FalArticuloNormativaFaltas art = normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(norm.getId(), "ART-R1C", 1, "Art R1C", null,
-                            new BigDecimal("2"), TipoUnidad.SALARIO, false, null, null, LocalDate.now(), "u1"));
+                            new BigDecimal("2"), TipoUnidad.SALARIO, false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "u1"));
             FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
                     tarifarioRepo.nextId(), TipoUnidadFaltas.SALARIO, new BigDecimal("80000"),
-                    LocalDate.of(2020, 1, 1), LocalDateTime.now(), "sistema");
+                    LocalDate.of(2020, 1, 1), FaltasClockTestSupport.FIXED.now(), "sistema");
             tarifarioRepo.save(t);
             articuloService.imputar(acta.getId(), norm.getId(), art.getId(), "u1");
         }
@@ -438,7 +440,7 @@ class ValorizacionInvariantesR1Test {
         @DisplayName("sin guardia (no-arg constructor): item para confirmada se guarda sin error")
         void sin_guardia_item_para_confirmada_permitido() {
             InMemoryActaValorizacionItemRepository itemRepoSinGuardia = new InMemoryActaValorizacionItemRepository();
-            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepoSinGuardia, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo);
+            valorizacionService = new ValorizacionService(valorizacionRepo, itemRepoSinGuardia, articuloImputadoRepo, normativaRepo, tarifarioRepo, actaRepo, FaltasClockTestSupport.FIXED);
 
             FalActaValorizacion prel = valorizacionService.calcularBasePreliminar(acta.getId(), "u1");
             valorizacionService.confirmar(prel.getId(), "u1");
@@ -469,7 +471,7 @@ class ValorizacionInvariantesR1Test {
         private FalTarifarioUnidadFaltas newTarifario(TipoUnidadFaltas tipo, LocalDate desde, LocalDate hasta) {
             Long id = tarifarioRepo.nextId();
             FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
-                    id, tipo, new BigDecimal("100000"), desde, LocalDateTime.now(), "sistema");
+                    id, tipo, new BigDecimal("100000"), desde, FaltasClockTestSupport.FIXED.now(), "sistema");
             if (hasta != null) t.setFhVigHasta(hasta);
             return t;
         }
@@ -568,7 +570,7 @@ class ValorizacionInvariantesR1Test {
         void setUp() {
             medidaRepo = new InMemoryMedidaPreventivaRepository();
             articuloMedidaRepo = new InMemoryArticuloMedidaPreventivaRepository();
-            medidaService = new MedidaPreventivaService(medidaRepo, articuloMedidaRepo);
+            medidaService = new MedidaPreventivaService(medidaRepo, articuloMedidaRepo, FaltasClockTestSupport.FIXED);
         }
 
         @Test
@@ -603,12 +605,12 @@ class ValorizacionInvariantesR1Test {
             medidaService.crearPrimeraVersion("MP03", "Inhibicion", null, null, null, false, null, "u1");
 
             FalMedidaPreventiva candidata = new FalMedidaPreventiva(
-                    medidaRepo.nextId(), "MP03", (short) 2, "Inhibicion v2", LocalDateTime.now(), "u1");
+                    medidaRepo.nextId(), "MP03", (short) 2, "Inhibicion v2", FaltasClockTestSupport.FIXED.now(), "u1");
 
             assertThat(medidaRepo.crearNuevaVersionAtomico(candidata)).isNotNull();
 
             FalMedidaPreventiva candidataDuplicada = new FalMedidaPreventiva(
-                    medidaRepo.nextId(), "MP03", (short) 2, "Inhibicion v2 dup", LocalDateTime.now(), "u2");
+                    medidaRepo.nextId(), "MP03", (short) 2, "Inhibicion v2 dup", FaltasClockTestSupport.FIXED.now(), "u2");
 
             assertThatThrownBy(() -> medidaRepo.crearNuevaVersionAtomico(candidataDuplicada))
                     .isInstanceOf(PrecondicionVioladaException.class)
@@ -646,7 +648,7 @@ class ValorizacionInvariantesR1Test {
 
         private FalActaArticuloInfringido nuevoActivo(Long actaId, Long articuloId) {
             Long id = repo.nextId();
-            return new FalActaArticuloInfringido(id, actaId, 1L, articuloId, LocalDateTime.now(), "u1");
+            return new FalActaArticuloInfringido(id, actaId, 1L, articuloId, FaltasClockTestSupport.FIXED.now(), "u1");
         }
 
         @Test
@@ -682,7 +684,7 @@ class ValorizacionInvariantesR1Test {
         @DisplayName("dar de baja y agregar nuevo activo para mismo par: permitido")
         void baja_y_nuevo_activo_permitido() {
             FalActaArticuloInfringido a1 = repo.save(nuevoActivo(1L, 100L));
-            a1.darDeBaja(MotivoBajaArticuloInfringido.CORRECCION_IMPUTACION, LocalDateTime.now(), "u1");
+            a1.darDeBaja(MotivoBajaArticuloInfringido.CORRECCION_IMPUTACION, FaltasClockTestSupport.FIXED.now(), "u1");
             repo.save(a1);  // dar de baja
             assertThat(repo.save(nuevoActivo(1L, 100L))).isNotNull();
         }
@@ -707,7 +709,7 @@ class ValorizacionInvariantesR1Test {
         @DisplayName("guardar relacion nueva activa es permitido")
         void nueva_activa_ok() {
             ArticuloMedidaPreventivaId pk = new ArticuloMedidaPreventivaId(1L, 10L);
-            FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(pk, true, LocalDateTime.now(), "u1");
+            FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(pk, true, FaltasClockTestSupport.FIXED.now(), "u1");
             assertThat(repo.save(rel)).isNotNull();
         }
 
@@ -715,7 +717,7 @@ class ValorizacionInvariantesR1Test {
         @DisplayName("desactivar una relacion es permitido")
         void desactivar_ok() {
             ArticuloMedidaPreventivaId pk = new ArticuloMedidaPreventivaId(1L, 10L);
-            FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(pk, true, LocalDateTime.now(), "u1");
+            FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(pk, true, FaltasClockTestSupport.FIXED.now(), "u1");
             rel = repo.save(rel);
             rel.setSiActiva(false);
             assertThat(repo.save(rel)).isNotNull();
@@ -726,7 +728,7 @@ class ValorizacionInvariantesR1Test {
         @DisplayName("reactivar una relacion via save() lanza PrecondicionVioladaException")
         void reactivacion_via_save_falla() {
             ArticuloMedidaPreventivaId pk = new ArticuloMedidaPreventivaId(1L, 10L);
-            FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(pk, true, LocalDateTime.now(), "u1");
+            FalArticuloMedidaPreventiva rel = new FalArticuloMedidaPreventiva(pk, true, FaltasClockTestSupport.FIXED.now(), "u1");
             rel = repo.save(rel);
             rel.setSiActiva(false);
             repo.save(rel);

@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenFirmezaCondena;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFalloActa;
@@ -32,7 +34,7 @@ class FalloInvariantesTest {
     private FalActaFallo crearFallo(Long actaId) {
         Long id = repo.nextId();
         FalActaFallo f = new FalActaFallo(id, actaId,
-                TipoFalloActa.CONDENATORIO, LocalDateTime.now(), LocalDateTime.now(), "USR-1");
+                TipoFalloActa.CONDENATORIO, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-1");
         f.setMontoCondena(new BigDecimal("1000"));
         f.setEstadoFallo(EstadoFalloActa.NOTIFICADO);
         return f;
@@ -99,7 +101,7 @@ class FalloInvariantesTest {
             FalActaFallo f = crearFallo(30L);
             repo.guardarComoVigente(f);
             FalActaFallo v = repo.findVigenteByActaId(30L).orElseThrow();
-            v.declararFirmeza(LocalDateTime.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+            v.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
             repo.guardar(v);
             FalActaFallo leido = repo.findVigenteByActaId(30L).orElseThrow();
             assertThat(leido.isSiFirme()).isTrue();
@@ -111,7 +113,7 @@ class FalloInvariantesTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
         @Test @DisplayName("declararFirmeza: lanza si origenFirmeza null") void firmeza_requiere_origen() {
-            assertThatThrownBy(() -> crearFallo(32L).declararFirmeza(LocalDateTime.now(), null))
+            assertThatThrownBy(() -> crearFallo(32L).declararFirmeza(FaltasClockTestSupport.FIXED.now(), null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
         @Test @DisplayName("siFirme=false sin fhFirmeza inicialmente") void no_firme_inicialmente() {
@@ -147,7 +149,7 @@ class FalloInvariantesTest {
     class CamposNuevos {
         @Test @DisplayName("fhVtoApelacion y siApelable seteables") void nuevos_campos() {
             FalActaFallo f = crearFallo(50L);
-            f.setFhVtoApelacion(java.time.LocalDate.now().plusDays(15));
+            f.setFhVtoApelacion(FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(15));
             f.setSiApelable(true);
             assertThat(f.getFhVtoApelacion()).isNotNull();
             assertThat(f.isSiApelable()).isTrue();
@@ -169,7 +171,7 @@ class FalloInvariantesTest {
             FalActaFallo f = crearFallo(53L);
             f.setResultadoFallo(ResultadoFalloActa.CONDENA);
             f.setSiApelable(true);
-            f.setFhVtoApelacion(java.time.LocalDate.now().plusDays(10));
+            f.setFhVtoApelacion(FaltasClockTestSupport.FIXED.now().toLocalDate().plusDays(10));
             f.setValorizacionId(99L);
             f.setFalloReemplazadoId(77L);
             FalActaFallo c = f.copia();

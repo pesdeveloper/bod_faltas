@@ -2,6 +2,8 @@ package ar.gob.malvinas.faltas.core.web;
 
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.NumerarDocumentoCommand;
+import ar.gob.malvinas.faltas.core.application.result.NumerarDocumentoParaFirmasResponse;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.application.command.EnviarAFirmaCommand;
 import ar.gob.malvinas.faltas.core.application.command.RegistrarFirmaDocumentalCommand;
 import ar.gob.malvinas.faltas.core.web.dto.NumerarDocumentoRequest;
@@ -35,7 +37,6 @@ import ar.gob.malvinas.faltas.core.web.dto.IncorporarDocumentoEscaneadoRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,7 +45,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/faltas")
@@ -173,44 +173,36 @@ public class DocumentoController {
                 "Convalidacion simple registrada. Documento permanece en ADJUNTO."));
     }
 
+    /**
+     * Numera un documento concreto via integracion controlada con la aplicacion de Firmas.
+     *
+     * El actor se extrae del token Bearer (sub del JWT); no se acepta actor en el body.
+     * Protegido por autenticacion JWT obligatoria.
+     * Idempotente: si el documento ya esta numerado, devuelve el numero existente (HTTP 200).
+     * Si numera por primera vez, devuelve HTTP 201.
+     *
+     * Flujo AL_FIRMAR obligatorio:
+     *   1. Firmas solicita POST /documentos/{id}/numerar  <- este endpoint
+     *   2. Faltas asigna y persiste el numero.
+     *   3. Firmas renderiza el contenido definitivo incluyendo el numero.
+     *   4. Firmas calcula el hash del contenido definitivo.
+     *   5. Firmas firma ese contenido (POST /documentos/{id}/firmar-real).
+     *
+     * Slice D-18.
+     */
+    @PostMapping("/documentos/{documentoId}/numerar")
+    public ResponseEntity<NumerarDocumentoParaFirmasResponse> numerar(
+            @PathVariable Long documentoId) {
+        String actor = ActorContextHolder.get().sub();
+        NumerarDocumentoCommand cmd = new NumerarDocumentoCommand(documentoId, actor);
+        NumerarDocumentoParaFirmasResponse resp = documentoService.numerarDocumentoParaFirmas(cmd);
+        return resp.yaEstabaNumerado()
+                ? ResponseEntity.ok(resp)
+                : ResponseEntity.status(HttpStatus.CREATED).body(resp);
+    }
     @GetMapping("/actas/{idActa}/documentos")
     public ResponseEntity<List<FalDocumento>> listar(@PathVariable Long idActa) {
         return ResponseEntity.ok(documentoService.obtenerDocumentos(idActa));
     }
 
-    @ExceptionHandler(ActaNoEncontradaException.class)
-    public ResponseEntity<Map<String, String>> handleNotFound(ActaNoEncontradaException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(DocumentoNoEncontradoException.class)
-    public ResponseEntity<Map<String, String>> handleDocNotFound(DocumentoNoEncontradoException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(DocumentoPlantillaNoEncontradaException.class)
-    public ResponseEntity<Map<String, String>> handlePlantillaNotFound(DocumentoPlantillaNoEncontradaException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(DocumentoPlantillaInvalidaException.class)
-    public ResponseEntity<Map<String, String>> handlePlantillaInvalida(DocumentoPlantillaInvalidaException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(FirmanteNoEncontradoException.class)
-    public ResponseEntity<Map<String, String>> handleFirmanteNotFound(FirmanteNoEncontradoException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", ex.getMessage()));
-    }
-
-    @ExceptionHandler(PrecondicionVioladaException.class)
-    public ResponseEntity<Map<String, String>> handlePrecondicion(PrecondicionVioladaException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(Map.of("error", ex.getMessage()));
-    }
 }
