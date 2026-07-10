@@ -18,7 +18,8 @@ Estado verificado:
 - contrato global de errores HTTP cerrado mediante `ErrorResponse` y `GlobalFaltasControllerAdvice`;
 - suite completa: **2478 tests, 0 failures, 0 errors, BUILD SUCCESS**;
 - spec-as-source activa saneada en UTF-8;
-- sin JDBC, JPA, MariaDB ni DDL incorporados todavía.
+- infraestructura JDBC base incorporada: dependencia Spring JDBC, driver MariaDB, perfil `jdbc`, configuración de `DataSource` y prueba condicionada de infraestructura;
+- sin repositorios JDBC de dominio, migraciones versionadas, DDL productivo, Flyway/Liquibase, Testcontainers ni JPA/Hibernate todavía.
 
 Las definiciones activas de paridad y estrategia de persistencia se encuentran en:
 

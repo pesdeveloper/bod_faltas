@@ -1,61 +1,93 @@
-﻿# Fuentes base — Faltas / Dirección de Faltas
+# Fuentes de referencia — Faltas / Dirección de Faltas
 
-Esta carpeta contiene documentos fuente obligatorios para el backend productivo de Faltas.
+Esta carpeta contiene insumos históricos, funcionales y estructurales utilizados para auditar y completar la spec canónica del backend productivo de Faltas.
 
-## Documentos base
+La única spec-as-source normativa está en:
 
-### 1. Modelo MariaDB final
+`backend/api-faltas-core/docs/spec-as-source/`
+
+Su punto de entrada obligatorio es:
+
+`backend/api-faltas-core/docs/spec-as-source/README.md`
+
+Los documentos de esta carpeta no pueden redefinir silenciosamente la spec canónica.
+
+## 1. Modelo MariaDB de referencia
 
 Archivo:
 
 `MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md`
 
 Rol:
-- Fuente estructural del modelo MariaDB productivo.
-- Define tablas, campos, convenciones técnicas, catálogos funcionales, eventos, snapshots y reglas de persistencia futura.
-- Debe consultarse antes de crear o modificar entidades, enums, catálogos, repositorios, persistencia JDBC/MariaDB o scripts SQL.
 
-### 2. Matriz de proceso
+- insumo estructural para tablas, campos, convenciones técnicas y persistencia;
+- fuente de auditoría para la reconstrucción del modelo MariaDB;
+- referencia que debe reconciliarse con la spec vigente, la implementación y los tests.
+
+No debe aplicarse mecánicamente ni prevalecer ante una decisión canónica posterior.
+
+## 2. Matriz de proceso de referencia
 
 Archivo:
 
 `MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md`
 
 Rol:
-- Fuente funcional del motor de proceso.
-- Define acciones, precondiciones, eventos, transiciones, snapshot esperado, cerrabilidad y restricciones.
-- Debe consultarse antes de crear o modificar servicios de dominio, comandos, eventos, snapshot, bandejas, acciones pendientes o tests de flujo.
 
-## Regla de prioridad
+- insumo funcional para acciones, precondiciones, eventos, transiciones y cerrabilidad;
+- fuente de auditoría durante la consolidación temática de la spec;
+- evidencia histórica de decisiones de proceso.
 
-Cuando haya dudas o conflicto, usar esta jerarquía:
+No reemplaza los documentos funcionales canónicos de `spec-as-source`.
 
-1. Decisiones cerradas explícitas posteriores, si están documentadas en spec-as-source o delta aprobado.
-2. `docs/faltas/MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md`
-3. `docs/faltas/MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md`
-4. `backend/api-faltas-core/docs/spec-as-source/` (spec viva)
-5. Tests ejecutables actuales.
-6. Código in-memory actual.
-7. Prototipo/Angular sólo como evidencia UX, nunca como fuente de dominio.
+## 3. Delta de implementación InMemory
 
-## Política de cambios
+Archivo:
 
-Los documentos base no deben editarse de forma oportunista en cada slice.
+`DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md`
 
-Si la implementación in-memory descubre una corrección necesaria:
-1. documentarla primero en `DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md`;
-2. agregar o ajustar tests guardrail;
-3. revisar la decisión;
-4. recién después generar una nueva versión del modelo MariaDB o actualizar scripts SQL futuros.
+Rol:
 
-## Regla para agentes Cursor/Codex
+- registrar diferencias detectadas entre el modelo anterior y la implementación validada;
+- aportar evidencia para la matriz de paridad;
+- evitar que una diferencia conocida se pierda al diseñar MariaDB.
 
-Antes de implementar cualquier slice de dominio, revisar:
+El delta no es una segunda spec ni puede resolver contradicciones por sí solo.
 
-- este README;
-- el modelo MariaDB base;
-- la matriz de proceso;
-- `backend/api-faltas-core/docs/spec-as-source/`;
-- `backend/api-faltas-core/docs/spec-as-source/99-pendientes-siguientes-slices.md`.
+## 4. Decisiones de dominio
 
-No inventar eventos, bloques, estados, bandejas, acciones ni catálogos que no estén justificados por estas fuentes.
+Archivo:
+
+`domain-decisions.md`
+
+Rol:
+
+- conservar decisiones explícitas que deben ser verificadas contra la spec canónica;
+- aportar contexto para la auditoría y trazabilidad.
+
+Toda decisión todavía vigente debe terminar absorbida por el documento canónico temático correspondiente.
+
+## 5. Regla de autoridad
+
+Ante una diferencia entre esta carpeta y `spec-as-source`:
+
+1. no elegir automáticamente el documento más nuevo;
+2. no elegir automáticamente el comportamiento del código;
+3. registrar el gap;
+4. resolverlo de forma explícita;
+5. actualizar primero la spec canónica;
+6. alinear después modelo, código, tests y documentación de referencia.
+
+## 6. Política de cambios
+
+No editar estos documentos de forma oportunista para hacerlos coincidir con una implementación.
+
+Cuando aparezca una diferencia:
+
+- identificar la regla afectada;
+- localizar evidencia en Java y tests;
+- determinar si es un gap documental, una decisión pendiente o un defecto;
+- registrar la resolución en la spec canónica;
+- actualizar esta documentación solamente si sigue siendo una referencia activa y la actualización está dentro del alcance autorizado.
+
+La historia de cambios se conserva en Git y no debe mezclarse con el contrato vigente.

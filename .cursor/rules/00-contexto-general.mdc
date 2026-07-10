@@ -1,5 +1,5 @@
 ---
-description: Fuente de verdad y criterio de continuidad
+description: Fuente normativa y criterio de continuidad
 globs:
   - backend/**
 alwaysApply: true
@@ -9,13 +9,15 @@ Este proyecto usa enfoque spec-as-source.
 
 Reglas obligatorias:
 
+- La única fuente normativa del backend productivo de Faltas es `backend/api-faltas-core/docs/spec-as-source/`.
+- El punto de entrada obligatorio es `backend/api-faltas-core/docs/spec-as-source/README.md`.
+- Leer únicamente los documentos canónicos que ese README clasifique como aplicables al alcance.
+- `docs/faltas/`, el código, los tests, los handoffs, los documentos de continuidad y la historia Git son fuentes de evidencia, auditoría o conformidad; no pueden redefinir silenciosamente la spec.
+- Las instrucciones del slice actual pueden delimitar el alcance y autorizar cambios, pero no deben alterar reglas de dominio sin actualizar explícitamente la spec canónica.
+- Si existe una contradicción, no resolverla por fecha, cantidad de tests, nombre de archivo, cercanía con el código ni inferencia propia.
+- Ante una contradicción, detener la decisión afectada, reportar el gap y solicitar resolución explícita.
 - No rediseñar desde cero.
 - Priorizar continuidad sobre reinvención.
-- La fuente principal de verdad es:
-  1. `backend/api-faltas-core/docs/spec-as-source/` y `docs/faltas/`
-  2. instrucciones explícitas del chat actual
-  3. archivos de estado/reanudación solo cuando se incluyan de forma intencional
-- Si hay contradicción entre inferencia y spec, priorizar la spec.
-- No inventar estructuras no documentadas.
-- No introducir simplificaciones que rompan decisiones ya cerradas.
-- Priorizar correcciones quirúrgicas y continuidad.
+- No inventar estructuras ni reglas no documentadas.
+- No introducir simplificaciones que rompan decisiones cerradas.
+- Priorizar correcciones quirúrgicas, trazables y verificables.
