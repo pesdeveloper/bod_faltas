@@ -1,63 +1,115 @@
-# Slice {{N}} — {{TITULO}}
+# {{ID_SLICE}} — {{TÍTULO}}
 
-## Objetivo
-Implementar o corregir {{comportamiento puntual}} en el prototipo backend, manteniendo coherencia con el modelo final.
+## 1. Repositorio y rama
 
-## Fuente de verdad
-Tomar como fuente principal solo:
+Repositorio:
 
-- `backend/api-faltas-core/docs/spec-as-source/...`
-- `backend/api-faltas-core/docs/spec-as-source/...`
-- `docs/faltas/...`
+`{{RUTA_REPOSITORIO}}`
 
-Usar otras partes de las fuentes vivas solo si resulta estrictamente necesario.
+Rama obligatoria:
 
-## Alcance técnico
-Trabajar solo sobre:
+`{{RAMA}}`
 
-- `backend/api-faltas-prototipo/...`
-- `backend/api-faltas-prototipo/...`
-- `backend/api-faltas-prototipo/...`
+Commit o baseline de entrada:
 
-## No tocar
-- otros módulos backend
-- persistencia real
-- workers
-- frontend
-- SQL físico
-- código no relacionado con este circuito
-- circuitos viejos ya descartados
+`{{COMMIT_O_BASELINE}}`
 
-## Restricciones funcionales
-- no reintroducir circuitos viejos
-- mantener un único circuito verdadero
-- el estado del expediente debe ser agregador cuando haya múltiples piezas o documentos
-- el detalle fino debe vivir en estructuras específicas
-- si una simplificación rompe el modelo final, corregirla ahora
+## 2. Objetivo
 
-## Caso demo principal
-Usar como caso principal:
+{{OBJETIVO_PUNTUAL_Y_OBSERVABLE}}
 
-- `ACTA-XXXX`
+## 3. Autoridad y contexto
 
-### Recorrido esperado
-1. {{estado o acción inicial}}
-2. {{acción}}
-3. {{resultado esperado}}
-4. {{siguiente acción}}
-5. {{estado final esperado}}
+Punto de entrada obligatorio:
 
-## Criterio de cierre
-El slice queda bien cuando:
+`backend/api-faltas-core/docs/spec-as-source/README.md`
 
-- {{condición observable 1}}
-- {{condición observable 2}}
-- {{condición observable 3}}
-- no queda ningún circuito viejo compitiendo con el nuevo
+Documentos canónicos aplicables:
 
-## Instrucción de implementación
-Actuar de forma quirúrgica.
-No improvisar.
-No sobrearquitectar.
-No abrir más alcance del necesario.
-Si un circuito viejo queda obsoleto por este cambio, eliminarlo completo.
+- `{{RUTA_SPEC_1}}`
+- `{{RUTA_SPEC_2}}`
+
+Fuentes de evidencia permitidas:
+
+- `{{RUTA_JAVA_O_TEST_1}}`
+- `{{RUTA_JAVA_O_TEST_2}}`
+
+Los documentos de `docs/faltas/`, `docs-trabajo/`, handoffs, prototipo o frontend solo deben consultarse si este prompt los autoriza expresamente.
+
+Ante una contradicción, no elegir una versión por inferencia. Reportar el gap y detener la decisión afectada.
+
+## 4. Precondiciones
+
+Antes de modificar:
+
+1. verificar rama;
+2. verificar commit o baseline;
+3. verificar working tree limpio;
+4. usar PowerShell 7;
+5. respetar UTF-8 y `.gitattributes`;
+6. no hacer staging, commit, push, reset ni clean.
+
+## 5. Alcance exacto autorizado
+
+Crear:
+
+- `{{ARCHIVO_NUEVO}}`
+
+Modificar:
+
+- `{{ARCHIVO_MODIFICABLE}}`
+
+Eliminar:
+
+- `{{ARCHIVO_ELIMINABLE}}`
+
+No modificar ningún archivo fuera de esta lista.
+
+## 6. Comportamiento o contenido requerido
+
+{{DEFINICIÓN_COMPLETA_DEL_CAMBIO}}
+
+## 7. Fuera de alcance
+
+- {{FUERA_DE_ALCANCE_1}}
+- {{FUERA_DE_ALCANCE_2}}
+- cambios oportunistas;
+- refactors no necesarios;
+- correcciones de encoding fuera de los archivos autorizados;
+- actualización de baselines no solicitada;
+- ejecución del siguiente slice.
+
+## 8. Criterios de aceptación
+
+El slice queda cerrado cuando:
+
+- {{CRITERIO_1}}
+- {{CRITERIO_2}}
+- {{CRITERIO_3}}
+- no hay cambios fuera de alcance;
+- `git diff --check` no reporta errores;
+- no hubo staging ni commit.
+
+## 9. Validaciones
+
+Ejecutar:
+
+```powershell
+git status --short --branch
+git diff --check
+{{COMANDO_VALIDACIÓN}}
+```
+
+No imprimir el diff completo en consola salvo error.
+
+## 10. Salida esperada
+
+Informar:
+
+- archivos modificados;
+- resumen del cambio;
+- validaciones ejecutadas;
+- gaps o desviaciones;
+- confirmación de que no hubo staging ni commit.
+
+No ejecutar tareas posteriores sin autorización.

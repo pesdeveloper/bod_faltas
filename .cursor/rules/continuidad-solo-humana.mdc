@@ -1,52 +1,52 @@
 ---
-description: La continuidad estable y volátil del proyecto se mantiene manualmente y no debe ser reescrita ni releída innecesariamente por Cursor
+description: Las decisiones de continuidad y alcance requieren control humano
 alwaysApply: true
 ---
 
-# Continuidad solo humana
+# Continuidad controlada por decisión humana
 
-## Objetivo
+## 1. Principio
 
-Evitar que Cursor consuma contexto innecesario y reescriba artefactos de continuidad que deben mantenerse manualmente.
+Cursor puede leer o editar artefactos de continuidad únicamente dentro del alcance explícito del prompt actual.
 
-## Regla principal
+No debe decidir por sí mismo:
 
-Los siguientes archivos son artefactos de continuidad controlados manualmente:
+- qué handoff representa el estado vigente;
+- qué informe debe guardarse en el repositorio;
+- qué documento histórico debe eliminarse;
+- qué decisión funcional debe cerrarse;
+- qué slice debe ejecutarse a continuación;
+- dónde almacenar una auditoría externa.
 
-- `docs-trabajo/prompt-de-reanudacion-chat.md`
-- `docs-trabajo/estado-actual-y-proximo-paso.md`
-- `.cursor/rules/*.mdc`
+## 2. Preguntas que no deben convertirse en cambios automáticos
 
-Cursor no debe reescribirlos, resumirlos, normalizarlos ni proponer una nueva redacción por iniciativa propia.
+Si un documento propone opciones como:
 
-## Lectura restringida
+- guardar un informe;
+- ejecutar el próximo slice;
+- tomar una decisión de dominio;
+- mover documentación;
+- eliminar historia;
+- actualizar un baseline;
 
-Para slices funcionales:
+Cursor debe esperar una instrucción humana explícita.
 
-- no leer automáticamente el contenido completo de los archivos de continuidad
-- asumir que están vigentes
-- consultarlos solo si el prompt del slice lo pide explícitamente o si existe una duda real que impide resolver el cambio
+No debe seleccionar una opción recomendada ni encadenar tareas por iniciativa propia.
 
-## Edición restringida
+## 3. Límites
 
-No editar archivos de continuidad ni reglas `.mdc` salvo que ocurra una de estas dos condiciones:
+Sin autorización expresa, Cursor no debe:
 
-1. el objetivo del slice sea explícitamente documental, o
-2. se detecte un drift real y el prompt autorice explícitamente corregir continuidad
+- crear commits;
+- hacer staging;
+- ejecutar el siguiente slice;
+- guardar informes externos en el repo;
+- modificar `.cursor/rules/`;
+- transformar auditorías en spec;
+- convertir comportamiento Java en regla normativa.
 
-## Regla de economía de contexto
+## 4. Relación con la spec
 
-No gastar contexto en reexplicar, reescribir o volver a resumir continuidad ya consolidada.
+La continuidad describe cómo retomar un trabajo. La spec define qué debe hacer el sistema.
 
-Si el slice es funcional:
-- priorizar código, mocks, controller, store, DTOs, enums y subconjunto mínimo de spec
-- no cargar continuidad completa salvo necesidad estricta
-
-## Salida esperada
-
-Si Cursor considera necesario tocar continuidad, primero debe decirlo explícitamente y justificar:
-- qué drift detectó
-- por qué impide cerrar el slice
-- qué archivo puntual habría que corregir
-
-Sin esa justificación, no debe tocar continuidad.
+Ante conflicto, no reconciliar por inferencia. Reportar el gap y solicitar resolución.
