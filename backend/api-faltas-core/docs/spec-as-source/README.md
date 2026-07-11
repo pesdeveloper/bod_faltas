@@ -36,6 +36,24 @@ Para cualquier trabajo en `backend/api-faltas-core`:
 
 ## 4. Clasificación documental durante la canonicalización
 
+### 4.0 Documentos tematicos canonicos
+
+Estos documentos forman la capa normativa autosuficiente de la spec. Deben
+leerse en este orden antes de consultar los documentos de contrato funcional:
+
+1. [`00-governance/glossary.md`](00-governance/glossary.md) -- define el
+   vocabulario canonico del dominio; un termino canonico tiene un unico
+   significado.
+2. [`10-domain/lifecycle-states.md`](10-domain/lifecycle-states.md) -- define
+   las dimensiones de estado y el lifecycle de subagregados; establece que es
+   persistido, derivado o historico.
+3. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md)
+   -- aplica esas dimensiones al circuito de firma y cola notificatoria del fallo.
+
+Ante contradiccion entre un documento tematico y un documento de contrato
+funcional (4.1), el documento tematico es normativo en lo que respecta a
+definiciones de terminos, dimensiones y lifecycle.
+
 ### 4.1 Contrato funcional vigente
 
 Estos documentos contienen actualmente el contrato funcional que debe preservarse mientras se reorganiza la spec:
@@ -45,7 +63,7 @@ Estos documentos contienen actualmente el contrato funcional que debe preservars
 - `04-snapshot-bandejas-acciones.md`
 - `05-api-core-endpoints.md`
 - `104-plantillas-redaccion-combinacion-documentos.md`
-- `10-domain/firma-notificacion-fallo.md` (FIX-FALLO-NOTI-01: firma, cola notificatoria, EstadoFalloActa)
+- `10-domain/firma-notificacion-fallo.md` — firma, cola notificatoria y lifecycle de `EstadoFalloActa`
 
 Su estructura todavía puede contener evolución por slices. Esa cronología será absorbida gradualmente en documentos temáticos sin eliminar reglas vigentes.
 

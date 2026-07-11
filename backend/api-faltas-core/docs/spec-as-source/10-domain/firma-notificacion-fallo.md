@@ -9,11 +9,11 @@ El enum `EstadoFalloActa` contiene exactamente estos valores:
 | Valor                   | Descripcion                                                              |
 |-------------------------|--------------------------------------------------------------------------|
 | `PENDIENTE_FIRMA`       | Fallo dictado; documento generado; pendiente de firma obligatoria.       |
-| `PENDIENTE_NOTIFICACION`| Ultima firma completada; `fhFirma` registrado; cola notificatoria lista. |
+| `PENDIENTE_NOTIFICACION`| Ultima firma obligatoria confirmada; `fhFirma` registrado; fallo listo para continuar el circuito notificatorio. La cabecera `FalNotificacion` se prepara cuando la plantilla es notificable. |
 | `NOTIFICADO`            | Resultado notificatorio positivo registrado; `fhNotificacion` registrado.|
 | `FIRME`                 | Firmeza de condena declarada; `fhFirmeza` registrado.                    |
 | `REEMPLAZADO`           | Fallo reemplazado por uno nuevo (estado lateral).                        |
-| `SIN_EFECTO`            | Fallo anulado sin efecto (estado lateral).                               |
+| `SIN_EFECTO`            | Fallo invalidado o dejado sin efecto (estado lateral terminal).          |
 
 Prohibicion: `DICTADO` y `FIRMADO` no son estados del enum. Son hechos historicos
 persistidos en los campos `fhDictado` y `fhFirma` respectivamente. No deben
@@ -37,41 +37,60 @@ el estado canonico siempre esta en `estadoFallo`.
 
 ## 3. Ciclo de vida del fallo: transiciones de estado
 
+Lifecycle principal:
+
+```text
 PENDIENTE_FIRMA
-    -> PENDIENTE_NOTIFICACION   (marcarPendienteNotificacion: ultima firma obligatoria completada)
-    -> REEMPLAZADO              (fallo reemplazado por uno nuevo)
-    -> SIN_EFECTO               (fallo anulado)
-
+    --ultima firma obligatoria confirmada-->
 PENDIENTE_NOTIFICACION
-    -> NOTIFICADO               (marcarNotificado: resultado notificatorio positivo)
-    -> REEMPLAZADO
-
+    --resultado notificatorio positivo-->
 NOTIFICADO
-    -> FIRME                    (declararFirmeza: solo condenatorios)
-    -> REEMPLAZADO
+    --declaracion valida de firmeza; solo fallo CONDENATORIO-->
+FIRME
+```
 
-FIRME                           (estado terminal para condenatorios)
-REEMPLAZADO                     (estado terminal lateral)
-SIN_EFECTO                      (estado terminal lateral)
+Estados laterales terminales:
+
+- `REEMPLAZADO`: el fallo fue sustituido por otro y deja de ser vigente.
+- `SIN_EFECTO`: el fallo fue invalidado o dejado sin efecto.
+
+Este documento no define por analogia todos los estados de origen permitidos
+para las transiciones laterales. Cada transicion hacia `REEMPLAZADO` o
+`SIN_EFECTO` debe estar autorizada por su comando, precondiciones e invariantes
+especificos.
+
+No se permite retroceder ni saltear estados dentro del lifecycle principal.
 
 ---
 
 ## 4. Operaciones de dominio en `FalActaFallo`
 
 ### `marcarPendienteNotificacion(LocalDateTime fhFirma)`
-- Precondicion: `fhFirma` no nulo.
+- Precondiciones: `estadoFallo = PENDIENTE_FIRMA`; `fhFirma` no nulo.
 - Efecto: `this.fhFirma = fhFirma; this.estadoFallo = PENDIENTE_NOTIFICACION`.
 - Quien llama: `DocumentoService.completarFirmaDocumento` cuando se completan todas
   las firmas obligatorias activas del documento de fallo.
 
 ### `marcarNotificado(LocalDateTime fhNotificacion)`
-- Precondicion: `fhNotificacion` no nulo.
+- Precondiciones: `estadoFallo = PENDIENTE_NOTIFICACION`; `fhFirma` ya registrado; `fhNotificacion` no nulo.
 - Efecto: `this.fhNotificacion = fhNotificacion; this.estadoFallo = NOTIFICADO`.
 - Quien llama: `NotificacionService.actualizarFalloNotificado` al registrar resultado positivo.
 
 ### `declararFirmeza(LocalDateTime fhFirmeza, OrigenFirmezaCondena origen)`
-- Precondicion: ambos campos no nulos.
-- Efecto: `siFirme = true; this.fhFirmeza = fhFirmeza; this.origenFirmeza = origen; estadoFallo = FIRME`.
+
+Regla normativa:
+
+- solo fallo CONDENATORIO;
+- `estadoFallo = NOTIFICADO`;
+- `fhFirmeza` no nulo;
+- `origen` no nulo.
+
+Efectos:
+
+- `siFirme = true`;
+- `fhFirmeza = valor recibido`;
+- `origenFirmeza = origen`;
+- `estadoFallo = FIRME`.
 
 ---
 
@@ -135,8 +154,8 @@ como una unica unidad de aplicacion cuando se completan todas las firmas
 obligatorias activas del documento.
 
 La implementacion InMemory no proporciona rollback transaccional conjunto.
-La futura persistencia MariaDB debera ejecutar estos efectos dentro de una
-transaccion para garantizar atomicidad.
+La persistencia MariaDB debe ejecutar estos efectos dentro de una única
+transacción para garantizar atomicidad.
 
 1. `FalDocumento.estadoDocu = FIRMADO` -- guardado en DocumentoRepository.
 2. `FalActaFallo.marcarPendienteNotificacion(ahora)` -- si el documento es el asociado
@@ -177,15 +196,30 @@ para el mismo documento.
 
 ## 8. `NotificacionService.enviarNotificacion`
 
-Comportamiento canonico (FIX-FALLO-NOTI-01):
+La operacion debe consultar una unica vez la notificacion activa del documento
+mediante `buscarActivaPorDocumento`.
+
+Reglas:
 
 1. Verificar que el acta no este cerrada y que el documento este firmado.
-2. Buscar notificacion activa en estado `PENDIENTE_ENVIO` para el documento.
-3. Si existe: llamar `notif.iniciarEnvio(canal, ahora, ahora, "SISTEMA")` -- reutiliza la
-   notificacion preparada por el callback de firma; no crea una nueva.
-4. Si no existe: crear una nueva `FalNotificacion` en estado EN_PROCESO (flujo directo
-   sin cola previa).
-5. Emitir evento NOTENV y recalcular snapshot.
+2. Si no existe ninguna notificacion activa:
+   - crear una nueva cabecera en `EN_PROCESO`;
+   - completar canal, fecha de envio y primer intento.
+3. Si existe una notificacion activa en `PENDIENTE_ENVIO`:
+   - reutilizar la misma cabecera;
+   - ejecutar `iniciarEnvio`;
+   - pasarla a `EN_PROCESO`;
+   - no cambiar su identidad.
+4. Si existe una notificacion activa en cualquier otro estado:
+   - rechazar con `PrecondicionVioladaException`;
+   - no crear otra cabecera;
+   - no emitir eventos;
+   - no modificar bloque ni snapshot.
+5. Solo despues de completar correctamente el inicio del envio:
+   - emitir `NOTENV`;
+   - recalcular el snapshot.
+
+Por documento puede existir como maximo una notificacion activa.
 
 ---
 
@@ -201,7 +235,7 @@ generarLoteDesdePendientes(loteCodigo, referenciaExterna, guidLoteExt, idUser)
 2. Si la lista esta vacia: lanza `PrecondicionVioladaException` (mensaje incluye "PENDIENTE_ENVIO").
 3. Extrae los IDs y delega en `generarLoteConIntentos`.
 
-Evento `LOTGEN` emitido por acta afectada (ya implementado en `generarLoteConIntentos`).
+`generarLoteConIntentos` emite el evento `LOTGEN` por cada acta afectada.
 
 ### `generarLoteConIntentos` - Validacion total
 
@@ -236,7 +270,7 @@ Cuando una notificacion se incorpora al lote, se llama `notif.iniciarEnvio(canal
 |-------------------------------------------------------------------------|--------------------------------------|
 | EstadoFalloActa tiene exactamente 6 valores canonicos                   | FirmaFalloNotificacionCanonicaTest   |
 | DICTADO y FIRMADO no existen en el enum                                 | FirmaFalloNotificacionCanonicaTest   |
-| Firma completa: fallo=PENDIENTE_NOTIFICACION, notif=PENDIENTE_ENVIO     | FirmaFalloNotificacionCanonicaTest   |
+| Firma completa de plantilla notificable: fallo=PENDIENTE_NOTIFICACION, notif=PENDIENTE_ENVIO     | FirmaFalloNotificacionCanonicaTest   |
 | enviarNotificacion reutiliza PENDIENTE_ENVIO (no duplica)               | FirmaFalloNotificacionCanonicaTest   |
 | generarLoteDesdePendientes genera lote desde PENDIENTE_ENVIO            | FirmaFalloNotificacionCanonicaTest   |
 | Resultado positivo: fallo=NOTIFICADO via marcarNotificado               | FirmaFalloNotificacionCanonicaTest   |
@@ -260,7 +294,7 @@ Cuando una notificacion se incorpora al lote, se llama `notif.iniciarEnvio(canal
 
 ---
 
-## 10b. Seguridad JWT
+## 11. Seguridad JWT
 
 ### Validacion en desarrollo/test
 
@@ -270,20 +304,27 @@ Cuando una notificacion se incorpora al lote, se llama `notif.iniciarEnvio(canal
 - Se validan firma, algoritmo, `exp`, `nbf` cuando esta presente, issuer y audience.
 - El campo `sub` del token es el actor de dominio; `idUserFirma` en el body esta prohibido.
 
-### Staging y produccion (pendiente)
+### Staging y produccion
 
-- Pendiente activar validacion contra JWKS de TokenServer/.NET/OpenIddict.
-- La activacion no cambia el contrato HTTP ni el actor de dominio.
-- No exponer secretos reales ni URLs productivas en esta spec.
+- Los JWT deben validarse contra el JWKS publicado por
+  TokenServer/.NET/OpenIddict.
+- Deben validarse firma, algoritmo permitido, `exp`, `nbf` cuando este
+  presente, issuer, audience y `sub`.
+- El secreto simetrico ficticio de desarrollo/test no puede utilizarse en
+  staging ni produccion.
+- La validacion mediante JWKS no cambia el contrato HTTP ni el origen del actor
+  de dominio: el actor continua siendo el `sub` autenticado.
+- No se exponen secretos reales ni URLs productivas en esta spec.
 
 ---
 
-## 11. Prohibiciones vigentes
+## 12. Prohibiciones vigentes
 
 - No usar EstadoFalloActa.DICTADO -- eliminado.
 - No usar EstadoFalloActa.FIRMADO -- eliminado.
 - No usar fallo.setEstadoFallo(NOTIFICADO) directamente -- usar marcarNotificado().
 - No usar fallo.setFechaNotificacion() directamente -- usar marcarNotificado().
 - No usar idUserFirma en el request del callback.
-- No crear FalNotificacion nueva en enviarNotificacion si ya existe una en PENDIENTE_ENVIO.
-- No implementar MariaDB/JDBC en este slice.
+- No crear una nueva `FalNotificacion` en `enviarNotificacion` si ya existe
+  cualquier cabecera activa para el documento. Si esta en `PENDIENTE_ENVIO`,
+  se reutiliza; si esta en otro estado activo, la operacion se rechaza.
