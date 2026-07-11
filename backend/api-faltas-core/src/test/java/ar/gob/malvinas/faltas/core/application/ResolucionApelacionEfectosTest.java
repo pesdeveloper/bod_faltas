@@ -9,6 +9,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -63,7 +64,8 @@ class ResolucionApelacionEfectosTest {
         docService = new DocumentoService(actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 new InMemoryDocumentoPlantillaRepository(),
                 new TalonarioService(new InMemoryTalonarioRepository(), new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
-                new InMemoryDependenciaRepository(), new InMemoryDocumentoFirmaReqRepository(), new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryDependenciaRepository(), new InMemoryDocumentoFirmaReqRepository(), new InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
         falloService = new FalloActaService(actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoRepo, recalc, FaltasClockTestSupport.FIXED);

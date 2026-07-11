@@ -93,6 +93,39 @@ public class LoteCorreoService {
         if (notificacionIds == null || notificacionIds.isEmpty())
             throw new PrecondicionVioladaException("Debe indicar al menos una notificacion para generar el lote");
 
+        // Validar duplicados en la lista antes de procesar
+        java.util.Set<Long> vistos = new java.util.HashSet<>();
+        for (Long id : notificacionIds) {
+            if (!vistos.add(id)) {
+                throw new PrecondicionVioladaException("ID de notificacion duplicado en la lista: " + id);
+            }
+        }
+
+        // Validar codigo de lote antes de crear nada
+        synchronized (loteGeneracionMonitor) {
+            if (loteCorreoRepository.existeCodigo(loteCodigo))
+                throw new LoteCodigoDuplicadoException(loteCodigo);
+        }
+
+        // Validacion total: todos los IDs deben existir y estar en PENDIENTE_ENVIO sin resultado
+        List<FalNotificacion> notificacionesValidas = new ArrayList<>();
+        for (Long notifId : notificacionIds) {
+            FalNotificacion notif = notificacionRepository.buscarPorId(notifId)
+                    .orElseThrow(() -> new PrecondicionVioladaException(
+                            "Notificacion no encontrada: " + notifId));
+            if (notif.getEstado() != EstadoNotificacion.PENDIENTE_ENVIO) {
+                throw new PrecondicionVioladaException(
+                        "Notificacion " + notifId + " no esta en PENDIENTE_ENVIO. Estado actual: "
+                        + notif.getEstado());
+            }
+            if (notif.getResultado() != null) {
+                throw new PrecondicionVioladaException(
+                        "Notificacion " + notifId + " ya tiene resultado: " + notif.getResultado());
+            }
+            notificacionesValidas.add(notif);
+        }
+
+        // Crear lote
         LocalDateTime ahora = faltasClock.now();
         Long loteId = loteCorreoRepository.nextId();
         FalLoteCorreo lote = new FalLoteCorreo(loteId, loteCodigo, ahora, ahora, idUser);
@@ -106,12 +139,10 @@ public class LoteCorreoService {
 
         List<Long> actasAfectadas = new ArrayList<>();
 
-        for (Long notifId : notificacionIds) {
-            FalNotificacion notif = notificacionRepository.buscarPorId(notifId).orElse(null);
-            if (notif == null) continue;
+        for (FalNotificacion notif : notificacionesValidas) {
+            Long notifId = notif.getId();
 
-            if (notif.getResultado() == ResultadoNotificacion.POSITIVO) continue;
-
+            // Crear intento
             short nroIntento = intentoRepository.siguienteNroIntento(notifId);
             Long intentoId = intentoRepository.nextId();
             FalNotificacionIntento intento = new FalNotificacionIntento(
@@ -121,9 +152,10 @@ public class LoteCorreoService {
                     ahora, ahora, idUser);
             intentoRepository.guardar(intento);
 
-            notif.setEstado(EstadoNotificacion.EN_PROCESO);
-            notif.setFhUltMod(ahora);
-            notif.setIdUserUltMod(idUser);
+            // Iniciar envio: PENDIENTE_ENVIO -> EN_PROCESO
+            notif.iniciarEnvio(
+                    ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion.CORREO_POSTAL.name(),
+                    ahora, ahora, idUser);
             notificacionRepository.guardar(notif);
 
             if (!actasAfectadas.contains(notif.getIdActa())) {
@@ -144,6 +176,23 @@ public class LoteCorreoService {
         return loteCorreoRepository.buscarPorId(loteId).orElseThrow();
     }
 
+    /**
+     * Genera un lote de correo postal automaticamente a partir de todas las
+     * notificaciones en estado PENDIENTE_ENVIO.
+     * Emite el evento LOTGEN por acta afectada.
+     *
+     * @throws PrecondicionVioladaException si no hay notificaciones pendientes de envio.
+     */
+    public FalLoteCorreo generarLoteDesdePendientes(
+            String loteCodigo, String referenciaExterna, String guidLoteExt, String idUser) {
+        List<FalNotificacion> pendientes = notificacionRepository.buscarPorEstado(EstadoNotificacion.PENDIENTE_ENVIO);
+        if (pendientes.isEmpty()) {
+            throw new PrecondicionVioladaException(
+                    "No hay notificaciones en estado PENDIENTE_ENVIO para generar el lote.");
+        }
+        List<Long> ids = pendientes.stream().map(FalNotificacion::getId).toList();
+        return generarLoteConIntentos(loteCodigo, ids, referenciaExterna, guidLoteExt, idUser);
+    }
     public FalLoteCorreo emitirLote(Long loteId, String idUser) {
         FalLoteCorreo lote = loteCorreoRepository.buscarPorId(loteId)
                 .orElseThrow(() -> new LoteCorreoNoEncontradoException(loteId));

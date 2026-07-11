@@ -22,4 +22,23 @@ public interface DocumentoFirmaRepository {
     List<FalDocumentoFirma> buscarPorDocumento(Long idDocumento);
 
     Optional<FalDocumentoFirma> buscarPorDocumentoYSeq(Long idDocumento, short seqFirmaReq);
+
+    /**
+     * Busca una firma por su referencia externa unica emitida por la aplicacion de Firmas.
+     * Usado para idempotencia del callback firmar-real.
+     */
+    Optional<FalDocumentoFirma> buscarPorReferenciaFirmaExt(String referenciaFirmaExt);
+
+    /**
+     * Guarda la firma de forma atomica solo si no existe ninguna con la misma referenciaFirmaExt.
+     *
+     * Si ya existe: devuelve la firma existente con yaExistia=true, sin modificar nada.
+     * Si no existe: persiste la firma y devuelve yaExistia=false.
+     *
+     * La verificacion y la escritura son atomicas: dos llamadas concurrentes con la misma
+     * referenciaFirmaExt generan exactamente una firma persistida.
+     *
+     * FIX-FALLO-NOTI-01-R2: idempotencia concurrente.
+     */
+    DocumentoFirmaSaveResult guardarSiAusentePorReferencia(FalDocumentoFirma firma);
 }

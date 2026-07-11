@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.repository.memory;
 
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoNotificacion;
 import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import org.springframework.stereotype.Repository;
@@ -22,7 +23,19 @@ public class InMemoryNotificacionRepository implements NotificacionRepository, R
     }
 
     @Override
-    public FalNotificacion guardar(FalNotificacion notificacion) {
+    public synchronized FalNotificacion guardar(FalNotificacion notificacion) {
+        if (notificacion.estaActiva()) {
+            for (FalNotificacion existente : store.values()) {
+                if (existente.getIdDocumento().equals(notificacion.getIdDocumento())
+                        && !existente.getId().equals(notificacion.getId())
+                        && existente.estaActiva()) {
+                    throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                            "Ya existe una notificacion activa (id=" + existente.getId()
+                            + ") para el documento " + notificacion.getIdDocumento()
+                            + ". No puede existir una segunda notificacion activa.");
+                }
+            }
+        }
         store.put(notificacion.getId(), notificacion);
         return notificacion;
     }
@@ -43,6 +56,21 @@ public class InMemoryNotificacionRepository implements NotificacionRepository, R
     public List<FalNotificacion> buscarPorDocumento(Long idDocumento) {
         return store.values().stream()
                 .filter(n -> idDocumento.equals(n.getIdDocumento()))
+                .toList();
+    }
+
+    @Override
+    public Optional<FalNotificacion> buscarActivaPorDocumento(Long idDocumento) {
+        return store.values().stream()
+                .filter(n -> idDocumento.equals(n.getIdDocumento()) && n.estaActiva())
+                .findFirst();
+    }
+
+    @Override
+    public List<FalNotificacion> buscarPorEstado(EstadoNotificacion estado) {
+        return store.values().stream()
+                .filter(n -> estado.equals(n.getEstado()))
+                .sorted(java.util.Comparator.comparing(FalNotificacion::getId))
                 .toList();
     }
 

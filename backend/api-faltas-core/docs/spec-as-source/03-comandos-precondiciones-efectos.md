@@ -500,40 +500,39 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 ### RegistrarPagoExternoGestionCommand
 
 **Campos:**
-- ctaId - obligatorio
+- actaId - obligatorio
 - observaciones - opcional (nullable); si se informa, se incluye en FalActaEvento.descripcion
   como puente transitorio hasta implementar FalObservacion en Slice 9/JDBC.
-  Las observaciones textuales NO se persisten como columna en al_acta_gestion_externa.
-  El modelo MariaDB base ya define al_observacion con entidad_tipo=10=GESTION_EXTERNA.
+  Las observaciones textuales NO se persisten como columna en fal_acta_gestion_externa.
+  El modelo MariaDB base ya define fal_observacion con entidad_tipo=10=GESTION_EXTERNA.
 
 **Precondiciones:**
 1. Acta existe
-2. cta.situacionAdministrativa == EN_GESTION_EXTERNA
-3. cta.bloqueActual == GEXT
+2. acta.situacionAdministrativa == EN_GESTION_EXTERNA
+3. acta.bloqueActual == GEXT
 4. Existe FalGestionExterna con siActiva == true
 5. FalGestionExterna.estadoGestionExterna in [DERIVADA, EN_CURSO]
-6. cta.resultadoFinal == CONDENA_FIRME
+6. acta.resultadoFinal == CONDENA_FIRME
 7. No existe FalPagoCondena en estado CONFIRMADO
 8. Acta no esta cerrada, anulada, archivada
 
 **Efectos sobre FalGestionExterna:**
 - siActiva = false
 - estadoGestionExterna = CERRADA_EXTERNA
-- 
-esultadoGestionExterna = PAGO_REGISTRADO
-- echaCierreGestionExterna = LocalDateTime.now()
-- echaReingreso / motivoReingreso / observacionesReingreso no se tocan (quedan null)
+- resultadoGestionExterna = PAGO_REGISTRADO
+- fechaCierreGestionExterna = LocalDateTime.now()
+- fechaReingreso / motivoReingreso / observacionesReingreso no se tocan (quedan null)
 
 **Efectos sobre FalActa:**
-- cta.resultadoFinal = CONDENA_FIRME_PAGADA (siempre, independiente de bloqueantes)
+- acta.resultadoFinal = CONDENA_FIRME_PAGADA (siempre, independiente de bloqueantes)
 - Si no hay bloqueantes:
-  - cta.situacionAdministrativa = CERRADA
-  - cta.bloqueActual = CERR
+  - acta.situacionAdministrativa = CERRADA
+  - acta.bloqueActual = CERR
   - Registra CIERRA (despues de PAGAPR)
   - Snapshot: CERRADAS / NINGUNA
 - Si hay bloqueantes:
-  - cta.situacionAdministrativa = ACTIVA
-  - cta.bloqueActual = ANAL
+  - acta.situacionAdministrativa = ACTIVA
+  - acta.bloqueActual = ANAL
   - No registra CIERRA
   - Snapshot: PENDIENTE_ANALISIS / NINGUNA
   - Motor real activo desde Slice 7A.
@@ -541,10 +540,8 @@ esultadoGestionExterna = PAGO_REGISTRADO
 **Efectos sobre FalPagoCondena:**
 - No se toca. PAGAPR es un camino de pago externo independiente del flujo interno PCOINF/PCOCNF.
 - Si existe FalPagoCondena INFORMADO/OBSERVADO: queda como historico, no se modifica.
-- Despues de PAGAPR, 
-esultadoFinal = CONDENA_FIRME_PAGADA, por lo que InformarPagoCondena
-  y ConfirmarPagoCondena fallan (requieren 
-esultadoFinal == CONDENA_FIRME).
+- Despues de PAGAPR, resultadoFinal = CONDENA_FIRME_PAGADA, por lo que InformarPagoCondena
+  y ConfirmarPagoCondena fallan (requieren resultadoFinal == CONDENA_FIRME).
 
 **Eventos:**
 - PAGAPR: siempre, si pasan precondiciones. Primer evento registrado.
@@ -553,7 +550,7 @@ esultadoFinal == CONDENA_FIRME).
 
 **Errores esperados:**
 - PrecondicionVioladaException si acta no en EN_GESTION_EXTERNA
-- PrecondicionVioladaException si loqueActual != GEXT
+- PrecondicionVioladaException si bloqueActual != GEXT
 - PrecondicionVioladaException si no existe gestion externa activa
 - PrecondicionVioladaException si estadoGestionExterna no es DERIVADA ni EN_CURSO
 - PrecondicionVioladaException si 
@@ -910,3 +907,57 @@ Extiende Slice 6D-1. Habilita los tres casos de reingreso con dictamen externo d
 - Toda operacion productiva obtiene fecha/hora desde FaltasClock inyectado.
 - Una operacion atomica usa un unico LocalDateTime ahora = faltasClock.now() compartido entre entidad, evento, snapshot y auditoria cuando corresponde.
 - Prohibido LocalDateTime.now() / LocalDate.now() / Instant.now() directo en src/main/java fuera de allowlist.
+
+
+---
+
+## FIX-FALLO-NOTI-01 (2026-07-10) - Firma y cola notificatoria del fallo
+
+Ver especificacion completa en `10-domain/firma-notificacion-fallo.md`.
+
+### RegistrarFirmaDocumental (callback de Firmas)
+
+**Operacion:** `RegistrarFirmaDocumental`
+**Endpoint:** `POST /api/faltas/documentos/{documentoId}/firmar-real`
+**Actor:** extraido de JWT Bearer (`ActorContextHolder.get().sub()`). No acepta `idUserFirma` en body.
+**Idempotencia:** por `referenciaFirmaExt` (obligatoria, @NotBlank).
+
+**Precondiciones:**
+- Documento existente (`DocumentoNoEncontradoException` si no).
+- `referenciaFirmaExt` no nula ni blank.
+- Si ya existe firma con esa referencia y los datos son incompatibles: `PrecondicionVioladaException`.
+
+**Efectos (primera vez - HTTP 201):**
+- Crea `FalDocumentoFirma`.
+- Si todas las firmas obligatorias quedan completas: llama `completarFirmaDocumento`.
+  - `FalDocumento.estadoDocu = FIRMADO`.
+  - `FalActaFallo.marcarPendienteNotificacion(ahora)` si el documento pertenece al fallo activo.
+  - Prepara `FalNotificacion` en `PENDIENTE_ENVIO` si la plantilla es notificable y no hay notificacion activa.
+  - Evento `DOCFIR`.
+  - Recalculo de snapshot.
+
+**Efectos (idempotente - HTTP 200):**
+- Ninguno. Devuelve la firma existente sin crear registros ni disparar eventos.
+
+### EnviarNotificacion (reutilizacion de cola)
+
+**Cambio FIX-FALLO-NOTI-01:**
+- Antes de crear una nueva `FalNotificacion`, busca una existente en `PENDIENTE_ENVIO` para el documento.
+- Si existe: la reutiliza mediante `notif.iniciarEnvio(canal, ahora, ahora, "SISTEMA")`.
+- Si no existe: crea una nueva en `EN_PROCESO` (flujo directo, sin cola previa).
+- No se duplican notificaciones para el mismo documento.
+
+### GenerarLoteDesdePendientes (nuevo metodo canonico)
+
+**Metodo:** `LoteCorreoService.generarLoteDesdePendientes(loteCodigo, referenciaExterna, guidLoteExt, idUser)`
+
+**Precondiciones:**
+- Debe existir al menos una notificacion en `PENDIENTE_ENVIO` (`PrecondicionVioladaException` si no).
+- `loteCodigo` no duplicado.
+
+**Efectos:**
+- Crea `FalLoteCorreo` en estado `GENERADO`.
+- Para cada notificacion en `PENDIENTE_ENVIO`: crea `FalNotificacionIntento` y avanza notificacion a `EN_PROCESO`.
+- Emite evento `LOTGEN` por acta afectada.
+
+---

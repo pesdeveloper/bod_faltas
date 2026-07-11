@@ -45,6 +45,7 @@ Estos documentos contienen actualmente el contrato funcional que debe preservars
 - `04-snapshot-bandejas-acciones.md`
 - `05-api-core-endpoints.md`
 - `104-plantillas-redaccion-combinacion-documentos.md`
+- `10-domain/firma-notificacion-fallo.md` (FIX-FALLO-NOTI-01: firma, cola notificatoria, EstadoFalloActa)
 
 Su estructura todavía puede contener evolución por slices. Esa cronología será absorbida gradualmente en documentos temáticos sin eliminar reglas vigentes.
 

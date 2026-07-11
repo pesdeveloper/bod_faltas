@@ -19,6 +19,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.DocumentoPlantillaNoEncontra
 import ar.gob.malvinas.faltas.core.domain.exception.FirmanteNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
+import ar.gob.malvinas.faltas.core.application.result.RegistrarFirmaDocumentalResultado;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumentoFirma;
 import ar.gob.malvinas.faltas.core.web.dto.DocumentoFirmaResponse;
 import ar.gob.malvinas.faltas.core.web.dto.DocumentoResponse;
@@ -86,27 +87,30 @@ public class DocumentoController {
     }
 
     /**
-     * Registra una firma documental real con validacion de firmante/habilitacion/orden.
+     * Callback de la aplicacion de Firmas para registrar firma documental real.
      * POST /api/faltas/documentos/{documentoId}/firmar-real
-     * Slice 8C-6B-1.
+     * El actor se extrae del JWT Bearer (sub). Idempotente por referenciaFirmaExt.
+     * FIX-FALLO-NOTI-01.
      */
     @PostMapping("/documentos/{documentoId}/firmar-real")
     public ResponseEntity<DocumentoFirmaResponse> firmarReal(
             @PathVariable Long documentoId,
             @Valid @RequestBody RegistrarFirmaDocumentalRequest req) {
+        String actor = ActorContextHolder.get().sub();
         RegistrarFirmaDocumentalCommand cmd = new RegistrarFirmaDocumentalCommand(
                 documentoId,
                 req.seqFirmaReq(),
                 req.idFirmante(),
                 req.tipoFirma(),
-                req.idUserFirma(),
+                actor,
                 req.hashDocumento(),
                 req.referenciaFirmaExt(),
                 req.storageKey()
         );
-        FalDocumentoFirma firma = documentoService.registrarFirmaDocumental(cmd);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(DocumentoFirmaResponse.from(firma));
+        RegistrarFirmaDocumentalResultado resultado = documentoService.registrarFirmaDocumental(cmd);
+        HttpStatus status = resultado.yaExistia() ? HttpStatus.OK : HttpStatus.CREATED;
+        return ResponseEntity.status(status)
+                .body(DocumentoFirmaResponse.from(resultado.firma()));
     }
 
     @PostMapping("/documentos/{documentoId}/enviar-a-firma")

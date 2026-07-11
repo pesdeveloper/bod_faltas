@@ -404,14 +404,12 @@ public class SnapshotRecalculador {
 
             if (falloOpt.isPresent()) {
                 EstadoFalloActa estadoFallo = falloOpt.get().getEstadoFallo();
-                if (estadoFallo == EstadoFalloActa.DICTADO
-                        || estadoFallo == EstadoFalloActa.PENDIENTE_FIRMA) {
+                if (estadoFallo == EstadoFalloActa.PENDIENTE_FIRMA) {
                     snap.setCodBandeja(CodigoBandeja.PENDIENTE_FIRMA);
                     snap.setAccionPendiente(AccionPendiente.FIRMAR_DOCUMENTO);
                     return;
                 }
-                if (estadoFallo == EstadoFalloActa.FIRMADO
-                        || estadoFallo == EstadoFalloActa.PENDIENTE_NOTIFICACION) {
+                if (estadoFallo == EstadoFalloActa.PENDIENTE_NOTIFICACION) {
                     snap.setCodBandeja(CodigoBandeja.PENDIENTE_NOTIFICACION);
                     snap.setAccionPendiente(AccionPendiente.ENVIAR_NOTIFICACION);
                     return;

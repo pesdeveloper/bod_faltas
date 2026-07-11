@@ -26,6 +26,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/faltas/pagos/**").authenticated()
                         .requestMatchers("/api/faltas/documentos/*/numerar").authenticated()
+                        .requestMatchers("/api/faltas/documentos/*/firmar-real").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint(
                         (req, res, ex) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "Autenticacion Bearer requerida")))

@@ -119,16 +119,29 @@ public class NotificacionService {
                     "El documento no pertenece al acta indicada.");
         }
 
-        Long idNotif = notificacionRepository.nextId();
-        FalNotificacion notif = new FalNotificacion(
-                idNotif,
-                acta.getId(),
-                doc.getId(),
-                doc.getTipoDocu(),
-                cmd.canal(),
-                faltasClock.now()
-        );
-        notif.setObservaciones(cmd.observaciones());
+        LocalDateTime ahora = faltasClock.now();
+        Optional<FalNotificacion> activaOpt = notificacionRepository.buscarActivaPorDocumento(doc.getId());
+
+        FalNotificacion notif;
+        Long idNotif;
+        if (activaOpt.isEmpty()) {
+            idNotif = notificacionRepository.nextId();
+            notif = new FalNotificacion(idNotif, acta.getId(), doc.getId(), doc.getTipoDocu(),
+                    cmd.canal(), ahora);
+        } else {
+            FalNotificacion activa = activaOpt.get();
+            if (activa.getEstado() == EstadoNotificacion.PENDIENTE_ENVIO) {
+                notif = activa;
+                idNotif = notif.getId();
+                notif.iniciarEnvio(cmd.canal(), ahora, ahora, "SISTEMA");
+            } else {
+                throw new PrecondicionVioladaException(
+                        "Ya existe una notificacion activa en estado " + activa.getEstado()
+                        + " para el documento " + doc.getId()
+                        + ". No se puede crear una segunda notificacion activa.");
+            }
+        }
+        if (cmd.observaciones() != null) notif.setObservaciones(cmd.observaciones());
         notificacionRepository.guardar(notif);
 
         acta.setBloqueActual(BloqueActual.NOTI);
@@ -158,9 +171,10 @@ public class NotificacionService {
                     "La notificacion ya tiene resultado registrado: " + notif.getResultado());
         }
 
+        LocalDateTime ahoraPositiva = faltasClock.now();
         notif.setEstado(EstadoNotificacion.CON_ACUSE_POSITIVO);
         notif.setResultado(ResultadoNotificacion.POSITIVO);
-        notif.setFechaResultado(faltasClock.now());
+        notif.setFechaResultado(ahoraPositiva);
         if (cmd.observaciones() != null) notif.setObservaciones(cmd.observaciones());
         notificacionRepository.guardar(notif);
 
@@ -175,9 +189,9 @@ public class NotificacionService {
                 && notif.getIdDocumento().equals(falloOpt.get().getDocumentoId())) {
             FalActaFallo fallo = falloOpt.get();
             if (fallo.esAbsolutorio()) {
-                return registrarPositivaFalloAbsolutorio(acta, notif, cmd.observaciones());
+                return registrarPositivaFalloAbsolutorio(acta, notif, ahoraPositiva, cmd.observaciones());
             } else {
-                return registrarPositivaFalloCondenatorio(acta, notif, cmd.observaciones());
+                return registrarPositivaFalloCondenatorio(acta, notif, ahoraPositiva, cmd.observaciones());
             }
         }
 
@@ -270,9 +284,9 @@ public class NotificacionService {
     // -------------------------------------------------------------------------
 
     private ComandoResultado registrarPositivaFalloAbsolutorio(
-            FalActa acta, FalNotificacion notif, String observaciones) {
+            FalActa acta, FalNotificacion notif, LocalDateTime ahora, String observaciones) {
 
-        actualizarFalloNotificado(acta.getId());
+        actualizarFalloNotificado(acta.getId(), ahora);
 
         acta.setResultadoFinal(ResultadoFinalActa.ABSUELTO);
 
@@ -311,9 +325,9 @@ public class NotificacionService {
     }
 
     private ComandoResultado registrarPositivaFalloCondenatorio(
-            FalActa acta, FalNotificacion notif, String observaciones) {
+            FalActa acta, FalNotificacion notif, LocalDateTime ahora, String observaciones) {
 
-        actualizarFalloNotificado(acta.getId());
+        actualizarFalloNotificado(acta.getId(), ahora);
 
         acta.setBloqueActual(BloqueActual.ANAL);
         actaRepository.guardar(acta);
@@ -349,11 +363,10 @@ public class NotificacionService {
                 "Notificacion registrada como positiva. Bloque avanzado a ANAL.");
     }
 
-    private void actualizarFalloNotificado(Long actaId) {
+    private void actualizarFalloNotificado(Long actaId, LocalDateTime ahora) {
         Optional<FalActaFallo> falloOpt = falloActaRepository.buscarActivo(actaId);
         falloOpt.ifPresent(fallo -> {
-            fallo.setEstadoFallo(EstadoFalloActa.NOTIFICADO);
-            fallo.setFechaNotificacion(faltasClock.now());
+            fallo.marcarNotificado(ahora);
             falloActaRepository.guardar(fallo);
         });
     }

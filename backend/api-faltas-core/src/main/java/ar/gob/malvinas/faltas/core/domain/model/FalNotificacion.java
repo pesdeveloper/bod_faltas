@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
  * Toda notificacion recae sobre un documento del expediente.
  * Puede tener multiples intentos. El estado refleja el resultado acumulado.
  * El resultado operativo modifica la bandeja y el snapshot del acta.
+ *
+ * Ciclo de cola notificatoria:
+ *   preparar() -> PENDIENTE_ENVIO -> iniciarEnvio() -> EN_PROCESO -> resultado
  */
 public class FalNotificacion {
 
@@ -19,8 +22,8 @@ public class FalNotificacion {
     private final Long idActa;
     private final Long idDocumento;
     private final TipoDocu tipoDocumentoNotificado;
-    private final String canal;
-    private final LocalDateTime fechaEnvio;
+    private String canal;
+    private LocalDateTime fechaEnvio;
     private EstadoNotificacion estado;
     private ResultadoNotificacion resultado;
     private LocalDateTime fechaResultado;
@@ -30,6 +33,10 @@ public class FalNotificacion {
     private String idUserUltMod;
     private LocalDateTime fhAlta;
     private String idUserAlta;
+
+    // -------------------------------------------------------------------------
+    // Constructores de envio directo (mantener compatibilidad)
+    // -------------------------------------------------------------------------
 
     public FalNotificacion(
             Long id,
@@ -61,6 +68,63 @@ public class FalNotificacion {
         this.fhAlta = fhAlta;
         this.idUserAlta = idUserAlta;
     }
+
+    // -------------------------------------------------------------------------
+    // Factory para cola notificatoria (PENDIENTE_ENVIO)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Prepara una notificacion en estado PENDIENTE_ENVIO lista para ser procesada
+     * por un lote de correo o por envio directo.
+     *
+     * Estado inicial: PENDIENTE_ENVIO, resultado null, intentos 0, canal null, fechaEnvio null.
+     * No emite NOTENV. No es un envio real.
+     */
+    public static FalNotificacion preparar(
+            Long id,
+            Long idActa,
+            Long idDocumento,
+            TipoDocu tipoDocumentoNotificado,
+            LocalDateTime fhAlta,
+            String idUserAlta) {
+        if (id == null) throw new IllegalArgumentException("id requerido");
+        if (idActa == null) throw new IllegalArgumentException("idActa requerido");
+        if (idDocumento == null) throw new IllegalArgumentException("idDocumento requerido");
+        if (tipoDocumentoNotificado == null) throw new IllegalArgumentException("tipoDocumentoNotificado requerido");
+        FalNotificacion n = new FalNotificacion(id, idActa, idDocumento, tipoDocumentoNotificado, null, null);
+        n.estado = EstadoNotificacion.PENDIENTE_ENVIO;
+        n.intentos = 0;
+        n.fhAlta = fhAlta;
+        n.idUserAlta = idUserAlta;
+        return n;
+    }
+
+    // -------------------------------------------------------------------------
+    // Operaciones de dominio
+    // -------------------------------------------------------------------------
+
+    /**
+     * Inicia el envio real de una notificacion preparada (PENDIENTE_ENVIO -> EN_PROCESO).
+     * Completa canal, fecha de envio, incrementa intentos y registra la modificacion.
+     */
+    public void iniciarEnvio(String canal, LocalDateTime fechaEnvio, LocalDateTime fhUltMod, String actor) {
+        if (canal == null || canal.isBlank()) throw new IllegalArgumentException("canal requerido");
+        if (fechaEnvio == null) throw new IllegalArgumentException("fechaEnvio requerida");
+        if (this.estado != EstadoNotificacion.PENDIENTE_ENVIO) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "iniciarEnvio requiere estado PENDIENTE_ENVIO. Estado actual: " + this.estado);
+        }
+        this.canal = canal;
+        this.fechaEnvio = fechaEnvio;
+        this.estado = EstadoNotificacion.EN_PROCESO;
+        this.intentos++;
+        this.fhUltMod = fhUltMod;
+        this.idUserUltMod = actor;
+    }
+
+    // -------------------------------------------------------------------------
+    // Getters
+    // -------------------------------------------------------------------------
 
     public Long getId() { return id; }
     public Long getIdActa() { return idActa; }
@@ -99,5 +163,9 @@ public class FalNotificacion {
     public boolean estaEnProceso() {
         return estado == EstadoNotificacion.EN_PROCESO
                 || estado == EstadoNotificacion.PENDIENTE_ENVIO;
+    }
+
+    public boolean estaActiva() {
+        return estado != EstadoNotificacion.SIN_EFECTO;
     }
 }

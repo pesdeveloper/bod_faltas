@@ -13,6 +13,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -93,7 +94,8 @@ class ActaFlujoDocumentalFuncionalTest {
                         new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new InMemoryDependenciaRepository(),
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,

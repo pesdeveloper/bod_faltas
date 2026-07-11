@@ -125,7 +125,8 @@ class DocumentoEnvioFirmaTest {
                 actaRepo, docRepo, new InMemoryDocumentoFirmaRepository(),
                 eventoRepo, snapshotRepo, recalc, new InMemoryFalloActaRepository(),
                 plantillaRepo, talonarioService, depRepo, firmaReqRepo,
-                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================

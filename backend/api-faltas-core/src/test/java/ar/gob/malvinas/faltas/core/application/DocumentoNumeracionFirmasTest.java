@@ -126,7 +126,8 @@ class DocumentoNumeracionFirmasTest {
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo, talonarioService, depRepo,
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================

@@ -126,6 +126,36 @@ public class FalActaFallo {
 
     public boolean esAbsolutorio() { return tipoFallo == TipoFalloActa.ABSOLUTORIO; }
     public boolean esCondenatorio() { return tipoFallo == TipoFalloActa.CONDENATORIO; }
+    /**
+     * Registra la firma del documento de fallo y pasa el estado a PENDIENTE_NOTIFICACION.
+     * Debe llamarse cuando se completan todos los requisitos de firma obligatorios.
+     */
+    public void marcarPendienteNotificacion(LocalDateTime fhFirma) {
+        if (fhFirma == null) throw new IllegalArgumentException("fhFirma requerida");
+        if (this.estadoFallo != EstadoFalloActa.PENDIENTE_FIRMA) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "marcarPendienteNotificacion requiere estado PENDIENTE_FIRMA. Estado actual: " + this.estadoFallo);
+        }
+        this.fhFirma = fhFirma;
+        this.estadoFallo = EstadoFalloActa.PENDIENTE_NOTIFICACION;
+    }
+
+    /**
+     * Registra el resultado notificatorio positivo y pasa el estado a NOTIFICADO.
+     */
+    public void marcarNotificado(LocalDateTime fhNotificacion) {
+        if (fhNotificacion == null) throw new IllegalArgumentException("fhNotificacion requerida");
+        if (this.estadoFallo != EstadoFalloActa.PENDIENTE_NOTIFICACION) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "marcarNotificado requiere estado PENDIENTE_NOTIFICACION. Estado actual: " + this.estadoFallo);
+        }
+        if (this.fhFirma == null) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "marcarNotificado requiere fhFirma registrado.");
+        }
+        this.fhNotificacion = fhNotificacion;
+        this.estadoFallo = EstadoFalloActa.NOTIFICADO;
+    }
 
     /**
      * Declara la firmeza de condena en este fallo. Solo aplicable a condenatorios notificados.

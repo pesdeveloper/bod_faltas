@@ -10,6 +10,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -81,7 +82,8 @@ class DocumentoAdjuntoTest {
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
-                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo, FaltasClockTestSupport.FIXED);
+                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo,
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // -------------------------------------------------------------------------

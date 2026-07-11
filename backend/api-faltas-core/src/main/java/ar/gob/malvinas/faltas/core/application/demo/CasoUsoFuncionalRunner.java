@@ -92,7 +92,8 @@ public class CasoUsoFuncionalRunner {
                         new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), faltasClock),
                 new InMemoryDependenciaRepository(),
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), faltasClock);
+                new InMemoryFirmanteRepository(),
+                notifRepo, faltasClock);
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,

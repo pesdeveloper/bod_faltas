@@ -125,7 +125,8 @@ class FalloActaTest {
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
@@ -195,7 +196,7 @@ class FalloActaTest {
             assertThat(resultado.tipoEvento()).isEqualTo(TipoEventoActa.DOCFIR.codigo());
 
             FalActaFallo falloActualizado = falloRepo.buscarActivo(idActa).orElseThrow();
-            assertThat(falloActualizado.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRMADO);
+            assertThat(falloActualizado.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
 
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(idActa).orElseThrow();
             assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.PENDIENTE_NOTIFICACION);
@@ -609,9 +610,3 @@ class FalloActaTest {
         return idActa;
     }
 }
-
-
-
-
-
-

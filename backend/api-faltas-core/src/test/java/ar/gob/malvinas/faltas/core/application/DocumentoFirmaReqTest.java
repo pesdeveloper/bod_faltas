@@ -99,7 +99,8 @@ class DocumentoFirmaReqTest {
                 new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                 firmaReqRepo,
-                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
         firmaReqService = new DocumentoFirmaReqService(docRepo, plantillaRepo, firmaReqRepo, FaltasClockTestSupport.FIXED);
     }
@@ -617,5 +618,3 @@ class DocumentoFirmaReqTest {
         }
     }
 }
-
-

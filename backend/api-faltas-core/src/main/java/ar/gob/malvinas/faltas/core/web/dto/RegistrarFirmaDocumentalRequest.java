@@ -6,16 +6,18 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 /**
- * Request para registrar firma documental real.
+ * Request para registrar firma documental real via callback de la aplicacion de Firmas.
  * POST /api/faltas/documentos/{documentoId}/firmar-real
- * Slice 8C-6B-1.
+ *
+ * El actor se extrae exclusivamente del token Bearer (JWT sub).
+ * No se acepta idUserFirma en el body.
+ * referenciaFirmaExt es obligatoria y actua como clave de idempotencia.
  */
 public record RegistrarFirmaDocumentalRequest(
         @Positive short seqFirmaReq,
         @NotNull Long idFirmante,
         @NotNull TipoFirma tipoFirma,
-        @NotBlank String idUserFirma,
+        @NotBlank String referenciaFirmaExt,
         String hashDocumento,
-        String referenciaFirmaExt,
         String storageKey
 ) {}
