@@ -164,6 +164,26 @@ public class FalActaFallo {
     public void declararFirmeza(LocalDateTime fhFirmeza, OrigenFirmezaCondena origen) {
         if (fhFirmeza == null) throw new IllegalArgumentException("fhFirmeza requerida");
         if (origen == null) throw new IllegalArgumentException("origenFirmeza requerido");
+        if (this.tipoFallo != TipoFalloActa.CONDENATORIO) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "declararFirmeza solo aplica a fallo CONDENATORIO. Tipo actual: " + this.tipoFallo);
+        }
+        if (this.estadoFallo != EstadoFalloActa.NOTIFICADO) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "declararFirmeza requiere estadoFallo NOTIFICADO. Estado actual: " + this.estadoFallo);
+        }
+        if (this.fhFirma == null) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "declararFirmeza requiere fhFirma registrado.");
+        }
+        if (this.fhNotificacion == null) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "declararFirmeza requiere fhNotificacion registrado.");
+        }
+        if (this.siFirme || this.fhFirmeza != null || this.origenFirmeza != null) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "La firmeza ya fue declarada sobre este fallo.");
+        }
         this.siFirme = true;
         this.fhFirmeza = fhFirmeza;
         this.origenFirmeza = origen;

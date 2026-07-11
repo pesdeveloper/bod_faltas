@@ -31,12 +31,23 @@ class FalloInvariantesTest {
     @BeforeEach
     void setUp() { repo = new InMemoryFalloActaRepository(); }
 
+    /** Crea un fallo CONDENATORIO NOTIFICADO via operaciones canonicas. */
     private FalActaFallo crearFallo(Long actaId) {
         Long id = repo.nextId();
         FalActaFallo f = new FalActaFallo(id, actaId,
                 TipoFalloActa.CONDENATORIO, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-1");
         f.setMontoCondena(new BigDecimal("1000"));
-        f.setEstadoFallo(EstadoFalloActa.NOTIFICADO);
+        f.marcarPendienteNotificacion(FaltasClockTestSupport.FIXED.now());
+        f.marcarNotificado(FaltasClockTestSupport.FIXED.now());
+        return f;
+    }
+
+    /** Crea un fallo CONDENATORIO en estado inicial PENDIENTE_FIRMA. */
+    private FalActaFallo crearFalloPendienteFirma(Long actaId) {
+        Long id = repo.nextId();
+        FalActaFallo f = new FalActaFallo(id, actaId,
+                TipoFalloActa.CONDENATORIO, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-1");
+        f.setMontoCondena(new BigDecimal("1000"));
         return f;
     }
 
@@ -97,27 +108,126 @@ class FalloInvariantesTest {
 
     @Nested @DisplayName("C: Firmeza inline")
     class FirmezaInline {
-        @Test @DisplayName("declararFirmeza: siFirme=true, fhFirmeza y origenFirmeza presentes") void firmeza_caso_feliz() {
+
+        @Test
+        @DisplayName("declararFirmeza caso feliz: FIRME, siFirme, hitos, origen; preserva fhFirma y fhNotificacion")
+        void firmeza_caso_feliz() {
             FalActaFallo f = crearFallo(30L);
             repo.guardarComoVigente(f);
             FalActaFallo v = repo.findVigenteByActaId(30L).orElseThrow();
-            v.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+            LocalDateTime fhFirmeza = FaltasClockTestSupport.FIXED.now();
+            LocalDateTime fhFirmaAntes = v.getFhFirma();
+            LocalDateTime fhNotifAntes = v.getFhNotificacion();
+
+            v.declararFirmeza(fhFirmeza, OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
             repo.guardar(v);
+
             FalActaFallo leido = repo.findVigenteByActaId(30L).orElseThrow();
             assertThat(leido.isSiFirme()).isTrue();
-            assertThat(leido.getFhFirmeza()).isNotNull();
+            assertThat(leido.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThat(leido.getFhFirmeza()).isEqualTo(fhFirmeza);
             assertThat(leido.getOrigenFirmeza()).isEqualTo(OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+            assertThat(leido.getFhFirma()).isEqualTo(fhFirmaAntes);
+            assertThat(leido.getFhNotificacion()).isEqualTo(fhNotifAntes);
         }
-        @Test @DisplayName("declararFirmeza: lanza si fhFirmeza null") void firmeza_requiere_fecha() {
-            assertThatThrownBy(() -> crearFallo(31L).declararFirmeza(null, OrigenFirmezaCondena.APELACION_RECHAZADA))
+
+        @Test
+        @DisplayName("declararFirmeza: rechaza fallo ABSOLUTORIO")
+        void firmeza_rechaza_absolutorio() {
+            Long id = repo.nextId();
+            FalActaFallo f = new FalActaFallo(id, 31L,
+                    TipoFalloActa.ABSOLUTORIO, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-1");
+            assertThatThrownBy(() -> f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("CONDENATORIO");
+            assertThat(f.isSiFirme()).isFalse();
+            assertThat(f.getFhFirmeza()).isNull();
+            assertThat(f.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_FIRMA);
+        }
+
+        @Test
+        @DisplayName("declararFirmeza: rechaza estado PENDIENTE_FIRMA")
+        void firmeza_rechaza_pendiente_firma() {
+            FalActaFallo f = crearFalloPendienteFirma(32L);
+            assertThatThrownBy(() -> f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("NOTIFICADO");
+            assertThat(f.isSiFirme()).isFalse();
+            assertThat(f.getFhFirmeza()).isNull();
+            assertThat(f.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_FIRMA);
+        }
+
+        @Test
+        @DisplayName("declararFirmeza: rechaza estado PENDIENTE_NOTIFICACION")
+        void firmeza_rechaza_pendiente_notificacion() {
+            FalActaFallo f = crearFalloPendienteFirma(33L);
+            f.marcarPendienteNotificacion(FaltasClockTestSupport.FIXED.now());
+            assertThatThrownBy(() -> f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("NOTIFICADO");
+            assertThat(f.isSiFirme()).isFalse();
+            assertThat(f.getFhFirmeza()).isNull();
+            assertThat(f.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
+        }
+
+        @Test
+        @DisplayName("declararFirmeza: rechaza NOTIFICADO inconsistente sin fhFirma")
+        void firmeza_rechaza_sin_fhFirma() {
+            FalActaFallo f = crearFallo(34L);
+            f.setFhFirma(null);
+            assertThatThrownBy(() -> f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("fhFirma");
+            assertThat(f.isSiFirme()).isFalse();
+            assertThat(f.getFhFirmeza()).isNull();
+        }
+
+        @Test
+        @DisplayName("declararFirmeza: rechaza NOTIFICADO inconsistente sin fhNotificacion")
+        void firmeza_rechaza_sin_fhNotificacion() {
+            FalActaFallo f = crearFallo(35L);
+            f.setFhNotificacion(null);
+            assertThatThrownBy(() -> f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("fhNotificacion");
+            assertThat(f.isSiFirme()).isFalse();
+            assertThat(f.getFhFirmeza()).isNull();
+        }
+
+        @Test
+        @DisplayName("declararFirmeza: rechaza segunda declaracion de firmeza; origen no se sobreescribe")
+        void firmeza_rechaza_doble_declaracion() {
+            FalActaFallo f = crearFallo(36L);
+            f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+            assertThat(f.isSiFirme()).isTrue();
+            assertThat(f.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThatThrownBy(() -> f.declararFirmeza(FaltasClockTestSupport.FIXED.now(), OrigenFirmezaCondena.APELACION_RECHAZADA))
+                    .isInstanceOf(PrecondicionVioladaException.class);
+            assertThat(f.isSiFirme()).isTrue();
+            assertThat(f.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThat(f.getOrigenFirmeza()).isEqualTo(OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+        }
+
+        @Test
+        @DisplayName("declararFirmeza: lanza si fhFirmeza null")
+        void firmeza_requiere_fecha() {
+            assertThatThrownBy(() -> crearFallo(37L).declararFirmeza(null, OrigenFirmezaCondena.APELACION_RECHAZADA))
                     .isInstanceOf(IllegalArgumentException.class);
         }
-        @Test @DisplayName("declararFirmeza: lanza si origenFirmeza null") void firmeza_requiere_origen() {
-            assertThatThrownBy(() -> crearFallo(32L).declararFirmeza(FaltasClockTestSupport.FIXED.now(), null))
+
+        @Test
+        @DisplayName("declararFirmeza: lanza si origenFirmeza null")
+        void firmeza_requiere_origen() {
+            assertThatThrownBy(() -> crearFallo(38L).declararFirmeza(FaltasClockTestSupport.FIXED.now(), null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
-        @Test @DisplayName("siFirme=false sin fhFirmeza inicialmente") void no_firme_inicialmente() {
-            FalActaFallo f = crearFallo(33L);
+
+        @Test
+        @DisplayName("siFirme=false sin fhFirmeza inicialmente")
+        void no_firme_inicialmente() {
+            Long id = repo.nextId();
+            FalActaFallo f = new FalActaFallo(id, 39L,
+                    TipoFalloActa.CONDENATORIO, FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), "USR-1");
             assertThat(f.isSiFirme()).isFalse();
             assertThat(f.getFhFirmeza()).isNull();
             assertThat(f.getOrigenFirmeza()).isNull();

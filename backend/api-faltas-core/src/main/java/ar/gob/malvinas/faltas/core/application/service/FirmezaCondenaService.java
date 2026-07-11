@@ -19,21 +19,18 @@ import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaApelacion;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
-import ar.gob.malvinas.faltas.core.domain.model.FalActaFirmezaCondena;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.ApelacionActaRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Servicio de firmeza de condena del fallo condenatorio.
@@ -43,6 +40,7 @@ import java.util.UUID;
  *   2. DeclararFirmePorApelacionRechazada: apelacion RECHAZADA -> CONFIR -> CONDENA_FIRME.
  *
  * Invariantes:
+ * - La firmeza vive exclusivamente en FalActaFallo (D1 cerrado).
  * - CONDENA_FIRME se asigna solo en este servicio.
  * - No cierra el acta.
  * - No registra CIERRA.
@@ -58,10 +56,8 @@ public class FirmezaCondenaService {
     private final ApelacionActaRepository apelacionActaRepository;
     private final ActaEventoRepository eventoRepository;
     private final ActaSnapshotRepository snapshotRepository;
-    private final FirmezaCondenaRepository firmezaCondenaRepository;
     private final SnapshotRecalculador snapshotRecalculador;
-
-        private final FaltasClock faltasClock;
+    private final FaltasClock faltasClock;
 
     public FirmezaCondenaService(
             ActaRepository actaRepository,
@@ -69,7 +65,6 @@ public class FirmezaCondenaService {
             ApelacionActaRepository apelacionActaRepository,
             ActaEventoRepository eventoRepository,
             ActaSnapshotRepository snapshotRepository,
-            FirmezaCondenaRepository firmezaCondenaRepository,
             SnapshotRecalculador snapshotRecalculador,
             FaltasClock faltasClock) {
         this.faltasClock = faltasClock;
@@ -78,7 +73,6 @@ public class FirmezaCondenaService {
         this.apelacionActaRepository = apelacionActaRepository;
         this.eventoRepository = eventoRepository;
         this.snapshotRepository = snapshotRepository;
-        this.firmezaCondenaRepository = firmezaCondenaRepository;
         this.snapshotRecalculador = snapshotRecalculador;
     }
 
@@ -95,25 +89,23 @@ public class FirmezaCondenaService {
         validarSinCondenaFirme(acta);
         validarSinApelacion(cmd.actaId());
 
-        registrarEvento(cmd.actaId(), TipoEventoActa.PLAVNC, null, null, null,
-                "Plazo de apelacion vencido sin presentacion de apelacion. " + nvl(cmd.observaciones()));
-        registrarEvento(cmd.actaId(), TipoEventoActa.CONFIR, null, null, null,
-                "Condena firme declarada por vencimiento de plazo de apelacion.");
+        LocalDateTime ahora = faltasClock.now();
+
+        fallo.declararFirmeza(ahora, OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+        falloActaRepository.guardar(fallo);
 
         acta.setResultadoFinal(ResultadoFinalActa.CONDENA_FIRME);
         actaRepository.guardar(acta);
 
-        Long idFirmeza = firmezaCondenaRepository.nextId();
-        FalActaFirmezaCondena firmeza = new FalActaFirmezaCondena(
-                idFirmeza, cmd.actaId(), fallo.getId(), null,
-                OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION,
-                faltasClock.now(), cmd.observaciones(), true);
-        firmezaCondenaRepository.guardar(firmeza);
+        registrarEvento(cmd.actaId(), TipoEventoActa.PLAVNC, null, null, null,
+                "Plazo de apelacion vencido sin presentacion de apelacion. " + nvl(cmd.observaciones()), ahora);
+        registrarEvento(cmd.actaId(), TipoEventoActa.CONFIR, null, null, null,
+                "Condena firme declarada por vencimiento de plazo de apelacion.", ahora);
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(cmd.actaId(), String.valueOf(idFirmeza),
+        return ComandoResultado.de(cmd.actaId(), String.valueOf(fallo.getId()),
                 TipoEventoActa.CONFIR.codigo(),
                 "Condena firme declarada por vencimiento de plazo de apelacion. Pago condena: Slice 3E.");
     }
@@ -149,35 +141,23 @@ public class FirmezaCondenaService {
                             + ". Solo la apelacion RECHAZADA habilita este comando.");
         }
 
-        registrarEvento(cmd.actaId(), TipoEventoActa.CONFIR, null, null, null,
-                "Condena firme declarada por apelacion rechazada. " + nvl(cmd.observaciones()));
+        LocalDateTime ahora = faltasClock.now();
+
+        fallo.declararFirmeza(ahora, OrigenFirmezaCondena.APELACION_RECHAZADA);
+        falloActaRepository.guardar(fallo);
 
         acta.setResultadoFinal(ResultadoFinalActa.CONDENA_FIRME);
         actaRepository.guardar(acta);
 
-        Long idFirmeza = firmezaCondenaRepository.nextId();
-        FalActaFirmezaCondena firmeza = new FalActaFirmezaCondena(
-                idFirmeza, cmd.actaId(), fallo.getId(), apelacion.getId(),
-                OrigenFirmezaCondena.APELACION_RECHAZADA,
-                faltasClock.now(), cmd.observaciones(), true);
-        firmezaCondenaRepository.guardar(firmeza);
+        registrarEvento(cmd.actaId(), TipoEventoActa.CONFIR, null, null, null,
+                "Condena firme declarada por apelacion rechazada. " + nvl(cmd.observaciones()), ahora);
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(cmd.actaId(), String.valueOf(idFirmeza),
+        return ComandoResultado.de(cmd.actaId(), String.valueOf(fallo.getId()),
                 TipoEventoActa.CONFIR.codigo(),
                 "Condena firme declarada por apelacion rechazada. Pago condena: Slice 3E.");
-    }
-
-    // -------------------------------------------------------------------------
-    // Consulta
-    // -------------------------------------------------------------------------
-
-    public Optional<FalActaFirmezaCondena> obtenerFirmezaActiva(Long actaId) {
-        actaRepository.buscarPorId(actaId)
-                .orElseThrow(() -> new ActaNoEncontradaException(actaId));
-        return firmezaCondenaRepository.buscarActivaPorActa(actaId);
     }
 
     // -------------------------------------------------------------------------
@@ -239,12 +219,13 @@ public class FirmezaCondenaService {
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
                                   Long idDocuRel, Long idNotifRel,
-                                  String idUserEvt, String descripcionLegible) {
+                                  String idUserEvt, String descripcionLegible,
+                                  LocalDateTime fhEvt) {
         FalActaEvento evento = FalActaEvento.builder()
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.USUARIO_WEB)
-                .fhEvt(faltasClock.now())
+                .fhEvt(fhEvt)
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

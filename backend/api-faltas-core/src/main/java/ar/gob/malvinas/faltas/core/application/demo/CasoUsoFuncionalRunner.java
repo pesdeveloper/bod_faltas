@@ -39,7 +39,6 @@ public class CasoUsoFuncionalRunner {
     private final FalloActaRepository falloRepo;
     private final ApelacionActaRepository apelacionRepo;
     private final ApelacionDocumentoRepository apelacionDocRepo;
-    private final FirmezaCondenaRepository firmezaRepo;
     private final GestionExternaRepository gestionExtRepo;
     private final BloqueanteMaterialRepository bloqueanteMaterialRepo;
 
@@ -72,7 +71,6 @@ public class CasoUsoFuncionalRunner {
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
         apelacionDocRepo = new InMemoryApelacionDocumentoRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         gestionExtRepo = new InMemoryGestionExternaRepository();
         bloqueanteMaterialRepo = new InMemoryBloqueanteMaterialRepository();
 
@@ -111,7 +109,7 @@ public class CasoUsoFuncionalRunner {
                 new NoOpBloqueantesMaterialesChecker(), faltasClock);
 
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, faltasClock);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, faltasClock);
 
         gestionExtService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondRepo, gestionExtRepo, recalc,

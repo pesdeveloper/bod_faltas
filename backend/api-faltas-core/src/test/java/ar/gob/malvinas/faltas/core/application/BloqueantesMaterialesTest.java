@@ -45,7 +45,6 @@ import ar.gob.malvinas.faltas.core.repository.BloqueanteMaterialRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.GestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
@@ -58,7 +57,6 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryBloqueanteMaterialR
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryGestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository;
@@ -108,7 +106,6 @@ class BloqueantesMaterialesTest {
     private PagoVoluntarioRepository pagoVolRepo;
     private FalloActaRepository falloRepo;
     private ApelacionActaRepository apelacionRepo;
-    private FirmezaCondenaRepository firmezaRepo;
     private PagoCondenaRepository pagoCondenaRepo;
     private GestionExternaRepository gestionExternaRepo;
     private BloqueanteMaterialRepository bloqueanteMaterialRepo;
@@ -135,7 +132,6 @@ class BloqueantesMaterialesTest {
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         gestionExternaRepo = new InMemoryGestionExternaRepository();
         bloqueanteMaterialRepo = new InMemoryBloqueanteMaterialRepository();
@@ -164,7 +160,7 @@ class BloqueantesMaterialesTest {
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
         gestionExternaService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo, recalc,
                 bloqueantesChecker, FaltasClockTestSupport.FIXED);

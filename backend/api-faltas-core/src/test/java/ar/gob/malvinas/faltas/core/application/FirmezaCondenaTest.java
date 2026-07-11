@@ -32,8 +32,12 @@ import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
-import ar.gob.malvinas.faltas.core.domain.model.FalActaFirmezaCondena;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
+import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicInteger;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
@@ -42,7 +46,6 @@ import ar.gob.malvinas.faltas.core.repository.ApelacionActaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEventoRepository;
@@ -52,7 +55,6 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryApelacionActaReposi
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository;
@@ -96,7 +98,6 @@ class FirmezaCondenaTest {
     private PagoVoluntarioRepository pagoRepo;
     private FalloActaRepository falloRepo;
     private ApelacionActaRepository apelacionRepo;
-    private FirmezaCondenaRepository firmezaRepo;
 
     private ActaService actaService;
     private DocumentoService docService;
@@ -116,7 +117,6 @@ class FirmezaCondenaTest {
         pagoRepo = new InMemoryPagoVoluntarioRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
 
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(
@@ -145,7 +145,7 @@ class FirmezaCondenaTest {
                 actaId -> false, FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
                 actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo,
-                firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
+                recalc, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -259,11 +259,21 @@ class FirmezaCondenaTest {
             assertThat(tipos).contains(TipoEventoActa.CONFIR);
             assertThat(tipos).doesNotContain(TipoEventoActa.CIERRA);
 
-            Optional<FalActaFirmezaCondena> firmeza = firmezaRepo.buscarActivaPorActa(actaId);
-            assertThat(firmeza).isPresent();
-            assertThat(firmeza.get().getOrigenFirmeza())
-                    .isEqualTo(OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
-            assertThat(firmeza.get().getApelacionId()).isNull();
+            FalActaFallo fallo = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(fallo.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThat(fallo.isSiFirme()).isTrue();
+            assertThat(fallo.getFhFirmeza()).isEqualTo(FaltasClockTestSupport.FIXED.now());
+            assertThat(fallo.getOrigenFirmeza()).isEqualTo(OrigenFirmezaCondena.VENCIMIENTO_PLAZO_APELACION);
+            assertThat(fallo.getFhFirma()).isNotNull();
+            assertThat(fallo.getFhNotificacion()).isNotNull();
+
+            List<FalActaEvento> eventosConFh = eventoRepo.buscarPorActa(actaId);
+            FalActaEvento evtPlavnc = eventosConFh.stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.PLAVNC).findFirst().orElseThrow();
+            FalActaEvento evtConfir = eventosConFh.stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.CONFIR).findFirst().orElseThrow();
+            assertThat(evtPlavnc.fhEvt()).isEqualTo(fallo.getFhFirmeza());
+            assertThat(evtConfir.fhEvt()).isEqualTo(fallo.getFhFirmeza());
 
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(actaId).orElseThrow();
             assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.PENDIENTE_PAGO_CONDENA);
@@ -314,11 +324,18 @@ class FirmezaCondenaTest {
             assertThat(tipos).doesNotContain(TipoEventoActa.PLAVNC);
             assertThat(tipos).doesNotContain(TipoEventoActa.CIERRA);
 
-            Optional<FalActaFirmezaCondena> firmeza = firmezaRepo.buscarActivaPorActa(actaId);
-            assertThat(firmeza).isPresent();
-            assertThat(firmeza.get().getOrigenFirmeza())
-                    .isEqualTo(OrigenFirmezaCondena.APELACION_RECHAZADA);
-            assertThat(firmeza.get().getApelacionId()).isNotNull();
+            FalActaFallo fallo = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(fallo.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThat(fallo.isSiFirme()).isTrue();
+            assertThat(fallo.getFhFirmeza()).isEqualTo(FaltasClockTestSupport.FIXED.now());
+            assertThat(fallo.getOrigenFirmeza()).isEqualTo(OrigenFirmezaCondena.APELACION_RECHAZADA);
+            assertThat(fallo.getFhFirma()).isNotNull();
+            assertThat(fallo.getFhNotificacion()).isNotNull();
+
+            List<FalActaEvento> eventosConFh = eventoRepo.buscarPorActa(actaId);
+            FalActaEvento evtConfirAp = eventosConFh.stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.CONFIR).findFirst().orElseThrow();
+            assertThat(evtConfirAp.fhEvt()).isEqualTo(fallo.getFhFirmeza());
 
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(actaId).orElseThrow();
             assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.PENDIENTE_PAGO_CONDENA);
@@ -566,6 +583,111 @@ class FirmezaCondenaTest {
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
             assertThat(tipos).doesNotContain(TipoEventoActa.CIERRA);
+        }
+    }
+
+    // =========================================================================
+    // 8.5 Reloj contado: un solo instante por comando exitoso
+    // =========================================================================
+
+    static class CountingClock extends FaltasClock {
+        private final AtomicInteger llamadas = new AtomicInteger(0);
+        private final LocalDateTime instante = FaltasClockTestSupport.FIXED.now();
+
+        @Override
+        public LocalDateTime now() {
+            llamadas.incrementAndGet();
+            return instante;
+        }
+
+        public int getLlamadas() { return llamadas.get(); }
+        public void reset() { llamadas.set(0); }
+    }
+
+    @Nested
+    @DisplayName("8.5 Reloj contado: instante unico por comando")
+    class RelojContado {
+
+        private CountingClock contando;
+        private FirmezaCondenaService firmezaConReloj;
+
+        @BeforeEach
+        void setUpReloj() {
+            contando = new CountingClock();
+            firmezaConReloj = new FirmezaCondenaService(
+                    actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo,
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo,
+                            new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED),
+                    contando);
+        }
+
+        @Test
+        @DisplayName("vencerPlazoApelacion: exactamente un now() en FirmezaCondenaService")
+        void vencer_plazo_consume_un_solo_instante() {
+            Long actaId = crearActaConFalloCondenatorioNotificado("40000001");
+            contando.reset();
+            firmezaConReloj.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+            assertThat(contando.getLlamadas()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("declararFirmePorApelacionRechazada: exactamente un now() en FirmezaCondenaService")
+        void apelacion_rechazada_consume_un_solo_instante() {
+            Long actaId = crearActaConApelacionRechazada("40000002");
+            contando.reset();
+            firmezaConReloj.declararFirmePorApelacionRechazada(
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null));
+            assertThat(contando.getLlamadas()).isEqualTo(1);
+        }
+    }
+
+    // =========================================================================
+    // 8.6 Invalidez sin efectos parciales
+    // =========================================================================
+
+    @Nested
+    @DisplayName("8.6 Invalidez sin efectos: fallo permanece NOTIFICADO")
+    class InvalidezSinEfectos {
+
+        @Test
+        @DisplayName("Comando invalido (apelacion PRESENTADA) no muta fallo ni acta")
+        void comando_invalido_no_muta_fallo_ni_acta() {
+            Long actaId = crearActaConFalloCondenatorioNotificado("50000099");
+            apelacionService.registrarApelacion(
+                    new RegistrarApelacionCommand(actaId, "Infractor", "Fundamentos", null));
+
+            FalActaFallo falloAntes = falloRepo.buscarActivo(actaId).orElseThrow();
+            EstadoFalloActa estadoAntes = falloAntes.getEstadoFallo();
+            boolean siFirmeAntes = falloAntes.isSiFirme();
+            LocalDateTime fhFirmezaAntes = falloAntes.getFhFirmeza();
+            ar.gob.malvinas.faltas.core.domain.enums.OrigenFirmezaCondena origenAntes = falloAntes.getOrigenFirmeza();
+            ResultadoFinalActa resultadoAntes = actaRepo.buscarPorId(actaId).orElseThrow().getResultadoFinal();
+            long confirAntes = eventoRepo.buscarPorActa(actaId).stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.CONFIR).count();
+            long plavncAntes = eventoRepo.buscarPorActa(actaId).stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.PLAVNC).count();
+
+            assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
+                    new VencerPlazoApelacionCommand(actaId, null)))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("PRESENTADA");
+
+            FalActaFallo falloDespues = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(falloDespues.getEstadoFallo()).isEqualTo(estadoAntes);
+            assertThat(falloDespues.isSiFirme()).isEqualTo(siFirmeAntes);
+            assertThat(falloDespues.getFhFirmeza()).isEqualTo(fhFirmezaAntes);
+            assertThat(falloDespues.getOrigenFirmeza()).isEqualTo(origenAntes);
+
+            FalActa actaDespues = actaRepo.buscarPorId(actaId).orElseThrow();
+            assertThat(actaDespues.getResultadoFinal()).isEqualTo(resultadoAntes);
+            assertThat(actaDespues.getResultadoFinal()).isNotEqualTo(ResultadoFinalActa.CONDENA_FIRME);
+
+            long confirDespues = eventoRepo.buscarPorActa(actaId).stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.CONFIR).count();
+            long plavncDespues = eventoRepo.buscarPorActa(actaId).stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.PLAVNC).count();
+            assertThat(confirDespues).isEqualTo(confirAntes);
+            assertThat(plavncDespues).isEqualTo(plavncAntes);
         }
     }
 }

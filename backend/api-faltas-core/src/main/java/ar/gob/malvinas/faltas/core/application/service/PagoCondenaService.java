@@ -95,7 +95,7 @@ public class PagoCondenaService {
     public ComandoResultado informar(InformarPagoCondenaCommand cmd) {
         FalActa acta = cargarActaOperativa(cmd.actaId());
         validarCondenaFirme(acta);
-        validarFalloCondenatorioNotificado(cmd.actaId());
+        validarFalloCondenatorioFirme(cmd.actaId());
 
         if (cmd.monto() == null || cmd.monto().compareTo(BigDecimal.ZERO) <= 0) {
             throw new PrecondicionVioladaException("El monto de pago de condena debe ser mayor a cero.");
@@ -258,7 +258,7 @@ public class PagoCondenaService {
         }
     }
 
-    private void validarFalloCondenatorioNotificado(Long actaId) {
+    private void validarFalloCondenatorioFirme(Long actaId) {
         FalActaFallo fallo = falloActaRepository.buscarActivo(actaId)
                 .orElseThrow(() -> new PrecondicionVioladaException(
                         "No existe fallo activo sobre el acta. No se puede iniciar pago de condena."));
@@ -266,10 +266,18 @@ public class PagoCondenaService {
             throw new PrecondicionVioladaException(
                     "El pago de condena requiere fallo condenatorio. Tipo actual: " + fallo.getTipoFallo());
         }
-        if (fallo.getEstadoFallo() != EstadoFalloActa.NOTIFICADO) {
+        if (fallo.getEstadoFallo() != EstadoFalloActa.FIRME) {
             throw new PrecondicionVioladaException(
-                    "El fallo condenatorio debe estar NOTIFICADO para iniciar pago de condena. "
-                            + "Estado actual: " + fallo.getEstadoFallo());
+                    "El pago de condena requiere fallo FIRME. Estado actual: "
+                            + fallo.getEstadoFallo());
+        }
+        if (!fallo.isSiFirme()
+                || fallo.getFhFirma() == null
+                || fallo.getFhNotificacion() == null
+                || fallo.getFhFirmeza() == null
+                || fallo.getOrigenFirmeza() == null) {
+            throw new PrecondicionVioladaException(
+                    "El fallo FIRME presenta una firmeza inconsistente.");
         }
     }
 

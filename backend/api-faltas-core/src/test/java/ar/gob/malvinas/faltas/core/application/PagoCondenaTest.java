@@ -29,6 +29,7 @@ import ar.gob.malvinas.faltas.core.application.service.PagoCondenaService;
 import ar.gob.malvinas.faltas.core.domain.enums.AccionPendiente;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoCondena;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
@@ -36,6 +37,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.domain.model.FalPagoCondena;
@@ -46,7 +48,6 @@ import ar.gob.malvinas.faltas.core.repository.ApelacionActaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
@@ -57,7 +58,6 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryApelacionActaReposi
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepository;
@@ -96,7 +96,6 @@ class PagoCondenaTest {
     private PagoVoluntarioRepository pagoVolRepo;
     private FalloActaRepository falloRepo;
     private ApelacionActaRepository apelacionRepo;
-    private FirmezaCondenaRepository firmezaRepo;
     private PagoCondenaRepository pagoCondenaRepo;
 
     private ActaService actaService;
@@ -118,7 +117,6 @@ class PagoCondenaTest {
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
@@ -145,7 +143,7 @@ class PagoCondenaTest {
                 actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
         pagoCondenaService = new PagoCondenaService(
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
@@ -155,7 +153,7 @@ class PagoCondenaTest {
     // Helpers: construir acta con condena firme
     // =========================================================================
 
-    private Long crearActaConCondenaFirme(String doc) {
+    private Long crearActaConFalloCondenatorioNotificado(String doc) {
         LabrarActaCommand cmd = new LabrarActaCommand(
                 "TRANSITO", "DEP-001", "INS-001",
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
@@ -181,7 +179,11 @@ class PagoCondenaTest {
                 new EnviarNotificacionCommand(actaId, idDocFallo, "CORREO", null))
                 .idEntidadAfectada();
         notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotifFallo, null));
+        return actaId;
+    }
 
+    private Long crearActaConCondenaFirme(String doc) {
+        Long actaId = crearActaConFalloCondenatorioNotificado(doc);
         firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
         return actaId;
     }
@@ -234,6 +236,13 @@ class PagoCondenaTest {
         @DisplayName("Test 3: Informar pago condena registra PCOINF")
         void informar_registra_pcoinf() {
             Long actaId = crearActaConCondenaFirme("50000001");
+
+            FalActaFallo falloFirme = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(falloFirme.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThat(falloFirme.isSiFirme()).isTrue();
+            assertThat(falloFirme.getFhFirmeza()).isNotNull();
+            assertThat(falloFirme.getOrigenFirmeza()).isNotNull();
+
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-ABC-001", "Pago via banco"));
 
@@ -421,6 +430,30 @@ class PagoCondenaTest {
                     actaId, new BigDecimal("1000"), "REF-001", null)))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("fallo");
+        }
+
+        @Test
+        @DisplayName("Test 11b: resultadoFinal=CONDENA_FIRME no suple firmeza: fallo NOTIFICADO rechaza pago")
+        void resultadoFinal_no_suple_firmeza() {
+            Long actaId = crearActaConFalloCondenatorioNotificado("50000091");
+            FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
+            acta.setResultadoFinal(ResultadoFinalActa.CONDENA_FIRME);
+            actaRepo.guardar(acta);
+
+            assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
+                            actaId, new BigDecimal("3000.00"), "REF-001", null)))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("FIRME");
+
+            FalActaFallo fallo = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(fallo.getEstadoFallo()).isEqualTo(EstadoFalloActa.NOTIFICADO);
+            assertThat(fallo.isSiFirme()).isFalse();
+            assertThat(fallo.getFhFirmeza()).isNull();
+            assertThat(pagoCondenaRepo.buscarPorActa(actaId)).isEmpty();
+
+            List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
+                    .stream().map(FalActaEvento::tipoEvt).toList();
+            assertThat(tipos).doesNotContain(TipoEventoActa.PCOINF);
         }
 
         @Test
