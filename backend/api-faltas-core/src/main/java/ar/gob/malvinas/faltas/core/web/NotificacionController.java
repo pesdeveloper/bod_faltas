@@ -11,6 +11,8 @@ import ar.gob.malvinas.faltas.core.domain.exception.DocumentoNoEncontradoExcepti
 import ar.gob.malvinas.faltas.core.domain.exception.NotificacionNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.EnviarNotificacionRequest;
 import ar.gob.malvinas.faltas.core.web.dto.RegistrarResultadoNotificacionRequest;
 import jakarta.validation.Valid;
@@ -39,8 +41,17 @@ public class NotificacionController {
     public ResponseEntity<ComandoResultado> enviar(
             @PathVariable Long idActa,
             @Valid @RequestBody EnviarNotificacionRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null)
+            throw new PrecondicionVioladaException("Contexto de actor no disponible. Autenticacion requerida.");
         EnviarNotificacionCommand cmd = new EnviarNotificacionCommand(
-                idActa, req.idDocumento(), req.canal(), req.observaciones());
+                idActa,
+                req.idDocumento(),
+                req.canal(),
+                req.destinoDigital(),
+                req.referenciaExterna(),
+                req.observaciones(),
+                ctx.sub());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(notificacionService.enviarNotificacion(cmd));
     }
@@ -76,6 +87,4 @@ public class NotificacionController {
     public ResponseEntity<List<FalNotificacion>> listar(@PathVariable Long idActa) {
         return ResponseEntity.ok(notificacionService.obtenerNotificaciones(idActa));
     }
-
 }
-

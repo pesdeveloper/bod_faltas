@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCom
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnviarNotificacionCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
@@ -129,7 +130,7 @@ class FalloActaTest {
                 new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository());
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo,
                 falloRepo, pagoRepo, recalc, FaltasClockTestSupport.FIXED);
@@ -218,7 +219,7 @@ class FalloActaTest {
             docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
 
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, idDocFallo, "POSTAL", null))
+                    new EnviarNotificacionCommand(idActa, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarPositiva(
@@ -256,7 +257,7 @@ class FalloActaTest {
             Long idDocFallo = fallo.getDocumentoId();
             docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, idDocFallo, "POSTAL", null))
+                    new EnviarNotificacionCommand(idActa, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
             notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
 
@@ -330,7 +331,7 @@ class FalloActaTest {
 
             docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, idDocFallo, "POSTAL", null))
+                    new EnviarNotificacionCommand(idActa, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarPositiva(
@@ -364,7 +365,7 @@ class FalloActaTest {
             docService.firmarDocumento(
                     new FirmarDocumentoCommand(fallo.getDocumentoId(), "Juez", "DIGITAL", null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), "POSTAL", null))
+                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarNegativa(
@@ -388,7 +389,7 @@ class FalloActaTest {
             docService.firmarDocumento(
                     new FirmarDocumentoCommand(fallo.getDocumentoId(), "Juez", "DIGITAL", null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), "POSTAL", null))
+                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarVencida(
@@ -432,7 +433,7 @@ class FalloActaTest {
             docService.firmarDocumento(
                     new FirmarDocumentoCommand(fallo.getDocumentoId(), "Juez", null, null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), "P", null))
+                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
             notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
 
@@ -497,7 +498,8 @@ class FalloActaTest {
                     new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED),
                     falloRepo,
-                    actaId -> true, FaltasClockTestSupport.FIXED);
+                    actaId -> true, FaltasClockTestSupport.FIXED,
+                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository());
 
             Long idActa = llegarAAnalisis();
             falloConBloqueantes.dictarAbsolutorio(
@@ -506,7 +508,7 @@ class FalloActaTest {
             docService.firmarDocumento(
                     new FirmarDocumentoCommand(fallo.getDocumentoId(), "Juez", null, null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), "P", null))
+                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
 
             notifConBloqueantes.registrarPositiva(
@@ -532,7 +534,7 @@ class FalloActaTest {
             docService.firmarDocumento(
                     new FirmarDocumentoCommand(fallo.getDocumentoId(), "Juez", null, null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), "P", null))
+                    new EnviarNotificacionCommand(idActa, fallo.getDocumentoId(), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
             notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
 
@@ -601,7 +603,7 @@ class FalloActaTest {
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "Inspector", "DIGITAL", null));
 
         String idNotif = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null))
+                new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"))
                 .idEntidadAfectada();
         notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
 

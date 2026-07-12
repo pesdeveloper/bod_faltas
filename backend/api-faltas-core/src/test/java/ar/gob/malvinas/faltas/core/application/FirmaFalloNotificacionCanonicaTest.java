@@ -93,7 +93,8 @@ class FirmaFalloNotificacionCanonicaTest {
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED,
+                intentoRepo, new InMemoryPersonaDomicilioRepository());
 
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo,
@@ -382,7 +383,7 @@ class FirmaFalloNotificacionCanonicaTest {
 
             // Llamar enviarNotificacion
             notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, idDoc, "POSTAL", null));
+                    new EnviarNotificacionCommand(idActa, idDoc, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"));
 
             // Debe existir solo 1 notificacion (reutilizada, no duplicada)
             List<FalNotificacion> notifs = notifRepo.buscarPorActa(idActa);
@@ -391,7 +392,7 @@ class FirmaFalloNotificacionCanonicaTest {
             FalNotificacion notif = notifs.get(0);
             assertThat(notif.getId()).isEqualTo(idNotifPrev); // misma notif
             assertThat(notif.getEstado()).isEqualTo(EstadoNotificacion.EN_PROCESO);
-            assertThat(notif.getCanal()).isEqualTo("POSTAL");
+            assertThat(notif.getCanal()).isEqualTo("PRESENCIAL");
             assertThat(notif.getFechaEnvio()).isNotNull();
         }
 
@@ -418,7 +419,7 @@ class FirmaFalloNotificacionCanonicaTest {
             docRepo.guardar(doc);
 
             notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, idDoc, "EMAIL", null));
+                    new EnviarNotificacionCommand(idActa, idDoc, CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"));
 
             List<FalNotificacion> notifs = notifRepo.buscarPorActa(idActa);
             assertThat(notifs).hasSize(1);
@@ -525,7 +526,7 @@ class FirmaFalloNotificacionCanonicaTest {
 
             // Enviar notificacion
             ComandoResultado enviada = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, idDoc, "POSTAL", null));
+                    new EnviarNotificacionCommand(idActa, idDoc, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"));
 
             Long idNotif = Long.parseLong(enviada.idEntidadAfectada());
 

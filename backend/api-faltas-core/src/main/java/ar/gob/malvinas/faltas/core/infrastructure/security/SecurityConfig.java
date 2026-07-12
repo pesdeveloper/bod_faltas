@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -27,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/faltas/pagos/**").authenticated()
                         .requestMatchers("/api/faltas/documentos/*/numerar").authenticated()
                         .requestMatchers("/api/faltas/documentos/*/firmar-real").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/faltas/actas/*/notificaciones/enviar").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint(
                         (req, res, ex) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "Autenticacion Bearer requerida")))

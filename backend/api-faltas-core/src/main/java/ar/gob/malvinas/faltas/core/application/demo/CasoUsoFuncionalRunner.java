@@ -95,7 +95,8 @@ public class CasoUsoFuncionalRunner {
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, bloqueantesChecker, faltasClock);
+                falloRepo, bloqueantesChecker, faltasClock,
+                new InMemoryNotificacionIntentoRepository(), new InMemoryPersonaDomicilioRepository());
 
         pagoVolService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoVolRepo, recalc,
@@ -286,7 +287,7 @@ public class CasoUsoFuncionalRunner {
 
     private String enviarNotificacion(Long actaId, Long docId) {
         return notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, docId, "CORREO", null))
+                new EnviarNotificacionCommand(actaId, docId, CanalNotificacion.PRESENCIAL, null, null, null, "demo-user"))
                 .idEntidadAfectada();
     }
 

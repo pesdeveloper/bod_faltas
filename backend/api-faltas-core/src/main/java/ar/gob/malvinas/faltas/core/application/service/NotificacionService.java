@@ -6,14 +6,14 @@ import ar.gob.malvinas.faltas.core.application.command.RegistrarNotificacionPosi
 import ar.gob.malvinas.faltas.core.application.command.RegistrarNotificacionVencidaCommand;
 import ar.gob.malvinas.faltas.core.application.port.BloqueantesMaterialesChecker;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
+import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoNotificacion;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoNotificacion;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
-import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
-import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoNoEncontradoException;
@@ -25,40 +25,32 @@ import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
 import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
+import ar.gob.malvinas.faltas.core.domain.model.FalNotificacionIntento;
+import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
+import ar.gob.malvinas.faltas.core.repository.NotificacionIntentoRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
+import ar.gob.malvinas.faltas.core.repository.PersonaDomicilioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
-import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Motor de proceso del circuito notificatorio del expediente.
  *
  * Enviar, registrar positiva, registrar negativa, registrar vencida.
- * Cada resultado actualiza el estado de la notificacion, registra el evento
- * real y recalcula el snapshot del acta.
  *
- * Regla: no se puede notificar si el documento no esta firmado.
- *
- * Comportamiento en registrarPositiva segun tipo de documento notificado:
- * - documento de fallo absolutorio (detectado por FalActaFallo.tipoFallo):
- *     asigna ABSUELTO; si no hay bloqueantes, cierra el acta.
- * - documento de fallo condenatorio (detectado por FalActaFallo.tipoFallo):
- *     deja en ANAL para prox. slice (apelacion/pago condena).
- * - cualquier otro documento: avanza a bloque ANAL.
- *
- * La distincion absolutorio/condenatorio ya no se basa en TipoDocu (ambos son
- * ACTO_ADMINISTRATIVO desde 8C-1), sino en FalActaFallo.tipoFallo comparando
- * el documentoId del fallo con el idDocumento de la notificacion.
+ * CMD-FALLO-002: enviarNotificacion usa CanalNotificacion canonico, obtiene el actor
+ * exclusivamente del JWT sub (via EnviarNotificacionCommand.actor), persiste exactamente
+ * un FalNotificacionIntento por llamada exitosa y usa un unico instante canonico para
+ * cabecera, intento y evento NOTENV.
  */
 @Service
 public class NotificacionService {
@@ -66,6 +58,8 @@ public class NotificacionService {
     private final ActaRepository actaRepository;
     private final DocumentoRepository documentoRepository;
     private final NotificacionRepository notificacionRepository;
+    private final NotificacionIntentoRepository notificacionIntentoRepository;
+    private final PersonaDomicilioRepository personaDomicilioRepository;
     private final ActaEventoRepository eventoRepository;
     private final ActaSnapshotRepository snapshotRepository;
     private final SnapshotRecalculador snapshotRecalculador;
@@ -82,8 +76,9 @@ public class NotificacionService {
             SnapshotRecalculador snapshotRecalculador,
             FalloActaRepository falloActaRepository,
             BloqueantesMaterialesChecker bloqueantesMaterialesChecker,
-            FaltasClock faltasClock) {
-        this.faltasClock = faltasClock;
+            FaltasClock faltasClock,
+            NotificacionIntentoRepository notificacionIntentoRepository,
+            PersonaDomicilioRepository personaDomicilioRepository) {
         this.actaRepository = actaRepository;
         this.documentoRepository = documentoRepository;
         this.notificacionRepository = notificacionRepository;
@@ -92,70 +87,203 @@ public class NotificacionService {
         this.snapshotRecalculador = snapshotRecalculador;
         this.falloActaRepository = falloActaRepository;
         this.bloqueantesMaterialesChecker = bloqueantesMaterialesChecker;
+        this.faltasClock = faltasClock;
+        this.notificacionIntentoRepository = notificacionIntentoRepository;
+        this.personaDomicilioRepository = personaDomicilioRepository;
     }
 
     // -------------------------------------------------------------------------
-    // EnviarNotificacion
+    // CMD-FALLO-002 EnviarNotificacion
     // -------------------------------------------------------------------------
 
     public ComandoResultado enviarNotificacion(EnviarNotificacionCommand cmd) {
+        // 1. cmd no nulo
+        if (cmd == null) throw new IllegalArgumentException("cmd no puede ser null");
+
+        // 2. actor no nulo, no blanco, maximo 36
+        String actor = cmd.actor();
+        if (actor == null || actor.isBlank())
+            throw new PrecondicionVioladaException("actor es obligatorio");
+        if (actor.length() > 36)
+            throw new PrecondicionVioladaException("actor excede 36 caracteres");
+
+        // 3. acta existente
         FalActa acta = actaRepository.buscarPorId(cmd.idActa())
                 .orElseThrow(() -> new ActaNoEncontradaException(cmd.idActa()));
 
-        if (acta.estaCerrada()) {
-            throw new PrecondicionVioladaException("El acta esta cerrada. No se puede enviar notificacion.");
-        }
+        // 4. acta no cerrada
+        if (acta.estaCerrada())
+            throw new PrecondicionVioladaException(
+                    "El acta esta cerrada. No se puede enviar notificacion.");
 
+        // 5. documento existente
         FalDocumento doc = documentoRepository.buscarPorId(cmd.idDocumento())
                 .orElseThrow(() -> new DocumentoNoEncontradoException(cmd.idDocumento()));
 
-        if (!doc.estaFirmado()) {
+        // 6. documento firmado
+        if (!doc.estaFirmado())
             throw new PrecondicionVioladaException(
                     "No se puede notificar un documento que no esta firmado. Estado actual: "
                             + doc.getEstadoDocu());
-        }
-        if (!acta.getId().equals(doc.getIdActa())) {
+
+        // 7. documento pertenece al acta
+        if (!acta.getId().equals(doc.getIdActa()))
             throw new PrecondicionVioladaException(
                     "El documento no pertenece al acta indicada.");
+
+        // 8. canal no nulo
+        CanalNotificacion canal = cmd.canal();
+        if (canal == null)
+            throw new PrecondicionVioladaException("canal es obligatorio");
+
+        // 9. validar y normalizar destino segun canal
+        if (canal == CanalNotificacion.PORTAL_INFRACTOR)
+            throw new PrecondicionVioladaException(
+                    "PORTAL_INFRACTOR se procesa exclusivamente mediante su comando especifico.");
+
+        Long domicilioNotifId = null;
+        String destinoDigitalNorm = null;
+
+        if (canal.requiereDomicilioFisico()) {
+            if (cmd.destinoDigital() != null)
+                throw new PrecondicionVioladaException(
+                        "destinoDigital debe ser null para canal " + canal + ".");
+            Long idDomicilio = acta.getIdDomicilioNotifAct();
+            if (idDomicilio == null)
+                throw new PrecondicionVioladaException(
+                        "El acta no tiene domicilio de notificacion asignado (idDomicilioNotifAct null).");
+            personaDomicilioRepository.buscarPorId(idDomicilio)
+                    .orElseThrow(() -> new PrecondicionVioladaException(
+                            "Domicilio de notificacion " + idDomicilio + " no encontrado."));
+            domicilioNotifId = idDomicilio;
+        } else if (canal.esDigital()) {
+            String dest = cmd.destinoDigital();
+            if (dest == null)
+                throw new PrecondicionVioladaException(
+                        "destinoDigital es obligatorio para canal EMAIL.");
+            String destTrim = dest.trim();
+            if (destTrim.isEmpty())
+                throw new PrecondicionVioladaException(
+                        "destinoDigital no puede estar vacio para canal EMAIL.");
+            if (destTrim.length() > 120)
+                throw new PrecondicionVioladaException(
+                        "destinoDigital excede 120 caracteres.");
+            destinoDigitalNorm = destTrim;
+        } else if (canal == CanalNotificacion.PRESENCIAL) {
+            if (cmd.destinoDigital() != null)
+                throw new PrecondicionVioladaException(
+                        "destinoDigital debe ser null para canal PRESENCIAL.");
         }
 
-        LocalDateTime ahora = faltasClock.now();
-        Optional<FalNotificacion> activaOpt = notificacionRepository.buscarActivaPorDocumento(doc.getId());
+        // 10. validar y normalizar referenciaExterna (precheck antes de ahora)
+        String refExtNorm = null;
+        if (cmd.referenciaExterna() != null) {
+            String refTrim = cmd.referenciaExterna().trim();
+            if (refTrim.isEmpty())
+                throw new PrecondicionVioladaException(
+                        "referenciaExterna no puede estar vacia.");
+            if (refTrim.length() > 80)
+                throw new PrecondicionVioladaException(
+                        "referenciaExterna excede 80 caracteres.");
+            if (notificacionIntentoRepository.buscarPorReferenciaExterna(refTrim).isPresent())
+                throw new PrecondicionVioladaException(
+                        "referenciaExterna ya existe: " + refTrim);
+            refExtNorm = refTrim;
+        }
 
-        FalNotificacion notif;
-        Long idNotif;
+        // 11. consultar cabecera activa exactamente una vez
+        Optional<FalNotificacion> activaOpt =
+                notificacionRepository.buscarActivaPorDocumento(doc.getId());
+
+        // 12. seleccionar rama: sin cabecera -> CREAR; PENDIENTE_ENVIO -> REUTILIZAR; otro -> rechazar
+        boolean crear;
         if (activaOpt.isEmpty()) {
-            idNotif = notificacionRepository.nextId();
-            notif = new FalNotificacion(idNotif, acta.getId(), doc.getId(), doc.getTipoDocu(),
-                    cmd.canal(), ahora);
+            crear = true;
         } else {
             FalNotificacion activa = activaOpt.get();
             if (activa.getEstado() == EstadoNotificacion.PENDIENTE_ENVIO) {
-                notif = activa;
-                idNotif = notif.getId();
-                notif.iniciarEnvio(cmd.canal(), ahora, ahora, "SISTEMA");
+                crear = false;
             } else {
                 throw new PrecondicionVioladaException(
                         "Ya existe una notificacion activa en estado " + activa.getEstado()
-                        + " para el documento " + doc.getId()
-                        + ". No se puede crear una segunda notificacion activa.");
+                                + " para el documento " + doc.getId()
+                                + ". No se puede crear una segunda notificacion activa.");
             }
         }
-        if (cmd.observaciones() != null) notif.setObservaciones(cmd.observaciones());
-        notificacionRepository.guardar(notif);
+
+        // 13. capturar ahora exactamente una vez
+        LocalDateTime ahora = faltasClock.now();
+
+        // Reclamar referencia externa atomicamente (despues de ahora, antes de IDs y mutaciones)
+        if (refExtNorm != null) {
+            boolean claimed = notificacionIntentoRepository.claimReferenciaExterna(refExtNorm);
+            if (!claimed)
+                throw new PrecondicionVioladaException(
+                        "referenciaExterna ya tomada concurrentemente: " + refExtNorm);
+        }
+
+        final String refExtFinal = refExtNorm;
+        final Long domicilioFinal = domicilioNotifId;
+        final String destinoFinal = destinoDigitalNorm;
+
+        FalNotificacion notif;
+
+        if (crear) {
+            // Rama CREAR
+            Long notificacionId = notificacionRepository.nextId();
+            Long intentoId = notificacionIntentoRepository.nextId();
+            short nroIntento = notificacionIntentoRepository.siguienteNroIntento(notificacionId);
+            if (nroIntento != 1)
+                throw new IllegalStateException(
+                        "Integridad comprometida: nroIntento esperado 1, obtenido: " + nroIntento);
+
+            FalNotificacion cabecera = new FalNotificacion(
+                    notificacionId, acta.getId(), doc.getId(), doc.getTipoDocu(),
+                    canal.name(), ahora, ahora, actor);
+            cabecera.setFhUltMod(ahora);
+            cabecera.setIdUserUltMod(actor);
+            if (cmd.observaciones() != null) cabecera.setObservaciones(cmd.observaciones());
+
+            FalNotificacionIntento intento = new FalNotificacionIntento(
+                    intentoId, notificacionId, nroIntento, canal,
+                    domicilioFinal, destinoFinal, null, refExtFinal,
+                    ahora, ahora, actor);
+
+            notificacionRepository.guardar(cabecera);
+            notificacionIntentoRepository.guardar(intento);
+            notif = cabecera;
+        } else {
+            // Rama REUTILIZAR
+            FalNotificacion cabecera = activaOpt.get();
+            Long intentoId = notificacionIntentoRepository.nextId();
+            short nroIntento = notificacionIntentoRepository.siguienteNroIntento(cabecera.getId());
+
+            FalNotificacionIntento intento = new FalNotificacionIntento(
+                    intentoId, cabecera.getId(), nroIntento, canal,
+                    domicilioFinal, destinoFinal, null, refExtFinal,
+                    ahora, ahora, actor);
+
+            cabecera.iniciarEnvio(canal.name(), ahora, ahora, actor);
+            if (cmd.observaciones() != null) cabecera.setObservaciones(cmd.observaciones());
+
+            notificacionRepository.guardar(cabecera);
+            notificacionIntentoRepository.guardar(intento);
+            notif = cabecera;
+        }
 
         acta.setBloqueActual(BloqueActual.NOTI);
         actaRepository.guardar(acta);
 
-        registrarEvento(acta.getId(), TipoEventoActa.NOTENV, doc.getId(), idNotif,
-                null, "Notificacion enviada. Canal: " + cmd.canal());
+        // Emitir exactamente un NOTENV con el instante canonico y el actor real
+        registrarEventoNotenv(acta.getId(), doc.getId(), notif.getId(), actor, ahora,
+                "Notificacion enviada. Canal: " + canal.name());
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
 
-        return ComandoResultado.de(acta.getId(), String.valueOf(idNotif),
+        return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTENV.codigo(),
-                "Notificacion enviada. Canal: " + cmd.canal());
+                "Notificacion enviada. Canal: " + canal.name());
     }
 
     // -------------------------------------------------------------------------
@@ -164,12 +292,12 @@ public class NotificacionService {
 
     public ComandoResultado registrarPositiva(RegistrarNotificacionPositivaCommand cmd) {
         FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
-                .orElseThrow(() -> new NotificacionNoEncontradaException(String.valueOf(cmd.idNotificacion())));
+                .orElseThrow(() -> new NotificacionNoEncontradaException(
+                        String.valueOf(cmd.idNotificacion())));
 
-        if (notif.getResultado() != null) {
+        if (notif.getResultado() != null)
             throw new PrecondicionVioladaException(
                     "La notificacion ya tiene resultado registrado: " + notif.getResultado());
-        }
 
         LocalDateTime ahoraPositiva = faltasClock.now();
         notif.setEstado(EstadoNotificacion.CON_ACUSE_POSITIVO);
@@ -181,9 +309,6 @@ public class NotificacionService {
         FalActa acta = actaRepository.buscarPorId(notif.getIdActa())
                 .orElseThrow(() -> new ActaNoEncontradaException(notif.getIdActa()));
 
-        // Detectar si la notificacion corresponde al documento de fallo activo.
-        // La distincion absolutorio/condenatorio vive en FalActaFallo.tipoFallo,
-        // no en TipoDocu (ambos fallos son ACTO_ADMINISTRATIVO desde 8C-1).
         Optional<FalActaFallo> falloOpt = falloActaRepository.buscarActivo(acta.getId());
         if (falloOpt.isPresent()
                 && notif.getIdDocumento().equals(falloOpt.get().getDocumentoId())) {
@@ -194,7 +319,6 @@ public class NotificacionService {
                 return registrarPositivaFalloCondenatorio(acta, notif, ahoraPositiva, cmd.observaciones());
             }
         }
-
         return registrarPositivaPiezaPrevia(acta, notif, cmd.observaciones());
     }
 
@@ -204,12 +328,12 @@ public class NotificacionService {
 
     public ComandoResultado registrarNegativa(RegistrarNotificacionNegativaCommand cmd) {
         FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
-                .orElseThrow(() -> new NotificacionNoEncontradaException(String.valueOf(cmd.idNotificacion())));
+                .orElseThrow(() -> new NotificacionNoEncontradaException(
+                        String.valueOf(cmd.idNotificacion())));
 
-        if (notif.getResultado() != null) {
+        if (notif.getResultado() != null)
             throw new PrecondicionVioladaException(
                     "La notificacion ya tiene resultado registrado: " + notif.getResultado());
-        }
 
         notif.setEstado(EstadoNotificacion.CON_ACUSE_NEGATIVO);
         notif.setResultado(ResultadoNotificacion.NEGATIVO);
@@ -241,12 +365,12 @@ public class NotificacionService {
 
     public ComandoResultado registrarVencida(RegistrarNotificacionVencidaCommand cmd) {
         FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
-                .orElseThrow(() -> new NotificacionNoEncontradaException(String.valueOf(cmd.idNotificacion())));
+                .orElseThrow(() -> new NotificacionNoEncontradaException(
+                        String.valueOf(cmd.idNotificacion())));
 
-        if (notif.getResultado() != null) {
+        if (notif.getResultado() != null)
             throw new PrecondicionVioladaException(
                     "La notificacion ya tiene resultado registrado: " + notif.getResultado());
-        }
 
         notif.setEstado(EstadoNotificacion.VENCIDA);
         notif.setResultado(ResultadoNotificacion.VENCIDO);
@@ -306,10 +430,8 @@ public class NotificacionService {
         if (sinBloqueantes) {
             registrarEvento(acta.getId(), TipoEventoActa.CIERRA, null, null, null,
                     "Acta cerrada. Fallo absolutorio notificado sin bloqueantes.");
-
             FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
             snapshotRepository.guardar(snap);
-
             return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                     TipoEventoActa.NOTPOS.codigo(),
                     "Notificacion positiva de fallo absolutorio. Acta cerrada. Resultado: ABSUELTO.");
@@ -317,7 +439,6 @@ public class NotificacionService {
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
-
         return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTPOS.codigo(),
                 "Notificacion positiva de fallo absolutorio. Resultado: ABSUELTO. "
@@ -338,7 +459,6 @@ public class NotificacionService {
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
-
         return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTPOS.codigo(),
                 "Notificacion positiva de fallo condenatorio. "
@@ -357,7 +477,6 @@ public class NotificacionService {
 
         FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
         snapshotRepository.guardar(snap);
-
         return ComandoResultado.de(acta.getId(), String.valueOf(notif.getId()),
                 TipoEventoActa.NOTPOS.codigo(),
                 "Notificacion registrada como positiva. Bloque avanzado a ANAL.");
@@ -369,6 +488,26 @@ public class NotificacionService {
             fallo.marcarNotificado(ahora);
             falloActaRepository.guardar(fallo);
         });
+    }
+
+    /**
+     * Registra el evento NOTENV usando el instante canonico ya capturado y el actor real del JWT.
+     * Garantiza que cabecera, intento y evento compartan exactamente el mismo instante.
+     */
+    private void registrarEventoNotenv(Long idActa, Long idDocuRel, Long idNotifRel,
+                                        String actor, LocalDateTime ahora, String descripcion) {
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(idActa)
+                .tipoEvt(TipoEventoActa.NOTENV)
+                .origenEvt(OrigenEvento.USUARIO_WEB)
+                .fhEvt(ahora)
+                .idDocuRel(idDocuRel)
+                .idNotifRel(idNotifRel)
+                .idUserEvt(actor)
+                .actorTipo(ActorTipoEvento.USUARIO_INTERNO)
+                .descripcionLegible(descripcion)
+                .build();
+        eventoRepository.registrar(evento);
     }
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
@@ -388,7 +527,5 @@ public class NotificacionService {
         eventoRepository.registrar(evento);
     }
 
-    private static String nvl(String s) {
-        return s != null ? s : "";
-    }
+    private static String nvl(String s) { return s != null ? s : ""; }
 }

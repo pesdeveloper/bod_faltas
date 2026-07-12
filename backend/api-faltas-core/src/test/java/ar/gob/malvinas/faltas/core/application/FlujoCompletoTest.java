@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnviarNotificacionCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
 import ar.gob.malvinas.faltas.core.application.command.RegistrarNotificacionNegativaCommand;
@@ -119,7 +120,7 @@ class FlujoCompletoTest {
                 new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository());
     }
 
     @Nested
@@ -248,7 +249,7 @@ class FlujoCompletoTest {
             String idDoc = generarYFirmarDoc(idActa);
 
             ComandoResultado resultado = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null));
+                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"));
 
             assertThat(resultado.tipoEvento()).isEqualTo(TipoEventoActa.NOTENV.codigo());
 
@@ -271,7 +272,7 @@ class FlujoCompletoTest {
             Long idActa = labrarYCompletarCaptura();
             String idDoc = generarYFirmarDoc(idActa);
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null))
+                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarPositiva(
@@ -293,7 +294,7 @@ class FlujoCompletoTest {
             Long idActa = labrarYCompletarCaptura();
             String idDoc = generarYFirmarDoc(idActa);
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null))
+                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarNegativa(
@@ -308,7 +309,7 @@ class FlujoCompletoTest {
             Long idActa = labrarYCompletarCaptura();
             String idDoc = generarYFirmarDoc(idActa);
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null))
+                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = notifService.registrarVencida(
@@ -372,7 +373,7 @@ class FlujoCompletoTest {
             Long idActa = labrarYCompletarCaptura();
             String idDoc = generarYFirmarDoc(idActa);
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null))
+                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"))
                     .idEntidadAfectada();
 
             notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
@@ -418,7 +419,7 @@ class FlujoCompletoTest {
             actaService.enriquecer(new EnriquecerActaCommand(idActa, "enriquecido"));
             String idDoc = generarYFirmarDoc(idActa);
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), "EMAIL", null))
+                    new EnviarNotificacionCommand(idActa, Long.parseLong(idDoc), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user"))
                     .idEntidadAfectada();
             notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
 

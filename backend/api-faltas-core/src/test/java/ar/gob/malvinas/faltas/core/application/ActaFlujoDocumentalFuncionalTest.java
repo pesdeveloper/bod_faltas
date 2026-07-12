@@ -99,7 +99,7 @@ class ActaFlujoDocumentalFuncionalTest {
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository());
 
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
@@ -140,7 +140,7 @@ class ActaFlujoDocumentalFuncionalTest {
                 .idEntidadAfectada());
         docService.firmarDocumento(new FirmarDocumentoCommand(docId, "Inspector", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(id, docId, "CORREO", null)).idEntidadAfectada();
+                new EnviarNotificacionCommand(id, docId, CanalNotificacion.PRESENCIAL, null, null, null, "test-user")).idEntidadAfectada();
         notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(notifId, null));
         return id;
     }
@@ -281,7 +281,7 @@ class ActaFlujoDocumentalFuncionalTest {
 
             assertThatThrownBy(() ->
                     notifService.enviarNotificacion(
-                            new EnviarNotificacionCommand(actaId, docId, "CORREO", null)))
+                            new EnviarNotificacionCommand(actaId, docId, CanalNotificacion.PRESENCIAL, null, null, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 

@@ -41,6 +41,7 @@ public class JwtActorFilter extends OncePerRequestFilter {
     static final String RUTA_PROTEGIDA = "/api/faltas/pagos";
     static final String SUFIJO_NUMERAR_DOCU = "/numerar";
     static final String SUFIJO_FIRMAR_REAL = "/firmar-real";
+    static final String SUFIJO_ENVIAR_NOTIF = "/notificaciones/enviar";
 
     private final JwtDecoder jwtDecoder;
 
@@ -105,6 +106,7 @@ public class JwtActorFilter extends OncePerRequestFilter {
         if (uri.startsWith(RUTA_PROTEGIDA)) return true;
         if (uri.endsWith(SUFIJO_NUMERAR_DOCU)) return true;
         if (uri.endsWith(SUFIJO_FIRMAR_REAL)) return true;
+        if (uri.endsWith(SUFIJO_ENVIAR_NOTIF)) return true;
         return false;
     }
 }
