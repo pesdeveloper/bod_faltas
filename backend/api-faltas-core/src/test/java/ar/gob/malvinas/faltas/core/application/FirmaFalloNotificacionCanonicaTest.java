@@ -52,6 +52,7 @@ class FirmaFalloNotificacionCanonicaTest {
     private NotificacionRepository notifRepo;
     private InMemoryLoteCorreoRepository loteRepo;
     private InMemoryNotificacionIntentoRepository intentoRepo;
+    private InMemoryPersonaDomicilioRepository domicilioRepo;
 
     private DocumentoService docService;
     private FalloActaService falloService;
@@ -71,6 +72,7 @@ class FirmaFalloNotificacionCanonicaTest {
         notifRepo = new InMemoryNotificacionRepository();
         loteRepo = new InMemoryLoteCorreoRepository();
         intentoRepo = new InMemoryNotificacionIntentoRepository();
+        domicilioRepo = new InMemoryPersonaDomicilioRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo,
@@ -102,7 +104,7 @@ class FirmaFalloNotificacionCanonicaTest {
 
         loteService = new LoteCorreoService(
                 loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo,
-                snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
+                snapshotRepo, recalc, domicilioRepo, FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -408,6 +410,17 @@ class FirmaFalloNotificacionCanonicaTest {
                     "San Martin 100", "Belgrano 50", null, null, null,
                     "Carlos Ruiz", "11223344", ResultadoFirmaInfractor.FIRMADA);
             acta.setBloqueActual(BloqueActual.NOTI);
+            Long domId5a = domicilioRepo.nextId();
+            domicilioRepo.guardar(new FalPersonaDomicilio(
+                    domId5a, 1L, null,
+                    TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                    true, true, true,
+                    null, null, null, null, null,
+                    null, null, null, null,
+                    "Dir 10", 10, false, null, null, "Dir 10, Malvinas",
+                    null, false, null, null, null,
+                    FaltasClockTestSupport.FIXED.now(), USER));
+            acta.setIdDomicilioNotifAct(domId5a);
             actaRepo.guardar(acta);
 
             Long idDoc = docRepo.nextId();
@@ -448,6 +461,17 @@ class FirmaFalloNotificacionCanonicaTest {
                     "Dir 10", "Dir Ref 10", null, null, null,
                     "Pedro Gomez", "55667788", ResultadoFirmaInfractor.FIRMADA);
             acta.setBloqueActual(BloqueActual.NOTI);
+            Long domId5a = domicilioRepo.nextId();
+            domicilioRepo.guardar(new FalPersonaDomicilio(
+                    domId5a, 1L, null,
+                    TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                    true, true, true,
+                    null, null, null, null, null,
+                    null, null, null, null,
+                    "Dir 10", 10, false, null, null, "Dir 10, Malvinas",
+                    null, false, null, null, null,
+                    FaltasClockTestSupport.FIXED.now(), USER));
+            acta.setIdDomicilioNotifAct(domId5a);
             actaRepo.guardar(acta);
 
             Long idDoc = docRepo.nextId();
@@ -465,7 +489,7 @@ class FirmaFalloNotificacionCanonicaTest {
             notifRepo.guardar(notifPrep);
 
             FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
-                    "LOTE-CANON-001", null, null, USER);
+                    new GenerarLoteCorreoCommand("LOTE-CANON-001", null, null, USER));
 
             assertThat(lote).isNotNull();
             assertThat(lote.getEstadoLote()).isEqualTo(EstadoLote.GENERADO);
@@ -479,7 +503,7 @@ class FirmaFalloNotificacionCanonicaTest {
         @DisplayName("5b. generarLoteDesdePendientes lanza excepcion si no hay PENDIENTE_ENVIO")
         void genera_lote_sin_pendientes_falla() {
             assertThatThrownBy(() ->
-                    loteService.generarLoteDesdePendientes("LOTE-VACIO", null, null, USER))
+                    loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOTE-VACIO", null, null, USER)))
                     .isInstanceOf(ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException.class)
                     .hasMessageContaining("PENDIENTE_ENVIO");
         }
@@ -505,6 +529,17 @@ class FirmaFalloNotificacionCanonicaTest {
                     "Av. Libertad 200", "Ref 20", null, null, null,
                     "Ana Torres", "99887766", ResultadoFirmaInfractor.FIRMADA);
             acta.setBloqueActual(BloqueActual.NOTI);
+            Long domId5a = domicilioRepo.nextId();
+            domicilioRepo.guardar(new FalPersonaDomicilio(
+                    domId5a, 1L, null,
+                    TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                    true, true, true,
+                    null, null, null, null, null,
+                    null, null, null, null,
+                    "Dir 10", 10, false, null, null, "Dir 10, Malvinas",
+                    null, false, null, null, null,
+                    FaltasClockTestSupport.FIXED.now(), USER));
+            acta.setIdDomicilioNotifAct(domId5a);
             actaRepo.guardar(acta);
 
             Long idDoc = docRepo.nextId();

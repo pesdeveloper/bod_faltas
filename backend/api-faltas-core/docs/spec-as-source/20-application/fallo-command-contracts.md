@@ -457,7 +457,7 @@ aplicar cualquier cambio de estado.
 **Canales de entrada:**
 Canal de entrada: proceso tecnico autenticado.
 Endpoint HTTP: no aplica.
-Servicio: `LoteCorreoService.generarLoteDesdePendientes` que delega en `generarLoteConIntentos`.
+Servicio: `LoteCorreoService.generarLoteDesdePendientes`.
 
 **Actor y autorizacion:** Identidad tecnica autenticada del proceso que invoca el lote.
 No aplica JWT de usuario final. La forma concreta de autenticacion tecnica se
@@ -475,8 +475,7 @@ Todo evento `LOTGEN` registra el actorTecnico autenticado.
 **Agregado propietario:** `FalLoteCorreo`.
 
 **Entidades leidas:** notificaciones con `buscarPorEstado(PENDIENTE_ENVIO)`;
-`FalActa` por cada notificacion; `FalPersonaDomicilio` asociado a `FalActa.idDomicilioNotifAct`;
-cada notificacion validada individualmente en `generarLoteConIntentos`.
+`FalActa` por cada notificacion; `FalPersonaDomicilio` asociado a `FalActa.idDomicilioNotifAct`.
 
 **Orden de validaciones:**
 
@@ -491,7 +490,11 @@ cada notificacion validada individualmente en `generarLoteConIntentos`.
 3. Verificar que `loteCodigo` no exista. Si existe: `LoteCodigoDuplicadoException`.
 4. Consultar todas las notificaciones en `PENDIENTE_ENVIO`.
 5. Ordenarlas de forma ascendente por `id`.
-6. Si no existe ninguna: `PrecondicionVioladaException`.
+6. Si no existe ninguna notificacion:
+   - volver a consultar `loteCodigo`;
+   - si ya existe: `LoteCodigoDuplicadoException`;
+   - si continua inexistente: `PrecondicionVioladaException`.
+   Este recheck preserva la prioridad del codigo frente a una lectura inicial obsoleta.
 7. Derivar la lista interna de IDs y verificar defensivamente que no contenga duplicados.
 8. Para cada notificacion:
    - existe en repositorio;
@@ -500,20 +503,18 @@ cada notificacion validada individualmente en `generarLoteConIntentos`.
    - acta asociada existente;
    - `acta.idDomicilioNotifAct` no nulo;
    - `FalPersonaDomicilio` referenciado existente.
-9. Calcular para cada notificacion el siguiente `nroIntento`, sin reservarlo ni mutar todavia.
+9. No reservar ni asignar `loteId`, `intentoId` o `nroIntento` durante la
+   validacion.
 10. Solo despues de completar todas las validaciones y lecturas, capturar `ahora` una unica vez.
 
-El helper `generarLoteConIntentos` recibe la lista interna derivada por el comando. Si se
-reutiliza desde otra operacion interna con una lista explicita, debe aplicar las mismas
-validaciones de existencia, duplicados, estado, resultado y destino antes de mutar.
 
 **Precondiciones:** Al menos una notificacion en `PENDIENTE_ENVIO`; `loteCodigo` unico;
 cada notificacion con acta existente, `idDomicilioNotifAct` informado y `FalPersonaDomicilio` referenciado existente.
 
-**Instante canonico:** `FaltasClock.now()` capturado una sola vez despues de validar
-identidad tecnica, entrada, unicidad de `loteCodigo`, conjunto completo de notificaciones,
-actas, domicilios y proximos numeros de intento; mismo instante para
-lote, intentos, transiciones a `EN_PROCESO`, canal/fecha y eventos `LOTGEN`.
+**Instante canonico:** `FaltasClock.now()` se captura una sola vez despues de validar identidad
+tecnica, entrada, unicidad y recheck de `loteCodigo`, conjunto completo de
+notificaciones, actas y domicilios.
+Mismo instante para lote, intentos, transiciones a `EN_PROCESO`, canal/fecha y eventos `LOTGEN`.
 El metodo `registrarEvento` debe recibir ese instante; no debe capturar un nuevo
 `FaltasClock.now()` independiente.
 
@@ -524,11 +525,23 @@ y `LOTGEN`.
 
 **Orden de efectos** (solo si todas las validaciones pasan):
 
-Despues de capturar `ahora`, obtener identificadores antes de construir entidades:
-- obtener o asignar loteId;
-- para cada notificacion ordenada: asignar atomicamente nroIntento; obtener o asignar intentoId.
-Una implementacion puede asignar los IDs dentro de los repositorios.
-No reservar `loteId`, `intentoId` ni `nroIntento` antes de completar todas las validaciones.
+Despues de capturar `ahora`:
+
+1. Obtener o asignar `loteId`.
+2. Construir el candidato `FalLoteCorreo`.
+3. Ejecutar
+   `LoteCorreoRepository.guardarSiAusentePorCodigo(candidato)`.
+4. Si la operacion devuelve un lote preexistente:
+   `LoteCodigoDuplicadoException`; no asignar `nroIntento` ni `intentoId` y no
+   aplicar ningun otro efecto.
+5. Solo si el candidato fue el ganador, para cada notificacion ordenada:
+   - asignar atomicamente `nroIntento`;
+   - obtener o asignar `intentoId`;
+   - construir y persistir el intento;
+   - transicionar y persistir la cabecera.
+6. Procesar las actas distintas, eventos y snapshots.
+
+Campos y efectos detallados:
 
 1. Crear `FalLoteCorreo`:
    `id = loteId`;
@@ -571,7 +584,8 @@ No reservar `loteId`, `intentoId` ni `nroIntento` antes de completar todas las v
 `ActaEvento` (LOTGEN por acta afectada), `FalActaSnapshot` (guardar por acta afectada).
 
 Orden normativo de persistencia:
-1. guardar FalLoteCorreo;
+1. guardar FalLoteCorreo mediante guardarSiAusentePorCodigo;
+   solo el ganador continua
 2. por cada notificacion ordenada:
    a. guardar FalNotificacionIntento;
    b. guardar FalNotificacion en EN_PROCESO;
@@ -619,18 +633,35 @@ originales ya hayan avanzado a `EN_PROCESO`.
 
 El invocador puede consultar el lote por `loteCodigo` para resolver una respuesta incierta.
 
+Esto tambien aplica cuando el primer precheck fue obsoleto y ya no quedan notificaciones
+pendientes: la ausencia de pendientes activa un recheck de `loteCodigo`; si el codigo ya
+existe, el resultado sigue siendo `LoteCodigoDuplicadoException`.
+
 **Concurrencia:**
-InMemory: `synchronized (loteGeneracionMonitor)` serializa la creacion del lote dentro de
-una sola instancia JVM. No garantiza atomicidad entre repositorios multiples.
-MariaDB: debe usar transaccion que garantice unicidad de `loteCodigo` y consistencia de
-estados de notificacion. No afirmar atomicidad InMemory conjunta.
+InMemory:
+
+- `synchronized (loteGeneracionMonitor)` serializa el comando completo dentro de
+  una instancia de `LoteCorreoService`;
+- evita que dos codigos diferentes procesen simultaneamente el mismo conjunto
+  de notificaciones pendientes;
+- `guardarSiAusentePorCodigo` agrega la garantia atomica de unicidad para el
+  mismo `loteCodigo`;
+- no se afirma rollback transaccional entre repositorios.
+
+MariaDB:
+
+- una transaccion debe bloquear o reclamar las notificaciones pendientes;
+- debe garantizar unicidad de `loteCodigo`;
+- lote, intentos, cabeceras, actas, eventos y snapshots forman una sola unidad
+  atomica.
 
 **Efectos prohibidos:**
 - No crear lote si cualquier precondicion falla.
 - No mutar notificaciones si la validacion previa falla.
 
 **Tests de conformidad:**
-`NotificacionAcuseLoteServiceTest`, `FirmaFalloNotificacionCanonicaTest`
+`NotificacionAcuseLoteServiceTest`, `FirmaFalloNotificacionCanonicaTest`,
+`LoteCorreoIntentosCanonicoTest`
 
 ---
 

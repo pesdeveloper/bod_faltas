@@ -18,4 +18,11 @@ public interface LoteCorreoRepository {
     Optional<FalLoteCorreo> buscarPorReferenciaExterna(String referenciaExterna);
     Optional<FalLoteCorreo> buscarPorGuid(String guidLoteExt);
     boolean existeCodigo(String loteCodigo);
+
+    /**
+     * Persiste el candidato solo si no existe un lote con el mismo loteCodigo.
+     * La implementacion debe garantizar atomicidad bajo concurrencia.
+     * Devuelve el candidato si fue el ganador, o el lote ya existente si habia uno.
+     */
+    FalLoteCorreo guardarSiAusentePorCodigo(FalLoteCorreo candidato);
 }

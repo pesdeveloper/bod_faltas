@@ -52,7 +52,7 @@ class NotificacionIntentoConcurrenciaTest {
 
         intentoService = new NotificacionIntentoService(intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED);
         acuseService = new NotificacionAcuseService(acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
-        loteService = new LoteCorreoService(loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
+        loteService = new LoteCorreoService(loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryPersonaDomicilioRepository(), FaltasClockTestSupport.FIXED);
     }
 
     private void crearActa(Long id) {

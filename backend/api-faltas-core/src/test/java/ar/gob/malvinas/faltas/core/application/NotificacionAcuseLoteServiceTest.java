@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.application.command.GenerarLoteCorreoCommand;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.*;
@@ -28,6 +29,7 @@ class NotificacionAcuseLoteServiceTest {
     private InMemoryNotificacionAcuseRepository acuseRepo;
     private InMemoryLoteCorreoRepository loteRepo;
     private NotificacionAcuseService acuseService;
+    private InMemoryPersonaDomicilioRepository domicilioRepo;
     private LoteCorreoService loteService;
 
     @BeforeEach
@@ -39,6 +41,7 @@ class NotificacionAcuseLoteServiceTest {
         intentoRepo = new InMemoryNotificacionIntentoRepository();
         acuseRepo = new InMemoryNotificacionAcuseRepository();
         loteRepo = new InMemoryLoteCorreoRepository();
+        domicilioRepo = new InMemoryPersonaDomicilioRepository();
 
         var docRepo = new InMemoryDocumentoRepository();
         var pagoVolRepo = new InMemoryPagoVoluntarioRepository();
@@ -53,14 +56,26 @@ class NotificacionAcuseLoteServiceTest {
                 acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
 
         loteService = new LoteCorreoService(
-                loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
+                loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, domicilioRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa(Long id) {
+        Long domId = domicilioRepo.nextId();
+        domicilioRepo.guardar(new FalPersonaDomicilio(
+                domId, 1L, null,
+                TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                true, true, true,
+                null, null, null, null, null,
+                null, null, null, null,
+                "Av. Libertad 100", 100, false,
+                null, null, "Av. Libertad 100, Malvinas",
+                null, false, null, null, null,
+                AHORA, "SYS"));
         FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
                 java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
                 null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
         a.setBloqueActual(BloqueActual.NOTI);
+        a.setIdDomicilioNotifAct(domId);
         return actaRepo.guardar(a);
     }
 
@@ -362,14 +377,14 @@ class NotificacionAcuseLoteServiceTest {
             assertThat(conError.getEstadoLote()).isEqualTo(EstadoLote.CON_ERROR);
         }
 
-        @Test @DisplayName("generar lote con intentos - crea intento CORREO_POSTAL por notificacion")
-        void generarLoteConIntentos() {
+        @Test @DisplayName("generarLoteDesdePendientes - crea intento CORREO_POSTAL por notificacion")
+        void generarLoteDesdePendientes_creaIntento() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
             crearNotificacionPendiente(20L, 1L);
 
-            FalLoteCorreo lote = loteService.generarLoteConIntentos(
-                    "LOT-001", java.util.List.of(10L, 20L), null, null, "USR");
+            FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-001", null, null, "USR"));
 
             assertThat(lote.getEstadoLote()).isEqualTo(EstadoLote.GENERADO);
             assertThat(intentoRepo.buscarPorNotificacion(10L)).hasSize(1);
@@ -377,10 +392,12 @@ class NotificacionAcuseLoteServiceTest {
             assertThat(intentoRepo.buscarPorNotificacion(10L).get(0).getCanalNotif()).isEqualTo(CanalNotificacion.CORREO_POSTAL);
         }
 
-        @Test @DisplayName("generar lote sin notificaciones lanza excepcion")
+        @Test @DisplayName("sin notificaciones PENDIENTE_ENVIO lanza excepcion")
         void generarLoteVacio() {
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-001", java.util.List.of(), null, null, "USR"))
-                    .isInstanceOf(PrecondicionVioladaException.class);
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-001", null, null, "USR")))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("PENDIENTE_ENVIO");
         }
 
         @Test @DisplayName("notificacion ya positiva rechazada al incluir en lote")
@@ -390,7 +407,8 @@ class NotificacionAcuseLoteServiceTest {
             notif.setResultado(ResultadoNotificacion.POSITIVO);
             notifRepo.guardar(notif);
 
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-001", java.util.List.of(10L), null, null, "USR"))
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-001", null, null, "SYS")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("ya tiene resultado");
         }
@@ -417,18 +435,21 @@ class NotificacionAcuseLoteServiceTest {
                     .isInstanceOf(LoteCorreoNoEncontradoException.class);
         }
 
-        @Test @DisplayName("ID inexistente en generarLoteConIntentos lanza excepcion")
+        @Test @DisplayName("command null lanza PrecondicionVioladaException sin efectos")
         void generarLote_idInexistente() {
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-NEX", java.util.List.of(999L), null, null, "USR"))
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(null))
                     .isInstanceOf(PrecondicionVioladaException.class);
+            assertThat(loteRepo.buscarPorEstado(EstadoLote.GENERADO)).isEmpty();
         }
 
-        @Test @DisplayName("IDs duplicados en generarLoteConIntentos lanza excepcion")
+        @Test @DisplayName("guidLoteExt en mayusculas se persiste canonicamente en minusculas")
         void generarLote_idsDuplicados() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-DUP", java.util.List.of(10L, 10L), null, null, "USR"))
-                    .isInstanceOf(PrecondicionVioladaException.class);
+            FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-DUP", null,
+                            "550E8400-E29B-41D4-A716-446655440000", "SYS"));
+            assertThat(lote.getGuidLoteExt()).isEqualTo("550e8400-e29b-41d4-a716-446655440000");
         }
 
         @Test @DisplayName("notificacion EN_PROCESO rechazada al incluir en lote")
@@ -437,36 +458,49 @@ class NotificacionAcuseLoteServiceTest {
             FalNotificacion n = notifRepo.guardar(FalNotificacion.preparar(10L, 1L, 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
             n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
             notifRepo.guardar(n);
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-ENP", java.util.List.of(10L), null, null, "USR"))
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-ENP", null, null, "SYS")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
-        @Test @DisplayName("sin mutaciones cuando falla una validacion (ninguna mutacion si falla)")
+        @Test @DisplayName("validacion global previa: segunda notif invalida -> primera permanece PENDIENTE_ENVIO")
         void generarLote_sinMutaciones_cuando_falla() {
-            crearActa(1L);
+            Long domId = domicilioRepo.nextId();
+            domicilioRepo.guardar(new FalPersonaDomicilio(
+                    domId, 1L, null,
+                    TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                    true, true, true,
+                    null, null, null, null, null,
+                    null, null, null, null,
+                    "Av. Libertad 100", 100, false,
+                    null, null, "Av. Libertad 100, Malvinas",
+                    null, false, null, null, null,
+                    AHORA, "SYS"));
+            FalActa actaValida = new FalActa(1L, "UUID-1", TipoActa.TRANSITO, 1L, 1L,
+                    java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
+                    null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+            actaValida.setBloqueActual(BloqueActual.ANAL);
+            actaValida.setIdDomicilioNotifAct(domId);
+            actaRepo.guardar(actaValida);
             crearNotificacionPendiente(10L, 1L);
-            long eventosPre = eventoRepo.buscarPorActa(1L).size();
-            long intentosPre = intentoRepo.buscarPorNotificacion(10L).size();
+            notifRepo.guardar(FalNotificacion.preparar(20L, 999L, 20L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
 
-            // ID inexistente junto con ID valido: debe rechazar todo
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-FAIL", java.util.List.of(10L, 999L), null, null, "USR"))
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-FAIL", null, null, "SYS")))
                     .isInstanceOf(PrecondicionVioladaException.class);
 
-            // Sin lote nuevo
             assertThatThrownBy(() -> loteService.buscarPorCodigo("LOT-FAIL")).isInstanceOf(Exception.class);
-            // Sin intentos nuevos
-            assertThat(intentoRepo.buscarPorNotificacion(10L)).hasSize((int) intentosPre);
-            // Notificacion sigue en PENDIENTE_ENVIO
+            assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
-            // Sin eventos nuevos
-            assertThat(eventoRepo.buscarPorActa(1L)).hasSize((int) eventosPre);
+            assertThat(eventoRepo.buscarPorActa(1L)).isEmpty();
+            assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
         }
 
-        @Test @DisplayName("canal final es CORREO_POSTAL al generar lote con intentos")
+        @Test @DisplayName("canal final es CORREO_POSTAL al generar lote")
         void generarLote_canal_correoPostal() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            loteService.generarLoteConIntentos("LOT-CANAL", java.util.List.of(10L), null, null, "USR");
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-CANAL", null, null, "SYS"));
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getCanal()).isEqualTo("CORREO_POSTAL");
         }
 
@@ -474,7 +508,7 @@ class NotificacionAcuseLoteServiceTest {
         void generarLote_fechaEnvio_noNula() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            loteService.generarLoteConIntentos("LOT-FECHA", java.util.List.of(10L), null, null, "USR");
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-FECHA", null, null, "SYS"));
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getFechaEnvio()).isNotNull();
         }
 
@@ -482,7 +516,7 @@ class NotificacionAcuseLoteServiceTest {
         void generarLote_intentos_uno() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            loteService.generarLoteConIntentos("LOT-INT", java.util.List.of(10L), null, null, "USR");
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-INT", null, null, "SYS"));
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getIntentos()).isEqualTo(1);
         }
 
@@ -490,15 +524,15 @@ class NotificacionAcuseLoteServiceTest {
         void generarLote_exactamente_un_intento() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            loteService.generarLoteConIntentos("LOT-UNO", java.util.List.of(10L), null, null, "USR");
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-UNO", null, null, "SYS"));
             assertThat(intentoRepo.buscarPorNotificacion(10L)).hasSize(1);
         }
 
-        @Test @DisplayName("evento LOTGEN emitido al generar lote con intentos")
+        @Test @DisplayName("evento LOTGEN emitido al generar lote")
         void generarLote_evento_LOTGEN() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            loteService.generarLoteConIntentos("LOT-EVT", java.util.List.of(10L), null, null, "USR");
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-EVT", null, null, "SYS"));
             assertThat(eventoRepo.buscarPorActa(1L)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.LOTGEN);
         }
 
@@ -506,11 +540,10 @@ class NotificacionAcuseLoteServiceTest {
         void generarLote_snapshot_recalculado() {
             crearActa(1L);
             crearNotificacionPendiente(10L, 1L);
-            loteService.generarLoteConIntentos("LOT-SNAP", java.util.List.of(10L), null, null, "USR");
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-SNAP", null, null, "SYS"));
             assertThat(snapshotRepo.buscarPorActa(1L)).isPresent();
         }
     }
-
     @Nested @DisplayName("FalNotificacion.iniciarEnvio")
     class IniciarEnvioTests {
 
