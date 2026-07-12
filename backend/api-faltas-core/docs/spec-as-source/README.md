@@ -47,12 +47,30 @@ leerse en este orden antes de consultar los documentos de contrato funcional:
 2. [`10-domain/lifecycle-states.md`](10-domain/lifecycle-states.md) -- define
    las dimensiones de estado y el lifecycle de subagregados; establece que es
    persistido, derivado o historico.
-3. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md)
+3. [`00-governance/command-contract-standard.md`](00-governance/command-contract-standard.md)
+   -- define el estandar normativo de contratos de comandos: plantilla, orden
+   canonico de ejecucion, taxonomia de errores, idempotencia y concurrencia.
+   Todos los contratos de comandos deben conformar este estandar.
+4. [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md)
+   -- aplica el estandar al circuito de firma, notificacion, firmeza y pago.
+   Contiene los contratos definitivos de los siete comandos canonicalizados.
+5. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md)
    -- aplica esas dimensiones al circuito de firma y cola notificatoria del fallo.
 
 Ante contradiccion entre un documento tematico y un documento de contrato
 funcional (4.1), el documento tematico es normativo en lo que respecta a
 definiciones de terminos, dimensiones y lifecycle.
+
+**Ruta tematica recomendada para contratos de comandos:**
+
+glosario -- dimensiones/lifecycle -- estandar de comandos -- contratos de comandos de fallo -- circuito especifico firma/notificacion
+
+El estandar define como se escribe todo comando. El catalogo de fallo aplica el estandar.
+Los documentos `03-comandos-precondiciones-efectos.md` y `04-snapshot-bandejas-acciones.md`
+son material transitorio de extraccion; siguen vigentes pero seran absorbidos gradualmente
+en documentos tematicos.
+Ante contradiccion sobre los siete comandos canonicalizados, prevalece
+`20-application/fallo-command-contracts.md`.
 
 ### 4.1 Contrato funcional vigente
 
