@@ -196,7 +196,7 @@ class PagoCondenaTest {
 
     private Long informarPago(Long actaId) {
         pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                actaId, new BigDecimal("3000.00"), "REF-001", null));
+                actaId, new BigDecimal("3000.00"), "REF-001", null, "test-user"));
         return actaId;
     }
 
@@ -250,7 +250,7 @@ class PagoCondenaTest {
             assertThat(falloFirme.getOrigenFirmeza()).isNotNull();
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-ABC-001", "Pago via banco"));
+                    actaId, new BigDecimal("3000.00"), "REF-ABC-001", "Pago via banco", "test-user"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -262,7 +262,7 @@ class PagoCondenaTest {
         void informar_no_cierra() {
             Long actaId = crearActaConCondenaFirme("50000002");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-001", null));
+                    actaId, new BigDecimal("3000.00"), "REF-001", null, "test-user"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getSituacionAdministrativa()).isNotEqualTo(SituacionAdministrativaActa.CERRADA);
@@ -413,7 +413,7 @@ class PagoCondenaTest {
             Long actaId = actaService.labrar(cmd).idActa();
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("1000"), "REF-001", null)))
+                    actaId, new BigDecimal("1000"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("CONDENA_FIRME");
         }
@@ -433,7 +433,7 @@ class PagoCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("1000"), "REF-001", null)))
+                    actaId, new BigDecimal("1000"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("fallo");
         }
@@ -447,7 +447,7 @@ class PagoCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                            actaId, new BigDecimal("3000.00"), "REF-001", null)))
+                            actaId, new BigDecimal("3000.00"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("FIRME");
 
@@ -468,12 +468,12 @@ class PagoCondenaTest {
             Long actaId = crearActaConCondenaFirme("50000010");
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, BigDecimal.ZERO, "REF-001", null)))
+                    actaId, BigDecimal.ZERO, "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("monto");
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("-100"), "REF-001", null)))
+                    actaId, new BigDecimal("-100"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("monto");
         }
@@ -487,7 +487,7 @@ class PagoCondenaTest {
 
             // Acta ya cerrada: no se puede operar
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000"), "REF-002", null)))
+                    actaId, new BigDecimal("3000"), "REF-002", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 

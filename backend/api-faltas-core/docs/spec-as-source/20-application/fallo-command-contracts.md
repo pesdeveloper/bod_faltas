@@ -1328,14 +1328,18 @@ independiente: primero el resultado del acta y luego el estado del fallo.
 
 **Orden de validaciones:**
 1. JWT Bearer presente y valido (Spring Security). Sin token: HTTP 401. `sub` presente.
-2. Validacion estructural del request: `monto` requerido; `referenciaPago` no vacia. Violation: HTTP 400.
-3. Acta existe. No existe: `ActaNoEncontradaException` (HTTP 404).
-4. Acta operativa (no CERRADA, ANULADA, ARCHIVADA, PARALIZADA). Si no: `PrecondicionVioladaException` (HTTP 422).
-5. `acta.resultadoFinal == CONDENA_FIRME`. Si no: `PrecondicionVioladaException` (HTTP 422).
-6. Fallo activo existe y es CONDENATORIO en estado FIRME, con `siFirme=true`,
-   `fhFirma`, `fhNotificacion`, `fhFirmeza` y `origenFirmeza` presentes.
+2. Validacion estructural del request (Bean Validation `@Valid`): `monto` requerido (`@NotNull`);
+   `referenciaPago` no vacia (`@NotBlank`). Violation: HTTP 400.
+3. Validacion estructural del comando (servicio, antes de `synchronized`):
+   `actaId` no null; `actor` no null, no blank, `<= 36` caracteres (defensivo, sub del JWT);
+   `monto` no null y `> 0`; `referenciaPago` no null y no blank.
+   Si viola: `PrecondicionVioladaException` (HTTP 422) o `IllegalArgumentException` (comando null).
+4. Acta existe. No existe: `ActaNoEncontradaException` (HTTP 404).
+5. Acta operativa (no CERRADA, ANULADA, ARCHIVADA, PARALIZADA). Si no: `PrecondicionVioladaException` (HTTP 422).
+6. `acta.resultadoFinal == CONDENA_FIRME`. Si no: `PrecondicionVioladaException` (HTTP 422).
+7. Fallo activo existe y es CONDENATORIO con `resultadoFallo == CONDENA` en estado FIRME,
+   con `siFirme=true`, `fhFirma`, `fhNotificacion`, `fhFirmeza` y `origenFirmeza` presentes.
    Si cualquier condicion falla: `PrecondicionVioladaException` (HTTP 422).
-7. `monto > 0`. Si no: `PrecondicionVioladaException` (HTTP 422).
 8. Si existe pago previo y esta `CONFIRMADO`: `PrecondicionVioladaException` (HTTP 422).
 
 **Precondiciones:** Acta operativa; `CONDENA_FIRME`; fallo CONDENATORIO FIRME con todos
@@ -1398,28 +1402,45 @@ bandeja `PENDIENTE_CONFIRMACION_PAGO_CONDENA`; accion `CONFIRMAR_PAGO_CONDENA`.
 | Condicion | Excepcion | HTTP | Efectos parciales | Reintentable |
 |---|---|---|---|---|
 | JWT ausente o invalido | (Spring Security) | 401 | Ninguno | No |
+| body: `monto` ausente | `MethodArgumentNotValidException` | 400 | Ninguno | No sin correccion |
+| body: `referenciaPago` ausente o blank | `MethodArgumentNotValidException` | 400 | Ninguno | No sin correccion |
+| command directo: `actaId` null | `PrecondicionVioladaException` | 422 | Ninguno | No sin correccion |
+| command directo: `actor` null/blank/>36 | `PrecondicionVioladaException` | 422 | Ninguno | No sin correccion |
+| command directo: `monto` null o no positivo | `PrecondicionVioladaException` | 422 | Ninguno | No sin correccion |
+| command directo: `referenciaPago` null o blank | `PrecondicionVioladaException` | 422 | Ninguno | No sin correccion |
 | Acta no encontrada | `ActaNoEncontradaException` | 404 | Ninguno | No |
 | Acta no operativa | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | resultadoFinal != CONDENA_FIRME | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Sin fallo activo | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Fallo no CONDENATORIO o no FIRME | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Firmeza inconsistente (hitos faltantes) | `PrecondicionVioladaException` | 422 | Ninguno | No |
-| monto <= 0 | `PrecondicionVioladaException` | 422 | Ninguno | No |
-| referenciaPago vacia | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Pago ya confirmado | `PrecondicionVioladaException` | 422 | Ninguno | No |
 
 **Semantica de reintento:** Comando no idempotente con actualizacion controlada de una
 identidad natural por acta.
-- No existe pago: crear una unica entidad para el acta.
-- Pago en `INFORMADO`: reutilizar la misma entidad; actualizar datos; emitir un nuevo `PCOINF`.
-- Pago en `OBSERVADO`: reutilizar la misma entidad; volver a `INFORMADO`; actualizar datos; emitir un nuevo `PCOINF`.
-- Pago en `CONFIRMADO`: rechazar.
-- Cada ejecucion valida sobre `INFORMADO` o `OBSERVADO` emite un nuevo `PCOINF`.
-- Un retry secuencial tras respuesta perdida puede repetir la frontera informativa y emitir otro `PCOINF`, aunque reutilice la misma entidad.
-- La concurrencia inicial no esta garantizada sin unicidad, OCC o transaccion.
-- `referenciaPago` no es una clave de idempotencia mientras no exista una regla de unicidad expresa.
 
-**Concurrencia:** No garantizado sin OCC, transaccion o exclusion mutua.
+Retry secuencial:
+- `PENDIENTE/INFORMADO/OBSERVADO`: valido; mismo `pago.id`; nuevo `PCOINF` por ejecucion.
+- `CONFIRMADO`: rechazo con `PrecondicionVioladaException` (HTTP 422).
+
+Retry concurrente en misma instancia:
+- Serializado por `pagoCondenaMonitor`.
+- Una sola entidad de pago por acta.
+- Cada ejecucion valida emite un `PCOINF`.
+
+Otra instancia/JVM/nodo/MariaDB:
+- No garantizado sin unicidad fisica por acta mas transaccion, OCC o bloqueo.
+
+No llamarlo idempotente. `referenciaPago` no es clave de idempotencia mientras no exista
+una regla de unicidad expresa.
+
+**Concurrencia:** Dentro de la misma instancia de `PagoCondenaService`, `informar`,
+`confirmar` y `observar` se serializan mediante `pagoCondenaMonitor` (monitor privado
+de instancia). Dos informes iniciales validos reutilizan una sola entidad por acta y
+cada ejecucion emite su `PCOINF`.
+
+Otra instancia, otra JVM/nodo o MariaDB no tiene todavia esa garantia y requiere unicidad
+fisica por acta mas transaccion/OCC o bloqueo.
 
 **Efectos prohibidos:**
 - No cerrar el acta.
@@ -1428,7 +1449,9 @@ identidad natural por acta.
 - No modificar `FalActaFallo` ni `FalActa`.
 
 **Tests de conformidad:**
-`PagoCondenaTest`, `ActaFlujoFalloFuncionalTest`
+`PagoCondenaTest`, `PagoCondenaInformarCanonicaTest` (canonical, CountingClock),
+`PagoCondenaInformarControllerTest` (adaptador HTTP), `PagoCondenaInformarSecurityTest` (seguridad JWT),
+`ActaFlujoFalloFuncionalTest`
 
 ---
 
@@ -1518,8 +1541,10 @@ identidad natural por acta.
 | CMD-FALLO-007 | `resultadoFinal != CONDENA_FIRME` | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | CMD-FALLO-007 | Sin fallo activo / no CONDENATORIO / no FIRME | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | CMD-FALLO-007 | Firmeza inconsistente (hitos faltantes) | `PrecondicionVioladaException` | 422 | Ninguno | No |
-| CMD-FALLO-007 | monto <= 0 | `PrecondicionVioladaException` | 422 | Ninguno | No |
-| CMD-FALLO-007 | referenciaPago vacia | `PrecondicionVioladaException` | 422 | Ninguno | No |
+| CMD-FALLO-007 | body: `monto` ausente/null | `MethodArgumentNotValidException` | 400 | Ninguno | No sin correccion |
+| CMD-FALLO-007 | body: `referenciaPago` ausente o blank | `MethodArgumentNotValidException` | 400 | Ninguno | No sin correccion |
+| CMD-FALLO-007 | command directo: `monto` null o no positivo | `PrecondicionVioladaException` | 422 | Ninguno | No sin correccion |
+| CMD-FALLO-007 | command directo: `referenciaPago` null o blank | `PrecondicionVioladaException` | 422 | Ninguno | No sin correccion |
 | CMD-FALLO-007 | Pago ya confirmado | `PrecondicionVioladaException` | 422 | Ninguno | No |
 
 ---
@@ -1534,4 +1559,4 @@ identidad natural por acta.
 | CMD-FALLO-004 | Rechazo seguro de repeticion | `(notificacionId, intentoId)` | 422 PRECONDICION_VIOLADA (resultado ya registrado) | Garantizado dentro de la misma JVM por `ResultadoPositivoInMemoryMonitor.INSTANCE` (serializa ordinario/ordinario, portal/portal y ordinario/portal; exactamente un ganador; el perdedor rechaza antes de su reloj y sin efectos). Multiples JVM/nodos o MariaDB: no garantizado sin transaccion + OCC/bloqueo. | No se duplican dentro de una JVM bajo el monitor compartido; multinodo requiere garantia fisica/transaccional. |
 | CMD-FALLO-005 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA (`CONDENA_FIRME` ya asignado) | Garantizado dentro de la misma instancia de FirmezaCondenaService por `firmezaMonitor` (exactamente un ganador; el perdedor rechaza antes de su reloj y sin efectos). Otra instancia, otra JVM/nodo o MariaDB: no garantizado sin transaccion + OCC/bloqueo. | No se duplican dentro de la misma instancia protegida; fuera de esa frontera requieren garantia fisica/transaccional. |
 | CMD-FALLO-006 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA (`CONDENA_FIRME` ya asignado) | Serializado por el mismo `firmezaMonitor` compartido con CMD-FALLO-005 dentro de la misma instancia de FirmezaCondenaService. Otra instancia, otra JVM/nodo o MariaDB: no garantizado sin transaccion + OCC/bloqueo. | No se duplican dentro de la misma instancia protegida; fuera de esa frontera requieren garantia fisica/transaccional. |
-| CMD-FALLO-007 | Comando no idempotente con actualizacion controlada de una identidad natural por acta | - | Si pago CONFIRMADO: 422. Si pago INFORMADO o OBSERVADO: actualiza datos, emite nuevo `PCOINF`. Si primer intento con timeout: posible actualizacion no intencional | No garantizado sin OCC, transaccion o exclusion mutua | Cada ejecucion valida sobre `INFORMADO` o `OBSERVADO` emite un nuevo `PCOINF`. Un retry secuencial tras respuesta perdida puede emitir otro `PCOINF`. Concurrentemente no garantizado sin OCC, transaccion o exclusion mutua. |
+| CMD-FALLO-007 | Comando no idempotente con actualizacion controlada de una identidad natural por acta | - | PENDIENTE/INFORMADO/OBSERVADO: actualiza datos, emite nuevo `PCOINF`, mismo `pago.id`. CONFIRMADO: 422. Retry tras timeout puede emitir otro `PCOINF`. | Serializado por `pagoCondenaMonitor` dentro de la misma instancia de PagoCondenaService. Una sola entidad por acta; cada ejecucion valida emite `PCOINF`. Otra instancia/JVM/nodo/MariaDB: no garantizado sin unicidad fisica mas transaccion/OCC o bloqueo. | Cada ejecucion valida emite un nuevo `PCOINF`. No es idempotente. `referenciaPago` no es clave de idempotencia. |

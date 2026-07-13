@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/faltas/notificaciones/*/positiva").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/faltas/actas/*/firmeza/vencer-plazo-apelacion").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/faltas/actas/*/firmeza/por-apelacion-rechazada").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/faltas/actas/*/pago-condena/informar").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint(
                         (req, res, ex) -> res.sendError(HttpStatus.UNAUTHORIZED.value(), "Autenticacion Bearer requerida")))

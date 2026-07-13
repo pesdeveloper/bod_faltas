@@ -1383,7 +1383,7 @@ class GestionExternaTest {
             // informar requiere CONDENA_FIRME, por lo que falla primero en informar
             assertThatThrownBy(() ->
                     pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                            actaId, new BigDecimal("5000.00"), "REF-TEST", null)))
+                            actaId, new BigDecimal("5000.00"), "REF-TEST", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -1890,7 +1890,7 @@ class GestionExternaTest {
             assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.CONDENA_FIRME);
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("5000.00"), "REF-6D1-07", null));
+                    actaId, new java.math.BigDecimal("5000.00"), "REF-6D1-07", null, "test-user"));
 
             FalActa actaDespues = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(actaDespues.getResultadoFinal()).isEqualTo(ResultadoFinalActa.CONDENA_FIRME);

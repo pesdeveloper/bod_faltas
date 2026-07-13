@@ -246,7 +246,7 @@ class BloqueantesMaterialesTest {
         void pago_condena_sin_bloqueantes_cierra() {
             Long actaId = crearActaConCondenaFirme("7A00001");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7A-001", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7A-001", null, "test-user"));
 
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -273,7 +273,7 @@ class BloqueantesMaterialesTest {
             registrarBloqueante(actaId);
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7A-002", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7A-002", null, "test-user"));
 
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -299,7 +299,7 @@ class BloqueantesMaterialesTest {
             registrarBloqueanteCumplido(actaId);
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7A-005", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7A-005", null, "test-user"));
 
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -377,7 +377,7 @@ class BloqueantesMaterialesTest {
             Long actaIdPcocnf = crearActaConCondenaFirme("7A00006a");
             registrarBloqueante(actaIdPcocnf);
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaIdPcocnf, new BigDecimal("3000.00"), "REF-7A-006", null));
+                    actaIdPcocnf, new BigDecimal("3000.00"), "REF-7A-006", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaIdPcocnf, null));
 
             Long actaIdPagapr = crearActaEnGestionExternaConCondenaFirme("7A00006b");
@@ -553,7 +553,7 @@ class BloqueantesMaterialesTest {
             bloqueanteMaterialService.cumplir(new CumplirBloqueanteMaterialCommand(b.getId()));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-010", null));
+                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-010", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
@@ -597,7 +597,7 @@ class BloqueantesMaterialesTest {
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.MEDIDA_PREVENTIVA));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-012", null));
+                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-012", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
@@ -629,7 +629,7 @@ class BloqueantesMaterialesTest {
             bloqueanteMaterialService.anular(new AnularBloqueanteMaterialCommand(b2.getId()));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("1500.00"), "REF-7B-013", null));
+                    actaId, new java.math.BigDecimal("1500.00"), "REF-7B-013", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             List<String> codigos = eventoRepo.buscarPorActa(actaId)
@@ -664,7 +664,7 @@ class BloqueantesMaterialesTest {
             FalBloqueanteMaterial b = bloqueanteMaterialService.registrar(
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.RODADO));
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7C-" + docNum, null));
+                    actaId, new BigDecimal("3000.00"), "REF-7C-" + docNum, null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
             return new Object[]{actaId, b.getId()};
         }
@@ -729,7 +729,7 @@ class BloqueantesMaterialesTest {
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.MEDIDA_PREVENTIVA));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7C-003", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7C-003", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             // Cumplir solo b1; b2 sigue activo
@@ -770,7 +770,7 @@ class BloqueantesMaterialesTest {
             // Crear acta y cerrarla limpiamente (sin bloqueantes activos al confirmar pago)
             Long actaId = crearActaConCondenaFirme("7C00005");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7C-005", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7C-005", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             // Verificar que ya esta cerrada con CIERRA

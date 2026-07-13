@@ -623,7 +623,7 @@ public class CasoUsoFuncionalRunner {
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
-                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null));
+                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null, "demo-user"));
         pasos.add("informarPagoCondena -> PCOINF/PENDIENTE_CONFIRMACION_PAGO_CONDENA");
         return buildResultado(def, id, pasos);
     }
@@ -632,7 +632,7 @@ public class CasoUsoFuncionalRunner {
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
-                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null));
+                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null, "demo-user"));
         pasos.add("informarPagoCondena");
         pagoCondService.confirmar(new ConfirmarPagoCondenaCommand(id, null));
         pasos.add("confirmarPagoCondena -> PCOCNF+CIERRA/CERRADAS");
@@ -789,7 +789,7 @@ public class CasoUsoFuncionalRunner {
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
-                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null));
+                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null, "demo-user"));
         pasos.add("informarPagoCondena");
         pagoCondService.observar(new ObservarPagoCondenaCommand(id, "Comprobante invalido", null));
         pasos.add("observarPagoCondena -> PCOOBS/PENDIENTE_PAGO_CONDENA");
@@ -804,7 +804,7 @@ public class CasoUsoFuncionalRunner {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
                 new InformarPagoCondenaCommand(id, new BigDecimal("4000.00"),
-                        "BANCO-DESCUENTO", "Pago con descuento administrativo aplicado"));
+                        "BANCO-DESCUENTO", "Pago con descuento administrativo aplicado", "demo-user"));
         pasos.add("informarPagoCondena (monto con descuento)");
         pagoCondService.confirmar(new ConfirmarPagoCondenaCommand(id,
                 "Descuento administrativo aplicado"));

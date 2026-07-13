@@ -53,6 +53,7 @@ import org.springframework.stereotype.Component;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -160,12 +161,22 @@ public class SnapshotRecalculador {
     }
 
     public FalActaSnapshot recalcular(FalActa acta) {
+        return recalcular(acta, faltasClock.now());
+    }
+
+    /**
+     * Overload que acepta el instante canonico externamente.
+     * Usa exactamente la misma logica de routing que {@link #recalcular(FalActa)}.
+     * snap.ultimaActualizacion = ahora (no consulta el reloj internamente).
+     */
+    public FalActaSnapshot recalcular(FalActa acta, LocalDateTime ahora) {
+        Objects.requireNonNull(ahora, "ahora no puede ser null");
         FalActaSnapshot snap = new FalActaSnapshot(acta.getId());
         snap.setBloqueActual(acta.getBloqueActual());
         snap.setEstadoProcesal(acta.getEstadoProcesal());
         snap.setSituacionAdministrativa(acta.getSituacionAdministrativa());
         snap.setResultadoFinal(acta.getResultadoFinal());
-        snap.setUltimaActualizacion(faltasClock.now());
+        snap.setUltimaActualizacion(ahora);
 
         List<FalDocumento> docs = documentoRepository.buscarPorActa(acta.getId());
         List<FalNotificacion> notifs = notificacionRepository.buscarPorActa(acta.getId());
