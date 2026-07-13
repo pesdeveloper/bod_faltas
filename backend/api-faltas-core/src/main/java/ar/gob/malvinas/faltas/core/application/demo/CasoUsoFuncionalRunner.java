@@ -56,12 +56,13 @@ public class CasoUsoFuncionalRunner {
     private final GestionExternaService gestionExtServiceConBloqueantes;
     private final BloqueanteMaterialService bloqueanteMaterialService;
     private final ActaParalizacionService paralizacionService;
+    private final FaltasClock faltasClock;
 
     public CasoUsoFuncionalRunner() {
         // Composition root manual: authorized exception to new FaltasClock() rule.
         // This class is NOT a Spring bean. It creates one canonical clock instance
         // and injects it into all services it wires. Not for production Spring context.
-        FaltasClock faltasClock = new FaltasClock();
+        faltasClock = new FaltasClock();
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -428,7 +429,11 @@ public class CasoUsoFuncionalRunner {
         pasos.add("enviarNotificacionFallo");
         registrarPositiva(notifFalloId);
         pasos.add("registrarPositivaFallo");
-        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+        // Retrotraer fhVtoApelacion para que la validacion temporal del slice CMD-FALLO-005 pase en demo
+        FalActaFallo falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(faltasClock.now().toLocalDate().minusDays(1));
+        falloRepo.guardar(falloVto);
+        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "demo-user"));
         pasos.add("vencerPlazoApelacion -> CONDENA_FIRME");
         return actaId;
     }

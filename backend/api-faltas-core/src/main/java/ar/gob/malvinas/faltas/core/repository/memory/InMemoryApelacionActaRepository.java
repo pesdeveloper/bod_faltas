@@ -54,6 +54,14 @@ public class InMemoryApelacionActaRepository implements ApelacionActaRepository,
     }
 
     @Override
+    public Optional<FalActaApelacion> buscarPorFallo(Long falloId) {
+        return store.values().stream()
+                .filter(a -> a.getFalloId() != null && a.getFalloId().equals(falloId))
+                .findFirst()
+                .map(FalActaApelacion::copia);
+    }
+
+    @Override
     public void reset() {
         store.clear();
         idGen.set(1);

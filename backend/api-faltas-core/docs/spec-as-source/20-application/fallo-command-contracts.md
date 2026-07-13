@@ -1058,20 +1058,24 @@ Servicio: `FirmezaCondenaService.vencerPlazoApelacion`
 - Requiere JWT Bearer obligatorio. Sin Bearer: HTTP 401 (Spring Security).
 - El actor se extrae exclusivamente de `ActorContextHolder.get().sub()` (campo `sub` del JWT).
 - JWT con firma invalida, vencido, issuer/audience incorrectos o sin `sub`: HTTP 401.
+- El endpoint esta explicitamente declarado en `SecurityConfig` y reconocido en `JwtActorFilter`.
 
 **Entrada:**
 - `id` (path, Long): identificador del acta.
 - `observaciones` (body, opcional).
 
+El `actor` del comando se obtiene en el controlador desde `ActorContextHolder.get().sub()`.
+No proviene del body. `VencerPlazoApelacionCommand` transporta el campo `actor` (String, max 36).
+
 **Clave de idempotencia:** No hay. `CONDENA_FIRME` previa -> rechazo.
 
 **Agregado propietario:** `FalActaFallo`, `FalActa`.
 
-**Entidades leidas:** `FalActa`, `FalActaFallo` (buscarActivo), `FalActaApelacion` asociada al fallo activo (`falloId = fallo.id`).
+**Entidades leidas:** `FalActa`, `FalActaFallo` (buscarActivo), `FalActaApelacion`
+via `ApelacionActaRepository.buscarPorFallo(fallo.id)` (busca exclusivamente por `falloId`).
 
-La implementacion debe consultar la apelacion asociada al fallo activo o recorrer el resultado
-disponible hasta identificarla. La mera consulta de la ultima apelacion por acta no demuestra
-existencia ni ausencia para el fallo activo.
+Una apelacion historica de otro fallo no bloquea el vencimiento del fallo activo.
+La mera consulta `buscarUltima(actaId)` no es suficiente para CMD-FALLO-005.
 
 **Orden de validaciones:**
 1. JWT Bearer presente y valido (Spring Security). Sin token: HTTP 401.
@@ -1155,9 +1159,11 @@ bandeja `PENDIENTE_PAGO_CONDENA`; accion `GESTIONAR_PAGO_CONDENA`.
 
 **Semantica de reintento:** Rechazo seguro de repeticion. Segundo intento -> 422.
 
-**Concurrencia:** Un retry secuencial posterior a un exito visible se rechaza con 422.
-El resultado de dos ejecuciones concurrentes no esta garantizado hasta que exista OCC,
-transaccion o exclusion mutua verificable.
+**Concurrencia:** CMD-FALLO-005 y CMD-FALLO-006 comparten `private final Object firmezaMonitor = new Object()`
+en `FirmezaCondenaService`. El monitor es por instancia de servicio, no estatico.
+Dentro de la misma instancia de FirmezaCondenaService: exactamente un ganador; el perdedor rechaza
+antes de su reloj y sin efectos en fallo, acta, eventos ni snapshot.
+Otra instancia del mismo servicio, otra JVM/nodo o MariaDB: no garantizado sin transaccion + OCC/bloqueo.
 
 **Efectos prohibidos:**
 - No emitir `PLAVNC` si existe cualquier apelacion asociada al fallo activo.
@@ -1167,7 +1173,8 @@ transaccion o exclusion mutua verificable.
 - No emitir `CIERRA`.
 
 **Tests de conformidad:**
-`FirmezaCondenaTest`, `ActaFlujoFalloFuncionalTest`
+`FirmezaCondenaTest`, `FirmezaVencimientoCanonicaTest`, `FirmezaVencimientoControllerTest`,
+`FirmezaVencimientoSecurityTest`, `ActaFlujoFalloFuncionalTest`
 
 ---
 
@@ -1264,8 +1271,9 @@ bandeja `PENDIENTE_PAGO_CONDENA`; accion `GESTIONAR_PAGO_CONDENA`.
 **Semantica de reintento:** Rechazo seguro de repeticion. Segundo intento -> 422.
 
 **Concurrencia:** Un retry secuencial posterior a un exito visible se rechaza con 422.
-El resultado de dos ejecuciones concurrentes no esta garantizado hasta que exista OCC,
-transaccion o exclusion mutua verificable.
+Dentro de la misma instancia de FirmezaCondenaService: serializado por el mismo `firmezaMonitor`
+compartido con CMD-FALLO-005.
+Otra instancia del mismo servicio, otra JVM/nodo o MariaDB: no garantizado sin transaccion + OCC/bloqueo.
 
 **Efectos prohibidos:**
 - No emitir `PLAVNC`.
@@ -1522,7 +1530,7 @@ identidad natural por acta.
 | CMD-FALLO-001 | Idempotencia por referencia externa | `referenciaFirmaExt` | HTTP 200, mismo resultado logico, sin duplicar entidades ni eventos | La busqueda temprana no es la garantia concurrente. La garantia para la misma referencia es `guardarSiAusentePorReferencia`. Solo su ganador aplica efectos posteriores. Sin duplicar firma ni `DOCFIR`. | Misma referencia externa: no duplica firma ni `DOCFIR`. Referencias externas distintas sobre el mismo requisito: no garantizado hasta que `FalDocumentoFirmaReq` posea OCC, transicion atomica o restriccion equivalente. |
 | CMD-FALLO-002 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA si notificacion ya esta en estado activo incompatible | No garantizado sin OCC, transaccion o exclusion mutua | No garantizado concurrentemente; el retry secuencial rechazado no duplica eventos. |
 | CMD-FALLO-003 | Comando no idempotente | `loteCodigo` como clave unica de rechazo de repeticion | `LoteCodigoDuplicadoException`, incluso si ya no quedan pendientes; consultar lote por `loteCodigo` | La unicidad de `loteCodigo` debe elegir un solo ganador; la unidad completa todavia exige transaccion para lote, intentos, notificaciones, actas, eventos y snapshots | El mismo `loteCodigo` no produce nuevos `LOTGEN` despues de consolidarse la unicidad; otro `loteCodigo` representa otra ejecucion. |
-| CMD-FALLO-004 | Rechazo seguro de repeticion | `(notificacionId, intentoId)` | 422 PRECONDICION_VIOLADA (resultado ya registrado) | No garantizado sin OCC, transaccion o exclusion mutua | No garantizado concurrentemente; el retry secuencial rechazado no duplica eventos. |
-| CMD-FALLO-005 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA (`CONDENA_FIRME` ya asignado) | No garantizado sin OCC, transaccion o exclusion mutua | No garantizado concurrentemente; el retry secuencial rechazado no duplica eventos. |
-| CMD-FALLO-006 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA (`CONDENA_FIRME` ya asignado) | No garantizado sin OCC, transaccion o exclusion mutua | No garantizado concurrentemente; el retry secuencial rechazado no duplica eventos. |
+| CMD-FALLO-004 | Rechazo seguro de repeticion | `(notificacionId, intentoId)` | 422 PRECONDICION_VIOLADA (resultado ya registrado) | Garantizado dentro de la misma JVM por `ResultadoPositivoInMemoryMonitor.INSTANCE` (serializa ordinario/ordinario, portal/portal y ordinario/portal; exactamente un ganador; el perdedor rechaza antes de su reloj y sin efectos). Multiples JVM/nodos o MariaDB: no garantizado sin transaccion + OCC/bloqueo. | No se duplican dentro de una JVM bajo el monitor compartido; multinodo requiere garantia fisica/transaccional. |
+| CMD-FALLO-005 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA (`CONDENA_FIRME` ya asignado) | Garantizado dentro de la misma instancia de FirmezaCondenaService por `firmezaMonitor` (exactamente un ganador; el perdedor rechaza antes de su reloj y sin efectos). Otra instancia, otra JVM/nodo o MariaDB: no garantizado sin transaccion + OCC/bloqueo. | No se duplican dentro de la misma instancia protegida; fuera de esa frontera requieren garantia fisica/transaccional. |
+| CMD-FALLO-006 | Rechazo seguro de repeticion | - | 422 PRECONDICION_VIOLADA (`CONDENA_FIRME` ya asignado) | Serializado por el mismo `firmezaMonitor` compartido con CMD-FALLO-005 dentro de la misma instancia de FirmezaCondenaService. Otra instancia, otra JVM/nodo o MariaDB: no garantizado sin transaccion + OCC/bloqueo. | No se duplican dentro de la misma instancia protegida; fuera de esa frontera requieren garantia fisica/transaccional. |
 | CMD-FALLO-007 | Comando no idempotente con actualizacion controlada de una identidad natural por acta | - | Si pago CONFIRMADO: 422. Si pago INFORMADO o OBSERVADO: actualiza datos, emite nuevo `PCOINF`. Si primer intento con timeout: posible actualizacion no intencional | No garantizado sin OCC, transaccion o exclusion mutua | Cada ejecucion valida sobre `INFORMADO` o `OBSERVADO` emite un nuevo `PCOINF`. Un retry secuencial tras respuesta perdida puede emitir otro `PCOINF`. Concurrentemente no garantizado sin OCC, transaccion o exclusion mutua. |

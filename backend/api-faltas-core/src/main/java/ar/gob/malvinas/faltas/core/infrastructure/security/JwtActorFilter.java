@@ -44,6 +44,8 @@ public class JwtActorFilter extends OncePerRequestFilter {
     static final String SUFIJO_ENVIAR_NOTIF = "/notificaciones/enviar";
     static final String PREFIJO_NOTIF_POSITIVA = "/api/faltas/notificaciones/";
     static final String SUFIJO_NOTIF_POSITIVA = "/positiva";
+    static final String PREFIJO_ACTAS = "/api/faltas/actas/";
+    static final String SUFIJO_VENCER_PLAZO = "/firmeza/vencer-plazo-apelacion";
 
     private final JwtDecoder jwtDecoder;
 
@@ -110,6 +112,8 @@ public class JwtActorFilter extends OncePerRequestFilter {
         if (uri.endsWith(SUFIJO_FIRMAR_REAL)) return true;
         if (uri.endsWith(SUFIJO_ENVIAR_NOTIF)) return true;
         if (uri.startsWith(PREFIJO_NOTIF_POSITIVA) && uri.endsWith(SUFIJO_NOTIF_POSITIVA)) return true;
+        if (uri.startsWith(PREFIJO_ACTAS) && uri.endsWith(SUFIJO_VENCER_PLAZO)
+                && "POST".equalsIgnoreCase(request.getMethod())) return true;
         return false;
     }
 }

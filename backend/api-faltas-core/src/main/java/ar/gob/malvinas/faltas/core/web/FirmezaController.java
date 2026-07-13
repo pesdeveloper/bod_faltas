@@ -4,8 +4,8 @@ import ar.gob.malvinas.faltas.core.application.command.DeclararCondenaFirmePorAp
 import ar.gob.malvinas.faltas.core.application.command.VencerPlazoApelacionCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.FirmezaCondenaService;
-import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
-import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.DeclararFirmezaRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,9 +30,14 @@ public class FirmezaController {
     public ResponseEntity<ComandoResultado> vencerPlazoApelacion(
             @PathVariable Long id,
             @RequestBody(required = false) DeclararFirmezaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         VencerPlazoApelacionCommand cmd = new VencerPlazoApelacionCommand(
                 id,
-                req != null ? req.observaciones() : null);
+                req != null ? req.observaciones() : null,
+                ctx.sub());
         return ResponseEntity.ok(firmezaCondenaService.vencerPlazoApelacion(cmd));
     }
 

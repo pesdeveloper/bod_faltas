@@ -185,6 +185,10 @@ class FirmezaCondenaTest {
                 new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
         notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotifFallo), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotifFallo)), null, "test-actor"));
+        // Retrotraer fhVtoApelacion para satisfacer la validacion temporal del CMD-FALLO-005
+        FalActaFallo falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(LocalDate.of(2026, 7, 8));
+        falloRepo.guardar(falloVto);
         return actaId;
     }
 
@@ -250,7 +254,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConFalloCondenatorioNotificado("10000001");
 
             firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, "Plazo vencido sin recurso"));
+                    new VencerPlazoApelacionCommand(actaId, "Plazo vencido sin recurso", "test-user"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.CONDENA_FIRME);
@@ -289,7 +293,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConFalloCondenatorioNotificado("10000002");
 
             firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null));
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -383,7 +387,7 @@ class FirmezaCondenaTest {
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("fallo activo");
         }
@@ -396,7 +400,7 @@ class FirmezaCondenaTest {
                     new DictarFalloAbsolutorioCommand(actaId, "Absolutorias", null));
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("condenatorio");
         }
@@ -409,7 +413,7 @@ class FirmezaCondenaTest {
                     actaId, new BigDecimal("1000"), "Cargos", null));
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("NOTIFICADO");
         }
@@ -422,7 +426,7 @@ class FirmezaCondenaTest {
                     new RegistrarApelacionCommand(actaId, "Infractor", "Fundamentos", null));
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("PRESENTADA");
         }
@@ -433,7 +437,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConApelacionRechazada("30000005");
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("rechazada");
         }
@@ -487,10 +491,10 @@ class FirmezaCondenaTest {
         @DisplayName("Test 17: No doble firmeza (vencimiento de plazo dos veces falla)")
         void no_doble_firmeza() {
             Long actaId = crearActaConFalloCondenatorioNotificado("30000009");
-            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("firme");
         }
@@ -504,7 +508,7 @@ class FirmezaCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("cerrada");
         }
@@ -518,7 +522,7 @@ class FirmezaCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("archivada");
         }
@@ -532,7 +536,7 @@ class FirmezaCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("anulada");
         }
@@ -546,7 +550,7 @@ class FirmezaCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("paralizada");
         }
@@ -555,7 +559,7 @@ class FirmezaCondenaTest {
         @DisplayName("Test 22: Firmeza no genera eventos de pago condena")
         void firmeza_no_genera_pago_condena() {
             Long actaId = crearActaConFalloCondenatorioNotificado("30000014");
-            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -570,7 +574,7 @@ class FirmezaCondenaTest {
         @DisplayName("Test 23: Firmeza no cierra el acta")
         void firmeza_no_cierra_acta() {
             Long actaId = crearActaConFalloCondenatorioNotificado("30000015");
-            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getSituacionAdministrativa())
@@ -581,7 +585,7 @@ class FirmezaCondenaTest {
         @DisplayName("Test 24: Firmeza no registra CIERRA")
         void firmeza_no_registra_cierra() {
             Long actaId = crearActaConFalloCondenatorioNotificado("30000016");
-            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+            firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -629,7 +633,7 @@ class FirmezaCondenaTest {
         void vencer_plazo_consume_un_solo_instante() {
             Long actaId = crearActaConFalloCondenatorioNotificado("40000001");
             contando.reset();
-            firmezaConReloj.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+            firmezaConReloj.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
             assertThat(contando.getLlamadas()).isEqualTo(1);
         }
 
@@ -671,7 +675,7 @@ class FirmezaCondenaTest {
                     .filter(e -> e.tipoEvt() == TipoEventoActa.PLAVNC).count();
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
-                    new VencerPlazoApelacionCommand(actaId, null)))
+                    new VencerPlazoApelacionCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("PRESENTADA");
 

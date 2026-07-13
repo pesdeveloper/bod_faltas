@@ -187,7 +187,10 @@ class PagoCondenaTest {
 
     private Long crearActaConCondenaFirme(String doc) {
         Long actaId = crearActaConFalloCondenatorioNotificado(doc);
-        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+        var falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(LocalDate.of(2026, 7, 8));
+        falloRepo.guardar(falloVto);
+        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
         return actaId;
     }
 
