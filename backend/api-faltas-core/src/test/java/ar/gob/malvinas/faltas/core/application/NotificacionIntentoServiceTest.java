@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
@@ -37,9 +38,9 @@ class NotificacionIntentoServiceTest {
         intentoRepo = new InMemoryNotificacionIntentoRepository();
         loteRepo = new InMemoryLoteCorreoRepository();
 
-        var docRepo = new InMemoryDocumentoRepository();
+        InMemoryDocumentoRepository docRepo = new InMemoryDocumentoRepository();
+        InMemoryFalloActaRepository falloRepo = new InMemoryFalloActaRepository();
         var pagoVolRepo = new InMemoryPagoVoluntarioRepository();
-        var falloRepo = new InMemoryFalloActaRepository();
         var apelacionRepo = new InMemoryApelacionActaRepository();
         var pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
@@ -47,7 +48,9 @@ class NotificacionIntentoServiceTest {
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
 
         service = new NotificacionIntentoService(
-                intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED);
+                intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED,
+                falloRepo, docRepo, new NoOpBloqueantesMaterialesChecker(),
+                PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
     }
 
     private FalActa crearActa(Long id) {
@@ -290,7 +293,7 @@ class NotificacionIntentoServiceTest {
         void portalPositivo() {
             crearActa(1L);
             crearNotificacion(10L, 1L);
-            FalNotificacionIntento portalIntento = service.registrarPortalPositivo(10L, "user-portal-001", "USR");
+            FalNotificacionIntento portalIntento = service.registrarPortalPositivo(10L, 1L, "user-portal-001", "USR");
             assertThat(portalIntento.getCanalNotif()).isEqualTo(CanalNotificacion.PORTAL_INFRACTOR);
             assertThat(portalIntento.getResultadoIntento()).isEqualTo(ResultadoNotificacion.POSITIVO);
             assertThat(portalIntento.getEstadoIntento()).isEqualTo(EstadoNotificacion.CON_ACUSE_POSITIVO);
@@ -300,7 +303,7 @@ class NotificacionIntentoServiceTest {
         void portalActualizaCabecera() {
             crearActa(1L);
             crearNotificacion(10L, 1L);
-            service.registrarPortalPositivo(10L, "user-portal-001", "USR");
+            service.registrarPortalPositivo(10L, 1L, "user-portal-001", "USR");
             FalNotificacion notif = notifRepo.buscarPorId(10L).orElseThrow();
             assertThat(notif.getEstado()).isEqualTo(EstadoNotificacion.CON_ACUSE_POSITIVO);
             assertThat(notif.getResultado()).isEqualTo(ResultadoNotificacion.POSITIVO);
@@ -314,7 +317,7 @@ class NotificacionIntentoServiceTest {
             FalNotificacionIntento previo = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             assertThat(previo.getEstadoIntento()).isEqualTo(EstadoNotificacion.EN_PROCESO);
 
-            service.registrarPortalPositivo(10L, "user-portal-001", "USR");
+            service.registrarPortalPositivo(10L, 1L, "user-portal-001", "USR");
 
             FalNotificacionIntento previoActualizado = intentoRepo.buscarPorId(previo.getId()).orElseThrow();
             assertThat(previoActualizado.getResultadoIntento()).isEqualTo(ResultadoNotificacion.SUPERADA_POR_PORTAL);
@@ -327,7 +330,7 @@ class NotificacionIntentoServiceTest {
             FalNotificacion notif = crearNotificacion(10L, 1L);
             notif.setResultado(ResultadoNotificacion.POSITIVO);
             notifRepo.guardar(notif);
-            assertThatThrownBy(() -> service.registrarPortalPositivo(10L, "user", "USR"))
+            assertThatThrownBy(() -> service.registrarPortalPositivo(10L, 1L, "user", "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("POSITIVO");
         }
@@ -337,7 +340,7 @@ class NotificacionIntentoServiceTest {
             crearActa(1L);
             crearNotificacion(10L, 1L);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            service.registrarPortalPositivo(10L, "user-portal", "USR");
+            service.registrarPortalPositivo(10L, 1L, "user-portal", "USR");
             List<FalActaEvento> eventos = eventoRepo.buscarPorActa(1L);
             assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.NOTSUP);
             assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.PORPOS);
@@ -349,7 +352,7 @@ class NotificacionIntentoServiceTest {
             crearNotificacion(10L, 1L);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            service.registrarPortalPositivo(10L, "user", "USR");
+            service.registrarPortalPositivo(10L, 1L, "user", "USR");
             List<FalNotificacionIntento> intentos = service.obtenerIntentos(10L);
             assertThat(intentos).hasSize(3);
         }

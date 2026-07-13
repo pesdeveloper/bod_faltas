@@ -192,7 +192,11 @@ public class QrActaService {
      *
      * Si el usuario visualiza una pieza notificable y se cumplen reglas de portal,
      * delega en NotificacionIntentoService para registrar notificacion positiva.
-     * El acceso QR se registra independientemente del resultado de la notificacion.
+     * El acceso QR es append-only e independiente del resultado notificatorio:
+     * queda registrado aunque la notificacion falle por mismatch u otro error.
+     *
+     * La unica autoridad para actaIdQrEsperada es el resultado de resolver el token
+     * protegido; nunca proviene del caller como parametro externo independiente.
      *
      * @param token              token QR
      * @param canal              canal de acceso
@@ -202,8 +206,10 @@ public class QrActaService {
      * @param notificacionId     id de la notificacion a cerrar como positiva (nullable)
      * @param destinoPortal      identificador del usuario en el portal (para el intento)
      * @param idUser             operador del sistema que ejecuta la operacion
-     * @param notifService       servicio de notificacion (nullable si notificacionId es null)
-     * @return resultado del acceso
+     * @param notifService       servicio de notificacion; obligatorio cuando notificacionId
+     *                           es no null; null solo si notificacionId es null
+     * @return resultado del acceso QR
+     * @throws IllegalArgumentException si notificacionId es no null y notifService es null
      */
     public AccesoQrResultado registrarAccesoConNotificacion(
             String token,
@@ -216,10 +222,16 @@ public class QrActaService {
             String idUser,
             NotificacionIntentoService notifService) {
 
+        if (notificacionId != null && notifService == null) {
+            throw new IllegalArgumentException(
+                    "notifService es obligatorio cuando notificacionId esta informado");
+        }
+
         AccesoQrResultado resultado = registrarAcceso(token, canal, ipOrigen, userAgent, idCorrel);
 
-        if (notificacionId != null && notifService != null) {
-            notifService.registrarPortalPositivo(notificacionId, destinoPortal, idUser);
+        if (notificacionId != null) {
+            notifService.registrarPortalPositivo(
+                    notificacionId, resultado.actaId(), destinoPortal, idUser);
         }
 
         return resultado;

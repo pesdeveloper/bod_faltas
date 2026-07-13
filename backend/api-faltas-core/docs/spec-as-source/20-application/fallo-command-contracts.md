@@ -878,15 +878,23 @@ La variante portal produce la misma proyeccion correspondiente al tipo de pieza 
 
 **Concurrencia:**
 
-- Variante ordinaria InMemory: el monitor `resultadoPositivoMonitor` de `NotificacionService`
-  serializa toda la lectura, validacion, calculo de plazo, persistencia, eventos y snapshot del
-  comando dentro de una instancia. Bajo repeticion concurrente sobre la misma notificacion e
-  intento, exactamente una ejecucion tiene exito y las restantes se rechazan con
-  `PrecondicionVioladaException`, sin duplicar `NOTPOS`, `CIERRA` ni snapshot.
-- Variante ordinaria MariaDB: el monitor local no aplica; la exclusion debe lograrse mediante
-  transaccion con OCC o bloqueo de la cabecera/intento.
-- Variante portal: continua fuera de conformidad en este slice; su concurrencia se cerrara en el
-  micro-slice de portal.
+Ambas variantes (ordinaria y portal) sincronizan sobre el mismo monitor InMemory compartido
+(`ResultadoPositivoInMemoryMonitor.INSTANCE`), lo que garantiza dentro de una instancia JVM:
+
+- ordinario vs ordinario sobre la misma notificacion: exactamente una ejecucion tiene exito;
+  las restantes se rechazan con `PrecondicionVioladaException` antes de capturar el reloj y sin
+  efectos secundarios en intento, cabecera, fallo, acta ni snapshot.
+- portal vs portal sobre la misma notificacion: idem anterior; sin duplicar `PORPOS`, `NOTSUP`,
+  `CIERRA` ni snapshot.
+- ordinario vs portal sobre la misma notificacion: exactamente un ganador; el perdedor detecta
+  el resultado ya persistido y rechaza antes de su reloj, sin producir `NOTPOS` o `PORPOS`
+  adicionales ni snapshot duplicado.
+
+Garantia exclusiva de una instancia JVM. Multiples nodos o MariaDB requieren:
+
+- transaccion con OCC o bloqueo de la cabecera de notificacion;
+- restriccion unica a nivel de base de datos sobre (notificacionId, nroIntento) para el intento
+  portal.
 
 **Portal positivo:**
 
@@ -900,12 +908,23 @@ No existe endpoint HTTP directo para esta variante.
 ### Entrada
 
 - `notificacionId`: identificador de la notificacion.
+- `actaIdQrEsperada`: identificador interno obtenido al resolver el token QR; no proviene
+  del cliente como autoridad; es la unica fuente valida para la asociacion QR-acta-notificacion.
 - `destinoPortal`: requerido, no blanco, maximo 120 caracteres.
 - `actor` autenticado.
+
+Cuando `notificacionId` esta informado, la colaboracion con `NotificacionIntentoService`
+es obligatoria; no existe bypass silencioso por servicio null.
+La validacion de servicio ocurre antes del acceso QR para que un cableado erroneo
+falle precozmente sin registrar accesos de auditoria.
 
 ### Validaciones
 
 - notificacion existente;
+- `actaIdQrEsperada` no null;
+- invariante de asociacion: `notificacion.idActa = actaIdQrEsperada`;
+  mismatch -> `PrecondicionVioladaException` antes del reloj portal y antes de cualquier
+  mutacion notificatoria;
 - `destinoPortal` valido: trim; longitud 1..120;
 - cabecera sin resultado POSITIVO previo;
 - acta existente;
@@ -979,13 +998,19 @@ eventos y snapshot.
 
 | Condicion | Excepcion |
 |---|---|
+| `actaIdQrEsperada` null (cableado invalido) | `PrecondicionVioladaException` |
+| Mismatch QR-acta-notificacion: `notificacion.idActa != actaIdQrEsperada` | `PrecondicionVioladaException` |
+| `notificacionId` informado y `notifService` null (cableado invalido) | `IllegalArgumentException` |
 | `destinoPortal` invalido (null, blanco o excede 120) | `PrecondicionVioladaException` |
 | Conflicto al asignar `nroIntento` (unicidad violada) | `PrecondicionVioladaException` |
 
 ### Reintento
 
 - rechazo seguro si la cabecera ya es positiva;
-- retry concurrente no garantizado sin OCC, transaccion o exclusion mutua.
+- retry concurrente dentro de una JVM: garantizado por el monitor compartido
+  `ResultadoPositivoInMemoryMonitor.INSTANCE` (serializa ordinario/ordinario, portal/portal y
+  ordinario/portal); el perdedor rechaza antes de su reloj y sin efectos secundarios;
+- multiples nodos o MariaDB: requiere transaccion con OCC o bloqueo de la cabecera.
 
 ### Persistencia
 
@@ -1009,9 +1034,10 @@ forman una sola unidad transaccional en MariaDB.
 - No cerrar el acta para fallo condenatorio (el cierre es posterior al pago de condena).
 
 **Tests de conformidad:**
-`NotificacionPositivaCanonicaTest`, `NotificacionPositivaControllerTest`,
+`NotificacionPositivaCanonicaTest`, `NotificacionPortalPositivaCanonicaTest`,
+`NotificacionPositivaControllerTest`,
 `NotificacionPositivaSecurityTest`, `FirmaFalloNotificacionCanonicaTest`,
-`ActaFlujoNotificacionFuncionalTest`
+`ActaFlujoNotificacionFuncionalTest`, `QrActaServiceTest` (clase anidada `IntegracionPortal`)
 
 ---
 

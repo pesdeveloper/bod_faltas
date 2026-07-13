@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
@@ -43,14 +44,17 @@ class NotificacionIntentoConcurrenciaTest {
         acuseRepo = new InMemoryNotificacionAcuseRepository();
         loteRepo = new InMemoryLoteCorreoRepository();
 
-        var docRepo = new InMemoryDocumentoRepository();
+        InMemoryDocumentoRepository docRepo = new InMemoryDocumentoRepository();
+        InMemoryFalloActaRepository falloRepo = new InMemoryFalloActaRepository();
         var pagoVolRepo = new InMemoryPagoVoluntarioRepository();
-        var falloRepo = new InMemoryFalloActaRepository();
         var apelRepo = new InMemoryApelacionActaRepository();
         var pagoCondRepo = new InMemoryPagoCondenaRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
 
-        intentoService = new NotificacionIntentoService(intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED);
+        intentoService = new NotificacionIntentoService(
+                intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED,
+                falloRepo, docRepo, new NoOpBloqueantesMaterialesChecker(),
+                PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
         acuseService = new NotificacionAcuseService(acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
         loteService = new LoteCorreoService(loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryPersonaDomicilioRepository(), FaltasClockTestSupport.FIXED);
     }
@@ -191,7 +195,7 @@ class NotificacionIntentoConcurrenciaTest {
         crearActa(1L);
         crearNotif(10L, 1L);
         FalNotificacionIntento postal = intentoService.registrarIntento(10L, CanalNotificacion.CORREO_POSTAL, 100L, null, null, null, "USR");
-        intentoService.registrarPortalPositivo(10L, "user-portal", "USR");
+        intentoService.registrarPortalPositivo(10L, 1L, "user-portal", "USR");
 
         FalNotificacionIntento postalPost = intentoRepo.buscarPorId(postal.getId()).orElseThrow();
         assertThat(postalPost.getResultadoIntento()).isEqualTo(ResultadoNotificacion.SUPERADA_POR_PORTAL);

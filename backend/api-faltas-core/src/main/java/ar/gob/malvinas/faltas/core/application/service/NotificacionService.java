@@ -74,13 +74,8 @@ public class NotificacionService {
     private final FaltasClock faltasClock;
     private final PlazosAdministrativosService plazosAdministrativosService;
 
-    /**
-     * Monitor de exclusion mutua de la variante ordinaria de resultado positivo (CMD-FALLO-004).
-     * Serializa lectura, validaciones, calculo de plazo, persistencia, eventos y snapshot dentro
-     * de una instancia JVM. No afecta enviar, negativa ni vencida.
-     * MariaDB debe reemplazar esta exclusion local por transaccion/OCC.
-     */
-    private final Object resultadoPositivoMonitor = new Object();
+    // Sin monitor propio: se usa ResultadoPositivoInMemoryMonitor.INSTANCE, compartido con la
+    // variante portal (NotificacionIntentoService), para serializar tambien ordinario vs portal.
 
     public NotificacionService(
             ActaRepository actaRepository,
@@ -313,8 +308,8 @@ public class NotificacionService {
      * absolutorio (aplica cierre/bloqueantes).
      *
      * Toda lectura de dominio, validacion, calculo de plazo, persistencia, eventos y snapshot
-     * ocurren bajo {@code resultadoPositivoMonitor}. La validacion estructural del comando puede
-     * ocurrir antes del monitor.
+     * ocurren bajo {@link ResultadoPositivoInMemoryMonitor#INSTANCE}, compartido con la variante
+     * portal. La validacion estructural del comando puede ocurrir antes del monitor.
      */
     public ComandoResultado registrarPositiva(RegistrarNotificacionPositivaCommand cmd) {
         // Validacion estructural previa al monitor (puede ocurrir fuera del reloj y del dominio)
@@ -325,7 +320,7 @@ public class NotificacionService {
         if (cmd.intentoId() == null)
             throw new PrecondicionVioladaException("intentoId es obligatorio");
 
-        synchronized (resultadoPositivoMonitor) {
+        synchronized (ResultadoPositivoInMemoryMonitor.INSTANCE) {
             // 1. cargar FalNotificacion
             FalNotificacion notif = notificacionRepository.buscarPorId(cmd.idNotificacion())
                     .orElseThrow(() -> new NotificacionNoEncontradaException(
