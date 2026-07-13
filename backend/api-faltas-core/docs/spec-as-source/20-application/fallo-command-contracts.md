@@ -710,28 +710,41 @@ Servicio: `NotificacionService.registrarPositiva`
 6. Intento en estado `EN_PROCESO` y sin resultado previo (`estadoIntento = EN_PROCESO` y `resultadoIntento = null`). Si no: `PrecondicionVioladaException` (HTTP 422).
 7. Cabecera en estado `EN_PROCESO` y sin resultado previo (`notificacion.estado = EN_PROCESO` y `notificacion.resultado = null`). Si tiene resultado o estado distinto: `PrecondicionVioladaException` (HTTP 422).
 8. Acta cargada desde `notif.idActa`. No encontrada: `ActaNoEncontradaException` (HTTP 404).
-9. Si la notificacion corresponde al documento del fallo activo: cargar y validar el documento y el fallo.
-   La distincion absolutorio/condenatorio vive en `FalActaFallo.tipoFallo`, no en `TipoDocu`.
-10. Estado e hitos del fallo compatibles con la variante que corresponda.
-11. Capturar `ahora` una sola vez.
+9. Acta no esta cerrada. Si esta cerrada: `PrecondicionVioladaException` (HTTP 422).
+10. Si la notificacion corresponde al documento del fallo activo: cargar y validar el documento y el fallo.
+    La distincion absolutorio/condenatorio vive en `FalActaFallo.tipoFallo`, no en `TipoDocu`.
+11. Estado e hitos del fallo compatibles con la variante que corresponda; entre ellos,
+    `fhVtoApelacion == null` antes del resultado positivo (invariante comun a ambos tipos).
+12. Capturar `ahora` una sola vez.
 
 **Precondiciones por variante:**
+
+Invariante comun del fallo (antes de clasificar CONDENATORIO/ABSOLUTORIO):
+- `fhVtoApelacion` debe ser null antes del resultado positivo. Para condenatorio se calcula desde
+  `ahoraPositiva` recien despues del positivo; para absolutorio permanece null. Un valor previo es
+  inconsistente (ocultaria un vencimiento calculado antes de la notificacion) y se rechaza antes del
+  reloj y antes de toda mutacion: `PrecondicionVioladaException` (HTTP 422).
 
 Pieza previa al fallo:
 - Notificacion e intento sin resultado previo; acta existente.
 
 Fallo condenatorio:
 - Ademas: fallo activo existente con documento coincidente; fallo en estado `PENDIENTE_NOTIFICACION`;
-  `fhFirma` presente en el fallo.
+  `fhFirma` presente en el fallo; `fallo.tipoFallo = CONDENATORIO` y `fallo.resultadoFallo = CONDENA`.
+  La coherencia tipo/resultado se valida antes del reloj y antes de toda mutacion; si falla:
+  `PrecondicionVioladaException` (HTTP 422).
 
 Fallo absolutorio:
 - Ademas: fallo activo existente; fallo en estado `PENDIENTE_NOTIFICACION`;
   `fhFirma != null`; `fallo.tipoFallo = ABSOLUTORIO` y `fallo.resultadoFallo = ABSUELVE`.
+  La coherencia tipo/resultado se valida antes del reloj y antes de toda mutacion; si falla:
+  `PrecondicionVioladaException` (HTTP 422). Un `tipoFallo` no reconocido tambien se rechaza.
 
-**Instante canonico:** `FaltasClock.now()` capturado una vez (`ahoraPositiva`) en el paso 11,
-despues de completar todas las validaciones. El mismo `ahoraPositiva` se usa para: fechaResultado
-del intento, fechaResultado de la cabecera, `fhNotificacion` del fallo, base de `fhVtoApelacion`
-y evento notificatorio.
+**Instante canonico:** `FaltasClock.now()` capturado una vez (`ahoraPositiva`) en el paso 12,
+despues de completar todas las precondiciones de entrada y dominio; para condenatorio, a continuacion
+se invoca y valida el contrato interno del calculo, todavia antes de la primera mutacion. El mismo
+`ahoraPositiva` se usa para: fechaResultado del intento, fechaResultado de la cabecera,
+`fhNotificacion` del fallo, base de `fhVtoApelacion` y evento notificatorio.
 
 **Orden de efectos por variante:**
 
@@ -780,6 +793,10 @@ Fallo condenatorio:
   la politica de plazo devuelve un `LocalDate`; el dia almacenado es el ultimo dia habil completo en que
   puede presentarse la apelacion; ese dia todavia es apelable; el plazo se considera vencido cuando
   `ahora.toLocalDate().isAfter(fhVtoApelacion)`; no comparar directamente `LocalDateTime` con `LocalDate`.
+- Contrato del calculo: `NotificacionService` valida el resultado antes de mutar: no null;
+  `tipo = APELACION_FALLO`; `fechaOrigen = ahoraPositiva.toLocalDate()`; `fechaVencimiento` no null.
+  El calculo se invoca una sola vez. Una violacion del contrato es un error interno (no del usuario):
+  `IllegalStateException`, sin efectos (ni intento, ni cabecera, ni fallo, ni acta, ni eventos, ni snapshot).
 - `FalActa.bloqueActual = ANAL`; guardar acta.
 - Persistir intento, notificacion, fallo y acta (misma transaccion en MariaDB).
 - Registrar evento `NOTPOS` con ahoraPositiva y actor autenticado.
@@ -852,13 +869,24 @@ La variante portal produce la misma proyeccion correspondiente al tipo de pieza 
 | Intento ya resuelto | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Cabecera ya tiene resultado | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Acta no encontrada | `ActaNoEncontradaException` | 404 | Ninguno | No |
+| Acta cerrada | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Fallo en estado incompatible | `PrecondicionVioladaException` | 422 | Ninguno | No |
 | Fallo sin fhFirma | `PrecondicionVioladaException` | 422 | Ninguno | No |
+| Fallo con `fhVtoApelacion` previamente informado | `PrecondicionVioladaException` | 422 | Ninguno | No |
 
 **Semantica de reintento:** Rechazo seguro de repeticion. Segundo intento -> 422 PRECONDICION_VIOLADA.
 
-**Concurrencia:** Rechazo seguro de repeticion secuencial. El retry concurrente no esta
-garantizado sin OCC, transaccion o exclusion mutua.
+**Concurrencia:**
+
+- Variante ordinaria InMemory: el monitor `resultadoPositivoMonitor` de `NotificacionService`
+  serializa toda la lectura, validacion, calculo de plazo, persistencia, eventos y snapshot del
+  comando dentro de una instancia. Bajo repeticion concurrente sobre la misma notificacion e
+  intento, exactamente una ejecucion tiene exito y las restantes se rechazan con
+  `PrecondicionVioladaException`, sin duplicar `NOTPOS`, `CIERRA` ni snapshot.
+- Variante ordinaria MariaDB: el monitor local no aplica; la exclusion debe lograrse mediante
+  transaccion con OCC o bloqueo de la cabecera/intento.
+- Variante portal: continua fuera de conformidad en este slice; su concurrencia se cerrara en el
+  micro-slice de portal.
 
 **Portal positivo:**
 
@@ -981,7 +1009,9 @@ forman una sola unidad transaccional en MariaDB.
 - No cerrar el acta para fallo condenatorio (el cierre es posterior al pago de condena).
 
 **Tests de conformidad:**
-`FirmaFalloNotificacionCanonicaTest`, `ActaFlujoNotificacionFuncionalTest`
+`NotificacionPositivaCanonicaTest`, `NotificacionPositivaControllerTest`,
+`NotificacionPositivaSecurityTest`, `FirmaFalloNotificacionCanonicaTest`,
+`ActaFlujoNotificacionFuncionalTest`
 
 ---
 

@@ -35,6 +35,7 @@ class ResolucionApelacionEfectosTest {
     private InMemoryFalloActaRepository falloRepo;
     private InMemoryApelacionActaRepository apelacionRepo;
     private InMemoryApelacionDocumentoRepository apelDocRepo;
+    private InMemoryNotificacionIntentoRepository intentoRepo;
 
     private ActaService actaService;
     private DocumentoService docService;
@@ -66,8 +67,10 @@ class ResolucionApelacionEfectosTest {
                 new TalonarioService(new InMemoryTalonarioRepository(), new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new InMemoryDependenciaRepository(), new InMemoryDocumentoFirmaReqRepository(), new InMemoryFirmanteRepository(),
                 new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
+        intentoRepo = new InMemoryNotificacionIntentoRepository();
         notifService = new NotificacionService(actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository());
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
         falloService = new FalloActaService(actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoRepo, recalc, FaltasClockTestSupport.FIXED);
         apelacionService = new ApelacionActaService(actaRepo, falloRepo, apelacionRepo, apelDocRepo, eventoRepo, snapshotRepo,
                 recalc, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
@@ -80,7 +83,7 @@ class ResolucionApelacionEfectosTest {
         // document auto-created by dictarCondenatorio
         docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Inspector", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user")).idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(notifId)), null, "test-actor"));
         apelacionService.registrarApelacion(RegistrarApelacionCommand.legacy(actaId, "Infractor", "Apelo el fallo", null));
         return actaId;
     }
@@ -93,7 +96,7 @@ class ResolucionApelacionEfectosTest {
         String docId = docService.generarDocumento(new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, "Acta")).idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(docId), "Insp", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(new EnviarNotificacionCommand(actaId, Long.parseLong(docId), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user")).idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(notifId)), null, "test-actor"));
         return actaId;
     }
 

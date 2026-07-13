@@ -72,7 +72,8 @@ class NotificacionEnvioIntentoTest {
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, new NoOpBloqueantesMaterialesChecker(), countingClock,
-                intentoRepo, domicilioRepo);
+                intentoRepo, domicilioRepo,
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(countingClock));
     }
 
     // -------------------------------------------------------------------------

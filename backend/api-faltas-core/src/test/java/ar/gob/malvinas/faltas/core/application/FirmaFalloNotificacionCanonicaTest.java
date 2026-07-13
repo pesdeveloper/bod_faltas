@@ -96,7 +96,8 @@ class FirmaFalloNotificacionCanonicaTest {
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED,
-                intentoRepo, new InMemoryPersonaDomicilioRepository());
+                intentoRepo, new InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
 
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo,
@@ -567,7 +568,7 @@ class FirmaFalloNotificacionCanonicaTest {
 
             // Registrar positiva
             notifService.registrarPositiva(
-                    new RegistrarNotificacionPositivaCommand(idNotif, null));
+                    new RegistrarNotificacionPositivaCommand(idNotif, ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, idNotif), null, "test-actor"));
 
             // Fallo debe estar NOTIFICADO con fhNotificacion registrado
             FalActaFallo falloPost = falloRepo.buscarActivo(idActa).orElseThrow();

@@ -14,6 +14,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.EnviarNotificacionRequest;
+import ar.gob.malvinas.faltas.core.web.dto.RegistrarNotificacionPositivaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.RegistrarResultadoNotificacionRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -59,9 +60,12 @@ public class NotificacionController {
     @PostMapping("/notificaciones/{id}/positiva")
     public ResponseEntity<ComandoResultado> positiva(
             @PathVariable Long id,
-            @RequestBody(required = false) RegistrarResultadoNotificacionRequest req) {
+            @Valid @RequestBody RegistrarNotificacionPositivaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null)
+            throw new PrecondicionVioladaException("Contexto de actor no disponible. Autenticacion requerida.");
         RegistrarNotificacionPositivaCommand cmd = new RegistrarNotificacionPositivaCommand(
-                id, req != null ? req.observaciones() : null);
+                id, req.intentoId(), req.observaciones(), ctx.sub());
         return ResponseEntity.ok(notificacionService.registrarPositiva(cmd));
     }
 

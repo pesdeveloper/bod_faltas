@@ -59,6 +59,7 @@ class ActaFlujoDocumentalFuncionalTest {
     private ActaService actaService;
     private DocumentoService docService;
     private NotificacionService notifService;
+    private final ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository intentoRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository();
     private FalloActaService falloService;
     private DocumentoRedaccionService redaccionService;
     private DocumentoGeneracionMockService mockGenService;
@@ -99,7 +100,8 @@ class ActaFlujoDocumentalFuncionalTest {
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository());
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
 
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
@@ -141,7 +143,7 @@ class ActaFlujoDocumentalFuncionalTest {
         docService.firmarDocumento(new FirmarDocumentoCommand(docId, "Inspector", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(
                 new EnviarNotificacionCommand(id, docId, CanalNotificacion.PRESENCIAL, null, null, null, "test-user")).idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(notifId, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(notifId)), null, "test-actor"));
         return id;
     }
 

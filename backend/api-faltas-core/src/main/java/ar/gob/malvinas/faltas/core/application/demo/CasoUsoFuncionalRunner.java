@@ -8,6 +8,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.infrastructure.config.PlazosAdministrativosProperties;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 
@@ -34,6 +35,7 @@ public class CasoUsoFuncionalRunner {
     private final DocumentoRepository docRepo;
     private final DocumentoFirmaRepository firmaRepo;
     private final NotificacionRepository notifRepo;
+    private final NotificacionIntentoRepository notifIntentoRepo;
     private final PagoVoluntarioRepository pagoVolRepo;
     private final PagoCondenaRepository pagoCondRepo;
     private final FalloActaRepository falloRepo;
@@ -66,6 +68,7 @@ public class CasoUsoFuncionalRunner {
         docRepo = new InMemoryDocumentoRepository();
         firmaRepo = new InMemoryDocumentoFirmaRepository();
         notifRepo = new InMemoryNotificacionRepository();
+        notifIntentoRepo = new InMemoryNotificacionIntentoRepository();
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         pagoCondRepo = new InMemoryPagoCondenaRepository();
         falloRepo = new InMemoryFalloActaRepository();
@@ -93,10 +96,17 @@ public class CasoUsoFuncionalRunner {
                 new InMemoryFirmanteRepository(),
                 notifRepo, faltasClock);
 
+        CalendarioAdministrativoService calendarioService =
+                new CalendarioAdministrativoService(new InMemoryDiaNoComputableRepository(), faltasClock);
+        PlazosAdministrativosService plazosService = new PlazosAdministrativosService(
+                new PlazosAdministrativosProperties(),
+                new CalculadorPlazosAdministrativos(calendarioService));
+
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, bloqueantesChecker, faltasClock,
-                new InMemoryNotificacionIntentoRepository(), new InMemoryPersonaDomicilioRepository());
+                notifIntentoRepo, new InMemoryPersonaDomicilioRepository(),
+                plazosService);
 
         pagoVolService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoVolRepo, recalc,
@@ -292,7 +302,18 @@ public class CasoUsoFuncionalRunner {
     }
 
     private void registrarPositiva(String notifId) {
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), null));
+        Long idNotif = Long.parseLong(notifId);
+        List<Long> activos = notifIntentoRepo.buscarPorNotificacion(idNotif).stream()
+                .filter(i -> i.getEstadoIntento() == EstadoNotificacion.EN_PROCESO
+                        && i.getResultadoIntento() == null)
+                .map(FalNotificacionIntento::getId)
+                .toList();
+        if (activos.size() != 1)
+            throw new IllegalStateException(
+                    "Se esperaba exactamente un intento EN_PROCESO sin resultado para la notificacion "
+                            + idNotif + ", encontrados: " + activos.size() + ".");
+        notifService.registrarPositiva(
+                new RegistrarNotificacionPositivaCommand(idNotif, activos.get(0), null, "demo-user"));
     }
 
     private Long llegarAAnalisis(List<String> pasos) {
