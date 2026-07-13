@@ -45,10 +45,15 @@ public class FirmezaController {
     public ResponseEntity<ComandoResultado> firmezaPorApelacionRechazada(
             @PathVariable Long id,
             @RequestBody(required = false) DeclararFirmezaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         DeclararCondenaFirmePorApelacionRechazadaCommand cmd =
                 new DeclararCondenaFirmePorApelacionRechazadaCommand(
                         id,
-                        req != null ? req.observaciones() : null);
+                        req != null ? req.observaciones() : null,
+                        ctx.sub());
         return ResponseEntity.ok(firmezaCondenaService.declararFirmePorApelacionRechazada(cmd));
     }
 

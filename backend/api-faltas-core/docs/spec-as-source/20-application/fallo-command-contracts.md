@@ -1282,7 +1282,8 @@ Otra instancia del mismo servicio, otra JVM/nodo o MariaDB: no garantizado sin t
 - No emitir `CIERRA`.
 
 **Tests de conformidad:**
-`FirmezaCondenaTest`, `ActaFlujoFalloFuncionalTest`, `ResolucionApelacionEfectosTest`
+`FirmezaCondenaTest`, `FirmezaApelacionRechazadaCanonicaTest`, `FirmezaApelacionRechazadaControllerTest`,
+`FirmezaApelacionRechazadaSecurityTest`, `ActaFlujoFalloFuncionalTest`, `ResolucionApelacionEfectosTest`
 
 ---
 

@@ -319,7 +319,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConApelacionRechazada("20000001");
 
             firmezaService.declararFirmePorApelacionRechazada(
-                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, "Apelacion rechazada firme"));
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, "Apelacion rechazada firme", "test-user"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.CONDENA_FIRME);
@@ -355,7 +355,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConApelacionRechazada("20000002");
 
             firmezaService.declararFirmePorApelacionRechazada(
-                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null));
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null, "test-user"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -448,7 +448,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConFalloCondenatorioNotificado("30000006");
 
             assertThatThrownBy(() -> firmezaService.declararFirmePorApelacionRechazada(
-                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null)))
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("apelacion");
         }
@@ -461,7 +461,7 @@ class FirmezaCondenaTest {
                     new RegistrarApelacionCommand(actaId, "Infractor", "Fundamentos", null));
 
             assertThatThrownBy(() -> firmezaService.declararFirmePorApelacionRechazada(
-                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null)))
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("PRESENTADA");
         }
@@ -482,7 +482,7 @@ class FirmezaCondenaTest {
                     new ResolverApelacionAceptaAbsuelveCommand(actaId, "Absolucion segunda instancia", null));
 
             assertThatThrownBy(() -> firmezaService.declararFirmePorApelacionRechazada(
-                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null)))
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("RECHAZADA");
         }
@@ -643,7 +643,7 @@ class FirmezaCondenaTest {
             Long actaId = crearActaConApelacionRechazada("40000002");
             contando.reset();
             firmezaConReloj.declararFirmePorApelacionRechazada(
-                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null));
+                    new DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, null, "test-user"));
             assertThat(contando.getLlamadas()).isEqualTo(1);
         }
     }
