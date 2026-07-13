@@ -773,7 +773,10 @@ Fallo condenatorio:
   si es null, preservar el valor existente.
 - La descripcion de `NOTPOS` incorpora las observaciones informadas sin persistirlas en otro campo.
 - `FalActaFallo.marcarNotificado(ahoraPositiva)` -> `fhNotificacion = ahoraPositiva`; `estadoFallo = NOTIFICADO`.
-  Calcular y persistir `fhVtoApelacion` (tipo `LocalDate`): se calcula desde `ahoraPositiva.toLocalDate()`;
+  Calcular y persistir `fhVtoApelacion` (tipo `LocalDate`) mediante `PlazosAdministrativosService.calcularVencimientoApelacion(ahoraPositiva.toLocalDate())`:
+  tipo = `APELACION_FALLO`; fechaOrigen = `ahoraPositiva.toLocalDate()`; cantidad leida desde configuracion global (`faltas.plazos.apelacion-dias-computables`);
+  el dia de notificacion no se cuenta; sabado computa; domingo, 1 de enero, 1 de mayo y excepciones locales activas no computan;
+  resultado LocalDate = ultimo dia completo apelable; equivalente a:
   la politica de plazo devuelve un `LocalDate`; el dia almacenado es el ultimo dia habil completo en que
   puede presentarse la apelacion; ese dia todavia es apelable; el plazo se considera vencido cuando
   `ahora.toLocalDate().isAfter(fhVtoApelacion)`; no comparar directamente `LocalDateTime` con `LocalDate`.

@@ -47,14 +47,16 @@ leerse en este orden antes de consultar los documentos de contrato funcional:
 2. [`10-domain/lifecycle-states.md`](10-domain/lifecycle-states.md) -- define
    las dimensiones de estado y el lifecycle de subagregados; establece que es
    persistido, derivado o historico.
-3. [`00-governance/command-contract-standard.md`](00-governance/command-contract-standard.md)
+3. [`10-domain/calendario-plazos-administrativos.md`](10-domain/calendario-plazos-administrativos.md)
+   -- gobierna calendarios locales, dias no computables y calculo reutilizable de plazos administrativos.
+4. [`00-governance/command-contract-standard.md`](00-governance/command-contract-standard.md)
    -- define el estandar normativo de contratos de comandos: plantilla, orden
    canonico de ejecucion, taxonomia de errores, idempotencia y concurrencia.
    Todos los contratos de comandos deben conformar este estandar.
-4. [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md)
+5. [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md)
    -- aplica el estandar al circuito de firma, notificacion, firmeza y pago.
    Contiene los contratos definitivos de los siete comandos canonicalizados.
-5. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md)
+6. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md)
    -- aplica esas dimensiones al circuito de firma y cola notificatoria del fallo.
 
 Ante contradiccion entre un documento tematico y un documento de contrato

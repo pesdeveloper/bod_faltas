@@ -14,6 +14,8 @@ app:
 # Activar explicitamente en ambiente demo/dev con faltas.demo.enabled=true.
 
 faltas:
+  plazos:
+    apelacion-dias-computables: 30
   security:
     jwt:
       issuer: https://tokenserver.dev.local
