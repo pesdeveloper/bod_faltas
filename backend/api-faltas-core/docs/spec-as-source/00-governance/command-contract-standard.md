@@ -1,5 +1,10 @@
 # Estandar canonico de contratos de comandos
 
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Ante contradiccion con un contrato de comando especifico, ese contrato es normativo en lo
+> particular; este estandar es normativo en lo estructural y definitorio (ver README).
+
 Este documento define el formato normativo de todo contrato de comando en el sistema de Faltas.
 Es autosuficiente y no hace referencia a slices, fechas ni estado temporal de implementacion.
 

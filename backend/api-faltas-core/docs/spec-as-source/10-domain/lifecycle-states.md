@@ -1,5 +1,10 @@
 # Dimensiones de estado y lifecycle
 
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Ante contradiccion sobre dimensiones, lifecycle o derivacion operativa, este
+> documento es normativo (ver seccion "Relacion con documentos transitorios" y README).
+
 ## Principio rector
 
 > Una misma acta puede tener simultaneamente un bloque, un estado procesal, una
@@ -84,7 +89,7 @@ Desenlace sustantivo del expediente. Valores exactos:
 | `ABSUELTO` | 2 | Fallo absolutorio |
 | `CONDENA_FIRME` | 3 | Condena firme |
 | `CONDENA_FIRME_PAGADA` | 4 | Condena firme pagada |
-| `FALLO_CONDENATORIO_PAGADO` | 5 | Fallo condenatorio pagado antes de firmeza |
+| `FALLO_CONDENATORIO_PAGADO` | 5 | LEGACY_RESERVED: sin productor canonico vigente; ningun comando actual lo asigna; no usar en nuevas escrituras; el resultado canonico del pago de condena confirmado es `CONDENA_FIRME_PAGADA` |
 | `FALLO_CONDENATORIO_GESTION_EXTERNA` | 6 | Fallo condenatorio derivado a gestion externa |
 | `PRESCRIPTO` | 7 | Prescripcion |
 | `ANULADO` | 8 | Anulacion |

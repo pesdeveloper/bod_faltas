@@ -24,7 +24,6 @@ simulador/**
 sql/**
 
 # módulos backend no relevantes para este slice de demo
-backend/api-faltas-core/**
 backend/api-faltas-operaciones/**
 backend/worker-notificaciones/**
 backend/worker-snapshots/**

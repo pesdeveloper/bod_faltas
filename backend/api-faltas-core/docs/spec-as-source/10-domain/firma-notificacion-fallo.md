@@ -1,5 +1,10 @@
 # Dominio: Firma y cola notificatoria del fallo
 
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Fuente propietaria del lifecycle de `EstadoFalloActa`, el callback de firma real
+> y la cola notificatoria del fallo (ver README).
+
 ---
 
 ## 1. Estado canonico de `EstadoFalloActa`

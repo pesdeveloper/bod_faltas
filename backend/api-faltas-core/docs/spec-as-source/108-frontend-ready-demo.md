@@ -1,6 +1,13 @@
 # 108 - Frontend-Ready Demo: Auditoría de Endpoints, Payloads y Flujo
 
-**Slice:** 8F-6
+> **Estado documental:** HISTORICAL
+> **Autoridad DDL:** NO
+> Este archivo conserva evidencia histórica de la auditoría frontend-ready de los
+> endpoints `/demo/**` (bloques 8F-6 a 8F-8) y no define comportamiento vigente con
+> autoridad normativa. El contrato vigente de los endpoints `/demo/**` está en
+> `05-api-core-endpoints.md`.
+
+**Bloque:** 8F-6
 **Fecha:** 2026-07-03
 **Módulo:** backend/api-faltas-core (in-memory, sin MariaDB)
 
@@ -73,8 +80,8 @@ La auditoría de este slice se focaliza en los 3 endpoints /demo.
 - [OK] Metadatos mock: storageKey y hashDocu siempre mock:// / sha256-mock-
 - [OK] errorMensaje null cuando exitoso, presente cuando fallido
 - [OK] Conteos agregados en raíz: totalCasos, casosExitosos, casosFallidos, completo
-- [GAP-1] accionDocumental y tipoDocu son enums técnicos sin label presentacional
-- [GAP-2] No hay campo "label" o "nombre" derivado para mostrar en UI sin mapeo en frontend
+- [ITEM-1] accionDocumental y tipoDocu son enums técnicos sin label presentacional
+- [ITEM-2] No hay campo "label" o "nombre" derivado para mostrar en UI sin mapeo en frontend
 
 ### GET /demo/actas/dataset-funcional
 
@@ -120,9 +127,9 @@ La auditoría de este slice se focaliza en los 3 endpoints /demo.
 - [OK] Flags booleanos para drill-down: cerrableEsperado, requiereFallo, requierePago, etc.
 - [OK] Conteos en raíz: totalActasMock, totalCasosUsoCubiertos, totalDocumentosEsperados
 - [OK] coberturaCompletaSegunDominioActual para banner de estado
-- [GAP-3] No hay endpoint GET /demo/actas/{codigo} para drill-down por acta individual
-- [GAP-4] bloqueEsperado, situacionEsperada, bandejaEsperada son enums técnicos sin labels presentacionales
-- [GAP-5] Las actas del dataset son definiciones declarativas, no instancias reales en repositorio
+- [ITEM-3] No hay endpoint GET /demo/actas/{codigo} para drill-down por acta individual
+- [ITEM-4] bloqueEsperado, situacionEsperada, bandejaEsperada son enums técnicos sin labels presentacionales
+- [ITEM-5] Las actas del dataset son definiciones declarativas, no instancias reales en repositorio
   (un GET /actas/{id} real no existe para estas actas mock)
 
 ### POST /demo/dev/reset
@@ -153,7 +160,7 @@ La auditoría de este slice se focaliza en los 3 endpoints /demo.
 - [OK] casosDatasetFuncional=31 confirma dataset de referencia intacto
 - [OK] errores=0 para verificación de integridad
 - [OK] 404 cuando disabled (faltas.demo.reset.enabled=false, default)
-- [GAP-6] actasDemoDisponibles siempre 0 post-reset (las actas del dataset son declarativas, no instanciadas)
+- [ITEM-6] actasDemoDisponibles siempre 0 post-reset (las actas del dataset son declarativas, no instanciadas)
 
 ---
 
@@ -204,8 +211,8 @@ La auditoría de este slice se focaliza en los 3 endpoints /demo.
 - No existe un `@ControllerAdvice` global. Cada controller operativo tiene sus propios `@ExceptionHandler`.
 - El patrón de error es consistente: `Map<String, String>` con clave "error".
 - Los endpoints /demo solo devuelven 200 o 404 (para reset disabled). No hay 422 en demo.
-- [GAP-7] No existe un DTO global de error. El patrón Map<String,String> no está documentado como contrato.
-- [GAP-8] No existe endpoint de health/demo-readiness para que el frontend verifique disponibilidad.
+- [ITEM-7] No existe un DTO global de error. El patrón Map<String,String> no está documentado como contrato.
+- [ITEM-8] No existe endpoint de health/demo-readiness para que el frontend verifique disponibilidad.
 
 ---
 
@@ -225,29 +232,29 @@ Desde Slice 8F-6 se agregó `DemoCorsConfig` (WebMvcConfigurer):
 
 | ID | Gap | Impacto |
 |----|-----|---------|
-| GAP-3 | No hay `GET /demo/actas/{codigo}` para drill-down de acta individual | Un frontend que necesite mostrar detalle de una acta específica no puede navegar a ella desde el dataset |
-| GAP-5 | Las actas del dataset son definiciones declarativas, no instancias reales en repositorio | El frontend no puede mostrar la acta "real" correspondiente al código del dataset |
-| GAP-8 | No hay endpoint de health/demo-readiness | El frontend no puede verificar si el backend está listo antes de mostrar la UI |
+| ITEM-3 | No hay `GET /demo/actas/{codigo}` para drill-down de acta individual | Un frontend que necesite mostrar detalle de una acta específica no puede navegar a ella desde el dataset |
+| ITEM-5 | Las actas del dataset son definiciones declarativas, no instancias reales en repositorio | El frontend no puede mostrar la acta "real" correspondiente al código del dataset |
+| ITEM-8 | No hay endpoint de health/demo-readiness | El frontend no puede verificar si el backend está listo antes de mostrar la UI |
 
 ### Gaps no bloqueantes (funciona, pero UX mejorable)
 
 | ID | Gap | Impacto |
 |----|-----|---------|
-| GAP-1 | accionDocumental y tipoDocu son enums técnicos sin label | El frontend debe mapear en TypeScript para mostrar texto amigable |
-| GAP-2 | No hay campo label/nombre derivado en DocumentoGraphDemoCasoResultado | El frontend usa descripcionCaso como fallback (disponible) |
-| GAP-4 | bloqueEsperado, situacionEsperada, bandejaEsperada son enums sin labels | El frontend debe mapear para mostrar texto amigable |
-| GAP-6 | actasDemoDisponibles=0 siempre (actas declarativas, no instanciadas en repo) | El conteo puede ser confuso; la doc debe aclarar que es por diseño |
-| GAP-7 | No hay DTO global de error documentado como contrato | El frontend debe manejar tanto Map<String,String> como Spring defaults |
+| ITEM-1 | accionDocumental y tipoDocu son enums técnicos sin label | El frontend debe mapear en TypeScript para mostrar texto amigable |
+| ITEM-2 | No hay campo label/nombre derivado en DocumentoGraphDemoCasoResultado | El frontend usa descripcionCaso como fallback (disponible) |
+| ITEM-4 | bloqueEsperado, situacionEsperada, bandejaEsperada son enums sin labels | El frontend debe mapear para mostrar texto amigable |
+| ITEM-6 | actasDemoDisponibles=0 siempre (actas declarativas, no instanciadas en repo) | El conteo puede ser confuso; la doc debe aclarar que es por diseño |
+| ITEM-7 | No hay DTO global de error documentado como contrato | El frontend debe manejar tanto Map<String,String> como Spring defaults |
 
 ### Gaps de slice futuro
 
 | ID | Gap | Slice sugerido |
 |----|-----|----------------|
-| GAP-9 | Paginación en GET /demo/actas/dataset-funcional (31 actas en un solo payload) | 8G o superior |
-| GAP-10 | Labels/i18n de enums exportados desde el backend | 8G o superior |
-| GAP-11 | Endpoint GET /demo/actas/{codigo} con instancia real + eventos + documentos | 8G o superior |
-| GAP-12 | Normalización de DTO de error global (@ControllerAdvice) | 9.x o superior |
-| GAP-13 | CORS de producción con origins configurados por ambiente | Etapa 9 / infra |
+| ITEM-9 | Paginación en GET /demo/actas/dataset-funcional (31 actas en un solo payload) | 8G o superior |
+| ITEM-10 | Labels/i18n de enums exportados desde el backend | 8G o superior |
+| ITEM-11 | Endpoint GET /demo/actas/{codigo} con instancia real + eventos + documentos | 8G o superior |
+| ITEM-12 | Normalización de DTO de error global (@ControllerAdvice) | 9.x o superior |
+| ITEM-13 | CORS de producción con origins configurados por ambiente | Etapa 9 / infra |
 
 ---
 
@@ -285,7 +292,7 @@ Desde Slice 8F-6 se agregó `DemoCorsConfig` (WebMvcConfigurer):
 |--------|------|-----------|---------|
 | GET | /demo/actas/{codigo} | DatasetFuncionalDemoController | DemoActaMaterializadorService |
 
-### Materializacion real (GAP-5 cerrado)
+### Materializacion real (ITEM-5 cerrado)
 
 - No se devuelve una ficha declarativa del catalog.
 - Se crea un CasoUsoFuncionalRunner aislado por request.
@@ -293,14 +300,14 @@ Desde Slice 8F-6 se agregó `DemoCorsConfig` (WebMvcConfigurer):
 - La instancia resultante (acta, snapshot, eventos, documentos) se proyecta al DTO.
 - Idempotente: cada ejecucion produce el mismo estado final para el mismo codigo.
 
-### GAP-3 cerrado
+### ITEM-3 cerrado
 
 - GET /demo/actas/{codigo} disponible.
 - HTTP 200 para codigo existente.
 - HTTP 404 para codigo inexistente (sin stacktrace expuesto).
-- No se implemento @ControllerAdvice global (GAP-7 sigue no bloqueante).
+- No se implemento @ControllerAdvice global (ITEM-7 sigue no bloqueante).
 
-### GAP-5 cerrado
+### ITEM-5 cerrado
 
 - El detalle devuelve una instancia real del acta.
 - Timeline: eventos append-only reales, ordenados por ordenLogico.
@@ -366,10 +373,10 @@ Desde Slice 8F-6 se agregó `DemoCorsConfig` (WebMvcConfigurer):
 
 | ID | Estado | Nota |
 |----|--------|------|
-| GAP-3 | CERRADO | GET /demo/actas/{codigo} implementado |
-| GAP-5 | CERRADO | Instancia real via CasoUsoFuncionalRunner |
-| GAP-7 | NO BLOQUEANTE | Error global sin @ControllerAdvice (Spring defaults) |
-| GAP-8 | PENDIENTE 8F-8 | Health/demo-readiness no implementado |
+| ITEM-3 | CERRADO | GET /demo/actas/{codigo} implementado |
+| ITEM-5 | CERRADO | Instancia real via CasoUsoFuncionalRunner |
+| ITEM-7 | NO BLOQUEANTE | Error global sin @ControllerAdvice (Spring defaults) |
+| ITEM-8 | PENDIENTE 8F-8 | Health/demo-readiness no implementado |
 
 ### Tests agregados
 
@@ -392,7 +399,7 @@ Desde Slice 8F-6 se agregó `DemoCorsConfig` (WebMvcConfigurer):
 
 ### Objetivo
 
-Cierre de GAP-8. Endpoint de demo-readiness para que el frontend Angular verifique disponibilidad del backend antes de cargar la UI de navegacion.
+Cierre de ITEM-8. Endpoint de demo-readiness para que el frontend Angular verifique disponibilidad del backend antes de cargar la UI de navegacion.
 
 ### Endpoint
 
@@ -443,7 +450,7 @@ HTTP 200 — siempre que el modulo este iniciado
 2. Si demoReady=true: habilitar navegacion completa (dataset → detalle → documentos).
 3. Si demoReady=false: mostrar pantalla de error/espera.
 4. Si warnings no vacio: mostrar banner informativo (no bloquea la demo).
-5. Si eset.enabled=false: no mostrar boton de reset en la UI (es el caso default).
+5. Si reset.enabled=false: no mostrar boton de reset en la UI (es el caso default).
 
 ### Flujo navegacion completa demo
 
@@ -475,8 +482,8 @@ Sin llamadas HTTP contra si mismo. Sin efectos destructivos.
 ### Guardrails confirmados (8F-8)
 
 - storageReal=false siempre.
-- esetEnabled=false por defecto.
-- No expone s3:// ni ile://.
+- resetEnabled=false por defecto.
+- No expone s3:// ni file://.
 - No ejecuta reset.
 - No genera documentos.
 - No usa JDBC/MariaDB/JPA.
@@ -487,4 +494,4 @@ DemoHealthContractTest — 16 tests, 0 failures.
 
 Build final: **1502 tests, BUILD SUCCESS**.
 
-### GAP-8 CERRADO
+### ITEM-8 CERRADO

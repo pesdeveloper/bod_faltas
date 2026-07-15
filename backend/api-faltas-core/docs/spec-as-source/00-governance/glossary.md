@@ -1,5 +1,10 @@
 # Glosario canonico del dominio de Faltas
 
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Ante contradiccion con otro documento normativo respecto de la dimension, naturaleza
+> o distincion de un termino, este glosario prevalece (ver README, seccion de precedencia).
+
 ## Introduccion
 
 Este glosario define los terminos canonicos del dominio de Faltas.
@@ -219,6 +224,15 @@ expediente. Valores: `SIN_RESULTADO_FINAL` (0), `PAGO_VOLUNTARIO_PAGADO` (1),
 `ABSUELTO` (2), `CONDENA_FIRME` (3), `CONDENA_FIRME_PAGADA` (4),
 `FALLO_CONDENATORIO_PAGADO` (5), `FALLO_CONDENATORIO_GESTION_EXTERNA` (6),
 `PRESCRIPTO` (7), `ANULADO` (8), `NULIDAD` (9).
+
+`CONDENA_FIRME_PAGADA` es el resultado canonico del pago de condena
+confirmado (via `PCOCNF` o `PAGAPR`).
+
+`FALLO_CONDENATORIO_PAGADO` (codigo 5) es LEGACY_RESERVED: permanece
+compilado en el enum para lectura de datos historicos/compatibilidad, pero
+ningun comando vigente lo asigna y esta prohibido para nuevas escrituras
+funcionales. No representa un hito activo equivalente a
+`CONDENA_FIRME_PAGADA`.
 
 No confundir con: situacion administrativa (que es el estado operativo
 transversal, no el desenlace sustantivo).

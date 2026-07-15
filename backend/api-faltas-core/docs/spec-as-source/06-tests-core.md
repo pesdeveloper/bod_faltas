@@ -1,6 +1,12 @@
- 06 - Tests del Core
+# 06 - Tests del Core
 
-## Estado actual: 329 tests passing
+> **Estado documental:** HISTORICAL
+> **Autoridad DDL:** NO
+> Este archivo conserva el diario historico de suites de tests y conteos acumulados por
+> slice; no define comportamiento vigente ni autoridad normativa. La evidencia de tests
+> actual y unica vive en `101-auditoria-pre-jdbc-mariadb.md` (seccion de evidencia de tests).
+
+## Estado historico de referencia: 329 tests passing (punto de partida del diario)
 
 ---
 

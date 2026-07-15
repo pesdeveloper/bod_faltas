@@ -1,4 +1,8 @@
- 02 - Estados, Bloques y Eventos
+# 02 - Estados, Bloques y Eventos
+
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Ante contradiccion con un documento tematico de `00-governance/` o `10-domain/`, ese documento tematico prevalece en lo que respecta a definiciones, dimensiones y lifecycle (ver README, seccion 4.0).
 
 ## Bloques productivos (BloqueActual)
 
@@ -45,20 +49,22 @@ La documentalidad se modela exclusivamente mediante `FalDocumento`, `FalDocument
 | Valor | Descripcion |
 |-------|-------------|
 | SIN_RESULTADO_FINAL               | Valor inicial, toda acta comienza aqui |
-| PAGO_VOLUNTARIO_CONFIRMADO        | Cerrada por pago voluntario confirmado (Slice 2) |
-| ABSUELTO                          | Cerrada por fallo absolutorio notificado (Slice 3A) |
-| CONDENA_FIRME                     | Condena firme declarada por vencimiento de plazo o apelacion rechazada (Slice 4) |
-| FALLO_CONDENATORIO_PAGADO         | Fallo condenatorio pagado (Slice 5) |
-| FALLO_CONDENATORIO_GESTION_EXTERNA| Fallo condenatorio en gestion externa (Slice 6) |
+| PAGO_VOLUNTARIO_PAGADO            | Cerrada por pago voluntario confirmado |
+| ABSUELTO                          | Cerrada por fallo absolutorio notificado |
+| CONDENA_FIRME                     | Condena firme declarada por vencimiento de plazo o apelacion rechazada |
+| CONDENA_FIRME_PAGADA              | Condena firme pagada (via PCOCNF o PAGAPR) |
+| FALLO_CONDENATORIO_PAGADO         | LEGACY_RESERVED (codigo 5): valor compilado sin productor canonico vigente; ningun comando actual lo asigna; prohibido para nuevas escrituras funcionales; el resultado canonico del pago de condena confirmado es CONDENA_FIRME_PAGADA |
+| FALLO_CONDENATORIO_GESTION_EXTERNA| Fallo condenatorio derivado a gestion externa (reservado; no asignado por el circuito PAGAPR vigente) |
 | PRESCRIPTO                        | Cerrada por prescripcion |
 | ANULADO                           | Anulada |
+| NULIDAD                           | Nulidad declarada |
 
-Prohibido: PAGO_VOLUNTARIO (ambiguo), PAGO_INFORMADO (no es resultado final).
+Prohibido: PAGO_VOLUNTARIO (ambiguo), PAGO_INFORMADO (no es resultado final), PAGO_VOLUNTARIO_CONFIRMADO (nombre incorrecto; el valor correcto es PAGO_VOLUNTARIO_PAGADO).
 Prohibido: FALLO_ABSOLUTORIO como valor de ResultadoFinalActa. El valor correcto es ABSUELTO.
 
 ---
 
-## EstadoPagoVoluntario (Slice 2)
+## EstadoPagoVoluntario
 
 | Valor | Descripcion |
 |-------|-------------|
@@ -74,7 +80,7 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 
 ---
 
-## TipoFalloActa (Slice 3A)
+## TipoFalloActa
 
 | Valor | Descripcion |
 |-------|-------------|
@@ -83,31 +89,107 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 
 ---
 
-## EstadoFalloActa (Slice 3A)
+## ResultadoFalloActa
 
-| Valor | Descripcion |
-|-------|-------------|
-| DICTADO              | Fallo dictado, pendiente de firma del documento |
-| PENDIENTE_FIRMA      | Alias operativo de DICTADO |
-| FIRMADO              | Documento de fallo firmado, pendiente de notificacion |
-| PENDIENTE_NOTIFICACION | Alias operativo de FIRMADO |
-| NOTIFICADO           | Notificacion del fallo registrada con acuse positivo |
-| SIN_EFECTO           | Fallo anulado o sin efecto (reservado) |
+El enum `ResultadoFalloActa` contiene exactamente estos 4 valores:
+
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| ABSUELVE | 1 | El fallo absuelve al infractor |
+| CONDENA | 2 | El fallo condena al infractor |
+| DECLARA_NULIDAD | 3 | El fallo declara la nulidad del acta o de una pieza |
+| OTRO | 9 | Otro resultado no clasificado en los anteriores |
+
+`ResultadoFalloActa` es el resultado concreto de un fallo dictado o de una
+resolucion de apelacion; no debe confundirse con `TipoFalloActa` (clasificacion
+previa al dictado) ni con `ResultadoFinalActa` (desenlace sustantivo del acta).
 
 ---
 
-## EstadoApelacionActa (Slice 3B)
+## EstadoFalloActa
+
+El enum `EstadoFalloActa` contiene exactamente estos 6 valores (fuente normativa completa: [`10-domain/lifecycle-states.md`](10-domain/lifecycle-states.md), seccion "Lifecycle del fallo"):
 
 | Valor | Descripcion |
 |-------|-------------|
-| PRESENTADA       | Apelacion presentada por el infractor (Slice 3B) |
-| RECHAZADA        | Apelacion rechazada - condena queda firme (Slice 3C) |
-| ACEPTADA_ABSUELVE| Apelacion aceptada - absolucion en segunda instancia (Slice 3C) |
-| SIN_EFECTO       | Apelacion anulada o sin efecto |
+| PENDIENTE_FIRMA        | Fallo dictado; documento generado; pendiente de firma obligatoria |
+| PENDIENTE_NOTIFICACION | Ultima firma obligatoria confirmada; `fhFirma` registrado |
+| NOTIFICADO             | Notificacion del fallo registrada con acuse positivo; `fhNotificacion` registrado |
+| FIRME                  | Firmeza de condena declarada; `fhFirmeza` registrado |
+| REEMPLAZADO            | Fallo sustituido por otro (estado lateral terminal) |
+| SIN_EFECTO             | Fallo anulado o dejado sin efecto (estado lateral terminal) |
+
+Prohibido: `DICTADO` y `FIRMADO` no son valores del enum. Son hechos historicos persistidos en `fhDictado` y `fhFirma` respectivamente. No deben reintroducirse como valores de enum ni como aliases de compatibilidad.
+
+---
+
+## EstadoApelacionActa
+
+El enum `EstadoApelacionActa` contiene exactamente estos 6 valores:
+
+| Valor | Descripcion |
+|-------|-------------|
+| PRESENTADA        | Apelacion presentada por el infractor |
+| EN_ANALISIS       | Apelacion en analisis (via `PasarApelacionAAnalisisCommand`) |
+| RECHAZADA         | Apelacion rechazada/resuelta con resultado RECHAZADA; no declara firmeza por si misma; habilita la ejecucion posterior de CMD-FALLO-006 |
+| ACEPTADA_ABSUELVE | Apelacion aceptada - absolucion en segunda instancia |
+| RESUELTA          | Apelacion resuelta con modificacion de condena o nulidad, sin absolver |
+| SIN_EFECTO        | Apelacion anulada o sin efecto |
+
+---
+
+## ResultadoResolucionApelacion
+
+El enum `ResultadoResolucionApelacion` contiene exactamente estos 4 valores:
+
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| RECHAZADA | 1 | La apelacion se rechaza; no declara firmeza por si misma; deja pendiente CMD-FALLO-006 (Declarar condena firme por apelacion rechazada) |
+| ACEPTADA_ABSUELVE | 2 | La apelacion se acepta y absuelve al infractor |
+| MODIFICA_CONDENA | 3 | La apelacion se acepta y modifica la condena sin absolver |
+| NULIDAD | 4 | La apelacion resulta en nulidad declarada |
+
+Este es el resultado concreto que se informa al resolver una `FalApelacionActa`
+mediante el comando de resolucion de apelacion; determina el evento emitido
+(`APERAZ`, `APEABS`, `APEMCO` o `APENUL`) y el `EstadoApelacionActa` final.
+
+---
+
+## Actores y origenes de evento (ActorTipoEvento, OrigenEvento)
+
+Todo `FalActaEvento` persiste dos dimensiones adicionales al actor autenticado
+(`sub` del JWT): el tipo de actor y el origen tecnico del evento. Ninguna de las
+dos sustituye al actor autenticado; son metadatos de trazabilidad.
+
+### ActorTipoEvento
+
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| USUARIO_INTERNO | 1 | Agente/operador interno del organismo |
+| INSPECTOR | 2 | Inspector de faltas |
+| INFRACTOR | 3 | El infractor actuando directamente (p. ej. portal) |
+| SISTEMA | 4 | Proceso automatico interno sin actor humano |
+| INTEGRACION | 5 | Sistema externo integrado |
+| NOTIFICADOR | 6 | Servicio o agente de notificacion |
+
+### OrigenEvento
+
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| USUARIO_WEB | 1 | Interfaz web interna |
+| DISPOSITIVO_MOBILE | 2 | Dispositivo movil de inspeccion |
+| PROCESO_AUTOMATICO | 3 | Proceso automatico del sistema |
+| INTEGRACION | 4 | Integracion con sistema externo |
+| PORTAL_INFRACTOR | 5 | Portal publico del infractor |
+| SERVICIO_NOTIFICACION | 6 | Servicio de notificacion |
+| LOTE_CORREO | 7 | Procesamiento de lote de correo |
+| SISTEMA_QR | 8 | Acceso o generacion via codigo QR |
 
 ---
 
 ## Eventos (TipoEventoActa)
+
+`TipoEventoActa` contiene un catalogo mas amplio de eventos productivos (incluye documentacion, numeracion, acuses, QR y economia). Esta seccion documenta los eventos exigidos por el circuito de fallo, notificacion, apelacion, firmeza, pago de condena y gestion externa. El catalogo completo, codigo por codigo, esta en la seccion "Catalogo completo de TipoEventoActa" mas abajo. El catalogo fuente definitivo es evidencia de conformidad en `TipoEventoActa.java`.
 
 ### Ciclo inicial
 | Codigo | Descripcion |
@@ -127,10 +209,11 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 |--------|-------------|
 | NOTENV | Notificacion enviada |
 | NOTPOS | Notificacion con acuse positivo |
+| PORPOS | Notificacion positiva por portal infractor |
 | NOTNEG | Notificacion con acuse negativo |
 | NOTVNC | Notificacion vencida sin acuse |
 
-### Pago voluntario (Slice 2)
+### Pago voluntario
 | Codigo | Descripcion |
 |--------|-------------|
 | PAGVSO | Pago voluntario solicitado |
@@ -141,26 +224,29 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 | PAGOBS | Pago voluntario observado/rechazado |
 | PAGVVN | Pago voluntario vencido sin confirmacion |
 
-### Fallo (Slice 3A)
+### Fallo
 | Codigo | Descripcion |
 |--------|-------------|
 | FALABS | Fallo absolutorio dictado |
 | FALCON | Fallo condenatorio dictado |
 
-### Apelacion (Slice 3B + 3C)
+### Apelacion
 | Codigo | Descripcion |
 |--------|-------------|
 | APEPRE | Apelacion presentada |
-| APERAZ | Apelacion rechazada - condena queda firme (Slice 3C) |
-| APEABS | Apelacion aceptada - absolucion en segunda instancia (Slice 3C) |
+| APERAZ | Apelacion rechazada/resuelta con resultado RECHAZADA; no declara firmeza; habilita CMD-FALLO-006 |
+| APEABS | Apelacion aceptada - absolucion en segunda instancia |
 
-### Firmeza de condena (Slice 4)
+### Firmeza de condena
 | Codigo | Descripcion |
 |--------|-------------|
 | PLAVNC | Plazo de apelacion vencido sin apelacion presentada |
 | CONFIR | Condena firme declarada |
 
-### Pago de condena (Slice 5 ? implementado)
+### Pago de condena
+
+Ver catalogo completo, estado y transiciones en la seccion "Pago de condena" mas abajo.
+
 | Codigo | Descripcion |
 |--------|-------------|
 | PCOINF | Pago de condena informado por el infractor |
@@ -175,9 +261,91 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 | ACTREA | Acta reactivada |
 | ACTARC | Acta archivada |
 | ACTREI | Acta reingresada desde archivo |
-| EXTDER | Derivar a gestion externa - apremio/juzgado de paz (Slice 6) |
-| EXTRET | Reingresar desde gestion externa (Slice 6) |
-| PAGAPR | Pago externo por apremio registrado (Slice 6) |
+| EXTDER | Derivar a gestion externa - apremio/juzgado de paz |
+| EXTRET | Reingresar desde gestion externa |
+| PAGAPR | Pago externo por apremio registrado |
+
+---
+
+## Catalogo completo de TipoEventoActa (verificacion de completitud)
+
+`TipoEventoActa.java` es la fuente de codigo para el catalogo completo. Esta
+tabla enumera los 65 valores vigentes uno por uno para trazabilidad completa
+codigo <-> spec. Los eventos del circuito de fallo, notificacion, apelacion,
+firmeza, pago de condena y gestion externa tienen matriz de comando completa
+en `20-application/fallo-command-contracts.md` (columna "Matriz completa").
+Los eventos de documentos, numeracion, acuses/lotes de notificacion y QR
+pertenecen a subsistemas ya cerrados en slices anteriores a este circuito y no
+se reabren en esta auditoria; su evidencia de conformidad es el codigo Java y
+los tests de esos subsistemas.
+
+| Codigo | Descripcion | Area | Matriz completa |
+|--------|-------------|------|-------------------|
+| ACTLAB | Acta labrada/creada | Ciclo inicial | `02` (esta seccion) |
+| ACTCAP | Captura completada (CAPT->ENRI) | Ciclo inicial | `02` (esta seccion) |
+| ACTENR | Acta enriquecida | Ciclo inicial | `02` (esta seccion) |
+| DOCGEN | Documento generado | Documentos | Codigo/tests del subsistema documental |
+| DOCFIR | Documento firmado | Documentos / Fallo | `20-application/fallo-command-contracts.md` (CMD-FALLO-001) |
+| DOCEMI | Documento emitido formalmente | Documentos | Codigo/tests del subsistema documental |
+| NOTENV | Notificacion enviada | Notificacion | Codigo/tests del subsistema documental |
+| NOTPOS | Notificacion con acuse positivo | Notificacion / Fallo | `20-application/fallo-command-contracts.md` (CMD-FALLO-004) |
+| NOTNEG | Notificacion con acuse negativo | Notificacion | Codigo/tests del subsistema documental |
+| NOTVNC | Notificacion vencida sin acuse | Notificacion | Codigo/tests del subsistema documental |
+| ACTPAR | Acta paralizada | Ciclo inicial | `02` (esta seccion) |
+| ACTREA | Acta reactivada | Ciclo inicial | `02` (esta seccion) |
+| ACTARC | Acta archivada | Ciclo inicial | `02` (esta seccion) |
+| ACTREI | Acta reingresada desde archivo | Ciclo inicial | `02` (esta seccion) |
+| FALABS | Fallo absolutorio dictado | Fallo | `02` (esta seccion) |
+| FALCON | Fallo condenatorio dictado | Fallo | `02` (esta seccion) |
+| PAGVSO | Pago voluntario solicitado | Pago voluntario | `02` (esta seccion) |
+| PAGVMF | Pago voluntario monto fijado | Pago voluntario | `02` (esta seccion) |
+| PAGINF | Pago voluntario informado por el infractor | Pago voluntario | `02` (esta seccion) |
+| PAGCMP | Comprobante de pago adjuntado | Pago voluntario | `02` (esta seccion) |
+| PAGCNF | Pago voluntario confirmado | Pago voluntario | `02` (esta seccion) |
+| PAGOBS | Pago voluntario observado/rechazado | Pago voluntario | `02` (esta seccion) |
+| PAGVVN | Pago voluntario vencido sin confirmacion | Pago voluntario | `02` (esta seccion) |
+| APEPRE | Apelacion presentada | Apelacion | `02` (esta seccion) |
+| APERAZ | Apelacion rechazada/resuelta con resultado RECHAZADA; no declara firmeza | Apelacion | `02` (esta seccion); habilita `20-application/fallo-command-contracts.md` (CMD-FALLO-006) |
+| APEABS | Apelacion aceptada - absolucion en segunda instancia | Apelacion | `02` (esta seccion) |
+| PLAVNC | Plazo de apelacion vencido sin apelacion presentada | Firmeza | `20-application/fallo-command-contracts.md` (CMD-FALLO-005) |
+| CONFIR | Condena firme declarada | Firmeza | `20-application/fallo-command-contracts.md` (CMD-FALLO-005/006) |
+| PCOINF | Pago de condena informado por el infractor | Pago de condena | `20-application/fallo-command-contracts.md` (CMD-FALLO-007) |
+| PCOCNF | Pago de condena confirmado | Pago de condena | `02` (esta seccion) |
+| PCOOBS | Pago de condena observado/rechazado | Pago de condena | `02` (esta seccion) |
+| EXTDER | Derivar a gestion externa | Gestion externa | `02` (esta seccion) |
+| EXTRET | Reingresar desde gestion externa | Gestion externa | `02` (esta seccion) |
+| PAGAPR | Pago externo por apremio registrado | Gestion externa | `02` (esta seccion) |
+| APEANL | Apelacion pasada a EN_ANALISIS | Apelacion | Codigo/tests del subsistema de apelacion |
+| APEMCO | Apelacion aceptada - condena modificada | Apelacion | Codigo/tests del subsistema de apelacion |
+| APENUL | Apelacion resuelta - nulidad declarada | Apelacion | Codigo/tests del subsistema de apelacion |
+| FALRMP | Fallo reemplazado por decision en apelacion | Fallo / Apelacion | Codigo/tests del subsistema de apelacion |
+| DOCADJ | Documento adjuntado/incorporado al expediente | Documentos | Codigo/tests del subsistema documental |
+| CIERRA | Acta cerrada definitivamente | Cierre | `20-application/fallo-command-contracts.md` (CMD-FALLO-005/006/007) |
+| OBLDET | Obligacion de pago determinada | Economia | `02` (seccion "Eventos economicos canonicos") |
+| OBLSFE | Obligacion de pago dejada sin efecto | Economia | `02` (seccion "Eventos economicos canonicos") |
+| OBLREP | Obligacion de pago reemplazada | Economia | `02` (seccion "Eventos economicos canonicos") |
+| RCBGEN | Recibo al cobro generado | Economia | `02` (seccion "Eventos economicos canonicos") |
+| PLNGEN | Plan de pago generado | Economia | `02` (seccion "Eventos economicos canonicos") |
+| PLNREF | Plan de pago refinanciado | Economia | `02` (seccion "Eventos economicos canonicos") |
+| PLNANU | Plan de pago anulado | Economia | `02` (seccion "Eventos economicos canonicos") |
+| PAGREV | Pago revertido/contracargado | Economia | `02` (seccion "Eventos economicos canonicos") |
+| EMIANU | Emision Ingresos anulada | Economia | `02` (seccion "Eventos economicos canonicos") |
+| PAGANT | Pago aplicado a obligacion anterior | Economia | `02` (seccion "Eventos economicos canonicos") |
+| PAGRES | Pago anterior resuelto administrativamente | Economia | `02` (seccion "Eventos economicos canonicos") |
+| NOTINT | Intento de notificacion registrado | Notificacion | Codigo/tests del subsistema documental |
+| NOTREI | Reintento de notificacion registrado | Notificacion | Codigo/tests del subsistema documental |
+| NOTRVE | Reintento de notificacion post vencimiento | Notificacion | Codigo/tests del subsistema documental |
+| ACUGEN | Acuse de notificacion registrado | Notificacion | Codigo/tests del subsistema documental |
+| ACUVAL | Acuse de notificacion validado | Notificacion | Codigo/tests del subsistema documental |
+| LOTGEN | Lote de correo generado | Notificacion / Fallo | `20-application/fallo-command-contracts.md` (CMD-FALLO-003) |
+| LOTEMI | Lote de correo emitido | Notificacion | Codigo/tests del subsistema documental |
+| LOTPRC | Lote de correo procesado | Notificacion | Codigo/tests del subsistema documental |
+| LOTANU | Lote de correo anulado | Notificacion | Codigo/tests del subsistema documental |
+| PORPOS | Notificacion positiva por portal infractor | Notificacion / Fallo | `20-application/fallo-command-contracts.md` (CMD-FALLO-004, variante portal) |
+| NOTSUP | Intento de notificacion superado por portal | Notificacion / Fallo | `20-application/fallo-command-contracts.md` (CMD-FALLO-004, variante portal) |
+| DOCAMP | Documento adjuntado a apelacion | Documentos / Apelacion | Codigo/tests del subsistema documental |
+| QRGENA | Codigo QR de acceso generado para el acta | QR/Portal | Codigo/tests del subsistema QR |
+| QRACCA | Acceso valido al acta registrado via codigo QR | QR/Portal | Codigo/tests del subsistema QR |
 
 ---
 
@@ -201,13 +369,16 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 - `FIRMEZA` NO existe como evento generico. Usar `CONFIR`.
 - `FALLO` NO existe como evento generico. Usar `FALABS` o `FALCON`.
 - `APELACION` NO existe como evento generico. Usar `APEPRE`, `APERAZ` o `APEABS`.
+- `DRVEXT` NO existe como evento productivo. Los eventos correctos de gestion externa son `EXTDER`, `EXTRET`, `PAGAPR`.
 
 ### Estados prohibidos
 
 - `PAGO_INFORMADO` NO existe como estado productivo de pago voluntario.
-- `PAGO_VOLUNTARIO` NO existe en ResultadoFinalActa. Usar `PAGO_VOLUNTARIO_CONFIRMADO`.
+- `PAGO_VOLUNTARIO` NO existe en ResultadoFinalActa. Usar `PAGO_VOLUNTARIO_PAGADO`.
 - `PAGCMP` NO se emite sin adjunto/evidencia real del comprobante.
 - `FALLO_ABSOLUTORIO` NO existe en ResultadoFinalActa. Usar `ABSUELTO`.
+- `DICTADO` y `FIRMADO` NO existen en `EstadoFalloActa`. Son hechos persistidos en `fhDictado` y `fhFirma`.
+- `REINGRESAR_A_ANALISIS` y `REINGRESAR_A_PAGO_CONDENA` NO existen. Los valores vigentes de `ModoReingresoGestionExterna` son `REINGRESO_PARA_REVISION` y `REINGRESO_SIN_PAGO` respectivamente.
 
 ### Reglas de transicion
 
@@ -219,21 +390,19 @@ Prohibido: PAGO_INFORMADO como estado productivo.
 - Rechazar apelacion (APERAZ) NO cierra el acta.
 - Rechazar apelacion (APERAZ) NO genera CONFIR.
 - Rechazar apelacion (APERAZ) NO habilita pago condena todavia.
+- Rechazar apelacion (APERAZ) deja pendiente la ejecucion de CMD-FALLO-006 (Declarar condena firme por apelacion rechazada); la firmeza no es automatica.
 - Aceptar apelacion que absuelve (APEABS) asigna resultadoFinal=ABSUELTO.
 - Aceptar apelacion que absuelve cierra el acta solo si no hay bloqueantes activos.
-- PLAVNC y CONFIR son eventos productivos de firmeza de condena. No mezclar con APELAC.
+- PLAVNC y CONFIR son eventos productivos de firmeza de condena. No mezclar con APELAC (evento inexistente).
 - Vencimiento de plazo (PLAVNC+CONFIR) solo aplica si no existe apelacion alguna.
 - Firmeza por apelacion rechazada registra solo CONFIR (sin PLAVNC).
 - CONDENA_FIRME no cierra el acta automaticamente.
 - CONDENA_FIRME no inicia pago condena automaticamente.
-- Pago de condena: implementado en Slice 5 (PCOINF, PCOCNF, PCOOBS activos).
-- PLAVNC y CONFIR son eventos productivos reales desde Slice 4.
-- CONDENA_FIRME es un valor productivo real desde Slice 4.
-- PCOINF, PCOCNF, PCOOBS: implementados en Slice 5. Activos.
+- Pago de condena: PCOINF, PCOCNF, PCOOBS son eventos productivos vigentes.
 
 ---
 
-## Slice 5: Pago de condena (implementado)
+## Pago de condena
 
 ### Eventos de pago de condena
 
@@ -250,79 +419,86 @@ Los eventos correctos de pago condena son: `PCOINF`, `PCOCNF`, `PCOOBS`.
 
 ### Estado: EstadoPagoCondena
 
-| Valor      | Descripcion                                      |
-|------------|--------------------------------------------------|
-| NO_APLICA  | Valor inicial antes de condena firme             |
-| PENDIENTE  | Condena firme declarada, pago aun no informado   |
-| INFORMADO  | Infractor informo pago (via PCOINF)              |
-| CONFIRMADO | Pago confirmado (via PCOCNF) -> cierre del acta  |
-| OBSERVADO  | Pago observado/rechazado (via PCOOBS)            |
+| Valor      | Descripcion                                                        |
+|------------|---------------------------------------------------------------------|
+| NO_APLICA  | Valor inicial antes de condena firme                                |
+| PENDIENTE  | Condena firme declarada, pago aun no informado                      |
+| INFORMADO  | Infractor informo pago (via PCOINF)                                 |
+| CONFIRMADO | Pago confirmado via PCOCNF. No implica cierre del acta por si solo. |
+| OBSERVADO  | Pago observado/rechazado (via PCOOBS)                               |
 
 ### ResultadoFinalActa: CONDENA_FIRME_PAGADA
 
-Cuando el pago de condena es confirmado, el resultado final del acta pasa a:
-`CONDENA_FIRME_PAGADA` (via `PCOCNF` + `CIERRA`).
+`PCOCNF` (ConfirmarPagoCondena) asigna `resultadoFinal = CONDENA_FIRME_PAGADA` siempre
+que la confirmacion supera sus precondiciones, exista o no un bloqueante material activo.
+`CIERRA` es un efecto adicional e independiente: solo se registra cuando no hay
+bloqueantes materiales activos en el momento de la confirmacion.
 
 ### Transiciones de pago de condena
 
-- `CONDENA_FIRME` sin pago -> infractor informa pago (PCOINF) -> estado `INFORMADO`
-- `INFORMADO` -> organismo confirma (PCOCNF + CIERRA) -> `CONFIRMADO` + acta CERRADA
-- `INFORMADO` -> organismo observa (PCOOBS) -> `OBSERVADO`
-- `OBSERVADO` -> infractor puede reinformar (PCOINF) -> `INFORMADO`
+- `CONDENA_FIRME` sin pago -> infractor informa pago (PCOINF) -> estado `INFORMADO`.
+- `INFORMADO` -> organismo confirma -> `CONFIRMADO` + `resultadoFinal = CONDENA_FIRME_PAGADA` (`PCOCNF` se
+  registra siempre que la confirmacion es valida). A partir de aqui se bifurca segun bloqueantes:
+  - **Sin bloqueantes materiales activos:** se registra tambien `CIERRA`; acta `CERRADA` / `CERR`.
+  - **Con bloqueantes materiales activos:** no se registra `CIERRA`; acta permanece `ACTIVA` / `ANAL`
+    con `PCOCNF` ya registrado y el pago en `CONFIRMADO`. El cierre queda diferido hasta que se
+    resuelvan los bloqueantes (ver "Cierre diferido en CumplirBloqueante y AnularBloqueante" en
+    `03-comandos-precondiciones-efectos.md`).
+- `INFORMADO` -> organismo observa (PCOOBS) -> `OBSERVADO`.
+- `OBSERVADO` -> infractor puede reinformar (PCOINF) -> `INFORMADO`.
 
 ### Reglas criticas de pago de condena
 
-- PAGCON NO existe.
-- Confirmar pago solo si no hay bloqueantes materiales activos.
-- Si hay bloqueantes: no registrar PCOCNF, no registrar CIERRA, no cerrar acta.
-- Cuando confirma sin bloqueantes: PCOCNF se registra antes que CIERRA.
+- `PAGCON` NO existe como evento productivo.
+- `PCOCNF` se registra siempre que ConfirmarPagoCondena supera sus precondiciones (acta operativa,
+  `CONDENA_FIRME`, pago existente en `INFORMADO`), exista o no un bloqueante material activo.
+- Los bloqueantes materiales activos NO rechazan la confirmacion de pago: `ConfirmarPagoCondena`
+  siempre completa su efecto principal (`CONFIRMADO` + `PCOCNF` + `CONDENA_FIRME_PAGADA`).
+- Los bloqueantes materiales activos unicamente impiden que se registre `CIERRA` en esa misma
+  ejecucion. No es una precondicion de la confirmacion: es una condicion del efecto de cierre.
 - Informar pago NO cierra el acta.
 - Observar pago NO cierra el acta.
-- Integracion real con Ingresos/Tesoreria queda para slice posterior.
-- Comprobantes reales quedan para slice posterior.
-- Gestion externa no implementada en Slice 5.
-
+- La integracion real con Ingresos/Tesoreria es una dependencia externa no bloqueante para DDL (ver `99-pendientes-siguientes-slices.md`).
+- Los comprobantes reales de pago quedan como dependencia externa no bloqueante para DDL (ver `99-pendientes-siguientes-slices.md`).
 
 ---
 
-## Slice 6B: Reingreso desde gestion externa (implementado)
+## Reingreso desde gestion externa
 
 ### Evento: EXTRET
 
 | Codigo | Nombre | Descripcion |
 |--------|--------|-------------|
-| EXTRET | REINGRESAR_DESDE_GESTION_EXTERNA | Reingresar desde gestion externa (Slice 6B) |
+| EXTRET | REINGRESAR_DESDE_GESTION_EXTERNA | Reingresar desde gestion externa |
 
-**Estado:** implementado en Slice 6B.
-
-### ModoReingresoGestionExterna — catálogo productivo (alineado Slice 6D-0)
+### ModoReingresoGestionExterna - catalogo productivo
 
 Catalogo productivo modo_reingreso_gestion_ext. El campo es nullable: NULL antes del reingreso.
 
 | Valor | Estado | Descripcion |
 |-------|--------|-------------|
-| REINGRESO_PARA_REVISION | Habilitado (Slice 6B / 6D-1) | Retorna a ANAL / ACTIVA para revision interna. Par valido: SIN_CAMBIOS. Reemplaza REINGRESAR_A_ANALISIS. |
-| REINGRESO_SIN_PAGO | Habilitado (Slice 6B / 6D-1) | Retorna a ANAL / ACTIVA para circuito interno de cobro. Par valido: SIN_PAGO. Requiere CONDENA_FIRME. Reemplaza REINGRESAR_A_PAGO_CONDENA. |
-| REINGRESO_PARA_CIERRE | Reservado | Pendiente para slice posterior. |
-| REINGRESO_PARA_NUEVO_FALLO | Habilitado desde Slice 6D-2 | Par valido: ABSUELVE. Requiere CONDENA_FIRME. Vuelve a ANAL sin generar fallo automatico. |
-| REINGRESO_CON_PAGO | Reservado / No aplicable a PAGAPR | PAGAPR cierra con CERRADA_EXTERNA sin modo de reingreso. Reservado para slice futuro. |
-| REINGRESO_CON_DICTAMEN | Habilitado desde Slice 6D-2 | Pares validos: CONFIRMA_CONDENA o MODIFICA_MONTO. Requiere CONDENA_FIRME. Vuelve a ANAL. |
+| REINGRESO_PARA_REVISION | Habilitado | Retorna a ANAL / ACTIVA para revision interna. Par valido: SIN_CAMBIOS. Reemplaza el nombre historico REINGRESAR_A_ANALISIS. |
+| REINGRESO_SIN_PAGO | Habilitado | Retorna a ANAL / ACTIVA para circuito interno de cobro. Par valido: SIN_PAGO. Requiere CONDENA_FIRME. Reemplaza el nombre historico REINGRESAR_A_PAGO_CONDENA. |
+| REINGRESO_PARA_CIERRE | Reservado | Requiere decision de cierre definitivo; no habilitado. |
+| REINGRESO_PARA_NUEVO_FALLO | Habilitado | Par valido: ABSUELVE. Requiere CONDENA_FIRME. Vuelve a ANAL sin generar fallo automatico. |
+| REINGRESO_CON_PAGO | Reservado / No aplicable a PAGAPR | PAGAPR cierra con CERRADA_EXTERNA sin modo de reingreso. Reservado; no habilitado. |
+| REINGRESO_CON_DICTAMEN | Habilitado | Pares validos: CONFIRMA_CONDENA o MODIFICA_MONTO. Requiere CONDENA_FIRME. Vuelve a ANAL. |
 
-El campo modoReingresoGestionExterna es null mientras la gestion no se reingresia (estado DERIVADA o EN_CURSO).
+El campo modoReingresoGestionExterna es null mientras la gestion no se reingresa (estado DERIVADA o EN_CURSO).
 SIN_CAMBIOS empareja naturalmente con REINGRESO_PARA_REVISION.
 
-### EstadoGestionExterna — estados de reingreso
+### EstadoGestionExterna - estados de reingreso
 
 | Valor | Descripcion |
 |-------|-------------|
-| REINGRESADA | Gestion externa cerrada por reingreso al circuito (Slice 6B) |
+| REINGRESADA | Gestion externa cerrada por reingreso al circuito |
 
-### Evento: PAGAPR (Slice 6C)
+### Evento: PAGAPR
 
-`PAGAPR` existe en `TipoEventoActa` y **se emite desde Slice 6C**:
+`PAGAPR` existe en `TipoEventoActa` y se emite al registrar pago externo desde gestion externa:
 `Pago externo registrado en gestion externa (apremio / juzgado de paz / otra).`
 
-### Reglas de transición — reingreso
+### Reglas de transicion - reingreso
 
 - Reingreso NO cierra el acta.
 - Reingreso NO registra CIERRA.
@@ -336,7 +512,7 @@ SIN_CAMBIOS empareja naturalmente con REINGRESO_PARA_REVISION.
 
 ---
 
-## Slice 6C: Pago externo de gestion externa (implementado)
+## Pago externo de gestion externa
 
 ### Comando: RegistrarPagoExternoGestionCommand
 
@@ -347,35 +523,34 @@ El evento sigue siendo PAGAPR (codigo de 6 caracteres cerrado).
 
 | Codigo | Nombre | Descripcion |
 |--------|--------|-------------|
-| PAGAPR | PAGO_EXTERNO_GESTION | Pago externo registrado en gestion externa (Slice 6C) |
+| PAGAPR | PAGO_EXTERNO_GESTION | Pago externo registrado en gestion externa |
 
-**Estado anterior a Slice 6C:** declarado en TipoEventoActa pero no emitido.
-**Estado desde Slice 6C:** activo. Se emite al registrar pago externo desde gestion externa.
+Se emite al registrar pago externo desde gestion externa.
 
 Nota: PAGAPR y EXTRET son caminos mutuamente excluyentes por ciclo de gestion externa.
-- EXTRET = reingreso sin pago externo confirmado (Slice 6B).
-- PAGAPR = cierre de la gestion con pago externo registrado (Slice 6C).
+- EXTRET = reingreso sin pago externo confirmado.
+- PAGAPR = cierre de la gestion con pago externo registrado.
 Ambos dejan FalGestionExterna.siActiva = false. Solo uno puede ocurrir por ciclo.
 
-### EstadoGestionExterna: CERRADA_EXTERNA (activo desde Slice 6C)
+### EstadoGestionExterna: CERRADA_EXTERNA
 
 | Valor | Descripcion |
 |-------|-------------|
-| CERRADA_EXTERNA | Gestion externa cerrada por pago externo registrado (Slice 6C) |
+| CERRADA_EXTERNA | Gestion externa cerrada por pago externo registrado |
 
-### ResultadoGestionExterna - catalogo productivo (alineado Slice 6D-0)
+### ResultadoGestionExterna - catalogo productivo
 
 Catalogo productivo `resultado_gestion_ext`.
 
 | Valor | Estado | Descripcion |
 |-------|--------|-------------|
-| SIN_RESULTADO | Implementado (Slice 6A) | Estado inicial al derivar. |
-| PAGO_REGISTRADO | Implementado (Slice 6C) | Pago externo registrado. Reemplaza PAGO_EXTERNO_INFORMADO. |
-| SIN_CAMBIOS | Habilitado (Slice 6D-1) | Reingresa sin cambios sustantivos. Par obligatorio: REINGRESO_PARA_REVISION. |
-| SIN_PAGO | Habilitado (Slice 6D-1) | Reingresa sin pago. Par obligatorio: REINGRESO_SIN_PAGO. Requiere CONDENA_FIRME. |
-| ABSUELVE | Habilitado (Slice 6D-2) | El externo propone absolver. Par obligatorio: REINGRESO_PARA_NUEVO_FALLO. |
-| CONFIRMA_CONDENA | Habilitado (Slice 6D-2) | El externo confirma condena. Par obligatorio: REINGRESO_CON_DICTAMEN. |
-| MODIFICA_MONTO | Habilitado (Slice 6D-2) | El externo modifica monto. Par obligatorio: REINGRESO_CON_DICTAMEN. Requiere montoResultado > 0. |
+| SIN_RESULTADO | Implementado | Estado inicial al derivar. |
+| PAGO_REGISTRADO | Implementado | Pago externo registrado. Reemplaza el nombre historico PAGO_EXTERNO_INFORMADO. |
+| SIN_CAMBIOS | Habilitado | Reingresa sin cambios sustantivos. Par obligatorio: REINGRESO_PARA_REVISION. |
+| SIN_PAGO | Habilitado | Reingresa sin pago. Par obligatorio: REINGRESO_SIN_PAGO. Requiere CONDENA_FIRME. |
+| ABSUELVE | Habilitado | El externo propone absolver. Par obligatorio: REINGRESO_PARA_NUEVO_FALLO. |
+| CONFIRMA_CONDENA | Habilitado | El externo confirma condena. Par obligatorio: REINGRESO_CON_DICTAMEN. |
+| MODIFICA_MONTO | Habilitado | El externo modifica monto. Par obligatorio: REINGRESO_CON_DICTAMEN. Requiere montoResultado > 0. |
 
 No usar strings compuestos para mezclar tipo, resultado y modo de reingreso.
 Documentos externos recibidos: por fal_documento/adjuntos (pendiente).
@@ -383,21 +558,20 @@ Fundamentos y comentarios: por fal_observacion (pendiente hasta JDBC).
 
 ### ResultadoFinalActa: CONDENA_FIRME_PAGADA (via PAGAPR)
 
-PAGAPR asigna
-esultadoFinal = CONDENA_FIRME_PAGADA siempre (identico al pago interno PCOCNF).
+PAGAPR asigna resultadoFinal = CONDENA_FIRME_PAGADA siempre (identico al pago interno PCOCNF).
 La ruta es diferente (externa vs interna) pero el resultado juridico final es el mismo.
 
-FALLO_CONDENATORIO_GESTION_EXTERNA existe en el enum pero NO se usa en Slice 6C.
+FALLO_CONDENATORIO_GESTION_EXTERNA existe en el enum pero no se usa en el circuito de PAGAPR.
 Queda reservado. SIN_PAGO y SIN_CAMBIOS son rutas de reingreso (EXTRET), no rutas de cierre PAGAPR.
-Par SIN_PAGO/REINGRESO_SIN_PAGO y SIN_CAMBIOS/REINGRESO_PARA_REVISION implementados en Slice 6D-1.
+Los pares SIN_PAGO/REINGRESO_SIN_PAGO y SIN_CAMBIOS/REINGRESO_PARA_REVISION son pares productivos vigentes.
 
-### Reglas de transicion - Slice 6C
+### Reglas de transicion - pago externo de gestion externa
 
 - PAGAPR NO falla por bloqueantes materiales activos.
 - Los bloqueantes solo determinan si se emite o no CIERRA.
 - Sin bloqueantes: PAGAPR + CIERRA. Acta: resultadoFinal=CONDENA_FIRME_PAGADA, CERRADA/CERR.
 - Con bloqueantes: solo PAGAPR. Acta: resultadoFinal=CONDENA_FIRME_PAGADA, ACTIVA/ANAL.
-  Estado transitorio hasta Slice 7 (motor real de bloqueantes).
+  Este comportamiento se mantiene mientras existan bloqueantes materiales activos (ver "Motor real de bloqueantes materiales").
 - PAGAPR no toca FalPagoCondena (flujo interno de pago condena es independiente).
 - Si existe FalPagoCondena INFORMADO/OBSERVADO, queda como historico sin modificar.
 - Si existe FalPagoCondena CONFIRMADO: PAGAPR lanza PrecondicionVioladaException.
@@ -408,7 +582,7 @@ Par SIN_PAGO/REINGRESO_SIN_PAGO y SIN_CAMBIOS/REINGRESO_PARA_REVISION implementa
 
 ---
 
-## Slice 7A: Motor real de bloqueantes materiales (implementado)
+## Motor real de bloqueantes materiales
 
 ### OrigenBloqueanteMaterial
 
@@ -442,30 +616,30 @@ Contrato:
 - `existsActivoByActaId(String actaId)`: true si existe al menos uno con siActivo==true.
 
 Implementacion actual: `InMemoryBloqueanteMaterialRepository`.
-Slice 9: reemplazar por implementacion JDBC sin tocar servicios.
+Pendiente: reemplazar por implementacion JDBC sin tocar servicios (ver roadmap de DDL/JDBC en `99-pendientes-siguientes-slices.md`).
 
 ### RepositoryBloqueantesMaterialesChecker
 
-Implementacion real de `BloqueantesMaterialesChecker` (Slice 7A).
+Implementacion real de `BloqueantesMaterialesChecker`.
 Delega en `BloqueanteMaterialRepository.existsActivoByActaId(actaId)`.
 `@Component` - inyectado por Spring en todos los servicios.
 
 `NoOpBloqueantesMaterialesChecker` ya no es `@Component`. Usable solo en tests directamente.
 
-### Regla central Slice 7A
+### Regla central de bloqueantes materiales
 
 Un acta con resultado final cerrable NO se cierra si existen bloqueantes activos.
 
 Caminos afectados:
 - `PCOCNF` (ConfirmarPagoCondena): PCOCNF se registra siempre. CIERRA solo si sin bloqueantes.
   Con bloqueantes: acta queda CONDENA_FIRME_PAGADA / ACTIVA / ANAL.
-- `PAGAPR` (RegistrarPagoExternoGestion): mismo patron (ya implementado en Slice 6C).
+- `PAGAPR` (RegistrarPagoExternoGestion): mismo patron.
 - `PAGCNF` (ConfirmarPagoVoluntario): lanza PrecondicionVioladaException si hay bloqueantes (sin mutacion).
 - `NOTPOS` absolutorio y `APEABS` absolutorio: no cierran si hay bloqueantes (sin mutacion).
 
 ---
 
-## Slice 7B: Gestion minima in-memory de bloqueantes materiales (implementado)
+## Gestion minima in-memory de bloqueantes materiales
 
 ### Operaciones de gestion (no generan eventos de acta)
 
@@ -479,7 +653,7 @@ Estas operaciones no emiten eventos de FalActa: no existe evento de dominio defi
 El snapshot del acta no cambia por estas operaciones.
 El impacto en el cierre se produce cuando el acta llega a un punto de cierre (PCOCNF, PAGAPR, PAGCNF, NOTPOS, APEABS).
 
-### Reglas de transicion de bloqueantes (Slice 7B)
+### Reglas de transicion de bloqueantes
 
 - PENDIENTE -> CUMPLIDO: via cumplir. Idempotente si ya CUMPLIDO. No permitido si ANULADO.
 - PENDIENTE -> ANULADO:  via anular.  Idempotente si ya ANULADO.  No permitido si CUMPLIDO.
@@ -487,11 +661,11 @@ El impacto en el cierre se produce cuando el acta llega a un punto de cierre (PC
 - ANULADO:  terminal. No puede pasar a CUMPLIDO.
 - existsActivoByActaId: solo considera siActivo=true (PENDIENTE activo). CUMPLIDO y ANULADO no impiden cierre.
 
-### BloqueanteMaterialNoEncontradoException (Slice 7B)
+### BloqueanteMaterialNoEncontradoException
 
 Lanzada por cumplir() y anular() si el bloqueanteId no existe en el repositorio.
 
-## Slice 7C: Cierre diferido automatico (implementado)
+## Cierre diferido automatico
 
 Al resolver el ultimo bloqueante activo (cumplir o anular), el sistema evalua si el acta puede cerrarse:
 
@@ -500,7 +674,7 @@ Al resolver el ultimo bloqueante activo (cumplir o anular), el sistema evalua si
   - Acta pasa a CERRADA/CERR.
 
 Resultados cerrables habilitados para cierre diferido:
-  - PAGO_VOLUNTARIO_CONFIRMADO
+  - PAGO_VOLUNTARIO_PAGADO
   - ABSUELTO
   - CONDENA_FIRME_PAGADA
 
@@ -511,7 +685,7 @@ El cierre diferido solo emite CIERRA (evento ya existente).
 
 ---
 
-## Slice 8F-11M-B1: Eventos economicos canonicos (implementado)
+## Eventos economicos canonicos
 
 Catalogo vigente en `TipoEventoActa` para el circuito economico MariaDB/InMemory.
 No usar en spec activa los alias descartados: `DEBEMI`, `PAGPRC`, `PAGCFT`, `MOVPAG`, `PLNCAI`, `PAGANU`, ni sustitutos parciales (`OBLAUL`, `FPCGEN`, `FPPGEN`, `FPREFN`, `PLNCAN`).
@@ -534,7 +708,7 @@ Reglas:
 - `fal_acta_evento` permanece append-only; los hechos economicos se registran con estos codigos.
 - La proyeccion operativa (`fal_acta_economia_proyeccion`) y el snapshot leen la proyeccion economica; no duplican reglas de calculo en campos paralelos.
 
-### 8F-11M-B1-R2 (cierre economia InMemory)
+### Cierre de economia InMemory
 
 - `FalActaPagoMovimiento` es append-only con un unico vinculo canonico al original (`movimientoOrigenId`); un reverso (`PAGO_REVERTIDO`) o una anulacion (`EMISION_ANULADA`) referencian el movimiento origen por ese campo.
 - Un reverso que revive saldo hace que la obligacion deje de estar `CANCELADA_POR_PAGO` (vuelve a `CON_FORMA_PAGO_VIGENTE` si hay forma vigente o `PENDIENTE_FORMA_PAGO` si no) y que la forma deje de estar `PAGADA`.

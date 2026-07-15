@@ -1,111 +1,114 @@
-# 103 - Slice 9-1: Infraestructura JDBC base
+# 103 - Infraestructura JDBC base
 
-**Slice:** 9-1
-**Fecha:** 2026-07-02
-**Tipo:** Infraestructura Java / configuracion Spring.
-**Build cerrado:** 908/908 tests passing. BUILD SUCCESS.
+> **Estado documental:** SUPPORTING_CURRENT
+> **Autoridad DDL:** SUPPORTING
+> Inventario actual y verificable de la infraestructura JDBC base ya incorporada
+> (dependencias, perfiles, configuracion, prueba condicionada), previa a los
+> repositorios JDBC de dominio. No contiene el DDL definitivo. Ver
+> `101-auditoria-pre-jdbc-mariadb.md`, `102-slice-9-estrategia-jdbc-mariadb.md`,
+> `109-delta-modelo-mariadb-inmemory.md` y `110-matriz-maestra-paridad-mariadb-inmemory.md`.
 
----
+## 1. Alcance de este documento
 
-## 1. Objetivo
+Infraestructura minima JDBC incorporada, sin migrar todavia ningun repositorio de dominio:
 
-Implementar la infraestructura minima JDBC sin migrar todavia ningun repositorio de dominio.
+- Dependencias Spring JDBC y driver MariaDB en `pom.xml`.
+- Perfiles de configuracion (`default` in-memory, `jdbc` con MariaDB real).
+- `JdbcClient` disponible como infraestructura (auto-configurado por Spring Boot cuando
+  existe un `DataSource`).
+- Prueba condicionada de infraestructura JDBC que no rompe el build normal.
+- Sin repositorios JDBC de dominio.
 
-Este slice:
-- Agrego dependencias Spring JDBC y driver MariaDB en pom.xml.
-- Creo configuracion de perfiles (default in-memory, jdbc con MariaDB real).
-- Configuro JdbcClient como infraestructura disponible (auto-configurado por Spring Boot).
-- Creo test condicionado de infraestructura JDBC que no rompe el build normal.
-- Mantuvo todos los tests existentes verdes.
-- No migro ningun repositorio.
+## 2. Dependencias presentes
 
----
+Verificado en `pom.xml`:
 
-## 2. Dependencias agregadas
+    spring-boot-starter-jdbc              - JdbcClient, JdbcTemplate, DataSource auto-config
+    org.mariadb.jdbc:mariadb-java-client  - Driver MariaDB (scope runtime)
 
-En pom.xml (Spring Boot 3.5.3 gestiona versiones):
-
-    spring-boot-starter-jdbc  - JdbcClient, JdbcTemplate, DataSource auto-config
-    org.mariadb.jdbc:mariadb-java-client (scope runtime) - Driver MariaDB
-
-No se agrego:
-- spring-boot-starter-data-jpa (prohibido)
-- Hibernate (prohibido)
-- H2 / HSQLDB (no se usa embedded DB)
-- Flyway / Liquibase (decision pendiente para slices posteriores)
-
----
+No presentes:
+- `spring-boot-starter-data-jpa` (prohibido).
+- Hibernate (prohibido).
+- H2 / HSQLDB (no se usa embedded DB).
+- Flyway / Liquibase (decision pendiente; ver `99-pendientes-siguientes-slices.md`).
 
 ## 3. Perfiles de persistencia
 
-### Perfil default (sin DB requerida)
+### Perfil `default` (sin DB requerida)
 
-Archivo: src/main/resources/application.yml
+Archivo: `src/main/resources/application.yml`.
 
     spring.autoconfigure.exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
     app.persistence.mode: memory
 
-- DataSourceAutoConfiguration se excluye para no requerir base de datos real.
-- Los repositorios InMemory* permanecen activos.
-- Todos los tests existentes siguen funcionando.
+- `DataSourceAutoConfiguration` se excluye para no requerir base de datos real.
+- Los repositorios `InMemory*` permanecen activos.
 - La aplicacion arranca sin base de datos.
 
-### Perfil jdbc (MariaDB real)
+### Perfil `jdbc` (MariaDB real)
 
-Archivo: src/main/resources/application-jdbc.yml
+Archivo: `src/main/resources/application-jdbc.yml`.
 
     spring.autoconfigure.exclude: []   -- anula la exclusion del perfil default
     spring.datasource.url: ${FALTAS_DB_URL:jdbc:mariadb://localhost:3306/faltas_db}
     spring.datasource.username: ${FALTAS_DB_USER:faltas}
     spring.datasource.password: ${FALTAS_DB_PASSWORD:}
     spring.datasource.driver-class-name: org.mariadb.jdbc.Driver
+    spring.datasource.hikari.connection-timeout: 20000
+    spring.datasource.hikari.maximum-pool-size: 10
+    spring.datasource.hikari.minimum-idle: 2
     spring.sql.init.mode: never
 
     app.persistence.mode: jdbc
 
-- DataSourceAutoConfiguration activo.
-- Spring Boot auto-configura DataSource, JdbcTemplate y JdbcClient.
+- `DataSourceAutoConfiguration` activo; Spring Boot auto-configura `DataSource`,
+  `JdbcTemplate` y `JdbcClient` (pool HikariCP).
 - Credenciales por variables de entorno (no hardcodeadas).
 
----
+## 4. Variables de entorno para perfil `jdbc`
 
-## 4. Variables de entorno requeridas para perfil jdbc
-
-    FALTAS_DB_URL      - URL de conexion MariaDB
-                         Ejemplo: jdbc:mariadb://localhost:3306/faltas_db
+    FALTAS_DB_URL      - URL de conexion MariaDB (ej: jdbc:mariadb://localhost:3306/faltas_db)
     FALTAS_DB_USER     - Usuario de la base de datos
     FALTAS_DB_PASSWORD - Password de la base de datos
 
-No hay valores por defecto productivos hardcodeados.
-El valor por defecto de FALTAS_DB_URL en application-jdbc.yml es solo de referencia para dev local.
+Sin valores por defecto productivos hardcodeados. El valor por defecto de
+`FALTAS_DB_URL` en `application-jdbc.yml` es solo de referencia para desarrollo local.
 
----
+## 5. JdbcConfig real
 
-## 5. JdbcConfig.java
-
-Clase marcador del perfil jdbc:
-
-    src/main/java/ar/gob/malvinas/faltas/core/infrastructure/jdbc/JdbcConfig.java
+Archivo: `src/main/java/ar/gob/malvinas/faltas/core/infrastructure/jdbc/JdbcConfig.java`.
 
     @Configuration
     @Profile("jdbc")
     public class JdbcConfig { }
 
-Spring Boot auto-configura JdbcClient cuando existe un DataSource.
-Esta clase es el punto de extension para configuracion JDBC adicional en futuros slices.
+Spring Boot auto-configura `JdbcClient` cuando existe un `DataSource`. Esta clase es el
+punto de extension para configuracion JDBC adicional durante el bloque de DDL.
 
----
+## 6. JdbcInfrastructureIT y su condicion real
 
-## 6. Cómo ejecutar
+Archivo: `src/test/java/ar/gob/malvinas/faltas/core/infrastructure/JdbcInfrastructureIT.java`.
+
+Condicion de ejecucion: `@EnabledIfEnvironmentVariable(named = "FALTAS_DB_URL", matches = ".+")`.
+
+Tests:
+- `datasourceDisponible()`: `DataSource != null`.
+- `jdbcClientDisponible()`: `JdbcClient != null`.
+- `selectUnoEjecuta()`: `SELECT 1` devuelve `1`.
+
+Sin `FALTAS_DB_URL` definida: el test se omite automaticamente; el build no falla.
+Con `FALTAS_DB_URL` definida: el test se ejecuta contra MariaDB real (perfil `jdbc`).
+
+## 7. Como ejecutar
 
 ### Build normal (sin DB)
 
     cd backend/api-faltas-core
     mvn test
 
-Resultado: 908/908 tests passing. JdbcInfrastructureIT omitido automaticamente.
+`JdbcInfrastructureIT` se omite automaticamente.
 
 ### Con MariaDB disponible (PowerShell)
 
@@ -114,7 +117,7 @@ Resultado: 908/908 tests passing. JdbcInfrastructureIT omitido automaticamente.
     $env:FALTAS_DB_PASSWORD = "secret"
     mvn test
 
-Resultado: JdbcInfrastructureIT se ejecuta (3 tests adicionales).
+`JdbcInfrastructureIT` se ejecuta (3 tests adicionales).
 
 ### Arrancar la aplicacion con JDBC
 
@@ -126,43 +129,17 @@ Resultado: JdbcInfrastructureIT se ejecuta (3 tests adicionales).
 
 O con variables de entorno del sistema operativo.
 
----
+## 8. Confirmaciones vigentes
 
-## 7. Test JdbcInfrastructureIT
+- Sin JPA/Hibernate: cero referencias en codigo Java.
+- Sin repositorios JDBC de dominio todavia.
+- Sin tablas para enums cerrados. Sin seeds para enums cerrados.
+- Repositorios `InMemory*` siguen activos y sin modificar.
+- Sin migraciones versionadas (Flyway/Liquibase) todavia.
 
-Archivo: src/test/java/ar/gob/malvinas/faltas/core/infrastructure/JdbcInfrastructureIT.java
+## 9. Trabajo posterior
 
-Condicion de ejecucion: @EnabledIfEnvironmentVariable(named = "FALTAS_DB_URL", matches = ".+")
-
-Tests:
-- datasourceDisponible(): DataSource != null
-- jdbcClientDisponible(): JdbcClient != null
-- selectUnoEjecuta(): SELECT 1 devuelve 1
-
-En build normal (FALTAS_DB_URL no definida): test omitido. Build no falla.
-Con FALTAS_DB_URL definida: test se ejecuta contra MariaDB real.
-
----
-
-## 8. Confirmaciones
-
-- Sin JPA / Hibernate. Verificado: cero referencias en codigo Java.
-- Sin repositorios JDBC de dominio todavia. Se implementan desde 9-2.
-- Sin tablas para enums cerrados.
-- Sin seeds para enums cerrados.
-- InMemory* repositorios siguen activos y sin modificar.
-- FlujoCoreIT (test @SpringBootTest existente): sigue pasando con perfil default.
-- 908/908 tests passing. BUILD SUCCESS.
-
----
-
-## 9. Proximo slice
-
-9-2 - Piloto JdbcDocumentoPlantillaRepository con JdbcClient.
-
-Objetivo:
-- DDL: crear fal_documento_plantilla y fal_documento_plantilla_firma_req.
-- Implementar JdbcDocumentoPlantillaRepository.
-- Mapeo: enums como SMALLINT, ids BIGINT.
-- Activar via perfil jdbc.
-- Tests de integracion con MariaDB real.
+Ver `99-pendientes-siguientes-slices.md` para el bloque obligatorio de diseño y DDL
+MariaDB (resolucion de `DECISION_DDL-*`, DDL inicial versionado, adapters JDBC de
+dominio y activacion via perfil `jdbc`). Ver `102-slice-9-estrategia-jdbc-mariadb.md`
+para la estrategia de acceso a datos que ese bloque debe seguir.

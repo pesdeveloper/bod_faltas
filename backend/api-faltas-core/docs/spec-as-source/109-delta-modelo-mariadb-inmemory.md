@@ -1,51 +1,126 @@
-> **[8F-11D-R1 - 2026-07-06]** 8F-11D cerrado: FalTarifarioUnidadFaltas, FalMedidaPreventiva, FalArticuloMedidaPreventiva, FalActaArticuloInfringido, FalActaValorizacion, FalActaValorizacionItem. R1 invariantes aplicados: snapshot proyeccion (R1-A), confirmarVigenteAtomico (R1-B), inmutabilidad items (R1-C), guards atomicos de paridad en 6 tablas (R1-D). 1785 tests GREEN. Nota: el contenido detallado historico de este archivo fue perdido por error de escritura durante la limpieza de caracteres corruptos U+FEFF. La fuente vigente es 110.
->
-> **[8F-11A - 2026-07-04]** Este documento es historial de auditoria (slices 8F-9 / 8F-10).
-> La fuente vigente de paridad es: **`110-matriz-maestra-paridad-mariadb-inmemory.md`**
-> No actualizar este documento; actualizar el 110.
->
-> **[8F-11A-R1 - 2026-07-05]** Correccion documental aplicada al 110: 62 tablas (no 55), 29 FALTA_EN_INMEMORY (no 22), P1 cerrada, P2 cerrada. La entrada de `ResultadoFinalActa` en la seccion 8 de este documento es historica; la definicion vigente es la del 110.
+# 109 — Delta transversal: modelo InMemory vigente vs. MariaDB objetivo
 
----
+> **Estado documental:** PRE_DDL_PLAN
+> **Autoridad DDL:** SUPPORTING
+> No contiene el DDL definitivo. Describe unicamente los deltas transversales de
+> naturaleza fisica/infraestructural entre la implementacion InMemory vigente y el
+> objetivo MariaDB; no repite el inventario campo-por-campo, que vive en
+> `110-matriz-maestra-paridad-mariadb-inmemory.md`.
 
-# 109 - Auditoria DELTA: Modelo MariaDB vs Modelo InMemory
+## 1. Alcance de este documento
 
-**Slice:** 8F-9 / Revision 8F-9-R2 (base) | **Actualizado en 8F-10 (2026-07-04)** | **8F-11D-R1 (2026-07-06)**
-**Fecha base:** 2026-07-03 | **Ultima actualizacion:** 2026-07-06 (Slice 8F-11D-R1)
-**Tipo:** Auditoria y documentacion historica. Sin cambios funcionales Java.
-**Modulo:** backend/api-faltas-core (in-memory, sin MariaDB)
-**Build base:** 1785 tests passing. BUILD SUCCESS. (al cierre de 8F-11D-R1)
+Este documento no describe deltas de entidades o campos faltantes: ese cierre
+funcional (contrato funcional completo, sin entidades ni campos pendientes por
+incorporar) esta registrado como decision cerrada en
+`110-matriz-maestra-paridad-mariadb-inmemory.md`. Este documento (109) y `110`
+son complementarios: `109` describe los deltas fisicos transversales; `110` es
+la matriz vigente por agregado/puerto para el diseno de DDL/JDBC. Ninguno de
+los dos reemplaza al otro.
 
-> **NOTA DE RECONSTRUCCION:** El cuerpo detallado de este documento historico fue perdido
-> durante una operacion de limpieza de caracteres corruptos (U+FEFF) el 2026-07-06.
-> El documento original contenia la auditoria detallada de paridad para los slices 8F-9 y 8F-10.
-> La informacion vigente y actualizada esta en `110-matriz-maestra-paridad-mariadb-inmemory.md`.
+Este documento cubre exclusivamente los deltas **transversales de naturaleza
+fisica** que existen porque InMemory es un prototipo funcional de una sola JVM y
+MariaDB es una base relacional multi-nodo. Estos deltas no son gaps funcionales:
+son decisiones de diseno fisico que el bloque de DDL/JDBC debe resolver sin
+alterar el comportamiento de dominio ya validado.
 
----
+## 2. Identidad
 
-## Resumen de estado al cierre de 8F-11D-R1
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Generacion de identificador | Contador `AtomicLong`/campo `nextId` en memoria por repositorio | `AUTO_INCREMENT` o secuencia equivalente por tabla | El objetivo debe garantizar unicidad e monotonicidad bajo escritura concurrente multi-nodo; InMemory solo la garantiza dentro de una JVM. |
+| Tipo de identificador | `Long` en las entidades ya migradas (ver `110`, inventario de identidad por agregado) | `BIGINT` | Sin delta de tipo pendiente; confirmar mapeo 1:1 en el DDL. |
+| Identidad natural (claves de negocio) | Validada en memoria antes de insertar (p. ej. `loteCodigo`, `referenciaFirmaExt`, `referenciaExterna`) | Debe reforzarse con restriccion `UNIQUE` fisica | Ver seccion 3. |
 
-| Categoria | Cantidad |
-|-----------|----------|
-| Tablas MariaDB auditadas | 62 |
-| Entidades InMemory persistibles | 37 |
-| ALINEADO | 32 entidades |
-| FALTA_EN_INMEMORY | 21 tablas (post 8F-11C+11D+R1) |
-| SOLO_DEMO_TEST | 21 clases |
-| NO_PERSISTIBLE | 25+ (servicios, DTOs, enums puro Java) |
+## 3. Unicidades
 
-## Slices completados hasta 8F-11D-R1
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Mecanismo | Operaciones atomicas de repositorio in-memory (`guardarSiAusentePorReferencia`, `guardarActivoSiAusentePorFecha`, verificacion previa en `LoteCorreoRepository`, etc.) sincronizadas dentro de una sola JVM | Restricciones `UNIQUE` a nivel de columna o indice compuesto | InMemory nunca delega la unicidad al motor de persistencia; MariaDB debe hacerlo para sostener la garantia con multiples instancias de aplicacion. |
+| Claves de idempotencia conocidas | `referenciaFirmaExt` (firma), `referenciaExterna` + `origenMovimiento` (pagos), `loteCodigo` (lote de correo), fecha (dia no computable activo) | Deben expresarse como restriccion `UNIQUE` (simple o parcial/condicional segun el motor) | Decision fisica pendiente para el bloque de DDL: marcar `DECISION_DDL` por clave, especialmente donde la unicidad es solo sobre el subconjunto "activo" (p. ej. una excepcion de calendario activa por fecha, una gestion externa activa por acta). |
 
-- **8F-9**: Ciclo base, modelos core
-- **8F-10**: Integracion documental
-- **8F-11A**: Auditoria y paridad inicial (62 tablas)
-- **8F-11A-R1**: Correccion documental (conteos, P1, P2)
-- **8F-11B**: Identidades, enums, versionRow, auditoria
-- **8F-11C**: FalPersona, FalPersonaDomicilio
-- **8F-11D**: FalTarifarioUnidadFaltas, FalMedidaPreventiva, FalArticuloMedidaPreventiva, FalActaArticuloInfringido, FalActaValorizacion, FalActaValorizacionItem
-- **8F-11D-R1**: Invariantes de cierre: snapshot proyeccion, confirmarVigenteAtomico, inmutabilidad items, guards atomicos
+## 4. Ordenacion determinista
 
-## Proximos slices
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Orden de eventos (`ActaEvento`) | Orden de inserccion en la lista in-memory (equivalente a orden de alta) | Requiere `ORDER BY` explicito con desambate deterministico (p. ej. `id` autoincremental como desempate de `fhEvento` igual) | El campo de desempate debe declararse explicitamente en el DDL; no asumir que el orden fisico de almacenamiento en disco coincide con el orden de alta. |
+| Orden de listados (documentos, notificaciones, intentos) | Orden de inserccion en memoria | Requiere `ORDER BY` explicito por columna de auditoria o id | Mismo criterio que arriba. |
 
-Ver `99-pendientes-siguientes-slices.md` para la lista actualizada.
-Ver `110-matriz-maestra-paridad-mariadb-inmemory.md` para la matriz de paridad vigente.
+## 5. Seleccion de registro activo/vigente
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Mecanismo | Recorrido en memoria filtrando por flags booleanos (`siVigente`, `siActiva`, `siActivo`, estado `!= SIN_EFECTO`, etc.) | Consulta indexada `WHERE si_vigente = 1` (o equivalente) | El DDL debe indexar las columnas de vigencia usadas en consultas frecuentes (bandejas, snapshot, callback de firmas). |
+| Invariante de unicidad de "activo" | Verificada en el repositorio antes de guardar (p. ej. como maximo una `FalNotificacion` activa por documento; como maximo un fallo `siVigente = true` por acta) | Debe reforzarse con restriccion fisica (indice unico parcial/condicional o verificacion transaccional) | Ver `DECISION_DDL` en seccion 3; el motor MariaDB elegido determina si soporta indices unicos parciales. |
+
+## 6. Atomicidad y transacciones
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Garantia actual | `CONC-STD-001` (`00-governance/command-contract-standard.md`) declara explicitamente que la implementacion InMemory **no** ofrece rollback transaccional conjunto entre multiples repositorios; una mutacion parcial antes de una falla puede dejar el estado inconsistente | Debe ejecutar los efectos de cada comando dentro de una unica transaccion | Delta critico: ningun comando puede asumir en MariaDB la misma tolerancia a fallos parciales que tiene hoy en memoria. Todo comando multi-entidad (por ejemplo, completar firma: documento + fallo + notificacion + evento + snapshot) debe mapearse a una transaccion unica. |
+| Evento y transicion en la misma transaccion | Garantizado por ejecucion secuencial sincrona en memoria | Debe garantizarse explicitamente: un evento no puede persistir si la transicion que representa no persistio en la misma transaccion | Ver `CONC-STD-001`. |
+
+## 7. Reloj (`FaltasClock`)
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Captura | `FaltasClock.now()` se invoca exactamente una vez por operacion exitosa, antes de la primera mutacion; el mismo instante se reutiliza para todos los hitos y eventos de esa frontera de negocio (`CMD-ORDER-002`) | Debe preservarse la misma disciplina: un unico instante de aplicacion por comando, escrito en todas las columnas de fecha/hora que representen la misma frontera | Sin delta de comportamiento; el delta es puramente de mecanismo: en JDBC, el instante debe capturarse en la capa de aplicacion (Java) antes de construir la sentencia SQL, no mediante funciones de fecha del motor (`NOW()`, `CURRENT_TIMESTAMP` de MariaDB), para preservar testabilidad y evitar drift entre columnas de la misma transaccion. |
+
+## 8. Auditoría
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Campos | `fhAlta`, `idUserAlta`, `fhMod`/`fhBaja`, `idUserMod`/`idUserBaja` ya incorporados en las entidades auditables (ver `110`, inventario de auditoria por agregado) | Columnas equivalentes `NOT NULL` donde el dominio los exige | Sin delta funcional pendiente; el DDL debe respetar la nulabilidad exacta documentada por entidad en `110`. |
+
+## 9. Nulos
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Regla general | La nulabilidad de cada campo esta definida por las precondiciones e invariantes de dominio (ver contratos de comando y `10-domain/lifecycle-states.md`), no por el tipo Java | El DDL debe declarar `NOT NULL` exactamente donde el dominio lo exige, campo por campo, segun la matriz `110` | No inventar nulabilidad por analogia con otras columnas del mismo tipo. |
+
+## 10. Longitudes
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Regla general | Las longitudes maximas validadas en servicios (p. ej. `idUserAlta`/`idUserBaja` hasta 36 caracteres en `CalendarioAdministrativoService`; `referenciaExterna` hasta 200 caracteres en excepciones de calendario sincronizadas; `sub` del JWT hasta 36 caracteres en la integracion de pagos) son la fuente de longitud para el DDL | `VARCHAR(N)` debe usar exactamente la longitud validada por el servicio de aplicacion, no un valor generico | Marcar `DECISION_DDL` por columna donde la spec no documenta explicitamente una longitud maxima y deba inferirse de Bean Validation o de un valor por defecto conservador. |
+
+## 11. Enums y catálogos
+
+No todo enum de dominio con relevancia de persistencia expone un codigo explicito. Se
+distinguen tres categorias (ver `110`, `DECISION_DDL-ENUM-01`, y
+`102-slice-9-estrategia-jdbc-mariadb.md`, seccion 6):
+
+| Categoria | Definicion | Persistencia candidata |
+|---|---|---|
+| `EXPLICIT_NUMERIC_CODE` | El enum expone `codigo()` numerico (`short`) | Columna `SMALLINT` con el codigo explicito |
+| `EXPLICIT_STRING_CODE` | El enum expone `codigo()` de tipo `String` estable | Columna `CHAR`/`VARCHAR` exacta con constraint |
+| `NO_EXPLICIT_CODE` | El enum no expone `codigo()` | Pendiente de `DECISION_DDL-ENUM-01`; prohibido `ordinal()`; prohibido `name()` sin decision explicita |
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Enums `EXPLICIT_NUMERIC_CODE`/`EXPLICIT_STRING_CODE` | Codigo explicito verificado en el enum Java (ver `00-governance/glossary.md` y `110`) | Columna `SMALLINT` (o `CHAR`/`VARCHAR` para codigo `String`) con el codigo explicito del enum Java | Sin delta de estrategia pendiente para estos enums. `ResultadoFinalActa` tiene 10 codigos vigentes (0-9); el codigo 5 (`FALLO_CONDENATORIO_PAGADO`) es LEGACY_RESERVED (ver `110`, `DECISION_DDL-RF-005`). |
+| Enums `NO_EXPLICIT_CODE` (`EstadoFalloActa`, `EstadoApelacionActa`, `EstadoPagoCondena`) | Sin `codigo()`; comparacion y persistencia in-memory por referencia de enum Java, sin columna fisica | Representacion fisica pendiente: `DECISION_DDL-ENUM-01` (agregar `codigo()` estable antes del adapter JDBC, o aprobar codigo `String` con constraint) | Delta abierto. No inferir un `SMALLINT` por posicion (`ordinal()`) ni persistir `name()` sin la decision aprobada. |
+
+## 12. Concurrencia
+
+| Aspecto | InMemory vigente | MariaDB objetivo | Delta |
+|---|---|---|---|
+| Fronteras vigentes de exclusion | `guardarSiAusentePorReferencia` (repositorios); `ResultadoPositivoInMemoryMonitor.INSTANCE`, monitor estatico: su garantia alcanza a toda la JVM/classloader donde esa clase esta cargada, no solo a un objeto; `firmezaMonitor` (campo de instancia de `FirmezaCondenaService`) y `pagoCondenaMonitor` (campo de instancia de `PagoCondenaService`): su garantia alcanza unicamente a llamadas serializadas sobre esa misma instancia del servicio, no a otras instancias del mismo bean ni a otra JVM | OCC (`version_row`) y/o restricciones `UNIQUE` a nivel de fila; ningun monitor en memoria de Java (de campo o estatico) tiene efecto entre distintas JVM/nodos | Delta critico de escala. Un monitor de campo (`firmezaMonitor`, `pagoCondenaMonitor`) solo garantiza exclusion dentro de la misma instancia del servicio; no debe describirse como garantia "de toda la JVM". Un monitor estatico (`ResultadoPositivoInMemoryMonitor.INSTANCE`) si alcanza a toda la JVM/classloader, pero ninguno de los dos tipos se extiende a un despliegue multi-nodo. El DDL/JDBC debe reemplazar cada monitor en memoria por la garantia fisica equivalente (OCC, unicidad, o bloqueo a nivel de fila) antes de operar con mas de una instancia de aplicacion contra la misma base. |
+| OCC | Version en memoria (`versionRow` en el agregado) verificada antes de cada mutacion; conflicto lanza `ConcurrenciaConflictoException` (ver `CONC-STD-001`) | `version_row` fisico con `UPDATE ... WHERE version_row = :actual`; cero filas afectadas ⇒ `ConcurrenciaConflictoException` | Sin delta de contrato de excepcion; el delta es de mecanismo de deteccion (comparacion en memoria vs. `UPDATE` condicional). |
+
+## 13. Deltas ya resueltos funcionalmente (fuera de alcance de este documento)
+
+Los siguientes temas ya estan cerrados funcionalmente y su detalle vigente vive
+en `110-matriz-maestra-paridad-mariadb-inmemory.md` (inventario por agregado) y
+no se repite aqui: cobertura de entidades en InMemory (paralización, archivo,
+persona/domicilio, valorización, satélites de acta, notificaciones de ciclo
+completo, pivot documento-acta, QR/portal), identidades `String` migradas a
+`Long`, enums con código numérico explícito, y campos de auditoría
+incorporados. La historia de como se llegó a este cierre permanece en Git.
+
+## 14. Entrada al siguiente bloque
+
+Este documento, junto con `110-matriz-maestra-paridad-mariadb-inmemory.md`, es la
+base de entrada para diseñar el DDL versionado de MariaDB (ver
+`99-pendientes-siguientes-slices.md` y `101-auditoria-pre-jdbc-mariadb.md`). No
+contiene nombres de tabla nuevos ni tipos SQL definitivos más allá de los ya
+usados en `110`.

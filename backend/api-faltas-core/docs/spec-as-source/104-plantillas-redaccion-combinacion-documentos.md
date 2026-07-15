@@ -1,6 +1,14 @@
 # 104 - Plantillas operativas, variables documentales y motor de combinacion de documentos
 
-**Slice: 8F-1**
+> **Estado documental:** HISTORICAL
+> **Autoridad DDL:** NO
+> Este archivo conserva el diario de implementacion de plantillas, variables documentales
+> y motor de combinacion (bloques 8F-1 a 8F-6) y no define comportamiento vigente con
+> autoridad normativa. El modelo vigente de plantillas/redaccion/documentos esta en
+> `02-estados-bloques-eventos.md`, `03-comandos-precondiciones-efectos.md` y
+> `05-api-core-endpoints.md`.
+
+**Bloque: 8F-1**
 **Estado: CERRADO**
 **Build base: 908 tests OK -> post-slice: 954 tests OK**
 
@@ -400,7 +408,7 @@ Se setean **solo al confirmar y generar mock**, en DocumentoGeneracionMockServic
 
 - storageKey → mock://documentos/{id}/redacciones/{id}/documento-final.pdf
 - hashDocu → sha256-mock-{hex-sha256-del-contenido-mock}
-- hGeneracion → timestamp del momento de renderizado
+- fhGeneracion → timestamp del momento de renderizado
 
 ### Regla de BORRADOR sin PDF
 
@@ -438,11 +446,11 @@ La generacion mock NO invoca emision, NO envia a firma, NO notifica.
 
 | Clase | Paquete | Rol |
 |-------|---------|-----|
-| DocumentoRenderizadoMock | pplication/result/ | Record con resultado del render |
-| DocumentoGeneracionMockResponse | pplication/result/ | Response del servicio |
-| ConfirmarRedaccionYGenerarDocumentoMockCommand | pplication/command/ | Command de entrada |
-| DocumentoPdfMockRenderer | pplication/service/ | Renderer puro (no modifica FalDocumento) |
-| DocumentoGeneracionMockService | pplication/service/ | Orquestador del flujo |
+| DocumentoRenderizadoMock | application/result/ | Record con resultado del render |
+| DocumentoGeneracionMockResponse | application/result/ | Response del servicio |
+| ConfirmarRedaccionYGenerarDocumentoMockCommand | application/command/ | Command de entrada |
+| DocumentoPdfMockRenderer | application/service/ | Renderer puro (no modifica FalDocumento) |
+| DocumentoGeneracionMockService | application/service/ | Orquestador del flujo |
 | FalDocumentoRedaccion.confirmar() | domain/model/ | Metodo de dominio |
 
 ### Limitaciones
@@ -662,7 +670,7 @@ Estado final del dataset en 8F-4B-R1:
 
 **Descuento en ACT-031**: El descuento no tiene evento propio (DESCT no existe en TipoEventoActa). El pago con descuento queda representado como atributo/observación del PCOCNF. Razón: el descuento es una variante del pago confirmado, no una transición de estado distinta.
 
-**FirmaReq completa**: El ciclo de firma vía DocumentoFirmaReqService funciona correctamente en el prototipo in-memory. Los tests funcionales usan irmarDocumento() directamente que genera el evento DOCFIR.
+**FirmaReq completa**: El ciclo de firma vía DocumentoFirmaReqService funciona correctamente en el prototipo in-memory. Los tests funcionales usan firmarDocumento() directamente que genera el evento DOCFIR.
 
 **Emisión formal**: No requerida para cerrar los casos del dataset actual. Pendiente en 8F-5/8F-6 cuando se precise el endpoint formal de numeración.
 

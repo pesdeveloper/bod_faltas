@@ -1,16 +1,28 @@
 # Spec-as-source canónica — API Faltas Core
 
-## 1. Autoridad
+## 1. Propósito
 
-Esta carpeta es la única spec-as-source canónica del backend productivo de Faltas.
+Esta carpeta es la única spec-as-source canónica del backend productivo de
+Faltas (`backend/api-faltas-core`). Las reglas funcionales, arquitectónicas y
+de persistencia aprobadas deben quedar expresadas aquí antes de considerarse
+vigentes.
 
-Las reglas funcionales, arquitectónicas y de persistencia aprobadas deben quedar expresadas aquí antes de considerarse vigentes.
+El código Java, los tests, los modelos anteriores, las matrices, los deltas,
+los handoffs y la historia Git son fuentes de evidencia, auditoría o
+conformidad. No pueden redefinir silenciosamente la spec canónica.
 
-El código Java, los tests, los modelos anteriores, las matrices, los deltas, los handoffs y la historia Git son fuentes de evidencia, auditoría o conformidad. No pueden redefinir silenciosamente la spec canónica.
+La auditoría transversal final (`101-auditoria-pre-jdbc-mariadb.md`) cierra
+formalmente la etapa spec-as-source. Ver "Estado `READY_FOR_DDL`" más abajo.
 
-Durante la canonicalización actual, esas fuentes se utilizan para detectar reglas todavía no trasladadas, contradicciones y gaps. Toda diferencia debe resolverse de forma explícita y quedar incorporada primero en la spec.
+## 2. Registro documental
 
-## 2. Resolución de contradicciones
+El [`00-governance/spec-document-registry.md`](00-governance/spec-document-registry.md)
+es la fuente única de clasificación y autoridad DDL para cada `.md` de esta
+carpeta fuera de `handoff/**`. Cada archivo aparece allí exactamente una vez,
+con su clasificación (`NORMATIVE`, `SUPPORTING_CURRENT`, `HISTORICAL` o
+`PRE_DDL_PLAN`) y su autoridad DDL (`YES`, `SUPPORTING` o `NO`).
+
+## 3. Regla de precedencia
 
 Ante una contradicción:
 
@@ -21,133 +33,127 @@ Ante una contradicción:
 5. actualizar primero la spec canónica;
 6. alinear después código, tests, persistencia y documentos de referencia.
 
-Una implementación existente demuestra comportamiento, pero no convierte automáticamente ese comportamiento en regla normativa.
+Una implementación existente demuestra comportamiento, pero no convierte
+automáticamente ese comportamiento en regla normativa.
 
-## 3. Orden de lectura vigente
+Precedencia mínima entre documentos de la spec, de mayor a menor autoridad:
+
+1. `00-governance/` (glosario, estándar de contratos de comando, registro documental).
+2. `10-domain/` (dimensiones de estado, lifecycle, firma/notificación, calendario).
+3. `20-application/` (contratos de comandos de aplicación).
+4. Documentos top-level clasificados `NORMATIVE` (`02` a `05`, según el registro).
+5. `SUPPORTING_CURRENT`.
+6. `PRE_DDL_PLAN`.
+7. `HISTORICAL`.
+
+Ante contradicción entre un documento temático (`00-governance/`, `10-domain/`)
+y un documento de contrato funcional top-level, el documento temático es
+normativo en lo que respecta a definiciones de términos, dimensiones y
+lifecycle. Cuando [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md)
+declare precedencia específica para `CMD-FALLO-001..007`, esa precedencia
+específica se mantiene: ese documento prevalece sobre cualquier otro para esos
+siete comandos.
+
+## 4. Orden de lectura
 
 Para cualquier trabajo en `backend/api-faltas-core`:
 
 1. leer este `README.md`;
-2. identificar en la clasificación siguiente los documentos aplicables;
-3. leer solamente el subconjunto canónico necesario;
-4. consultar código y tests como evidencia de conformidad;
-5. consultar `docs/faltas/` y otros documentos externos únicamente como fuentes de auditoría o diseño físico;
-6. detenerse y reportar si existe una contradicción no resuelta.
+2. consultar el [registro documental](00-governance/spec-document-registry.md) para identificar la clasificación de los documentos aplicables al alcance;
+3. leer, en orden temático:
+   1. [`00-governance/glossary.md`](00-governance/glossary.md) — vocabulario canónico;
+   2. [`10-domain/lifecycle-states.md`](10-domain/lifecycle-states.md) — dimensiones de estado y lifecycle;
+   3. [`10-domain/calendario-plazos-administrativos.md`](10-domain/calendario-plazos-administrativos.md) — calendario y plazos;
+   4. [`00-governance/command-contract-standard.md`](00-governance/command-contract-standard.md) — estándar de contratos de comando;
+   5. [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md) — contratos de CMD-FALLO-001..007;
+   6. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md) — circuito de firma y cola notificatoria;
+4. leer solamente el subconjunto adicional necesario para el alcance (`02-estados-bloques-eventos.md`, `03-comandos-precondiciones-efectos.md`, `04-snapshot-bandejas-acciones.md`, `05-api-core-endpoints.md`);
+5. consultar código y tests como evidencia de conformidad;
+6. consultar `docs/faltas/` y otros documentos externos únicamente como fuentes de auditoría o diseño físico;
+7. detenerse y reportar si existe una contradicción no resuelta.
 
-## 4. Clasificación documental durante la canonicalización
+## 5. Documentos normativos, de soporte, históricos y pre-DDL
 
-### 4.0 Documentos tematicos canonicos
+Ver el detalle completo, archivo por archivo, en
+[`00-governance/spec-document-registry.md`](00-governance/spec-document-registry.md).
 
-Estos documentos forman la capa normativa autosuficiente de la spec. Deben
-leerse en este orden antes de consultar los documentos de contrato funcional:
+Resumen por clasificación:
 
-1. [`00-governance/glossary.md`](00-governance/glossary.md) -- define el
-   vocabulario canonico del dominio; un termino canonico tiene un unico
-   significado.
-2. [`10-domain/lifecycle-states.md`](10-domain/lifecycle-states.md) -- define
-   las dimensiones de estado y el lifecycle de subagregados; establece que es
-   persistido, derivado o historico.
-3. [`10-domain/calendario-plazos-administrativos.md`](10-domain/calendario-plazos-administrativos.md)
-   -- gobierna calendarios locales, dias no computables y calculo reutilizable de plazos administrativos.
-4. [`00-governance/command-contract-standard.md`](00-governance/command-contract-standard.md)
-   -- define el estandar normativo de contratos de comandos: plantilla, orden
-   canonico de ejecucion, taxonomia de errores, idempotencia y concurrencia.
-   Todos los contratos de comandos deben conformar este estandar.
-5. [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md)
-   -- aplica el estandar al circuito de firma, notificacion, firmeza y pago.
-   Contiene los contratos definitivos de los siete comandos canonicalizados.
-6. [`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md)
-   -- aplica esas dimensiones al circuito de firma y cola notificatoria del fallo.
+- **NORMATIVE** (autoridad `YES`): `00-governance/glossary.md`, `00-governance/command-contract-standard.md`, `00-governance/spec-document-registry.md`, `10-domain/lifecycle-states.md`, `10-domain/calendario-plazos-administrativos.md`, `10-domain/firma-notificacion-fallo.md`, `20-application/fallo-command-contracts.md`, `02-estados-bloques-eventos.md`, `03-comandos-precondiciones-efectos.md`, `04-snapshot-bandejas-acciones.md`, `05-api-core-endpoints.md`, este `README.md`.
+- **SUPPORTING_CURRENT** (autoridad `SUPPORTING`): `99-pendientes-siguientes-slices.md`, `101-auditoria-pre-jdbc-mariadb.md`, `103-slice-9-1-infraestructura-jdbc.md`.
+- **PRE_DDL_PLAN** (autoridad `SUPPORTING`): `102-slice-9-estrategia-jdbc-mariadb.md`, `109-delta-modelo-mariadb-inmemory.md`, `110-matriz-maestra-paridad-mariadb-inmemory.md`.
+- **HISTORICAL** (autoridad `NO`): `06-tests-core.md`, `104-plantillas-redaccion-combinacion-documentos.md`, `108-frontend-ready-demo.md`, y todo `handoff/**` (excluido del registro; no se elimina).
 
-Ante contradiccion entre un documento tematico y un documento de contrato
-funcional (4.1), el documento tematico es normativo en lo que respecta a
-definiciones de terminos, dimensiones y lifecycle.
+`102-slice-9-estrategia-jdbc-mariadb.md` fija la **estrategia** de acceso a
+datos (stack JDBC, identidad, enums) que el bloque de DDL debe seguir.
+`103-slice-9-1-infraestructura-jdbc.md` es el **inventario actual y
+verificable** de la infraestructura JDBC base ya incorporada (dependencias,
+perfiles, `DataSource`, prueba condicionada); por eso es `SUPPORTING_CURRENT`
+y no `PRE_DDL_PLAN`: describe hechos vigentes del código, no un plan futuro.
 
-**Ruta tematica recomendada para contratos de comandos:**
+`101-auditoria-pre-jdbc-mariadb.md` es `SUPPORTING_CURRENT`: es el informe/gate
+de conformidad y cierre formal de la auditoría transversal final
+(`READY_FOR_DDL`), no una fuente de reglas de dominio. No conserva un anexo
+histórico extenso; la historia de auditorías previas permanece en Git.
 
-glosario -- dimensiones/lifecycle -- estandar de comandos -- contratos de comandos de fallo -- circuito especifico firma/notificacion
+## 6. Cómo se usa la spec para diseñar el DDL de MariaDB
 
-El estandar define como se escribe todo comando. El catalogo de fallo aplica el estandar.
-Los documentos `03-comandos-precondiciones-efectos.md` y `04-snapshot-bandejas-acciones.md`
-son material transitorio de extraccion; siguen vigentes pero seran absorbidos gradualmente
-en documentos tematicos.
-Ante contradiccion sobre los siete comandos canonicalizados, prevalece
-`20-application/fallo-command-contracts.md`.
+El diseño del DDL versionado de MariaDB debe partir de:
 
-### 4.1 Contrato funcional vigente
+1. los documentos `NORMATIVE` (estados, eventos, comandos, endpoints) para las reglas de dominio que las tablas y columnas deben reforzar, nunca redefinir;
+2. [`109-delta-modelo-mariadb-inmemory.md`](109-delta-modelo-mariadb-inmemory.md) para los deltas vigentes de identidad, versionRow/OCC, unicidades, atomicidad, transacciones y enums/catálogos;
+3. [`110-matriz-maestra-paridad-mariadb-inmemory.md`](110-matriz-maestra-paridad-mariadb-inmemory.md) como matriz de entrada: por cada agregado/repositorio, identidad primaria, clave natural, FKs conceptuales, unicidad física, índices, versionRow/OCC, frontera transaccional y fuente normativa;
+4. [`102-slice-9-estrategia-jdbc-mariadb.md`](102-slice-9-estrategia-jdbc-mariadb.md) y [`103-slice-9-1-infraestructura-jdbc.md`](103-slice-9-1-infraestructura-jdbc.md) para la estrategia y la infraestructura JDBC ya incorporada.
 
-Estos documentos contienen actualmente el contrato funcional que debe preservarse mientras se reorganiza la spec:
+El DDL no puede modificar reglas de dominio, estados, eventos, transiciones,
+bandejas ni contratos HTTP vigentes. Toda decisión física que requiera
+análisis durante el diseño del DDL se marca `DECISION_DDL` en `109`/`110`; no
+se presenta como gap funcional.
 
-- `02-estados-bloques-eventos.md`
-- `03-comandos-precondiciones-efectos.md`
-- `04-snapshot-bandejas-acciones.md`
-- `05-api-core-endpoints.md`
-- `104-plantillas-redaccion-combinacion-documentos.md`
-- `10-domain/firma-notificacion-fallo.md` — firma, cola notificatoria y lifecycle de `EstadoFalloActa`
+## 7. Estado `READY_FOR_DDL`
 
-Su estructura todavía puede contener evolución por slices. Esa cronología será absorbida gradualmente en documentos temáticos sin eliminar reglas vigentes.
+La auditoría transversal final registrada en
+[`101-auditoria-pre-jdbc-mariadb.md`](101-auditoria-pre-jdbc-mariadb.md)
+declara el estado `READY_FOR_DDL`: la etapa spec-as-source queda formalmente
+cerrada y la siguiente etapa autorizada es diseñar y generar el DDL
+versionado de MariaDB, sin alterar los contratos funcionales vigentes.
 
-### 4.2 Persistencia, arquitectura y paridad
+## 8. Qué queda fuera de esta spec
 
-Estos documentos gobiernan transitoriamente la incorporación de MariaDB y deben leerse junto con el contrato funcional aplicable:
+Quedan explícitamente fuera del alcance de spec-as-source y de esta
+auditoría:
 
-- `102-slice-9-estrategia-jdbc-mariadb.md`
-- `110-matriz-maestra-paridad-mariadb-inmemory.md`
+- la generación del DDL/SQL definitivo de MariaDB;
+- la implementación JDBC de los repositorios de dominio;
+- las transacciones por comando, unicidades y FKs físicas, y OCC/bloqueos multinodo;
+- la migración de datos existentes;
+- las integraciones externas reales (Firmas, Notificaciones, Ingresos/Tesorería, storage/comprobantes reales, calendario administrativo externo);
+- el frontend productivo.
 
-La matriz de paridad es una herramienta de verificación. No reemplaza las reglas funcionales del dominio ni autoriza a inferir equivalencias entre conceptos distintos.
+Estos ítems son el roadmap vigente en
+[`99-pendientes-siguientes-slices.md`](99-pendientes-siguientes-slices.md).
 
-### 4.3 Baseline y trabajo pendiente
+## 9. Fuentes externas a esta carpeta
 
-- `99-pendientes-siguientes-slices.md`
+`docs/faltas/` contiene insumos históricos y de diseño para MariaDB, proceso y
+decisiones de dominio. Son obligatorios como material de auditoría cuando el
+alcance los involucra, pero no prevalecen sobre esta spec.
 
-Este archivo informa el baseline y el próximo trabajo autorizado. No define por sí solo reglas de dominio.
+Los tests ejecutables y la implementación InMemory constituyen la evidencia
+principal para comprobar paridad durante la incorporación de MariaDB. Si
+difieren de la spec, debe registrarse el gap y resolverse; no se debe
+modificar la spec automáticamente para copiar el código.
 
-### 4.4 Evidencia, auditoría o historia no normativa
+El prototipo y Angular son evidencia de UX o integración. Nunca constituyen
+por sí solos una fuente normativa de dominio.
 
-Los siguientes materiales no deben utilizarse como autoridad normativa ni para reemplazar documentos vigentes:
-
-- `06-tests-core.md`
-- `101-auditoria-pre-jdbc-mariadb.md`
-- `103-slice-9-1-infraestructura-jdbc.md`
-- `108-frontend-ready-demo.md`
-- `109-delta-modelo-mariadb-inmemory.md`
-- `handoff/`
-
-Pueden consultarse para recuperar evidencia, trazabilidad o decisiones todavía no absorbidas. No deben eliminarse hasta verificar que todo contenido vigente haya sido incorporado y trazado en la nueva organización.
-
-## 5. Fuentes externas a esta carpeta
-
-`docs/faltas/` contiene insumos históricos y de diseño para MariaDB, proceso y decisiones de dominio. Son obligatorios como material de auditoría cuando el alcance los involucra, pero no prevalecen sobre esta spec.
-
-Los tests ejecutables y la implementación InMemory constituyen la evidencia principal para comprobar paridad durante la incorporación de MariaDB. Si difieren de la spec, debe registrarse el gap y resolverse; no se debe modificar la spec automáticamente para copiar el código.
-
-El prototipo y Angular son evidencia de UX o integración. Nunca constituyen por sí solos una fuente normativa de dominio.
-
-## 6. Guardrails
+## 10. Guardrails
 
 - No inventar eventos, bloques, estados, bandejas, acciones ni catálogos.
 - No confundir estado de dominio, estado documental, bandeja operativa, acción disponible o proyección de snapshot.
 - No modificar reglas funcionales para facilitar la persistencia.
 - No reintroducir conceptos explícitamente eliminados.
-- No usar cronologías de slices como sustituto de una definición vigente consolidada.
-- No eliminar documentación durante la canonicalización sin extracción y trazabilidad previas.
+- No usar cronologías de slices como sustituto de una definición vigente consolidada en documentos `NORMATIVE`, `SUPPORTING_CURRENT` o `PRE_DDL_PLAN`.
+- No eliminar documentación sin extracción y trazabilidad previas.
 - No considerar cerrado un cambio documental si deja referencias rotas o fuentes de autoridad contradictorias.
-
-## 7. Objetivo de la canonicalización
-
-La spec final debe permitir reconstruir desde cero, sin consultar el código para descubrir reglas:
-
-- el modelo de dominio;
-- catálogos y códigos persistibles;
-- estados y transiciones;
-- comandos, precondiciones y efectos;
-- eventos;
-- snapshot, bandejas y acciones;
-- contratos HTTP y errores;
-- seguridad, actor, tiempo y auditoría;
-- persistencia MariaDB;
-- transacciones, concurrencia e idempotencia;
-- artefactos Java esperados;
-- tests de aceptación y trazabilidad.
-
-Hasta completar esa reorganización, este README define cómo interpretar y auditar el conjunto documental existente.
+- `SpecAsSourceGuardrailTest` (ver `backend/api-faltas-core/src/test/java/.../application/SpecAsSourceGuardrailTest.java`) automatiza la verificación del registro, los links relativos, los términos prohibidos y el gate `READY_FOR_DDL`.

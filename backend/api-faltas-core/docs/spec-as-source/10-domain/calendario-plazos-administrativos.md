@@ -1,5 +1,10 @@
 # Calendario administrativo local y calculo de plazos
 
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Es la fuente unica de las reglas de dias computables y del algoritmo de calculo
+> de vencimientos administrativos (ver README).
+
 ## 1. Proposito
 
 Este documento gobierna el modelo local de dias no computables, las reglas fijas del calendario administrativo y el calculo reutilizable de vencimientos de plazos administrativos (apelacion, y otros futuros).
@@ -82,7 +87,7 @@ El valor 30 es el default canonico del dominio. Los unicos lugares productivos a
 
 No hardcodear 30 en ningun servicio, calculador, test de paridad ni contrato.
 
-El valor es global y externalizable. No existe un endpoint de configuracion en el slice actual.
+El valor es global y externalizable. No existe actualmente un endpoint HTTP de configuracion.
 
 ---
 
@@ -220,7 +225,7 @@ La separacion arquitectonica actual prepara una futura sincronizacion sin modifi
 ```text
 Proveedor externo (e.g. Google Calendar u otro)
         |
-        v  (sincronizacion programada - NO implementada en este slice)
+        v  (sincronizacion programada - no implementada actualmente)
 Sincronizador externo
         |
         v
@@ -235,13 +240,13 @@ CalculadorPlazosAdministrativos (depende exclusivamente de CalendarioAdministrat
 
 **Prohibicion**: el calculador no debe consultar ningun proveedor externo, API de calendario, OAuth o servicio HTTP durante el calculo de un vencimiento.
 
-Google Calendar no esta integrado en este slice: sin OAuth, sin HTTP, sin scheduler. El calculador nunca consulta proveedores externos.
+Google Calendar no esta integrado actualmente: sin OAuth, sin HTTP, sin scheduler. El calculador nunca consulta proveedores externos.
 
 ---
 
-## 15. Alcance de este slice y trabajo futuro
+## 15. Alcance vigente y trabajo futuro
 
-### Implementado en este slice (CALENDARIO-PLAZOS-001)
+### Implementado (CALENDARIO-PLAZOS-001)
 
 - Enums: TipoDiaNoComputable, OrigenDiaNoComputable, TipoPlazoAdministrativo.
 - Modelo: FalDiaNoComputable (InMemory).
@@ -250,22 +255,21 @@ Google Calendar no esta integrado en este slice: sin OAuth, sin HTTP, sin schedu
 - Configuracion: PlazosAdministrativosProperties + faltas.plazos.apelacion-dias-computables.
 - Servicios: CalendarioAdministrativoService, CalculadorPlazosAdministrativos, PlazosAdministrativosService.
 - Resultado: CalculoPlazoAdministrativo (record).
-- Spec: este documento + actualizacion de README + CMD-FALLO-004.
-- Tests: 31 tests focales.
+- Spec: este documento, `README.md` y `20-application/fallo-command-contracts.md` (CMD-FALLO-004).
+- Tests: 31 tests focales (ver seccion 17).
 
-### Fuera de alcance en este slice
+### Fuera de alcance vigente (roadmap posterior, ver `99-pendientes-siguientes-slices.md`)
 
 - Integracion con Google Calendar ni ningun proveedor externo.
 - OAuth, secretos o cliente HTTP.
 - Scheduler de sincronizacion.
 - Controller HTTP para excepciones.
-- Modificacion del codigo de CMD-FALLO-004.
 - DDL MariaDB para FalDiaNoComputable.
 - Adapter JDBC para DiaNoComputableRepository.
 
 ### Deuda pendiente de persistencia
 
-FalDiaNoComputable es el modelo local InMemory del soporte de excepciones. Su tabla MariaDB y adapter JDBC se incorporaran en el slice de persistencia correspondiente. Este slice no afirma paridad fisica con MariaDB.
+FalDiaNoComputable es el modelo local InMemory del soporte de excepciones. Su tabla MariaDB y adapter JDBC se incorporaran en el bloque de DDL/JDBC correspondiente (ver `109-delta-modelo-mariadb-inmemory.md` y `110-matriz-maestra-paridad-mariadb-inmemory.md`). Este documento no afirma paridad fisica con MariaDB.
 
 ---
 

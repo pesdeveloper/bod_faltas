@@ -1,5 +1,10 @@
 # Contratos de comandos: firma, notificacion, firmeza y pago
 
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Ante contradiccion sobre CMD-FALLO-001..007 entre este documento y cualquier otro
+> documento de la spec, este documento es normativo (ver introduccion y README).
+
 ## Introduccion
 
 Este documento aplica el estandar definido en `00-governance/command-contract-standard.md`

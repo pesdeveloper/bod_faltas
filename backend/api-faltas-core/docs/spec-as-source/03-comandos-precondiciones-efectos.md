@@ -1,6 +1,10 @@
- 03 - Comandos, Precondiciones y Efectos
+# 03 - Comandos, Precondiciones y Efectos
 
-## Slice 1 - Ciclo base
+> **Estado documental:** NORMATIVE
+> **Autoridad DDL:** YES
+> Ante contradiccion con un documento tematico de `00-governance/` o `10-domain/`, ese documento tematico prevalece en lo que respecta a definiciones, dimensiones y lifecycle (ver README, seccion 4.0). Ante contradiccion sobre CMD-FALLO-001..007, prevalece `20-application/fallo-command-contracts.md`.
+
+## Ciclo base
 
 ### LabrarActa
 - **Precondiciones**: ninguna (inicio de flujo)
@@ -19,9 +23,18 @@
 - **Efectos**: crea FalDocumento PENDIENTE_FIRMA, evento DOCGEN
 
 ### FirmarDocumento
+
+Flujo naive de compatibilidad (`DocumentoService.firmarDocumento`). El circuito canonico vigente de firma
+es `RegistrarFirmaDocumental` (callback de Firmas), documentado en
+[`10-domain/firma-notificacion-fallo.md`](10-domain/firma-notificacion-fallo.md) y en la seccion
+"RegistrarFirmaDocumental (callback de Firmas)" mas abajo. Ante contradiccion, ese documento prevalece.
+
 - **Precondiciones**: documento existe y no esta firmado
 - **Efectos**: FalDocumento -> FIRMADO, crea FalDocumentoFirma, evento DOCFIR
-- **Efecto adicional Slice 3A**: si el documento es FALLO_ABSOLUTORIO o FALLO_CONDENATORIO, actualiza FalActaFallo.estadoFallo -> FIRMADO
+- **Efecto adicional**: si el documento es el asociado al fallo activo del acta (FALLO_ABSOLUTORIO o
+  FALLO_CONDENATORIO), delega en `completarFirmaDocumento`, que llama
+  `FalActaFallo.marcarPendienteNotificacion(ahora)` -- el fallo pasa a `PENDIENTE_NOTIFICACION`, nunca a un
+  hipotetico `FIRMADO` (`FIRMADO` no es un valor de `EstadoFalloActa`).
 - NO cierra el acta en ningun caso (ni fallo ni pieza inicial)
 
 ### EnviarNotificacion
@@ -30,7 +43,7 @@
 
 ### RegistrarNotificacionPositiva
 - **Precondiciones**: notificacion existe, sin resultado previo
-- **Efectos segun tipo de documento notificado** (Slice 3A):
+- **Efectos segun tipo de documento notificado**:
   1. Si notifica pieza inicial u otra pieza NO fallo:
      - notificacion -> CON_ACUSE_POSITIVO
      - bloque -> ANAL
@@ -50,7 +63,7 @@
      - evento NOTPOS
      - NO cierra
      - NO asigna CONDENA_FIRME
-     - Acta queda preparada para slice de apelacion/firmeza/pago condena
+     - Acta queda preparada para el circuito de apelacion/firmeza/pago de condena
 
 ### RegistrarNotificacionNegativa
 - **Precondiciones**: notificacion existe, sin resultado previo
@@ -62,7 +75,7 @@
 
 ---
 
-## Slice 2A/2B - Pago Voluntario
+## Pago Voluntario
 
 Pago voluntario es un FLUJO, no una accion unica.
 PAGVOL no existe. PAGO_INFORMADO no existe.
@@ -97,7 +110,7 @@ PAGVOL no existe. PAGO_INFORMADO no existe.
 - **Efectos**:
   - FalPagoVoluntario -> PENDIENTE_CONFIRMACION, guarda referenciaPago
   - Evento PAGINF
-  - NO emite PAGCMP: no hay adjunto/evidencia real del comprobante en este slice
+  - NO emite PAGCMP: no hay adjunto/evidencia real del comprobante
 
 ### ConfirmarPagoVoluntario
 - **Command**: `ConfirmarPagoVoluntarioCommand(actaId, observaciones)`
@@ -108,7 +121,7 @@ PAGVOL no existe. PAGO_INFORMADO no existe.
     (Si hay bloqueantes activos: lanza PrecondicionVioladaException, NO registra ningun evento)
 - **Efectos** (solo si sin bloqueantes):
   - FalPagoVoluntario -> CONFIRMADO
-  - acta.resultadoFinal = PAGO_VOLUNTARIO_CONFIRMADO
+  - acta.resultadoFinal = PAGO_VOLUNTARIO_PAGADO
   - acta.situacionAdministrativa = CERRADA
   - acta.bloqueActual = CERR
   - Evento PAGCNF (pago confirmado)
@@ -139,11 +152,11 @@ PAGVOL no existe. PAGO_INFORMADO no existe.
 
 ---
 
-## Puerto BloqueantesMaterialesChecker (Slice 2B)
+## Puerto BloqueantesMaterialesChecker
 
 Interfaz: `ar.gob.malvinas.faltas.core.application.port.BloqueantesMaterialesChecker`
 Metodo: `boolean tieneBloqueantesActivos(String actaId)`
-Implementacion productiva (Slice 7A): `RepositoryBloqueantesMaterialesChecker` (@Component)
+Implementacion productiva: `RepositoryBloqueantesMaterialesChecker` (@Component)
 
 Semantica del puerto:
 - `true` = existen bloqueantes activos, accion bloqueada
@@ -152,11 +165,11 @@ Semantica del puerto:
 Uso: ConfirmarPagoVoluntario, RegistrarNotificacionPositiva para fallo absolutorio.
 Para tests: lambda `actaId -> true` para simular bloqueantes activos.
 
-Motor real activo desde Slice 7A. Ver seccion Slice 7A de este archivo.
+Ver seccion "Motor real de bloqueantes materiales" mas abajo.
 
 ---
 
-## Slice 3A - Fallo absolutorio y condenatorio minimo
+## Fallo absolutorio y condenatorio minimo
 
 ### DictarFalloAbsolutorioCommand
 - **Command**: `DictarFalloAbsolutorioCommand(actaId, fundamentos, observaciones)`
@@ -167,7 +180,7 @@ Motor real activo desde Slice 7A. Ver seccion Slice 7A de este archivo.
   - No hay pago voluntario confirmado
   - No hay fallo activo ya dictado sobre la misma acta
 - **Efectos**:
-  - Crea FalActaFallo con tipoFallo=ABSOLUTORIO, estadoFallo=DICTADO
+  - Crea FalActaFallo con tipoFallo=ABSOLUTORIO, estadoFallo=PENDIENTE_FIRMA
   - Crea documento FALLO_ABSOLUTORIO (estadoDocumento=PENDIENTE_FIRMA)
   - Registra evento FALABS
   - Registra evento DOCGEN
@@ -186,7 +199,7 @@ Motor real activo desde Slice 7A. Ver seccion Slice 7A de este archivo.
   - No hay fallo activo ya dictado sobre la misma acta
   - montoCondena > 0
 - **Efectos**:
-  - Crea FalActaFallo con tipoFallo=CONDENATORIO, estadoFallo=DICTADO, montoCondena guardado
+  - Crea FalActaFallo con tipoFallo=CONDENATORIO, estadoFallo=PENDIENTE_FIRMA, montoCondena guardado
   - Crea documento FALLO_CONDENATORIO (estadoDocumento=PENDIENTE_FIRMA)
   - Registra evento FALCON
   - Registra evento DOCGEN
@@ -201,26 +214,23 @@ Motor real activo desde Slice 7A. Ver seccion Slice 7A de este archivo.
 ## Deudas tecnicas documentadas
 
 ### referenciaPago
-Dato temporal del slice. En produccion sera reemplazado por integracion real
-con el sistema de Ingresos/Tesoreria (Cmte_PG / Pref_PG / Nro_PG).
+Dato temporal. En produccion sera reemplazado por integracion real
+con el sistema de Ingresos/Tesoreria (Cmte_PG / Pref_PG / Nro_PG). Ver `99-pendientes-siguientes-slices.md`.
 
 ### PAGCMP (comprobante adjunto)
 El evento PAGCMP existe en el enum pero no se emite en `InformarPagoVoluntario`.
-Se reserva para slice posterior de adjuntos/comprobantes reales.
+Se reserva para cuando exista un circuito de adjuntos/comprobantes reales.
 Emitirlo sin adjunto real seria semanticamente incorrecto.
 
 ### Fallo condenatorio post-notificacion
 Luego de registrar notificacion positiva de FALLO_CONDENATORIO, el acta queda
 con resultadoFinal=SIN_RESULTADO_FINAL y fallo NOTIFICADO.
-Esta es la situacion minima correcta para Slice 3A.
-Los pasos siguientes (plazo de apelacion, apelacion, firmeza, pago condena) se implementan en slices posteriores.
+Los pasos siguientes (plazo de apelacion, apelacion, firmeza, pago condena) estan documentados en las
+secciones de apelacion, firmeza y pago de condena de este mismo documento.
 
-### CONDENA_FIRME
-No existe todavia como valor productivo de ResultadoFinalActa.
-Se reserva para el slice de firmeza/apelacion (post-3A).
 ---
 
-## Slice 3B - Apelacion presentada
+## Apelacion presentada
 
 ### RegistrarApelacionCommand
 - **Command**: `RegistrarApelacionCommand(actaId, presentante, fundamentos, observaciones)`
@@ -231,7 +241,7 @@ Se reserva para el slice de firmeza/apelacion (post-3A).
   - El fallo activo es CONDENATORIO
   - El fallo condenatorio esta en estado NOTIFICADO
   - No existe apelacion activa previa sobre la misma acta
-  - No existe CONDENA_FIRME (no aplica en Slice 3B, pero validado para slices futuros)
+  - No existe CONDENA_FIRME
 - **Efectos**:
   - Crea FalActaApelacion con estadoApelacion=PRESENTADA, siActiva=true
   - Registra evento APEPRE
@@ -246,19 +256,20 @@ Se reserva para el slice de firmeza/apelacion (post-3A).
 - `APELAC` NO ES evento productivo. Fue reemplazado por `APEPRE`.
 - `TipoEventoActa.deCodigo("APELAC")` debe lanzar `IllegalArgumentException`.
 - `TipoEventoActa.deCodigo("APEPRE")` resuelve correctamente.
-- `APERAZ` y `APEABS` son eventos productivos desde Slice 3C.
+- `APERAZ` y `APEABS` son eventos productivos vigentes de resolucion de apelacion.
 - `TipoEventoActa.deCodigo("APERAZ")` resuelve como apelacion rechazada.
 - `TipoEventoActa.deCodigo("APEABS")` resuelve como apelacion aceptada absuelve.
 
 ### Calculo de plazo
-No implementado en Slice 3B. Se reserva para Slice 3C.
+El calculo de vencimiento del plazo de apelacion esta gobernado por
+[`10-domain/calendario-plazos-administrativos.md`](10-domain/calendario-plazos-administrativos.md).
 
 ### Resolucion de apelacion (APERAZ / APEABS)
-Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
+Ver seccion "Resolucion de apelacion" mas abajo.
 
 ---
 
-## Slice 3C - Resolucion de apelacion
+## Resolucion de apelacion
 
 ### ResolverApelacionRechazadaCommand
 - **Command**: `ResolverApelacionRechazadaCommand(actaId, fundamentosResolucion, observaciones)`
@@ -266,13 +277,13 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
   - Acta existe
   - Acta no esta cerrada, anulada, archivada ni paralizada
   - Existe apelacion activa sobre el acta
-  - La apelacion esta en estado PRESENTADA
+  - La apelacion esta en estado PRESENTADA (o EN_ANALISIS, segun el circuito interno de analisis)
   - Existe fallo activo
   - El fallo activo es CONDENATORIO
   - El fallo condenatorio esta en estado NOTIFICADO
-  - No existe condena firme (ResultadoFinalActa != CONDENA_FIRME, no existe todavia)
-  - No existe pago de condena confirmado (no implementado todavia)
-  - No existe gestion externa activa (no implementado todavia)
+  - No existe condena firme (ResultadoFinalActa != CONDENA_FIRME)
+  - No existe pago de condena confirmado
+  - No existe gestion externa activa
 - **Efectos**:
   - FalActaApelacion.estadoApelacion -> RECHAZADA
   - FalActaApelacion.siActiva -> false
@@ -305,94 +316,71 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
     - No registra CIERRA
     - Snapshot: PENDIENTE_ANALISIS / NINGUNA (pendiente operativo por bloqueantes)
 
-### Deudas tecnicas Slice 3C
+### Notas de alcance de apelacion
 
-- PLAVNC (vencimiento de plazo de apelacion): Slice 3D
-- CONFIR (confirmacion de condena firme): Slice 3D
-- CONDENA_FIRME como ResultadoFinalActa: Slice 3D
-- Pago de condena: Slice 5
-- Gestion externa: Slice 3F
----
-
-## Slice 4 - Firmeza de condena
-
-### VencerPlazoApelacionCommand
-- **Command**: `VencerPlazoApelacionCommand(actaId, observaciones)`
-- **Precondiciones**:
-  - Acta existe
-  - Acta no esta cerrada, anulada, archivada ni paralizada
-  - Existe fallo activo
-  - El fallo activo es CONDENATORIO
-  - El fallo condenatorio esta en estado NOTIFICADO
-  - No existe apelacion (ninguna ultima apelacion: ni PRESENTADA ni RECHAZADA ni otra)
-  - No existe CONDENA_FIRME (resultadoFinal != CONDENA_FIRME)
-- **Efectos**:
-  - Registra evento PLAVNC (plazo de apelacion vencido)
-  - Registra evento CONFIR (condena firme) despues de PLAVNC
-  - FalActa.resultadoFinal -> CONDENA_FIRME
-  - Crea FalActaFirmezaCondena con origenFirmeza=VENCIMIENTO_PLAZO_APELACION
-  - Snapshot: PENDIENTE_PAGO_CONDENA / GESTIONAR_PAGO_CONDENA
-- **No cierra el acta**
-- **No registra CIERRA**
-- **No inicia pago condena**
-- **No crea obligacion de pago**
-
-### DeclararCondenaFirmePorApelacionRechazadaCommand
-- **Command**: `DeclararCondenaFirmePorApelacionRechazadaCommand(actaId, observaciones)`
-- **Precondiciones**:
-  - Acta existe
-  - Acta no esta cerrada, anulada, archivada ni paralizada
-  - Existe fallo activo
-  - El fallo activo es CONDENATORIO
-  - El fallo condenatorio esta en estado NOTIFICADO
-  - Existe ultima apelacion sobre el acta
-  - La ultima apelacion esta en estado RECHAZADA
-  - No existe apelacion en estado PRESENTADA
-  - No existe CONDENA_FIRME (resultadoFinal != CONDENA_FIRME)
-- **Efectos**:
-  - Registra evento CONFIR (condena firme)
-  - No registra PLAVNC (la firmeza viene por apelacion rechazada, no por vencimiento de plazo)
-  - FalActa.resultadoFinal -> CONDENA_FIRME
-  - Crea FalActaFirmezaCondena con origenFirmeza=APELACION_RECHAZADA, apelacionId asignado
-  - Snapshot: PENDIENTE_PAGO_CONDENA / GESTIONAR_PAGO_CONDENA
-- **No cierra el acta**
-- **No registra CIERRA**
-- **No inicia pago condena**
-- **No crea obligacion de pago**
-
-### Deudas tecnicas Slice 4
-
-- Pago de condena (PCOINF/PCOCNF/PCOOBS): Slice 5
-- Informar pago condena (PCOINF): Slice 5
-- Confirmar pago condena (PCOCNF): Slice 5
-- Gestion externa (EXTDER/EXTRET/PAGAPR): Slice 6 - NO usar DRVEXT
-- Calculo real de plazos de apelacion: Slice futuro de integracion
-- Cierre definitivo por condena firme pagada: Slice 5/posterior
+- `EstadoApelacionActa` tambien incluye `EN_ANALISIS` y `RESUELTA` (ver `02-estados-bloques-eventos.md`).
+  Estos valores gobiernan el circuito interno de analisis de la apelacion antes de su resolucion final.
+- Pago de condena: ver seccion "Pago de condena" de este documento.
+- Gestion externa: ver seccion "Reingreso desde gestion externa" y "Pago externo de gestion externa".
 
 ---
 
-## Slice 5: Pago de condena - Comandos, precondiciones y efectos
+## Familia canonica de comandos de fallo
 
-### InformarPagoCondenaCommand
+Los contratos completos y autoritativos de CMD-FALLO-001..007 viven
+exclusivamente en [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md).
 
-**Campos:** actaId, monto, referenciaPago, observaciones
+Esta seccion no duplica firmas, precondiciones, orden de efectos ni concurrencia.
 
-**Precondiciones:**
-- Acta existe y no esta cerrada, anulada, archivada ni paralizada
-- `resultadoFinal == CONDENA_FIRME`
-- Existe fallo condenatorio con estado `NOTIFICADO`
-- `monto > 0`
-- `referenciaPago` obligatoria y no vacia
-- No existe pago de condena `CONFIRMADO` previo
+| ID | Nombre canonico | Servicio | Heading propietario |
+|----|------------------|----------|----------------------|
+| CMD-FALLO-001 | Confirmar firma documental real | `DocumentoService.registrarFirmaDocumental` | [`20-application/fallo-command-contracts.md#cmd-fallo-001-confirmar-firma-documental-real`](20-application/fallo-command-contracts.md) |
+| CMD-FALLO-002 | Iniciar envio notificatorio directo | `NotificacionService.enviarNotificacion` | [`20-application/fallo-command-contracts.md#cmd-fallo-002-iniciar-envio-notificatorio-directo`](20-application/fallo-command-contracts.md) |
+| CMD-FALLO-003 | Generar lote postal desde notificaciones pendientes | `LoteCorreoService.generarLoteDesdePendientes` | [`20-application/fallo-command-contracts.md#cmd-fallo-003-generar-lote-postal-desde-notificaciones-pendientes`](20-application/fallo-command-contracts.md) |
+| CMD-FALLO-004 | Registrar resultado notificatorio positivo | `NotificacionService.registrarPositiva` | [`20-application/fallo-command-contracts.md#cmd-fallo-004-registrar-resultado-notificatorio-positivo`](20-application/fallo-command-contracts.md) |
+| CMD-FALLO-005 | Declarar firmeza por vencimiento del plazo de apelacion | `FirmezaCondenaService.vencerPlazoApelacion` | [`20-application/fallo-command-contracts.md#cmd-fallo-005-declarar-firmeza-por-vencimiento-del-plazo-de-apelacion`](20-application/fallo-command-contracts.md) |
+| CMD-FALLO-006 | Declarar firmeza por apelacion rechazada | `FirmezaCondenaService.declararFirmePorApelacionRechazada` | [`20-application/fallo-command-contracts.md#cmd-fallo-006-declarar-firmeza-por-apelacion-rechazada`](20-application/fallo-command-contracts.md) |
+| CMD-FALLO-007 | Informar pago de condena | `PagoCondenaService.informar` | [`20-application/fallo-command-contracts.md#cmd-fallo-007-informar-pago-de-condena`](20-application/fallo-command-contracts.md) |
 
-**Efectos:**
-- Crea o actualiza `FalPagoCondena` con estado `INFORMADO`
-- Registra evento `PCOINF`
-- NO cierra el acta
-- NO registra `CIERRA`
-- Recalcula snapshot
+## Firmeza de condena
+
+La firmeza de condena se declara exclusivamente mediante CMD-FALLO-005
+(vencimiento del plazo de apelacion) o CMD-FALLO-006 (apelacion rechazada).
+Ver la tabla de la "Familia canonica de comandos de fallo" para los enlaces
+propietarios. Este documento no mantiene una segunda version de sus
+precondiciones, efectos, orden de concurrencia ni modelo de persistencia.
+
+- La firmeza es inline en `FalActaFallo`; no existe un agregado ni un
+  repositorio dedicados a la persistencia de firmeza (ver `110`, decision P2,
+  para el detalle de la eliminacion de codigo confirmada).
+- La apelacion relevante para CMD-FALLO-006 se consulta por `fallo.id`, no por
+  "ultima apelacion del acta"; una apelacion historica de otro fallo no
+  bloquea ni satisface la precondicion.
+- Ambos comandos declaran actor (JWT `sub` via `ActorContextHolder`); no
+  existen firmas legacy de estos comandos sin actor.
+
+### Dependencias de firmeza y pago de condena
+
+- Pago de condena (PCOINF/PCOCNF/PCOOBS): ver seccion "Pago de condena".
+- Gestion externa (EXTDER/EXTRET/PAGAPR): ver secciones "Reingreso desde gestion externa" y "Pago externo de
+  gestion externa". `DRVEXT` sigue prohibido.
+- Calculo real de plazos de apelacion: ver `10-domain/calendario-plazos-administrativos.md`.
+
+---
+
+## Pago de condena - Comandos, precondiciones y efectos
+
+Informar pago de condena pertenece a CMD-FALLO-007 y su contrato completo
+vive exclusivamente en [`20-application/fallo-command-contracts.md`](20-application/fallo-command-contracts.md#cmd-fallo-007-informar-pago-de-condena).
+Este documento no mantiene una segunda lista de campos, precondiciones,
+efectos, estado del fallo, actor ni concurrencia para ese comando; ver la
+tabla de la "Familia canonica de comandos de fallo".
 
 ### ConfirmarPagoCondenaCommand
+
+`ConfirmarPagoCondenaCommand` es un comando general de pago de condena, fuera
+de los siete contratos canonicos CMD-FALLO-001..007. Su contrato completo
+vive en este documento.
 
 **Campos:** actaId, observaciones
 
@@ -400,22 +388,31 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 - Pago de condena existe y estado es `INFORMADO`
 - Acta no esta cerrada
 - `resultadoFinal == CONDENA_FIRME`
-- No hay bloqueantes materiales activos (`BloqueantesMaterialesChecker`)
+
+La presencia de bloqueantes materiales activos NO es una precondicion de este
+comando: `ConfirmarPagoCondena` confirma el pago exista o no un bloqueante
+activo. Los bloqueantes solo condicionan si se registra `CIERRA` (ver Efectos).
 
 **Efectos:**
-- Estado pago condena -> `CONFIRMADO`
+- Estado pago condena -> `CONFIRMADO` (siempre que se cumplan las precondiciones)
 - `acta.resultadoFinal = CONDENA_FIRME_PAGADA`
+- Registra `PCOCNF` (siempre, primer evento)
+
+Sin bloqueantes activos:
 - `acta.situacionAdministrativa = CERRADA`
 - `acta.bloqueActual = CERR`
-- Registra `PCOCNF` (primero)
-- Registra `CIERRA` (despues)
+- Registra `CIERRA` (despues de `PCOCNF`)
 - Snapshot: `CERRADAS / NINGUNA`
 
-**Si hay bloqueantes activos:**
-- Lanza `PrecondicionVioladaException`
-- NO registra ningun evento
-- NO cierra el acta
-- NO modifica el pago
+Con bloqueantes activos:
+- `acta.situacionAdministrativa = ACTIVA`
+- `acta.bloqueActual = ANAL`
+- NO registra `CIERRA`
+- Snapshot: `PENDIENTE_ANALISIS / NINGUNA`
+
+El motor real de bloqueantes (`RepositoryBloqueantesMaterialesChecker`) determina unicamente si se emite
+`CIERRA`; `PCOCNF` y la asignacion de `CONDENA_FIRME_PAGADA` ocurren siempre que se cumplen las
+precondiciones. Este comportamiento sigue el mismo patron que `RegistrarPagoExternoGestionCommand` (PAGAPR).
 
 ### ObservarPagoCondenaCommand
 
@@ -434,33 +431,61 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 - NO registra `CIERRA`
 - Snapshot: `PENDIENTE_PAGO_CONDENA / CORREGIR_PAGO_CONDENA`
 
-
 ---
 
-## Slice 6B: Reingreso desde gestion externa - Comandos, precondiciones y efectos
+## Reingreso desde gestion externa - Comandos, precondiciones y efectos
 
 ### ReingresarDesdeGestionExternaCommand
 
 **Campos:**
-- `actaId` — obligatorio
-- `modoReingresoGestionExterna` — obligatorio; debe ser `REINGRESO_PARA_REVISION` o `REINGRESO_SIN_PAGO`
-- `motivoReingreso` — obligatorio, no vacio
-- `resultadoGestionExterna` — opcional (nullable); si se informa se persiste en `FalGestionExterna`
-- `observaciones` — opcional (nullable)
+- `actaId` -- obligatorio
+- `modoReingresoGestionExterna` -- obligatorio; debe ser un valor habilitado (ver tabla de pares mas abajo)
+- `motivoReingreso` -- obligatorio, no vacio
+- `resultadoGestionExterna` -- opcional (nullable); si se informa se persiste en `FalGestionExterna` y debe
+  formar un par valido con `modoReingresoGestionExterna`
+- `observaciones` -- opcional (nullable)
 
-**Precondiciones:**
+**Precondiciones comunes:**
 - Acta existe
 - `modoReingresoGestionExterna` no nulo
 - `motivoReingreso` no nulo ni vacio
 - `acta.situacionAdministrativa == EN_GESTION_EXTERNA`
 - `acta.bloqueActual == GEXT`
-- `modoReingresoGestionExterna` es habilitado (no `REINGRESO_PARA_CIERRE`, no `REINGRESO_PARA_NUEVO_FALLO`, no nulo)
+- `modoReingresoGestionExterna` es un valor habilitado (no `REINGRESO_PARA_CIERRE`, no `REINGRESO_CON_PAGO`)
 - Existe `FalGestionExterna` activa (`siActiva == true`)
 - `FalGestionExterna.estadoGestionExterna in [DERIVADA, EN_CURSO]`
-- Si `modo == REINGRESO_SIN_PAGO`: `acta.resultadoFinal == CONDENA_FIRME`
+- `resultadoFinal == CONDENA_FIRME` para los modos que lo requieren (`REINGRESO_SIN_PAGO`,
+  `REINGRESO_PARA_NUEVO_FALLO`, `REINGRESO_CON_DICTAMEN`)
 - Acta no cerrada, no anulada, no archivada
 
-**Efectos:**
+**Pares habilitados de `resultadoGestionExterna` + `modoReingresoGestionExterna`:**
+
+| resultadoGestionExterna | modoReingresoGestionExterna | Descripcion |
+|------------------------|----------------------------|-------------|
+| `SIN_PAGO`             | `REINGRESO_SIN_PAGO`        | Vuelve sin pago; continua circuito interno de cobro. Requiere CONDENA_FIRME |
+| `SIN_CAMBIOS`          | `REINGRESO_PARA_REVISION`   | Vuelve sin cambios sustantivos; revision interna |
+| `ABSUELVE`             | `REINGRESO_PARA_NUEVO_FALLO`| El externo propone absolver. Requiere CONDENA_FIRME |
+| `CONFIRMA_CONDENA`     | `REINGRESO_CON_DICTAMEN`    | El externo confirma condena. Requiere CONDENA_FIRME |
+| `MODIFICA_MONTO`       | `REINGRESO_CON_DICTAMEN`    | El externo modifica monto. Requiere `montoResultado > 0` |
+
+**Pares invalidos rechazados:**
+- Cualquier combinacion que no figure en la tabla de pares habilitados (ejemplo: `SIN_PAGO` +
+  `REINGRESO_PARA_REVISION`, `SIN_CAMBIOS` + `REINGRESO_SIN_PAGO`).
+- `resultadoGestionExterna == PAGO_REGISTRADO` (asignado automaticamente por PAGAPR, no valido para reingreso).
+- `resultadoGestionExterna == SIN_RESULTADO` (estado inicial al derivar, no valido para reingreso).
+
+**Modos reservados (no habilitados):**
+- `REINGRESO_PARA_CIERRE`: reservado; requiere decision de cierre definitivo.
+- `REINGRESO_CON_PAGO`: reservado/no aplicable al flujo `PAGAPR` actual. `PAGAPR` cierra la gestion con
+  `estadoGestionExterna = CERRADA_EXTERNA` sin usar modo de reingreso.
+
+**Campo adicional para dictamen externo:**
+
+| Campo | Tipo | Obligatorio | Descripcion |
+|-------|------|-------------|-------------|
+| `montoResultado` | `BigDecimal` | Solo para MODIFICA_MONTO (> 0) | Monto externo informado. Persiste en `FalGestionExterna.montoResultado` (`monto_resultado` en MariaDB). |
+
+**Efectos comunes:**
 - `FalGestionExterna.siActiva = false`
 - `FalGestionExterna.estadoGestionExterna = REINGRESADA`
 - `FalGestionExterna.modoReingresoGestionExterna` = modo indicado
@@ -475,6 +500,18 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 - **No registra** `PAGAPR`
 - **No registra** `CIERRA`
 - **No registra** `EXTDER` adicional
+- `fechaCierreGestionExterna` no se toca (se usa exclusivamente en PAGAPR)
+
+**Efectos especificos por caso:**
+
+- **Caso ABSUELVE + REINGRESO_PARA_NUEVO_FALLO:** `FalActa.resultadoFinal` no cambia automaticamente; no
+  genera fallo absolutorio automatico; la acta vuelve a ANAL para que internamente se dicte nuevo fallo si
+  corresponde.
+- **Caso CONFIRMA_CONDENA + REINGRESO_CON_DICTAMEN:** `FalActa.resultadoFinal = CONDENA_FIRME` (confirmado
+  explicitamente); permite continuar circuito interno de pago u otras acciones en ANAL.
+- **Caso MODIFICA_MONTO + REINGRESO_CON_DICTAMEN:** `FalGestionExterna.montoResultado = montoResultado` (del
+  comando); `FalActa.resultadoFinal` no cambia automaticamente; no dicta nuevo fallo; no pasa a pago
+  automaticamente.
 
 **Errores esperados:**
 - `PrecondicionVioladaException` si modo nulo
@@ -482,27 +519,31 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 - `PrecondicionVioladaException` si acta no esta en `EN_GESTION_EXTERNA`
 - `PrecondicionVioladaException` si `bloqueActual != GEXT`
 - `PrecondicionVioladaException` si modo es `REINGRESO_PARA_CIERRE` (reservado)
-- `PrecondicionVioladaException` si modo es `REINGRESO_PARA_NUEVO_FALLO` (reservado)
+- `PrecondicionVioladaException` si modo es `REINGRESO_CON_PAGO` (reservado/no aplicable)
 - `PrecondicionVioladaException` si no existe gestion externa activa
 - `PrecondicionVioladaException` si gestion no esta en `DERIVADA` ni `EN_CURSO`
-- `PrecondicionVioladaException` si `REINGRESO_SIN_PAGO` y `resultadoFinal != CONDENA_FIRME`
+- `PrecondicionVioladaException` si el par resultado/modo no figura en la tabla de pares habilitados
+- `PrecondicionVioladaException` si `resultadoGestionExterna in [PAGO_REGISTRADO, SIN_RESULTADO]`
+- `PrecondicionVioladaException` si el modo requiere `CONDENA_FIRME` y `resultadoFinal != CONDENA_FIRME`
+- `PrecondicionVioladaException` si MODIFICA_MONTO con `montoResultado` nulo o <= 0
 - `ActaNoEncontradaException` si acta no existe
 
-**Modos prohibidos temporalmente:**
-- `REINGRESO_PARA_CIERRE`: reservado para slice futuro
-- `REINGRESO_PARA_NUEVO_FALLO`: reservado para slice futuro
-
+**Pendiente para trabajo posterior (ver `99-pendientes-siguientes-slices.md`):**
+- Nuevo fallo interno post-ABSUELVE (dictarFalloAbsolutorio o dictarFalloCondenatorio desde ANAL).
+- Actualizacion definitiva de monto condena post-MODIFICA_MONTO (comando dedicado).
+- Documentos externos (fal_documento): pendiente hasta JDBC.
+- Fundamentos/observaciones (fal_observacion): pendiente hasta JDBC.
 
 ---
 
-## Slice 6C: Pago externo de gestion externa - Comandos, precondiciones y efectos
+## Pago externo de gestion externa - Comandos, precondiciones y efectos
 
 ### RegistrarPagoExternoGestionCommand
 
 **Campos:**
 - actaId - obligatorio
 - observaciones - opcional (nullable); si se informa, se incluye en FalActaEvento.descripcion
-  como puente transitorio hasta implementar FalObservacion en Slice 9/JDBC.
+  como puente transitorio hasta implementar FalObservacion via JDBC.
   Las observaciones textuales NO se persisten como columna en fal_acta_gestion_externa.
   El modelo MariaDB base ya define fal_observacion con entidad_tipo=10=GESTION_EXTERNA.
 
@@ -535,7 +576,7 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
   - acta.bloqueActual = ANAL
   - No registra CIERRA
   - Snapshot: PENDIENTE_ANALISIS / NINGUNA
-  - Motor real activo desde Slice 7A.
+  - El motor real de bloqueantes (ver seccion "Motor real de bloqueantes materiales") determina esta condicion.
 
 **Efectos sobre FalPagoCondena:**
 - No se toca. PAGAPR es un camino de pago externo independiente del flujo interno PCOINF/PCOCNF.
@@ -553,94 +594,26 @@ Implementado en Slice 3C. Ver seccion Slice 3C mas abajo.
 - PrecondicionVioladaException si bloqueActual != GEXT
 - PrecondicionVioladaException si no existe gestion externa activa
 - PrecondicionVioladaException si estadoGestionExterna no es DERIVADA ni EN_CURSO
-- PrecondicionVioladaException si 
-esultadoFinal != CONDENA_FIRME
+- PrecondicionVioladaException si resultadoFinal != CONDENA_FIRME
 - PrecondicionVioladaException si existe FalPagoCondena CONFIRMADO
 - PrecondicionVioladaException si acta cerrada, anulada o archivada
 - ActaNoEncontradaException si acta no existe
 
-
-
 ---
 
-## Slice 6D-1: Reingreso sin pago y sin cambios - Validacion de pares resultado/modo
+## Motor real de bloqueantes materiales
 
-### ReingresarDesdeGestionExternaCommand - validacion de pares (Slice 6D-1)
-
-Extiende Slice 6B. Agrega validacion estricta del par `resultadoGestionExterna` + `modoReingresoGestionExterna`
-cuando `resultadoGestionExterna` es no nulo.
-
-**Pares habilitados en Slice 6D-1:**
-
-| resultadoGestionExterna | modoReingresoGestionExterna | Descripcion |
-|------------------------|----------------------------|-------------|
-| `SIN_PAGO`             | `REINGRESO_SIN_PAGO`        | Vuelve sin pago; continua circuito interno de cobro |
-| `SIN_CAMBIOS`          | `REINGRESO_PARA_REVISION`   | Vuelve sin cambios sustantivos; revision interna |
-
-**Pares habilitados en Slice 6D-2 (ver seccion siguiente):**
-
-| resultadoGestionExterna | modoReingresoGestionExterna |
-|------------------------|-----------------------------|
-| `ABSUELVE`             | `REINGRESO_PARA_NUEVO_FALLO`|
-| `CONFIRMA_CONDENA`     | `REINGRESO_CON_DICTAMEN`    |
-| `MODIFICA_MONTO`       | `REINGRESO_CON_DICTAMEN`    |
-
-**Pares todavia reservados (fallan con PrecondicionVioladaException):**
-
-| resultadoGestionExterna | modoReingresoGestionExterna |
-|------------------------|-----------------------------|
-| cualquiera             | `REINGRESO_PARA_CIERRE`     |
-
-**Nota sobre REINGRESO_CON_PAGO:**
-`REINGRESO_CON_PAGO` queda reservado/no aplicable al flujo `PAGAPR` actual.
-`PAGAPR` cierra la gestion con `estadoGestionExterna = CERRADA_EXTERNA` sin usar modo de reingreso.
-`REINGRESO_CON_PAGO` queda bloqueado y reservado para un slice futuro.
-
-**Precondiciones adicionales (Slice 6D-1):**
-- Si `resultadoGestionExterna` es no nulo:
-  - Desde Slice 6D-2: puede ser `ABSUELVE`, `CONFIRMA_CONDENA` o `MODIFICA_MONTO` (habilitados con par correcto)
-  - No puede ser `PAGO_REGISTRADO` (asignado automaticamente por PAGAPR)
-  - No puede ser `SIN_RESULTADO` (estado inicial al derivar)
-  - Si resultado es `SIN_PAGO`: modo debe ser `REINGRESO_SIN_PAGO`
-  - Si resultado es `SIN_CAMBIOS`: modo debe ser `REINGRESO_PARA_REVISION`
-
-**Caso A — SIN_PAGO / REINGRESO_SIN_PAGO:**
-- Precondiciones: Caso base + `resultadoFinal == CONDENA_FIRME` (ya existia en 6B)
-- Efectos: EXTRET emitido; `FalGestionExterna.resultadoGestionExterna = SIN_PAGO`;
-  `modoReingresoGestionExterna = REINGRESO_SIN_PAGO`; `fechaReingreso = now`;
-  NO `fechaCierreGestionExterna`; NO `estadoGestionExterna = CERRADA_EXTERNA`;
-  `FalActa.resultadoFinal` permanece `CONDENA_FIRME`; `situacionAdministrativa = ACTIVA`; `bloqueActual = ANAL`
-- No emite PAGAPR, CIERRA ni PCOCNF
-
-**Caso B — SIN_CAMBIOS / REINGRESO_PARA_REVISION:**
-- Precondiciones: Caso base
-- Efectos: EXTRET emitido; `FalGestionExterna.resultadoGestionExterna = SIN_CAMBIOS`;
-  `modoReingresoGestionExterna = REINGRESO_PARA_REVISION`; `fechaReingreso = now`;
-  NO `fechaCierreGestionExterna`; NO `estadoGestionExterna = CERRADA_EXTERNA`;
-  `FalActa.resultadoFinal` permanece `CONDENA_FIRME`; `situacionAdministrativa = ACTIVA`; `bloqueActual = ANAL`
-- No emite PAGAPR, CIERRA ni PCOCNF
-
-**Errores adicionales (Slice 6D-1):**
-- `PrecondicionVioladaException` si `resultadoGestionExterna in [ABSUELVE, CONFIRMA_CONDENA, MODIFICA_MONTO]`
-- `PrecondicionVioladaException` si `resultadoGestionExterna == PAGO_REGISTRADO`
-- `PrecondicionVioladaException` si `resultadoGestionExterna == SIN_RESULTADO`
-- `PrecondicionVioladaException` si par incoherente: `SIN_PAGO + REINGRESO_PARA_REVISION`
-- `PrecondicionVioladaException` si par incoherente: `SIN_CAMBIOS + REINGRESO_SIN_PAGO`
----
-
-## Slice 7A: Actualizacion de ConfirmarPagoCondena y motor de bloqueantes
-
-### ConfirmarPagoCondena - comportamiento actualizado (Slice 7A)
+### ConfirmarPagoCondena - comportamiento vigente
 
 PCOCNF se registra SIEMPRE cuando las precondiciones se cumplen.
 Los bloqueantes solo determinan si se emite o no CIERRA.
 
-Precondiciones (sin cambios):
+Precondiciones:
 - Pago de condena existe y estado es INFORMADO
 - Acta no esta cerrada
 - resultadoFinal == CONDENA_FIRME
 
-Efectos (actualizados en Slice 7A):
+Efectos:
 - Estado pago condena -> CONFIRMADO (siempre)
 - acta.resultadoFinal = CONDENA_FIRME_PAGADA (siempre)
 - Registra PCOCNF (siempre, primer evento)
@@ -657,10 +630,9 @@ Con bloqueantes activos:
 - NO registra CIERRA
 - Snapshot: PENDIENTE_ANALISIS / NINGUNA
 
-Nota: antes de Slice 7A, el comportamiento era lanzar PrecondicionVioladaException sin mutar.
-Desde Slice 7A, se alinea con el patron de PAGAPR (Slice 6C).
+Este comportamiento sigue el mismo patron que `RegistrarPagoExternoGestionCommand` (PAGAPR).
 
-### Puerto BloqueantesMaterialesChecker - motor real implementado (Slice 7A)
+### Puerto BloqueantesMaterialesChecker - motor real
 
 Implementacion productiva: RepositoryBloqueantesMaterialesChecker (@Component)
 Implementacion de test: NoOpBloqueantesMaterialesChecker (sin @Component, instanciar con new)
@@ -668,17 +640,9 @@ Implementacion de test: NoOpBloqueantesMaterialesChecker (sin @Component, instan
 RepositoryBloqueantesMaterialesChecker delega en BloqueanteMaterialRepository.existsActivoByActaId(actaId).
 NoOpBloqueantesMaterialesChecker ya no es @Component. Solo usable en tests directamente.
 
-Motor real: activo desde Slice 7A. No es mas deuda tecnica.
-
-### PAGAPR - nota actualizada
-
-La nota "Estado transitorio hasta Slice 7" en la seccion de PAGAPR queda obsoleta.
-El motor real de bloqueantes esta implementado desde Slice 7A.
-El comportamiento de PAGAPR con bloqueantes es el definitivo: PAGAPR siempre, CIERRA solo si sin bloqueantes.
-
 ---
 
-## Slice 7B: Gestion minima de bloqueantes materiales - Comandos, precondiciones y efectos
+## Gestion minima de bloqueantes materiales - Comandos, precondiciones y efectos
 
 ### RegistrarBloqueanteMaterialCommand
 
@@ -716,6 +680,7 @@ El comportamiento de PAGAPR con bloqueantes es el definitivo: PAGAPR siempre, CI
 - fechaCierre = now
 - Persiste en BloqueanteMaterialRepository
 - existsActivoByActaId(actaId) pasa a false si era el unico bloqueante activo
+- Se evalua cierre diferido (ver "Cierre diferido automatico")
 
 **Efectos (si ya CUMPLIDO - idempotente):**
 - Devuelve el bloqueante sin modificaciones
@@ -741,6 +706,7 @@ El comportamiento de PAGAPR con bloqueantes es el definitivo: PAGAPR siempre, CI
 - fechaCierre = now
 - Persiste en BloqueanteMaterialRepository
 - existsActivoByActaId(actaId) pasa a false si era el unico bloqueante activo
+- Se evalua cierre diferido (ver "Cierre diferido automatico")
 
 **Efectos (si ya ANULADO - idempotente):**
 - Devuelve el bloqueante sin modificaciones
@@ -751,7 +717,7 @@ El comportamiento de PAGAPR con bloqueantes es el definitivo: PAGAPR siempre, CI
 
 ---
 
-### Regla de cierre (confirmada Slice 7B)
+### Regla de cierre
 
 - existsActivoByActaId(actaId) consulta solo bloqueantes con siActivo=true.
 - Bloqueantes CUMPLIDO o ANULADO tienen siActivo=false y NO impiden CIERRA.
@@ -759,9 +725,9 @@ El comportamiento de PAGAPR con bloqueantes es el definitivo: PAGAPR siempre, CI
 
 ---
 
-## Slice 7C: Cierre diferido en CumplirBloqueante y AnularBloqueante (implementado)
+## Cierre diferido en CumplirBloqueante y AnularBloqueante
 
-### CumplirBloqueanteMaterial (comportamiento extendido en Slice 7C)
+### CumplirBloqueanteMaterial - cierre diferido
 
 Despues de resolver el estado a CUMPLIDO, se ejecuta `intentarCierreDiferido`:
 
@@ -769,7 +735,7 @@ Despues de resolver el estado a CUMPLIDO, se ejecuta `intentarCierreDiferido`:
   - No quedan bloqueantes activos para el acta.
   - El acta existe en el repositorio.
   - El acta NO esta cerrada/anulada.
-  - `resultadoFinal` es cerrable (PAGO_VOLUNTARIO_CONFIRMADO, ABSUELTO, CONDENA_FIRME_PAGADA).
+  - `resultadoFinal` es cerrable (PAGO_VOLUNTARIO_PAGADO, ABSUELTO, CONDENA_FIRME_PAGADA).
   - No existe ya un evento CIERRA en la historia del acta.
 
 - **Efectos si se cumplen todas las precondiciones:**
@@ -779,7 +745,7 @@ Despues de resolver el estado a CUMPLIDO, se ejecuta `intentarCierreDiferido`:
 
 - **Si alguna precondicion no se cumple:** no se emite CIERRA, sin efecto adicional, sin error.
 
-### AnularBloqueanteMaterial (comportamiento extendido en Slice 7C)
+### AnularBloqueanteMaterial - cierre diferido
 
 Identico al de CumplirBloqueanteMaterial en cuanto a cierre diferido.
 
@@ -791,82 +757,9 @@ Identico al de CumplirBloqueanteMaterial en cuanto a cierre diferido.
   el retorno temprano impide que se llame `intentarCierreDiferido`, evitando duplicados.
 - Guard adicional: `yaTieneCierre()` verifica la historia de eventos ante race conditions.
 
-
 ---
 
-## Slice 6D-2: Reingreso con dictamen externo
-
-### ReingresarDesdeGestionExternaCommand - dictamen externo (Slice 6D-2)
-
-Extiende Slice 6D-1. Habilita los tres casos de reingreso con dictamen externo desde instancia externa
-(juzgado de paz, apremio, otro organismo).
-
-**Nuevo campo en comando y DTO:**
-
-| Campo | Tipo | Obligatorio | Descripcion |
-|-------|------|-------------|-------------|
-| `montoResultado` | `BigDecimal` | Solo para MODIFICA_MONTO (> 0) | Monto externo informado. Persiste en `FalGestionExterna.montoResultado` (monto_resultado en MariaDB). |
-
-**Pares habilitados en Slice 6D-2:**
-
-| resultadoGestionExterna | modoReingresoGestionExterna | Efecto sobre resultadoFinal |
-|------------------------|----------------------------|-----------------------------|
-| `ABSUELVE`             | `REINGRESO_PARA_NUEVO_FALLO` | No cambia (queda CONDENA_FIRME); nuevo fallo posterior |
-| `CONFIRMA_CONDENA`     | `REINGRESO_CON_DICTAMEN`   | Se confirma CONDENA_FIRME (ya era precondicion) |
-| `MODIFICA_MONTO`       | `REINGRESO_CON_DICTAMEN`   | No cambia resultadoFinal; registra montoResultado |
-
-**Precondiciones comunes (adicionales a Slice 6B):**
-- `resultadoFinal == CONDENA_FIRME` (para REINGRESO_PARA_NUEVO_FALLO y REINGRESO_CON_DICTAMEN)
-- `resultadoGestionExterna` no nulo cuando modo es REINGRESO_PARA_NUEVO_FALLO o REINGRESO_CON_DICTAMEN
-- Para MODIFICA_MONTO: `montoResultado` no nulo y > 0
-
-**Efectos comunes (Slice 6D-2):**
-- Evento `EXTRET` emitido
-- `FalGestionExterna.siActiva = false`
-- `FalGestionExterna.estadoGestionExterna = REINGRESADA`
-- `FalGestionExterna.fechaReingreso = now`
-- `FalGestionExterna.resultadoGestionExterna` = resultado indicado
-- `FalGestionExterna.modoReingresoGestionExterna` = modo indicado
-- `FalActa.situacionAdministrativa = ACTIVA`
-- `FalActa.bloqueActual = ANAL`
-- No emite `CIERRA`, `PAGAPR` ni `PCOCNF`
-- `fechaCierreGestionExterna` no se toca (se usa en PAGAPR)
-
-**Efectos especificos:**
-
-**Caso ABSUELVE + REINGRESO_PARA_NUEVO_FALLO:**
-- `FalActa.resultadoFinal` no cambia automaticamente
-- No genera fallo absolutorio automatico
-- La acta vuelve a ANAL para que internamente se dicte nuevo fallo si corresponde
-
-**Caso CONFIRMA_CONDENA + REINGRESO_CON_DICTAMEN:**
-- `FalActa.resultadoFinal = CONDENA_FIRME` (confirmado explicitamente)
-- Permite continuar circuito interno de pago u otras acciones en ANAL
-
-**Caso MODIFICA_MONTO + REINGRESO_CON_DICTAMEN:**
-- `FalGestionExterna.montoResultado = montoResultado` (del comando)
-- `FalActa.resultadoFinal` no cambia automaticamente
-- No dicta nuevo fallo
-- No pasa a pago automaticamente
-- Internamente, luego del reingreso, se decidira si corresponde nuevo fallo o actualizacion de monto para continuar a pago
-
-**Errores esperados (Slice 6D-2):**
-- `PrecondicionVioladaException` si modo REINGRESO_PARA_NUEVO_FALLO o REINGRESO_CON_DICTAMEN con resultado null
-- `PrecondicionVioladaException` si resultado CONDENA_FIRME no se cumple para estos modos
-- `PrecondicionVioladaException` si MODIFICA_MONTO con montoResultado null
-- `PrecondicionVioladaException` si MODIFICA_MONTO con montoResultado <= 0
-- `PrecondicionVioladaException` si par incoherente (ABSUELVE + DICTAMEN, CONFIRMA_CONDENA + NUEVO_FALLO, etc.)
-- `PrecondicionVioladaException` si REINGRESO_PARA_CIERRE (sigue reservado)
-
-**Pendiente para slices posteriores:**
-- Nuevo fallo interno post-ABSUELVE (dictarFalloAbsolutorio o dictarFalloCondenatorio desde ANAL)
-- Actualizacion definitiva de monto condena post-MODIFICA_MONTO (comando dedicado)
-- Documentos externos (fal_documento): pendiente hasta JDBC
-- Fundamentos/observaciones (fal_observacion): pendiente hasta JDBC
-
----
-
-## CIERRE-D14-D18 (2026-07-09) - Numeracion documental para integracion Firmas
+## Numeracion documental para integracion con Firmas
 
 ### NumerarDocumentoParaFirmas
 
@@ -896,22 +789,21 @@ Extiende Slice 6D-1. Habilita los tres casos de reingreso con dictamen externo d
 - Preserva el orden obligatorio: numerar -> contenido definitivo/hash -> firma.
 
 **Concurrencia:**
-- InMemory actual: `synchronized` en `numerarDocumentoParaFirmas`; serializa llamadas dentro de una unica instancia JVM. No constituye un mecanismo de concurrencia multiinstancia.
+- InMemory actual: metodo de instancia `synchronized` (monitor `this`) en `numerarDocumentoParaFirmas`; serializa llamadas concurrentes sobre la misma instancia de `DocumentoService`, no un monitor estatico JVM-wide. No constituye un mecanismo de concurrencia multiinstancia.
 - MariaDB (adapter futuro): `SEQUENCE` asociada al talonario para obtener el correlativo electronico; transaccion que vincule el numero al documento y registre el movimiento de talonario; control optimista mediante `fal_documento.version_row`; constraints unicas del modelo; recarga posterior a conflicto OCC. Garantia observable: un unico numero definitivo por documento, valido en multiples instancias de la API.
 
 **Errores reales existentes:**
 - `DocumentoNoEncontradoException` -> HTTP 404.
 - `PrecondicionVioladaException` -> HTTP 422 (plantilla sin numeracion, momento incompatible, estado incompatible, talonario no vigente).
 
-## R-08 — Tiempo determinista (cerrado 2026-07-09)
+## Tiempo determinista
 - Toda operacion productiva obtiene fecha/hora desde FaltasClock inyectado.
 - Una operacion atomica usa un unico LocalDateTime ahora = faltasClock.now() compartido entre entidad, evento, snapshot y auditoria cuando corresponde.
 - Prohibido LocalDateTime.now() / LocalDate.now() / Instant.now() directo en src/main/java fuera de allowlist.
 
-
 ---
 
-## FIX-FALLO-NOTI-01 (2026-07-10) - Firma y cola notificatoria del fallo
+## Firma y cola notificatoria del fallo
 
 Ver especificacion completa en `10-domain/firma-notificacion-fallo.md`.
 
@@ -941,13 +833,13 @@ Ver especificacion completa en `10-domain/firma-notificacion-fallo.md`.
 
 ### EnviarNotificacion (reutilizacion de cola)
 
-**Cambio FIX-FALLO-NOTI-01:**
+**Comportamiento vigente:**
 - Antes de crear una nueva `FalNotificacion`, busca una existente en `PENDIENTE_ENVIO` para el documento.
 - Si existe: la reutiliza mediante `notif.iniciarEnvio(canal, ahora, ahora, "SISTEMA")`.
 - Si no existe: crea una nueva en `EN_PROCESO` (flujo directo, sin cola previa).
 - No se duplican notificaciones para el mismo documento.
 
-### GenerarLoteDesdePendientes (nuevo metodo canonico)
+### GenerarLoteDesdePendientes
 
 **Metodo:** `LoteCorreoService.generarLoteDesdePendientes(loteCodigo, referenciaExterna, guidLoteExt, idUser)`
 
@@ -959,5 +851,3 @@ Ver especificacion completa en `10-domain/firma-notificacion-fallo.md`.
 - Crea `FalLoteCorreo` en estado `GENERADO`.
 - Para cada notificacion en `PENDIENTE_ENVIO`: crea `FalNotificacionIntento` y avanza notificacion a `EN_PROCESO`.
 - Emite evento `LOTGEN` por acta afectada.
-
----
