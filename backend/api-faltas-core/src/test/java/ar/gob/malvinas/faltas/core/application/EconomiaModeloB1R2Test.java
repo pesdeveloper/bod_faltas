@@ -60,10 +60,14 @@ class EconomiaModeloB1R2Test {
     @AfterEach
     void tearDown() { ActorContextHolder.clear(); }
 
+    /** Contador deterministico para sintetizar cmtePG/prefPG/nroPG unico por llamada (R2-02: recibo obligatorio). */
+    private int reciboSeq = 0;
+
     private NotificarMovimientoPagoCommand confirmado(BigDecimal importe, String ref) {
+        reciboSeq++;
         return new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO,
                 OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL,
-                null, importe, null, importe, null, null, null, null, null, null, null, null, null, null, ref, T0, "USR");
+                null, importe, null, importe, null, null, null, "R2", (short) 1, reciboSeq, null, null, null, null, ref, T0, "USR");
     }
 
     @Test
@@ -136,12 +140,12 @@ class EconomiaModeloB1R2Test {
         RegistroMovimientoOutcome o1 = svc.registrar(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO,
                 OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL, null,
                 new BigDecimal("100"), null, new BigDecimal("100"),
-                null, null, null, null, null, null, null, null, null, null, "ADV-1", null, "USR");
+                null, null, null, "AD", (short) 1, 1, null, null, null, null, "ADV-1", null, "USR");
         reloj.avanzarHoras(5);
         RegistroMovimientoOutcome o2 = svc.registrar(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO,
                 OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL, null,
                 new BigDecimal("100"), null, new BigDecimal("100"),
-                null, null, null, null, null, null, null, null, null, null, "ADV-1", null, "USR");
+                null, null, null, "AD", (short) 1, 1, null, null, null, null, "ADV-1", null, "USR");
         assertThat(o1.resultado()).isEqualTo(MovimientoRegistroResult.CREATED);
         assertThat(o2.resultado()).isEqualTo(MovimientoRegistroResult.ALREADY_EXISTS);
         long total = movimientoRepo.findByObligacionPagoId(1L).stream()

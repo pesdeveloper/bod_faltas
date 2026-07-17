@@ -433,6 +433,244 @@ precondiciones. Este comportamiento sigue el mismo patron que `RegistrarPagoExte
 
 ---
 
+## Pago aplicado a obligacion anterior - Comandos, precondiciones y efectos
+
+Comando economico general fuera de la familia canonica CMD-FALLO-001..007;
+no crea un octavo comando de esa serie.
+
+### Notificacion de pago contra obligacion no vigente (evento PAGANT)
+
+Cuando `NotificarMovimientoPagoCommand` (`PAGO_CONFIRMADO`) referencia una
+`FalActaObligacionPago` cuyo `siVigente` es `false` (obligacion anterior,
+reemplazada, cancelada o dejada sin efecto), `PagoEconomicoService` no
+rechaza el pago ni lo pierde:
+
+- Clasifica el movimiento como `ClasificacionPago.OBLIGACION_ANTERIOR`
+  (derivado del estado de la obligacion destino, nunca elegido por el actor).
+- Registra el movimiento `PAGO_CONFIRMADO` contra esa obligacion, con su
+  importe completo, igual que cualquier otro movimiento economico.
+- Registra `PAGANT` en lugar de `PAGCNF`/`PCOCNF`: constancia de que el pago
+  todavia requiere asociacion/resolucion administrativa.
+- No dispara recalculo de estados ni de la proyeccion economica de la
+  obligacion vigente del acta: la obligacion destino ya no es la vigente y
+  su historial no debe mutar por este movimiento.
+
+**Precondicion de validacion:** `importeTotal` debe ser mayor a cero;
+importe nulo, cero o negativo es error de validacion, no una tolerancia de
+"pago no rechazado".
+
+**Recibo obligatorio (`cmtePG`/`prefPG`/`nroPG`):** todo `PAGO_CONFIRMADO`
+original (`movimientoOrigenId == null`) exige la terna completa
+`cmtePG`+`prefPG`+`nroPG`; es el unico dato que identifica el recibo fisico
+real recibido. Una terna parcial (algun campo presente sin los tres) es
+invalida para cualquier tipo de movimiento. Ver "Deduplicacion de recibo
+real" mas abajo para el detalle completo de esta regla y su alcance.
+
+### ResolverPagoObligacionAnteriorCommand
+
+**Campos:** actaId, movimientoPagoId, motivo, idUser (actor via JWT `sub`
+en el endpoint; ver `05-api-core-endpoints.md`)
+
+No existe `fal_acta_pago_resolucion` ni ninguna otra tabla de resolucion, y
+no se crea una obligacion nueva por la diferencia entre el importe del pago
+y el saldo pendiente. El unico efecto de esta resolucion es: (a) un unico
+movimiento de aplicacion `PAGO_CONFIRMADO` (`clasificacionPago = NORMAL`,
+ya no `OBLIGACION_ANTERIOR`: una vez resuelto, es un pago aplicado normal)
+contra la obligacion vigente del acta, con `movimientoOrigenId` apuntando al
+movimiento `PAGANT` original y `motivoAplicacionPagoAnterior` (motivo
+normalizado, `trim()`, `null` equivalente a cadena vacia) persistido en el
+propio movimiento; y (b) el evento `PAGRES`. El saldo y el excedente
+resultantes son siempre derivados (`FalActaEconomiaProyeccion`), nunca un
+dato de entrada ni una eleccion del actor.
+
+No duplica datos obtenibles de entidades relacionadas: la obligacion
+anterior/origen se deriva de `movimientoPagoId.obligacionPagoId` y la
+obligacion vigente contra la que se aplica se deriva de `actaId`
+(`ObligacionPagoRepository.findVigenteByActaId`).
+
+**Orden canonico de precondiciones (`CMD-ORDER-002`):** el servicio valida
+en este orden exacto, y no consume ningun id (`nextId()`) hasta completar
+el paso 9:
+1. El comando no es nulo (`PrecondicionVioladaException`, 422).
+2. Se resuelve el actor (`ActorContextHolder.subOr(cmd.idUser())`).
+3. El actor resuelto no es nulo ni esta en blanco
+   (`PrecondicionVioladaException`, 422).
+4. `actaId` es obligatorio (`PrecondicionVioladaException`, 422).
+5. `movimientoPagoId` es obligatorio (`PrecondicionVioladaException`, 422).
+6. Se normaliza el motivo (`trim()`, `null` equivalente a cadena vacia).
+7. Se cargan los recursos: acta (`ActaNoEncontradaException`, 404),
+   movimiento referenciado (`PagoMovimientoNoEncontradoException`, 404),
+   obligacion origen del movimiento (`ObligacionPagoNoEncontradaException`,
+   404).
+8. Se valida la elegibilidad completa, en este orden: el movimiento es
+   `PAGO_CONFIRMADO` con `clasificacionPago == OBLIGACION_ANTERIOR`; no es
+   ya un movimiento derivado (`movimientoOrigenId == null` — un movimiento
+   de aplicacion no puede volver a resolverse como si fuera un `PAGANT`
+   original); la obligacion origen pertenece al acta indicado; el
+   `importeTotal` del movimiento original es no nulo y mayor a cero; la
+   obligacion origen no es vigente (`obligacionOrigen.siVigente == false`).
+   Cualquier violacion es `PrecondicionVioladaException` (422). Estas
+   validaciones son defensivas: no asumen que el movimiento provino
+   necesariamente de `PagoEconomicoService`.
+9. Si ya existe un movimiento con `movimientoOrigenId` igual al id del
+   movimiento original, se resuelve como reintento (ver "Idempotencia" mas
+   abajo) y se retorna sin ejecutar los pasos 10-11.
+10. Se captura el unico instante real de `FaltasClock.now()` de toda la
+    ejecucion.
+11. Se ejecuta la primera mutacion: se busca la obligacion vigente del acta
+    (`ObligacionPagoNoEncontradaException`, 404 si no existe) y se aplican
+    los efectos.
+
+**Efectos (unico camino, sin distincion entre "total" y "parcial"):**
+- Crea un movimiento de aplicacion `PAGO_CONFIRMADO`
+  (`clasificacionPago = NORMAL`) contra la obligacion vigente, por el
+  importe total del movimiento original (`importeTotal`), completo y sin
+  recortar contra el saldo pendiente, vinculado via `movimientoOrigenId` y
+  con `motivoAplicacionPagoAnterior` persistido.
+- El movimiento original (`PAGANT`) no se modifica: conserva su importe
+  completo intacto.
+- Recalcula estados y proyeccion economica del acta por el mismo mecanismo
+  que cualquier otro `PAGO_CONFIRMADO`
+  (`PagoIntegracionService.recalcularEstados` /
+  `EconomiaProyeccionRecalculador.recalcular`), usando el instante unico
+  del paso 10: si el total aplicado a la obligacion vigente (incluyendo
+  este movimiento) alcanza o supera su `montoOriginal`, transiciona a
+  `CANCELADA_POR_PAGO`. No hay una regla especial de cancelacion propia de
+  esta resolucion.
+- Si el importe aplicado supera el saldo pendiente, el saldo derivado queda
+  en cero y la diferencia se refleja como `importeExcedente` (informativo);
+  no se crea obligacion nueva, reintegro ni credito interno.
+- Registra `PAGRES` (una sola vez, en la aplicacion nueva; no se emite en
+  reintentos idempotentes).
+
+**Cierre del acta:** esta resolucion nunca cierra el acta por si misma. El
+cierre sigue sometido a sus reglas y bloqueantes materiales propios; la capa
+de economia (Modelo B1) no dispara cierre. Los campos administrativos del
+acta (`bloqueActual`, `situacionAdministrativa`, `resultadoFinal`) nunca se
+modifican por esta resolucion.
+
+**Tiempo determinista:** un unico instante real de `FaltasClock.now()` por
+ejecucion (paso 10; no se lee el reloj en los reintentos, que reutilizan el
+instante historico). Ese unico instante es compartido exactamente por:
+`movimientoAplicado.fhMovimiento`, `movimientoAplicado.fhAlta`,
+`obligacion.fhCancelacion` (si la obligacion vigente transiciona a
+`CANCELADA_POR_PAGO`), el evento `PAGRES.fhEvt`,
+`proyeccion.fhCorteEconomico`, `proyeccion.fhUltMod` y
+`resultado.fhResolucion`. `EconomiaProyeccionRecalculador.recalcular` y
+`PagoIntegracionService.recalcularEstados` exponen una variante de 3/4
+argumentos que captura su propio `FaltasClock.now()` (usada por otros
+llamadores sin este requisito) y una variante que recibe el instante ya
+capturado; este comando usa exclusivamente la segunda.
+
+**Idempotencia y unicidad de aplicacion (sin tabla propia):** a lo sumo un
+movimiento puede declarar `movimientoOrigenId` igual al id del movimiento
+`PAGANT` original (`PagoMovimientoRepository.findByMovimientoOrigenId`). El
+motivo de idempotencia se compara siempre contra el campo estructurado
+`movimientoAplicado.motivoAplicacionPagoAnterior`; nunca se deriva
+parseando `FalActaEvento.descripcionLegible` del `PAGRES` (el evento es
+evidencia de auditoria, no fuente de verdad operativa). Ante un reintento
+sobre el mismo `movimientoPagoId`:
+- Si la obligacion vigente actual del acta coincide con la obligacion que
+  recibio la aplicacion previa y el `motivo` normalizado coincide con
+  `aplicacionPrevia.motivoAplicacionPagoAnterior`, devuelve el mismo
+  resultado (200) sin crear ningun movimiento, obligacion ni evento nuevo.
+  `movimientoOriginal` / `movimientoAplicado` / `importeAplicado` son
+  exactos, porque el movimiento de aplicacion es inmutable. El resultado
+  reporta los datos **historicos** de la primera ejecucion — `actor`
+  (`aplicacionPrevia.idUserAlta`), `motivo`
+  (`aplicacionPrevia.motivoAplicacionPagoAnterior`) y `fhResolucion`
+  (`aplicacionPrevia.fhMovimiento`) — nunca el actor ni el motivo de la
+  solicitud de reintento; un reintento por un actor distinto del que
+  resolvio originalmente sigue autorizado (la autorizacion se evalua sobre
+  el actor autenticado actual, paso 3), pero el resultado que reporta es el
+  de la primera resolucion. `saldoResultante` e `importeExcedente` si se
+  recalculan contra el estado economico actual (no existe un snapshot
+  historico persistido de esos dos campos).
+- Si la obligacion vigente actual ya no es la que recibio la aplicacion
+  previa, o el motivo normalizado no coincide con el historico, es un
+  conflicto (`ResolucionPagoAnteriorConflictoException`, 409): la
+  resolucion original ya tuvo un efecto distinto al que este reintento
+  produciria.
+
+**Concurrencia (alcance InMemory):** la resolucion se serializa a nivel de
+instancia de servicio (monitor de aplicacion). Esto evita la creacion
+duplicada del movimiento de aplicacion dentro de un mismo proceso, pero no
+es una garantia de exclusion mutua entre instancias/nodos. El requisito
+fisico equivalente para MariaDB (bloqueo a nivel de fila via `versionRow` y
+transaccion, mas la constraint de unicidad de aplicacion) queda pendiente en
+`109-delta-modelo-mariadb-inmemory.md` y
+`110-matriz-maestra-paridad-mariadb-inmemory.md`.
+
+**Errores:**
+- Acta inexistente -> `ActaNoEncontradaException` (404).
+- Movimiento inexistente -> `PagoMovimientoNoEncontradoException` (404).
+- Obligacion origen o vigente inexistente ->
+  `ObligacionPagoNoEncontradaException` (404).
+- Actor nulo o en blanco, movimiento no `PAGO_CONFIRMADO`,
+  `clasificacionPago != OBLIGACION_ANTERIOR`, movimiento ya derivado,
+  obligacion origen de otra acta, `importeTotal` invalido, u obligacion
+  origen vigente -> `PrecondicionVioladaException` (422).
+- Reintento incompatible (distinta obligacion aplicada o motivo distinto)
+  -> `ResolucionPagoAnteriorConflictoException` (409).
+
+### Clasificacion OBLIGACION_ANTERIOR no falsificable
+
+`ClasificacionPago.OBLIGACION_ANTERIOR` se deriva exclusivamente del estado
+objetivo de la obligacion destino (`siVigente == false`) en el momento de
+notificar el movimiento; nunca es una eleccion del actor. Si
+`NotificarMovimientoPagoCommand` (`PAGO_CONFIRMADO`) declara
+`clasificacionPago == OBLIGACION_ANTERIOR` contra una obligacion que **si**
+es vigente, `PagoEconomicoService` rechaza el comando con
+`PrecondicionVioladaException` (422) antes de delegar a
+`PagoIntegracionService`. Esta clasificacion nunca se acepta como dato de
+entrada valido contra una obligacion vigente, sin importar el valor
+declarado.
+
+### Deduplicacion de recibo real (cmtePG/prefPG/nroPG)
+
+`origenMovimiento + cmtePG + prefPG + nroPG` identifica univocamente un
+recibo fisico de pago recibido desde un sistema externo (Tesoreria, Caja,
+Ingresos), independientemente de la `referenciaExterna` tecnica que le
+asigne el emisor.
+
+**Obligatoriedad de la terna:** `PagoMovimientoService.registrar` es el
+unico punto de entrada de todo movimiento economico, tanto desde el
+comando directo como desde la frontera HTTP (`/notificar-movimiento`) y el
+camino `PAGANT` (`PagoEconomicoService.notificarPagoObligacionAnterior`).
+Antes de consumir `nextId()`, valida:
+- Terna parcial (algun campo de `cmtePG`/`prefPG`/`nroPG` presente sin los
+  tres) es invalida para cualquier tipo de movimiento
+  (`PrecondicionVioladaException`, 422).
+- `tipoMovimiento == PAGO_CONFIRMADO` que sea un movimiento original
+  (`movimientoOrigenId == null`) con la terna completamente nula es
+  invalido (`PrecondicionVioladaException`, 422): todo pago original real
+  debe traer su identificacion de recibo. El movimiento de aplicacion que
+  genera `ResolverPagoObligacionAnteriorCommand`
+  (`movimientoOrigenId != null`) puede tener la terna `NULL`: el recibo se
+  recupera navegando `movimientoOrigenId -> movimiento original`, nunca se
+  copia. `DEUDA_EMITIDA`/`EMISION_ANULADA` no son recibo y `PAGO_PROCESADO`
+  sigue con terna opcional; `PAGO_REVERTIDO` referencia el original via
+  `movimientoOrigenId`.
+
+**Unicidad atomica:** `InMemoryPagoMovimientoRepository.append` rechaza con
+`MovimientoPagoDuplicadoException` (409) cualquier movimiento entrante cuya
+terna `cmtePG/prefPG/nroPG` completa ya este registrada contra el mismo
+`origenMovimiento` con una `referenciaExterna` distinta: es un intento de
+doble registro del mismo recibo fisico bajo una referencia tecnica nueva.
+Esta verificacion vive dentro del mismo bloque `synchronized` que ya
+protege la unicidad por `id` y por `origenMovimiento + referenciaExterna`,
+por lo que dos hilos concurrentes con el mismo recibo fisico y
+`referenciaExterna` distinta nunca pueden insertar ambos: exactamente uno
+tiene exito y el resto recibe el conflicto. El precheck equivalente en
+`PagoMovimientoService.registrar` (`findByReferenciaPG`) se conserva como
+optimizacion de fast-path, pero la garantia real de unicidad es la de
+`append`. El camino de idempotencia exacta por `referenciaExterna` (mismo
+payload, misma referencia) sigue vigente sin cambios y tiene prioridad:
+solo se evalua la deduplicacion de recibo cuando la referencia entrante es
+realmente nueva.
+
+---
+
 ## Reingreso desde gestion externa - Comandos, precondiciones y efectos
 
 ### ReingresarDesdeGestionExternaCommand

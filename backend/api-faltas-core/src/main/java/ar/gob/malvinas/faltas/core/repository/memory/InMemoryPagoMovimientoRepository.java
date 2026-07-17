@@ -46,6 +46,26 @@ public class InMemoryPagoMovimientoRepository
                 return new RegistroMovimientoOutcome(MovimientoRegistroResult.CONFLICT, dup.copia());
             }
         }
+        // Deduplicacion atomica de recibo real (origenMovimiento+cmtePG+prefPG+nroPG):
+        // la verificacion vive dentro del mismo bloque synchronized que el insert
+        // para que dos hilos concurrentes con el mismo recibo y referenciaExterna
+        // distinta nunca inserten ambos (ver PagoMovimientoService.registrar, cuyo
+        // precheck previo a este append es solo un fast-path, no la garantia real).
+        if (m.getCmtePG() != null && m.getPrefPG() != null && m.getNroPG() != null) {
+            Optional<FalActaPagoMovimiento> porRecibo = store.values().stream()
+                    .filter(x -> m.getOrigenMovimiento() == x.getOrigenMovimiento()
+                            && m.getCmtePG().equals(x.getCmtePG())
+                            && m.getPrefPG().equals(x.getPrefPG())
+                            && m.getNroPG().equals(x.getNroPG()))
+                    .findFirst();
+            if (porRecibo.isPresent()) {
+                FalActaPagoMovimiento dup = porRecibo.get();
+                if (dup.payloadEquivalenteA(m)) {
+                    return new RegistroMovimientoOutcome(MovimientoRegistroResult.ALREADY_EXISTS, dup.copia());
+                }
+                return new RegistroMovimientoOutcome(MovimientoRegistroResult.CONFLICT, dup.copia());
+            }
+        }
         FalActaPagoMovimiento copia = m.copia();
         store.put(copia.getId(), copia);
         return new RegistroMovimientoOutcome(MovimientoRegistroResult.CREATED, copia.copia());
@@ -60,6 +80,15 @@ public class InMemoryPagoMovimientoRepository
     public List<FalActaPagoMovimiento> findByObligacionPagoId(Long obligacionPagoId) {
         return store.values().stream()
                 .filter(m -> m.getObligacionPagoId().equals(obligacionPagoId))
+                .map(FalActaPagoMovimiento::copia)
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    @Override
+    public List<FalActaPagoMovimiento> findByMovimientoOrigenId(Long movimientoOrigenId) {
+        if (movimientoOrigenId == null) return List.of();
+        return store.values().stream()
+                .filter(m -> movimientoOrigenId.equals(m.getMovimientoOrigenId()))
                 .map(FalActaPagoMovimiento::copia)
                 .collect(Collectors.toUnmodifiableList());
     }

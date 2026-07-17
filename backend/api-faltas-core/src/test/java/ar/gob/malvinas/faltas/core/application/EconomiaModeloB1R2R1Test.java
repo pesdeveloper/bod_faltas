@@ -68,10 +68,14 @@ class EconomiaModeloB1R2R1Test {
     @AfterEach
     void tearDown() { ActorContextHolder.clear(); }
 
+    /** Contador deterministico para sintetizar cmtePG/prefPG/nroPG unico por llamada (R2-02: recibo obligatorio). */
+    private int reciboSeq = 0;
+
     private NotificarMovimientoPagoCommand confirmado(BigDecimal importe, String ref) {
+        reciboSeq++;
         return new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO,
                 OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL,
-                null, importe, null, importe, null, null, null, null, null, null, null, null, null, null, ref, T0, "USR");
+                null, importe, null, importe, null, null, null, "R3", (short) 1, reciboSeq, null, null, null, null, ref, T0, "USR");
     }
 
     // ---- Punto 1: Reverso atomico ----
@@ -132,7 +136,7 @@ class EconomiaModeloB1R2R1Test {
 
         var m = economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, 10L, null,
                 TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL,
-                null, MONTO, null, MONTO, null, null, null, null, null, null, null, null, null, null, "CNF-FRM", T0, "USR"));
+                null, MONTO, null, MONTO, null, null, null, "FR", (short) 1, 1, null, null, null, null, "CNF-FRM", T0, "USR"));
         assertThat(formaRepo.findById(10L).orElseThrow().getEstadoFormaPago()).isEqualTo(EstadoFormaPago.PAGADA);
 
         economicoService.revertirMovimiento(m.getId(), MotivoAnulacionPago.CONTRACARGO, "REV-FRM", OrigenMovimiento.TESORERIA, "USR");
@@ -246,7 +250,7 @@ class EconomiaModeloB1R2R1Test {
         // Pago que cubre el total del plan
         economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, 21L, planRepo.findVigenteByObligacionPagoId(1L).orElseThrow().getId(),
                 TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL,
-                null, MONTO, null, MONTO, null, null, null, null, null, null, null, null, null, null, "PL-CNF", T0, "USR"));
+                null, MONTO, null, MONTO, null, null, null, "PL", (short) 1, 1, null, null, null, null, "PL-CNF", T0, "USR"));
 
         var planFinalizado = planRepo.findVigenteByObligacionPagoId(1L);
         assertThat(planFinalizado).isEmpty();
@@ -330,7 +334,7 @@ class EconomiaModeloB1R2R1Test {
         var cmd = new ar.gob.malvinas.faltas.core.application.command.NotificarMovimientoPagoCommand(
                 1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.INGRESOS,
                 null, null, ClasificacionPago.NORMAL, null, new BigDecimal("150"),
-                null, new BigDecimal("150"), null, null, null, null, null, null, null, null, null, null, "RI-1", T0, "USR");
+                null, new BigDecimal("150"), null, null, null, "RI", (short) 1, 1, null, null, null, null, "RI-1", T0, "USR");
         var m = localEconomicoService.notificarMovimiento(cmd);
         var p1 = localEconomicoService.conciliarMovimiento(m.getId(), "CONC-RI");
         LocalDateTime fh1 = p1.getFhUltimaConciliacion();

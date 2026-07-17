@@ -35,6 +35,7 @@ public class FalActaPagoMovimiento {
     private final Long idCierre;
     private final Long idOpe;
     private final Long movimientoOrigenId;
+    private final String motivoAplicacionPagoAnterior;
     private final MotivoAnulacionPago motivoAnulacionPago;
     private final LocalDateTime fhPagoProcesado;
     private final LocalDateTime fhPagoConfirmado;
@@ -66,6 +67,7 @@ public class FalActaPagoMovimiento {
         this.idCierre = b.idCierre;
         this.idOpe = b.idOpe;
         this.movimientoOrigenId = b.movimientoOrigenId;
+        this.motivoAplicacionPagoAnterior = b.motivoAplicacionPagoAnterior;
         this.motivoAnulacionPago = b.motivoAnulacionPago;
         this.fhPagoProcesado = b.fhPagoProcesado;
         this.fhPagoConfirmado = b.fhPagoConfirmado;
@@ -97,6 +99,16 @@ public class FalActaPagoMovimiento {
     public Long getIdCierre() { return idCierre; }
     public Long getIdOpe() { return idOpe; }
     public Long getMovimientoOrigenId() { return movimientoOrigenId; }
+    /**
+     * Motivo estructurado de la resolucion administrativa de un pago aplicado a
+     * obligacion anterior (ver ResolverPagoObligacionAnteriorCommand en
+     * backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md).
+     * Nulo en movimientos normales; en el movimiento de aplicacion creado por
+     * PAGRES es siempre no nulo (cadena vacia si el actor no informo motivo).
+     * Fuente autoritativa de idempotencia de motivo: nunca se deriva parseando
+     * FalActaEvento.descripcionLegible.
+     */
+    public String getMotivoAplicacionPagoAnterior() { return motivoAplicacionPagoAnterior; }
     public MotivoAnulacionPago getMotivoAnulacionPago() { return motivoAnulacionPago; }
     public LocalDateTime getFhPagoProcesado() { return fhPagoProcesado; }
     public LocalDateTime getFhPagoConfirmado() { return fhPagoConfirmado; }
@@ -137,6 +149,7 @@ public class FalActaPagoMovimiento {
                 && Objects.equals(idCierre, otro.idCierre)
                 && Objects.equals(idOpe, otro.idOpe)
                 && Objects.equals(movimientoOrigenId, otro.movimientoOrigenId)
+                && Objects.equals(motivoAplicacionPagoAnterior, otro.motivoAplicacionPagoAnterior)
                 && motivoAnulacionPago == otro.motivoAnulacionPago
                 && Objects.equals(fhPagoProcesado, otro.fhPagoProcesado)
                 && Objects.equals(fhPagoConfirmado, otro.fhPagoConfirmado)
@@ -164,6 +177,7 @@ public class FalActaPagoMovimiento {
                 .idCierre(idCierre)
                 .idOpe(idOpe)
                 .movimientoOrigenId(movimientoOrigenId)
+                .motivoAplicacionPagoAnterior(motivoAplicacionPagoAnterior)
                 .motivoAnulacionPago(motivoAnulacionPago)
                 .fhPagoProcesado(fhPagoProcesado)
                 .fhPagoConfirmado(fhPagoConfirmado)
@@ -197,6 +211,7 @@ public class FalActaPagoMovimiento {
         private Long idCierre;
         private Long idOpe;
         private Long movimientoOrigenId;
+        private String motivoAplicacionPagoAnterior;
         private MotivoAnulacionPago motivoAnulacionPago;
         private LocalDateTime fhPagoProcesado;
         private LocalDateTime fhPagoConfirmado;
@@ -267,6 +282,7 @@ public class FalActaPagoMovimiento {
         public Builder idCierre(Long v) { this.idCierre = v; return this; }
         public Builder idOpe(Long v) { this.idOpe = v; return this; }
         public Builder movimientoOrigenId(Long v) { this.movimientoOrigenId = v; return this; }
+        public Builder motivoAplicacionPagoAnterior(String v) { this.motivoAplicacionPagoAnterior = v; return this; }
         public Builder motivoAnulacionPago(MotivoAnulacionPago v) { this.motivoAnulacionPago = v; return this; }
         public Builder fhPagoProcesado(LocalDateTime v) { this.fhPagoProcesado = v; return this; }
         public Builder fhPagoConfirmado(LocalDateTime v) { this.fhPagoConfirmado = v; return this; }

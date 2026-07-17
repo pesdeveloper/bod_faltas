@@ -266,3 +266,27 @@ No hay bandeja transitoria especifica para "cierre pendiente por bloqueantes": e
 - `SnapshotRecalculador.proyectarPagos` es un no-op: las lecturas economicas se resuelven directamente desde `FalActaEconomiaProyeccion`.
 - La proyeccion economica no es fuente primaria juridica; los movimientos y eventos append-only si.
 - `montoOperativoVigente` puede permanecer solo como valorizacion UX, no como dato de pagos.
+- `FalActaEconomiaProyeccion.saldoPendiente` nunca es negativo: se deriva de
+  `monto - aplicadoNeto` con piso en cero. Cuando el total aplicado supera
+  el monto original (por ejemplo, tras resolver un pago aplicado a
+  obligacion anterior con `ResolverPagoObligacionAnteriorCommand`), la
+  diferencia queda en `importeExcedente` (informativo, nunca negativo, nunca
+  una nueva obligacion ni una devolucion). `siParcialmentePagada` (hay
+  aplicado > 0 y saldo pendiente > 0) y `siCancelada` (estado ==
+  `CANCELADA_POR_PAGO`) son flags derivados de la misma proyeccion, no
+  datos independientes.
+
+### Pago aplicado a obligacion anterior: sin impacto de routing
+
+- Notificar un pago contra una obligacion no vigente (evento `PAGANT`) y
+  resolverlo administrativamente (`ResolverPagoObligacionAnteriorCommand`,
+  evento `PAGRES`) no modifican `situacionAdministrativa` ni `bloqueActual`
+  del acta; ver `02-estados-bloques-eventos.md` (seccion "Pago aplicado a
+  obligacion anterior: PAGANT y PAGRES") y
+  `03-comandos-precondiciones-efectos.md` (seccion "Pago aplicado a
+  obligacion anterior - Comandos, precondiciones y efectos") para el
+  contrato completo.
+- No existe bandeja ni accion pendiente dedicada a "pago anterior pendiente
+  de resolucion": la deteccion y priorizacion operativa de un `PAGANT` sin
+  `PAGRES` asociado se resuelve por consulta directa de eventos/movimientos,
+  igual que el resto de la economia (misma regla de la seccion anterior).

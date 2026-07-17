@@ -714,3 +714,50 @@ Reglas:
 - Un reverso que revive saldo hace que la obligacion deje de estar `CANCELADA_POR_PAGO` (vuelve a `CON_FORMA_PAGO_VIGENTE` si hay forma vigente o `PENDIENTE_FORMA_PAGO` si no) y que la forma deje de estar `PAGADA`.
 - `siPagoConfirmado` representa pago vigente: reverso total -> false; dos pagos con reverso de uno -> sigue true.
 - El plan finaliza solo mediante transicion atomica a `FINALIZADO_POR_PAGO` (`siVigente=false`, `fhFinalizacionPago`). No se usan `CUMPLIDO`, `CAIDO`, `fhCaida` ni `PLNCAI`.
+
+### Pago aplicado a obligacion anterior: PAGANT y PAGRES
+
+Un pago recibido no se rechaza ni se pierde aunque refiera a una
+`FalActaObligacionPago` que ya no es `siVigente` (anterior, reemplazada,
+cancelada o dejada sin efecto). El circuito completo (comando, precondiciones
+y efectos) vive en
+[`03-comandos-precondiciones-efectos.md`](03-comandos-precondiciones-efectos.md#pago-aplicado-a-obligacion-anterior---comandos-precondiciones-y-efectos);
+esta seccion solo fija el significado de los dos codigos de evento.
+
+- `PAGANT`: constancia de que un `PAGO_CONFIRMADO` recibido referencia una
+  obligacion que ya no es vigente. Se emite al notificar el movimiento
+  (clasificacion `ClasificacionPago.OBLIGACION_ANTERIOR`), en lugar de
+  `PAGCNF`/`PCOCNF`. Todavia requiere asociacion/resolucion administrativa;
+  no implica por si mismo ningun cambio de estado en la obligacion vigente
+  del acta. `OBLIGACION_ANTERIOR` es una clasificacion derivada del estado
+  objetivo de la obligacion (no vigente), nunca una eleccion del actor: un
+  `PAGO_CONFIRMADO` contra una obligacion vigente no puede declararla.
+- `PAGRES`: resolucion efectiva y auditada de la aplicacion de ese pago
+  contra la obligacion vigente, mediante `ResolverPagoObligacionAnteriorCommand`.
+  No existe una tabla propia de resolucion (`fal_acta_pago_resolucion`) ni se
+  crea una obligacion nueva por la diferencia: el efecto es un unico
+  movimiento de aplicacion (`PAGO_CONFIRMADO`, `clasificacionPago=NORMAL`)
+  contra la obligacion vigente, con `movimientoOrigenId` apuntando al
+  movimiento `PAGANT` original, mas este evento. El saldo de la obligacion
+  se deriva siempre de la suma de sus movimientos (`monto - aplicado`); si el
+  pago resuelto supera el saldo pendiente, el excedente queda como dato
+  informativo (`importeExcedente`), no como una nueva obligacion ni una
+  devolucion.
+- `PAGANT` y `PAGRES` son eventos distintos y no intercambiables: un
+  movimiento `PAGANT` admite a lo sumo una aplicacion (`PAGRES`); la
+  unicidad se garantiza sin tabla propia, exigiendo que a lo sumo un
+  movimiento declare `movimientoOrigenId` igual al id del `PAGANT`. La
+  ausencia de `PAGRES` para un `PAGANT` dado significa que el pago sigue
+  pendiente de resolucion administrativa.
+- La resolucion registrada por `PAGRES` usa un unico instante real de
+  `FaltasClock.now()` por ejecucion (no una igualdad parcial entre varias
+  lecturas): ese mismo instante es compartido por el movimiento de
+  aplicacion (`fhMovimiento`, `fhAlta`), la cancelacion de la obligacion si
+  corresponde (`fhCancelacion`), el propio `PAGRES.fhEvt` y la proyeccion
+  economica recalculada (`fhCorteEconomico`, `fhUltMod`). El motivo de la
+  resolucion vive estructurado en
+  `FalActaPagoMovimiento.motivoAplicacionPagoAnterior` (campo del
+  movimiento de aplicacion), no parseado desde
+  `descripcionLegible`: `descripcionLegible` puede mostrar el motivo en
+  texto para lectura humana, pero nunca es la fuente de verdad que el
+  sistema consulta para decidir idempotencia o conflicto.

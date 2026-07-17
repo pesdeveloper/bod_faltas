@@ -3,7 +3,8 @@ package ar.gob.malvinas.faltas.core.domain.enums;
 public enum ClasificacionPago {
     NORMAL((short) 1),
     DUPLICADO_REAL((short) 2),
-    EXCEDENTE((short) 3);
+    EXCEDENTE((short) 3),
+    OBLIGACION_ANTERIOR((short) 4);
 
     private final short codigo;
     ClasificacionPago(short codigo) { this.codigo = codigo; }

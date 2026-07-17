@@ -577,14 +577,72 @@ GET /demo/health esta cubierto por 16 tests de contrato (ver `06-tests-core.md`)
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
-| POST | /pagos/notificar-movimiento | Notificacion normal de movimiento (tipos: DEUDA_EMITIDA, PAGO_PROCESADO, PAGO_CONFIRMADO, EMISION_ANULADA). Registra movimiento append-only, recalcula proyeccion economica. NO acepta PAGO_REVERTIDO (usar endpoint especifico de reverso). |
+| POST | /pagos/notificar-movimiento | Notificacion normal de movimiento (tipos: DEUDA_EMITIDA, PAGO_PROCESADO, PAGO_CONFIRMADO, EMISION_ANULADA). Registra movimiento append-only, recalcula proyeccion economica. NO acepta PAGO_REVERTIDO (usar endpoint especifico de reverso). Si el `PAGO_CONFIRMADO` referencia una obligacion no vigente, se clasifica `OBLIGACION_ANTERIOR` y emite `PAGANT` (ver mas abajo). |
 | POST | /pagos/revertir-movimiento | Operacion especifica de reverso atomico: crea 1 movimiento PAGO_REVERTIDO, emite exactamente 1 evento PAGREV, recalcula estados. Rechaza reverso por endpoint generico. Idempotente por referenciaExterna. |
+| POST | /pagos/resolver-pago-anterior | Resuelve administrativamente un `PAGANT` contra la obligacion vigente del acta: crea un unico movimiento de aplicacion (sin obligacion nueva ni tabla de resolucion propia). Emite `PAGRES`. Idempotente por `movimientoPagoId`. |
 
 Base path completo: `POST /api/faltas/pagos/notificar-movimiento`.
 
 Request: `NotificarMovimientoPagoRequest` (obligacion, forma, plan, tipo/origen/clasificacion, importes, referencia externa, fechas).
 
-Respuestas: 200 movimiento creado; 409 duplicado (`MovimientoPagoDuplicadoException`); 422 precondicion.
+Respuestas: 200 movimiento creado; 409 duplicado (`MovimientoPagoDuplicadoException`); 422 precondicion, incluyendo terna `cmtePG`/`prefPG`/`nroPG` ausente o parcial en un `PAGO_CONFIRMADO` original (ver "Deduplicacion de recibo" mas abajo).
+
+### POST /api/faltas/pagos/resolver-pago-anterior
+
+**Finalidad:** resolver administrativamente un movimiento `PAGO_CONFIRMADO`
+ya registrado con `clasificacionPago = OBLIGACION_ANTERIOR` (evento `PAGANT`
+emitido al notificarse), aplicandolo contra la obligacion vigente del acta.
+Contrato de dominio completo en
+[`03-comandos-precondiciones-efectos.md`](03-comandos-precondiciones-efectos.md#pago-aplicado-a-obligacion-anterior---comandos-precondiciones-y-efectos).
+
+**Autenticacion:** requerida, misma regla que el resto de
+`/api/faltas/pagos/**` (ver "Reglas de cierre de la integracion economica").
+Actor obtenido del JWT `sub` via `ActorContextHolder`; el body no declara
+actor.
+
+**Request:** `ResolverPagoObligacionAnteriorRequest`
+- `actaId`: Long, obligatorio (`@NotNull`)
+- `movimientoPagoId`: Long, obligatorio (`@NotNull`)
+- `motivo`: String, opcional
+
+**Response:** `ResolverPagoObligacionAnteriorResultado` (200 OK) -- record
+no persistido, no existe una tabla `fal_acta_pago_resolucion`:
+- `movimientoOriginal`: el `PAGANT` resuelto (`FalActaPagoMovimiento`).
+- `movimientoAplicado`: el movimiento de aplicacion creado
+  (`PAGO_CONFIRMADO`, `clasificacionPago=NORMAL`,
+  `movimientoOrigenId=movimientoOriginal.id`).
+- `obligacionOrigenId` / `obligacionAplicadaId`.
+- `importeAplicado`: importe total del movimiento original, sin recortar.
+- `saldoResultante` / `importeExcedente`: derivados de
+  `FalActaEconomiaProyeccion` al momento de la respuesta (`>= 0` siempre;
+  a lo sumo uno de los dos es positivo).
+- `motivo`, `actor`, `fhResolucion`.
+
+En un reintento idempotente compatible, `movimientoOriginal` /
+`movimientoAplicado` / `importeAplicado` son exactos (el movimiento de
+aplicacion es inmutable); `saldoResultante` / `importeExcedente` se
+recalculan contra el estado economico actual, no contra un snapshot
+historico (no existe tal snapshot persistido). `motivo`, `actor` y
+`fhResolucion` reportan los datos **historicos** de la primera ejecucion
+(no el actor ni el motivo de la solicitud de reintento).
+
+**Idempotencia:** un reintento con el mismo `movimientoPagoId`, la misma
+obligacion vigente que recibio la aplicacion previa y un `motivo`
+normalizado equivalente devuelve **200** con el mismo resultado, sin crear
+un segundo movimiento de aplicacion ni un segundo `PAGRES`. Un reintento
+con la obligacion vigente cambiada o un motivo distinto es un conflicto.
+
+**Errores:**
+| Caso | HTTP | Excepcion |
+|------|------|-----------|
+| Sin Bearer valido | 401 | (Spring Security) |
+| `actaId` o `movimientoPagoId` ausentes en el body | 400 | Bean Validation |
+| Acta inexistente | 404 | `ActaNoEncontradaException` |
+| Movimiento inexistente | 404 | `PagoMovimientoNoEncontradoException` |
+| Obligacion origen o vigente inexistente | 404 | `ObligacionPagoNoEncontradaException` |
+| Actor resuelto nulo o en blanco | 422 | `PrecondicionVioladaException` |
+| Movimiento no `PAGO_CONFIRMADO`, `clasificacionPago != OBLIGACION_ANTERIOR`, movimiento ya derivado, obligacion origen de otra acta, `importeTotal` invalido, u obligacion origen vigente | 422 | `PrecondicionVioladaException` |
+| Reintento incompatible (distinta obligacion aplicada o motivo distinto) | 409 | `ResolucionPagoAnteriorConflictoException` |
 
 ### Reglas de cierre de la integracion economica
 
@@ -592,6 +650,8 @@ Respuestas: 200 movimiento creado; 409 duplicado (`MovimientoPagoDuplicadoExcept
 - **Idempotencia**: clave `origenMovimiento + referenciaExterna`. Reintento identico -> `ALREADY_EXISTS` (no crea otro movimiento ni evento); mismo origen/referencia con importe u obligacion distintos -> **409**. Un reintento sin `fhMovimiento` informada no falla por avance del Clock.
 - **Conciliacion**: no crea movimiento ni evento ni muta el movimiento original; reclasifica importes agregados usando el input mock absoluto de Tesoreria; es idempotente; payload incompatible -> **409**.
 - **Reversos**: solo tipos reversibles (`PAGO_CONFIRMADO`); reverso identico es idempotente; segundo reverso distinto sobre un original ya revertido se rechaza.
+- **Pago aplicado a obligacion anterior**: ver `POST /api/faltas/pagos/resolver-pago-anterior` arriba para el contrato completo de `PAGANT`/`PAGRES`. `OBLIGACION_ANTERIOR` es una clasificacion derivada, nunca declarable contra una obligacion vigente (422 si se intenta).
+- **Deduplicacion de recibo**: `origenMovimiento + cmtePG + prefPG + nroPG` identifica un recibo fisico; reintentar el mismo recibo con una `referenciaExterna` distinta es **409** (`MovimientoPagoDuplicadoException`). La unicidad se verifica de forma atomica dentro de la escritura del movimiento (no solo con una verificacion previa), por lo que dos solicitudes concurrentes con el mismo recibo nunca insertan ambas. La terna `cmtePG/prefPG/nroPG` es obligatoria (completa, nunca parcial) en todo `PAGO_CONFIRMADO` original; ausente o parcial es **422** (`PrecondicionVioladaException`). El movimiento de aplicacion generado por `resolver-pago-anterior` (`movimientoOrigenId != null`) queda exento: su recibo se recupera navegando al movimiento original.
 
 ---
 

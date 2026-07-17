@@ -37,6 +37,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.NotificacionAcuseNoEncontrad
 import ar.gob.malvinas.faltas.core.domain.exception.NotificacionIntentoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.NotificacionNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.ObligacionPagoNoEncontradaException;
+import ar.gob.malvinas.faltas.core.domain.exception.PagoMovimientoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PersonaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PlanPagoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PlantillaContenidoAmbiguaException;
@@ -45,6 +46,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PlantillaDefaultAmbiguaExcep
 import ar.gob.malvinas.faltas.core.domain.exception.PlantillaDefaultNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.exception.QrTokenInvalidoException;
+import ar.gob.malvinas.faltas.core.domain.exception.ResolucionPagoAnteriorConflictoException;
 import ar.gob.malvinas.faltas.core.domain.exception.RubroVersionNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.TarifarioNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.ValorizacionNoEncontradaException;
@@ -114,6 +116,7 @@ public class GlobalFaltasControllerAdvice {
         m.put(NotificacionIntentoNoEncontradoException.class,         "NOTIFICACION_NO_ENCONTRADA");
         m.put(FormaPagoNoEncontradaException.class,                   "PAGO_NO_ENCONTRADO");
         m.put(ObligacionPagoNoEncontradaException.class,              "PAGO_NO_ENCONTRADO");
+        m.put(PagoMovimientoNoEncontradoException.class,              "PAGO_NO_ENCONTRADO");
         m.put(PlanPagoNoEncontradoException.class,                    "PAGO_NO_ENCONTRADO");
         m.put(ValorizacionNoEncontradaException.class,                "PAGO_NO_ENCONTRADO");
         m.put(BloqueanteMaterialNoEncontradoException.class,          "RECURSO_NO_ENCONTRADO");
@@ -159,6 +162,7 @@ public class GlobalFaltasControllerAdvice {
         NotificacionIntentoNoEncontradoException.class,
         FormaPagoNoEncontradaException.class,
         ObligacionPagoNoEncontradaException.class,
+        PagoMovimientoNoEncontradoException.class,
         PlanPagoNoEncontradoException.class,
         ValorizacionNoEncontradaException.class,
         BloqueanteMaterialNoEncontradoException.class,
@@ -223,6 +227,13 @@ public class GlobalFaltasControllerAdvice {
         log.debug("Conciliacion incompatible: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of("CONCILIACION_INCOMPATIBLE", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ResolucionPagoAnteriorConflictoException.class)
+    public ResponseEntity<ErrorResponse> handleResolucionPagoAnteriorConflicto(ResolucionPagoAnteriorConflictoException ex) {
+        log.debug("Conflicto al resolver pago anterior: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("RESOLUCION_PAGO_ANTERIOR_CONFLICTO", ex.getMessage()));
     }
 
     @ExceptionHandler({
