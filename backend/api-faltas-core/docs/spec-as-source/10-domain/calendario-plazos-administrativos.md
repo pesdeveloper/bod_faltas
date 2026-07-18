@@ -258,7 +258,7 @@ Google Calendar no esta integrado actualmente: sin OAuth, sin HTTP, sin schedule
 - Spec: este documento, `README.md` y `20-application/fallo-command-contracts.md` (CMD-FALLO-004).
 - Tests: 31 tests focales (ver seccion 17).
 
-### Fuera de alcance vigente (roadmap posterior, ver `99-pendientes-siguientes-slices.md`)
+### Fuera de alcance vigente (roadmap posterior, ver `../90-roadmap/current-roadmap.md`)
 
 - Integracion con Google Calendar ni ningun proveedor externo.
 - OAuth, secretos o cliente HTTP.
@@ -269,7 +269,7 @@ Google Calendar no esta integrado actualmente: sin OAuth, sin HTTP, sin schedule
 
 ### Deuda pendiente de persistencia
 
-FalDiaNoComputable es el modelo local InMemory del soporte de excepciones. Su tabla MariaDB y adapter JDBC se incorporaran en el bloque de DDL/JDBC correspondiente (ver `109-delta-modelo-mariadb-inmemory.md` y `110-matriz-maestra-paridad-mariadb-inmemory.md`). Este documento no afirma paridad fisica con MariaDB.
+FalDiaNoComputable es el modelo local InMemory del soporte de excepciones. Su tabla MariaDB y adapter JDBC se incorporaran en el bloque de DDL/JDBC correspondiente (ver `../50-persistence/inmemory-mariadb-deltas.md` y `../50-persistence/mariadb-logical-model.md`). Este documento no afirma paridad fisica con MariaDB.
 
 ---
 

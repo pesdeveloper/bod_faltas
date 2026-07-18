@@ -102,7 +102,7 @@ public class FalActaPagoMovimiento {
     /**
      * Motivo estructurado de la resolucion administrativa de un pago aplicado a
      * obligacion anterior (ver ResolverPagoObligacionAnteriorCommand en
-     * backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md).
+     * backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md).
      * Nulo en movimientos normales; en el movimiento de aplicacion creado por
      * PAGRES es siempre no nulo (cadena vacia si el actor no informo motivo).
      * Fuente autoritativa de idempotencia de motivo: nunca se deriva parseando

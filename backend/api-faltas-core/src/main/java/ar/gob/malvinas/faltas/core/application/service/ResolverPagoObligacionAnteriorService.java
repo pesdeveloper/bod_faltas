@@ -32,9 +32,9 @@ import java.util.Objects;
 /**
  * Resuelve administrativamente un pago aplicado a una obligacion anterior
  * (ResolverPagoObligacionAnteriorCommand). Ver
- * backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md
+ * backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md
  * (contrato completo del comando) y
- * backend/api-faltas-core/docs/spec-as-source/02-estados-bloques-eventos.md
+ * backend/api-faltas-core/docs/spec-as-source/10-domain/states-events-catalogs.md
  * (PAGANT/PAGRES) para el modelo canonico.
  *
  * No existe fal_acta_pago_resolucion ni obligacion por diferencia: el unico

@@ -43,7 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * seguridad (401), validacion de body (400), recursos inexistentes (404),
  * precondiciones de negocio (422), conflicto de reintento incompatible (409)
  * e idempotencia/exito (200), bajo el modelo R1 de movimiento unico. Ver
- * backend/api-faltas-core/docs/spec-as-source/05-api-core-endpoints.md.
+ * backend/api-faltas-core/docs/spec-as-source/40-api/http-contracts.md.
  *
  * Spring Security activo. No desactivar. Cada test siembra sus propios datos
  * usando actaRepo.nextId()/obligacionRepo.nextId() para no colisionar con

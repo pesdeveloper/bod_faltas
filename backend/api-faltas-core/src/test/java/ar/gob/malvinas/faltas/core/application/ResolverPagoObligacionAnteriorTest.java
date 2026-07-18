@@ -34,8 +34,8 @@ import static org.assertj.core.api.Assertions.*;
  * OBLIGACION_ANTERIOR, evento PAGANT) aplicado contra la obligacion vigente
  * de un acta (evento PAGRES), bajo el modelo R1 de movimiento unico: sin
  * fal_acta_pago_resolucion ni obligacion por diferencia. Ver
- * backend/api-faltas-core/docs/spec-as-source/02-estados-bloques-eventos.md
- * y backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md.
+ * backend/api-faltas-core/docs/spec-as-source/10-domain/states-events-catalogs.md
+ * y backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md.
  */
 @DisplayName("ResolverPagoObligacionAnterior - PAGANT/PAGRES (modelo R1, sin tabla de resolucion)")
 class ResolverPagoObligacionAnteriorTest {

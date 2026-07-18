@@ -150,6 +150,58 @@ Reglas:
 
 ---
 
+## CMD-STD-002 Nueve principios del motor determinista de acciones
+
+Todo comando o accion disponible en una bandeja debe operar segun un motor de
+proceso determinista. Los nueve principios siguientes son transversales a
+todo contrato de comando y complementan, sin sustituir, `CMD-ORDER-001` y
+`CMD-ORDER-002`.
+
+### Principio 1 - Estructura obligatoria de toda accion
+
+Toda accion debe declarar exactamente estos seis elementos:
+
+| Elemento | Descripcion |
+|---|---|
+| Accion | Comando explicito del usuario/sistema/integracion |
+| Precondiciones | Estado de dominio requerido para poder ejecutar |
+| Efectos | Cambios en las tablas fuente de verdad |
+| Eventos | Hechos reales append-only (`FalActaEvento`) |
+| Snapshot | Recalculo de bandeja/sub-bandeja/accion pendiente |
+| Errores | Rechazos claros si no se cumplen las precondiciones |
+
+### Principios 2 a 9 - Prohibiciones transversales de diseno de acciones
+
+Estan prohibidas:
+
+2. Acciones que no producen ningun efecto observable ("que no hacen nada").
+3. Acciones visibles en una bandeja sin una transicion de dominio real
+   detras.
+4. Acciones cuyo nombre no corresponde a su efecto real (que "ejecutan otra
+   cosa").
+5. Archivo automatico de un acta sin una decision explicita registrada por
+   comando.
+6. Fallo (dictado) automatico sin una decision explicita registrada por
+   comando.
+7. Cambios de estado de dominio disparados por historial accidental (efectos
+   secundarios no declarados en el contrato del comando).
+8. Eventos de dominio que representen unicamente un cambio de bandeja o de
+   proyeccion (`PASE_BANDEJA` y equivalentes no son eventos de dominio; ver
+   `10-domain/states-events-catalogs.md`, seccion "Eventos prohibidos").
+9. Uso de un catalogo o valor UI-only como si fuera un catalogo productivo de
+   dominio.
+
+Fuente: `MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md` (historico,
+eliminado tras esta migracion), seccion "1. Principio de motor
+determinista". El criterio de codigos de `bloque_actual` (`CAPT`/`ENRI`/
+`NOTI`/`ANAL`/`GEXT`/`ARCH`/`CERR`) y sus equivalencias historicas
+(`D1_CAPTURA`..`D5_ANALISIS`, `D3_DOCUMENTAL` eliminado) ya estaban
+documentados de forma completa en
+[`10-domain/states-events-catalogs.md`](../10-domain/states-events-catalogs.md)
+y no se repiten aqui.
+
+---
+
 ## ERR-STD-001 Taxonomia de errores
 
 La siguiente tabla describe las clases de error transversales y las excepciones

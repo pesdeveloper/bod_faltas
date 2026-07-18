@@ -16,12 +16,9 @@ El sistema se modela como un gestor documental orientado al expediente:
 - `backend/api-faltas-core/` — backend productivo y dominio principal;
 - `backend/api-faltas-core/docs/spec-as-source/` — única spec-as-source canónica del backend productivo;
 - `backend/api-faltas-prototipo/` — prototipo y soporte de demostración, no fuente normativa;
-- `docs/faltas/` — insumos históricos y estructurales para auditoría y MariaDB;
-- `docs-trabajo/` — artefactos operativos, cierres, prompts y validaciones históricas;
 - `apps/` — aplicaciones consumidoras;
 - `shared/` — contratos y recursos compartidos;
-- `infra/` — infraestructura y scripts;
-- `docs/` — documentación complementaria.
+- `infra/` — infraestructura y scripts.
 
 ## 3. Autoridad normativa
 
@@ -33,7 +30,7 @@ Su punto de entrada obligatorio es:
 
 `backend/api-faltas-core/docs/spec-as-source/README.md`
 
-El código Java, los tests, `docs/faltas/`, `docs-trabajo/`, los handoffs, el prototipo, Angular y la historia Git son fuentes de evidencia, auditoría o conformidad. No pueden redefinir silenciosamente la spec canónica.
+El código Java, los tests, el prototipo, Angular y la historia Git son fuentes de evidencia, auditoría o conformidad. No pueden redefinir silenciosamente la spec canónica.
 
 Ante una contradicción:
 
@@ -50,8 +47,7 @@ Para cualquier trabajo sobre `backend/api-faltas-core`:
 1. leer [AGENTS.md](AGENTS.md);
 2. leer el [README de la spec canónica](backend/api-faltas-core/docs/spec-as-source/README.md);
 3. identificar allí los documentos aplicables al alcance;
-4. consultar código y tests como evidencia de conformidad;
-5. consultar `docs/faltas/` y `docs-trabajo/` solamente cuando el alcance requiera auditoría histórica, proceso, MariaDB, demo o continuidad operativa.
+4. consultar código y tests como evidencia de conformidad.
 
 No comenzar por documentos históricos, handoffs, logs ni conteos antiguos de tests.
 
@@ -70,7 +66,12 @@ El motor de firma es un sistema externo con repositorio propio. En este reposito
 
 ## 6. Continuidad y trabajo operativo
 
-`docs-trabajo/` contiene artefactos operativos e históricos. No existe un archivo fijo que deba leerse siempre antes de cada slice.
+No existe un directorio fijo de continuidad en este repositorio ni un archivo que
+deba leerse siempre antes de cada slice. Los artefactos de continuidad (prompts
+de reanudación, cierres de slice, handoffs, checklists, informes) son
+transitorios y su lectura, creación o eliminación requiere autorización
+humana explícita en cada caso (ver `.cursor/rules/continuidad-solo-humana.mdc`
+y `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc`).
 
 La continuidad válida de un trabajo debe venir indicada expresamente por:
 

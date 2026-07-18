@@ -5,7 +5,7 @@ Antes de modificar el backend productivo de Faltas:
 1. leer `backend/api-faltas-core/docs/spec-as-source/README.md`;
 2. identificar allí los documentos canónicos aplicables al alcance;
 3. consultar código y tests como evidencia de conformidad;
-4. consultar `docs/faltas/` únicamente cuando el alcance requiera auditar proceso, modelo MariaDB o decisiones históricas.
+4. consultar `backend/api-faltas-core/docs/spec-as-source/00-governance/document-registry.md`, `backend/api-faltas-core/docs/spec-as-source/50-persistence/mariadb-logical-model.md` y `backend/api-faltas-core/docs/spec-as-source/50-persistence/ddl-decisions.md` cuando el alcance requiera auditar proceso, modelo MariaDB o decisiones históricas; usar la historia Git únicamente como evidencia adicional, nunca como autoridad.
 
 La única spec-as-source canónica del proyecto está en `backend/api-faltas-core/docs/spec-as-source/`.
 

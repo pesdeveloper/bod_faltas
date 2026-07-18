@@ -269,11 +269,11 @@ acta, consultar las dimensiones persistidas del agregado, no el snapshot.
 
 ---
 
-## Relacion con documentos transitorios
+## Relacion con otros documentos tematicos
 
-Los documentos numerados `02-estados-bloques-eventos.md` y
-`04-snapshot-bandejas-acciones.md` continuan como material de extraccion y
-trazabilidad mientras sus reglas se absorben tematicamente.
+`../10-domain/states-events-catalogs.md` (catalogo de bloques, estados y
+eventos) y `../30-projections/snapshot-bandejas-acciones.md` (matriz de
+snapshot, bandejas y acciones) son documentos tematicos hermanos de este.
 
 Ante una contradiccion sobre dimensiones, lifecycle o derivacion operativa,
 este documento es normativo.

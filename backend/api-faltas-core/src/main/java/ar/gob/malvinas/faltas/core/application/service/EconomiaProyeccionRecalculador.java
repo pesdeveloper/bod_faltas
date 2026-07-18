@@ -81,7 +81,7 @@ public class EconomiaProyeccionRecalculador {
      * consulta {@link FaltasClock}). Requerido por comandos que deben compartir
      * un unico instante real entre varias mutaciones (ver `CMD-ORDER-002` y
      * `ResolverPagoObligacionAnteriorCommand` en
-     * backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md).
+     * backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md).
      */
     public FalActaEconomiaProyeccion recalcular(Long actaId, OrigenUltimaActualizacion origen, String actorId, LocalDateTime corte) {
         Optional<FalActaObligacionPago> oblOpt = obligacionRepo.findVigenteByActaId(actaId);

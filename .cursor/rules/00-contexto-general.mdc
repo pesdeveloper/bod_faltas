@@ -12,7 +12,7 @@ Reglas obligatorias:
 - La única fuente normativa del backend productivo de Faltas es `backend/api-faltas-core/docs/spec-as-source/`.
 - El punto de entrada obligatorio es `backend/api-faltas-core/docs/spec-as-source/README.md`.
 - Leer únicamente los documentos canónicos que ese README clasifique como aplicables al alcance.
-- `docs/faltas/`, el código, los tests, los handoffs, los documentos de continuidad y la historia Git son fuentes de evidencia, auditoría o conformidad; no pueden redefinir silenciosamente la spec.
+- El código, los tests, los handoffs, los documentos de continuidad y la historia Git son fuentes de evidencia, auditoría o conformidad; no pueden redefinir silenciosamente la spec. Para auditar proceso, modelo MariaDB o decisiones históricas, la referencia vigente dentro de la spec es `backend/api-faltas-core/docs/spec-as-source/00-governance/document-registry.md`, `backend/api-faltas-core/docs/spec-as-source/50-persistence/mariadb-logical-model.md` y `backend/api-faltas-core/docs/spec-as-source/50-persistence/ddl-decisions.md`.
 - Las instrucciones del slice actual pueden delimitar el alcance y autorizar cambios, pero no deben alterar reglas de dominio sin actualizar explícitamente la spec canónica.
 - Si existe una contradicción, no resolverla por fecha, cantidad de tests, nombre de archivo, cercanía con el código ni inferencia propia.
 - Ante una contradicción, detener la decisión afectada, reportar el gap y solicitar resolución explícita.

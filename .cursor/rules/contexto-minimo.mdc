@@ -14,7 +14,7 @@ Para cualquier trabajo sobre `backend/api-faltas-core`:
 3. leer el prompt exacto del slice;
 4. abrir solamente el código y los tests necesarios para verificar o implementar ese alcance.
 
-No existe un archivo fijo de continuidad en `docs-trabajo/` que deba cargarse siempre.
+No existe un archivo fijo de continuidad que deba cargarse siempre.
 
 ## 2. Autoridad
 
@@ -26,12 +26,12 @@ Son fuentes de evidencia o auditoría, no autoridades equivalentes:
 
 - código Java;
 - tests;
-- `docs/faltas/`;
-- `docs-trabajo/`;
 - handoffs;
 - prototipo;
 - frontend;
 - historia Git.
+
+Para auditar proceso, modelo MariaDB o decisiones históricas, la referencia vigente dentro de la spec es `backend/api-faltas-core/docs/spec-as-source/00-governance/document-registry.md`, `backend/api-faltas-core/docs/spec-as-source/50-persistence/mariadb-logical-model.md` y `backend/api-faltas-core/docs/spec-as-source/50-persistence/ddl-decisions.md`.
 
 Si una fuente contradice la spec, no elegir una versión por inferencia. Reportar el gap y detener la decisión afectada.
 

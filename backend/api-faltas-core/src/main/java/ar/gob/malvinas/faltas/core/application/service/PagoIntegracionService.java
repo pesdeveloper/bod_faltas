@@ -86,7 +86,7 @@ public class PagoIntegracionService {
      * llamador (no consulta {@link FaltasClock} ni {@link ActorContextHolder}).
      * Requerido por comandos que deben compartir un unico instante real entre
      * varias mutaciones (ver `CMD-ORDER-002` y `ResolverPagoObligacionAnteriorCommand`
-     * en backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md).
+     * en backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md).
      */
     public void recalcularEstados(Long obligacionPagoId, Long formaPagoId, Long planPagoRefId, LocalDateTime instanteCanonico, String actor) {
         Optional<FalActaObligacionPago> obligOpt = obligacionRepo.findById(obligacionPagoId);

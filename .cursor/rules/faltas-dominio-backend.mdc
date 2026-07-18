@@ -3,9 +3,6 @@ description: Reglas backend y dominio para Faltas / Dirección de Faltas
 globs:
   - "backend/api-faltas-core/**/*.java"
   - "backend/api-faltas-prototipo/**/*.java"
-  - "docs/MATRIZ_REGLAS_ACTA.md"
-  - "docs/VALIDACION_FUNCIONAL.md"
-  - "docs/guia_qa/**/*.md"
 alwaysApply: false
 ---
 
@@ -22,12 +19,10 @@ La única fuente normativa del backend productivo de Faltas es:
 
 Son fuentes de evidencia funcional o QA, pero no pueden prevalecer sobre la spec canónica:
 
-- `docs/MATRIZ_REGLAS_ACTA.md`;
-- `docs/VALIDACION_FUNCIONAL.md`;
-- `docs/guia_qa/`;
 - el código Java;
 - los tests ejecutables;
-- el prototipo y Angular.
+- el prototipo y Angular;
+- historia Git, únicamente cuando se trate de evidencia histórica.
 
 Si una fuente de evidencia contradice la spec:
 
@@ -368,7 +363,7 @@ Revisar patrones:
 - `Â`
 - `ï»¿`
 - `â`
-- `�`
+- `U+FFFD` (carácter de reemplazo Unicode; no insertar el glifo literal en este documento)
 - `&#65533;`
 
 Existe un carácter `║` preexistente en `MatrizSanidadActasDemoIT.java`; no tocarlo salvo que se modifique ese archivo por necesidad real.
