@@ -67,7 +67,7 @@ class NotificacionEnvioIntentoTest {
                 eventoRepo, docRepo, notifRepo,
                 new InMemoryPagoVoluntarioRepository(), falloRepo,
                 new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(),
-                FaltasClockTestSupport.FIXED);
+                FaltasClockTestSupport.FIXED, snapshotRepo);
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,

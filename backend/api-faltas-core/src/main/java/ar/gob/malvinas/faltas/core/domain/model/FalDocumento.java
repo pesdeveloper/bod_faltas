@@ -34,6 +34,7 @@ import java.time.LocalDateTime;
 public class FalDocumento {
 
     private final Long id;
+    private int versionRow;
     private final Long idActa;
     private final TipoDocu tipoDocu;
     private final LocalDateTime fechaGeneracion;
@@ -62,6 +63,7 @@ public class FalDocumento {
         this.descripcion = descripcion;
         this.estadoDocu = EstadoDocu.PENDIENTE_FIRMA;
         this.tipoFirmaReq = TipoFirmaReq.NO_REQUIERE;
+        this.versionRow = 0;
     }
 
     public FalDocumento(
@@ -82,6 +84,7 @@ public class FalDocumento {
         this.estadoDocu = estadoDocu;
         this.tipoFirmaReq = tipoFirmaReq;
         this.plantillaId = plantillaId;
+        this.versionRow = 0;
     }
 
     public FalDocumento(
@@ -181,6 +184,8 @@ public class FalDocumento {
     }
 
     public Long getId() { return id; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int versionRow) { this.versionRow = versionRow; }
     public Long getIdActa() { return idActa; }
     public TipoDocu getTipoDocu() { return tipoDocu; }
     public LocalDateTime getFechaGeneracion() { return fechaGeneracion; }
@@ -223,4 +228,18 @@ public class FalDocumento {
     public boolean estaFirmado() { return estadoDocu == EstadoDocu.FIRMADO; }
     public boolean pendienteFirma() { return estadoDocu == EstadoDocu.PENDIENTE_FIRMA; }
     public boolean estaAdjunto() { return estadoDocu == EstadoDocu.ADJUNTO; }
+
+    public FalDocumento copia() {
+        FalDocumento c = new FalDocumento(id, idActa, tipoDocu, fechaGeneracion, descripcion,
+                estadoDocu, tipoFirmaReq, plantillaId, fechaGeneracion);
+        c.versionRow = this.versionRow;
+        c.storageKey = this.storageKey;
+        c.hashDocu = this.hashDocu;
+        c.fhGeneracion = this.fhGeneracion;
+        c.nroDocu = this.nroDocu;
+        c.idUserAlta = this.idUserAlta;
+        c.idTalonario = this.idTalonario;
+        c.nroTalonarioUsado = this.nroTalonarioUsado;
+        return c;
+    }
 }

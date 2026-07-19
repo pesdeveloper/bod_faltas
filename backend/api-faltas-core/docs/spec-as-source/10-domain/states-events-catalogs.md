@@ -110,14 +110,14 @@ previa al dictado) ni con `ResultadoFinalActa` (desenlace sustantivo del acta).
 
 El enum `EstadoFalloActa` contiene exactamente estos 6 valores (fuente normativa completa: [`10-domain/lifecycle-states.md`](lifecycle-states.md), seccion "Lifecycle del fallo"):
 
-| Valor | Descripcion |
-|-------|-------------|
-| PENDIENTE_FIRMA        | Fallo dictado; documento generado; pendiente de firma obligatoria |
-| PENDIENTE_NOTIFICACION | Ultima firma obligatoria confirmada; `fhFirma` registrado |
-| NOTIFICADO             | Notificacion del fallo registrada con acuse positivo; `fhNotificacion` registrado |
-| FIRME                  | Firmeza de condena declarada; `fhFirmeza` registrado |
-| REEMPLAZADO            | Fallo sustituido por otro (estado lateral terminal) |
-| SIN_EFECTO             | Fallo anulado o dejado sin efecto (estado lateral terminal) |
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| PENDIENTE_FIRMA        | 1 | Fallo dictado; documento generado; pendiente de firma obligatoria |
+| PENDIENTE_NOTIFICACION | 2 | Ultima firma obligatoria confirmada; `fhFirma` registrado |
+| NOTIFICADO             | 3 | Notificacion del fallo registrada con acuse positivo; `fhNotificacion` registrado |
+| FIRME                  | 4 | Firmeza de condena declarada; `fhFirmeza` registrado |
+| REEMPLAZADO            | 5 | Fallo sustituido por otro (estado lateral terminal) |
+| SIN_EFECTO             | 6 | Fallo anulado o dejado sin efecto (estado lateral terminal) |
 
 Prohibido: `DICTADO` y `FIRMADO` no son valores del enum. Son hechos historicos persistidos en `fhDictado` y `fhFirma` respectivamente. No deben reintroducirse como valores de enum ni como aliases de compatibilidad.
 
@@ -127,14 +127,14 @@ Prohibido: `DICTADO` y `FIRMADO` no son valores del enum. Son hechos historicos 
 
 El enum `EstadoApelacionActa` contiene exactamente estos 6 valores:
 
-| Valor | Descripcion |
-|-------|-------------|
-| PRESENTADA        | Apelacion presentada por el infractor |
-| EN_ANALISIS       | Apelacion en analisis (via `PasarApelacionAAnalisisCommand`) |
-| RECHAZADA         | Apelacion rechazada/resuelta con resultado RECHAZADA; no declara firmeza por si misma; habilita la ejecucion posterior de CMD-FALLO-006 |
-| ACEPTADA_ABSUELVE | Apelacion aceptada - absolucion en segunda instancia |
-| RESUELTA          | Apelacion resuelta con modificacion de condena o nulidad, sin absolver |
-| SIN_EFECTO        | Apelacion anulada o sin efecto |
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| PRESENTADA        | 1 | Apelacion presentada por el infractor |
+| EN_ANALISIS       | 2 | Apelacion en analisis (via `PasarApelacionAAnalisisCommand`) |
+| RECHAZADA         | 3 | Apelacion rechazada/resuelta con resultado RECHAZADA; no declara firmeza por si misma; habilita la ejecucion posterior de CMD-FALLO-006 |
+| ACEPTADA_ABSUELVE | 4 | Apelacion aceptada - absolucion en segunda instancia |
+| RESUELTA          | 5 | Apelacion resuelta con modificacion de condena o nulidad, sin absolver |
+| SIN_EFECTO        | 6 | Apelacion anulada o sin efecto |
 
 ---
 
@@ -419,13 +419,13 @@ Los eventos correctos de pago condena son: `PCOINF`, `PCOCNF`, `PCOOBS`.
 
 ### Estado: EstadoPagoCondena
 
-| Valor      | Descripcion                                                        |
-|------------|---------------------------------------------------------------------|
-| NO_APLICA  | Valor inicial antes de condena firme                                |
-| PENDIENTE  | Condena firme declarada, pago aun no informado                      |
-| INFORMADO  | Infractor informo pago (via PCOINF)                                 |
-| CONFIRMADO | Pago confirmado via PCOCNF. No implica cierre del acta por si solo. |
-| OBSERVADO  | Pago observado/rechazado (via PCOOBS)                               |
+| Valor      | Codigo | Descripcion                                                        |
+|------------|--------|---------------------------------------------------------------------|
+| NO_APLICA  | 1      | Valor inicial antes de condena firme                                |
+| PENDIENTE  | 2      | Condena firme declarada, pago aun no informado                      |
+| INFORMADO  | 3      | Infractor informo pago (via PCOINF)                                 |
+| CONFIRMADO | 4      | Pago confirmado via PCOCNF. No implica cierre del acta por si solo. |
+| OBSERVADO  | 5      | Pago observado/rechazado (via PCOOBS)                               |
 
 ### ResultadoFinalActa: CONDENA_FIRME_PAGADA
 

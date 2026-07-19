@@ -66,6 +66,7 @@ public class FalGestionExterna {
     private String idUserAlta;
     private LocalDateTime fhUltMod;
     private String idUserUltMod;
+    private int versionRow;
 
     public FalGestionExterna(Long id, Long actaId, LocalDateTime fhAlta, String idUserAlta) {
         this.id = id;
@@ -76,10 +77,13 @@ public class FalGestionExterna {
         this.siActiva = true;
         this.fhAlta = fhAlta;
         this.idUserAlta = idUserAlta;
+        this.versionRow = 0;
     }
 
     public Long getId() { return id; }
     public Long getActaId() { return actaId; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int v) { this.versionRow = v; }
     public LocalDateTime getFhAlta() { return fhAlta; }
     public String getIdUserAlta() { return idUserAlta; }
     public LocalDateTime getFhUltMod() { return fhUltMod; }
@@ -146,5 +150,30 @@ public class FalGestionExterna {
         return siActiva
                 && (estadoGestionExterna == EstadoGestionExterna.DERIVADA
                     || estadoGestionExterna == EstadoGestionExterna.EN_CURSO);
+    }
+
+    public FalGestionExterna copia() {
+        FalGestionExterna c = new FalGestionExterna(id, actaId, fhAlta, idUserAlta);
+        c.versionRow = this.versionRow;
+        c.tipoGestionExterna = this.tipoGestionExterna;
+        c.estadoGestionExterna = this.estadoGestionExterna;
+        c.resultadoGestionExterna = this.resultadoGestionExterna;
+        c.modoReingresoGestionExterna = this.modoReingresoGestionExterna;
+        c.motivoDerivacion = this.motivoDerivacion;
+        c.observacionesDerivacion = this.observacionesDerivacion;
+        c.fechaDerivacion = this.fechaDerivacion;
+        c.bloqueOrigen = this.bloqueOrigen;
+        c.situacionAdministrativaOrigen = this.situacionAdministrativaOrigen;
+        c.codigoBandejaOrigen = this.codigoBandejaOrigen;
+        c.accionPendienteOrigen = this.accionPendienteOrigen;
+        c.motivoReingreso = this.motivoReingreso;
+        c.observacionesReingreso = this.observacionesReingreso;
+        c.fechaReingreso = this.fechaReingreso;
+        c.fechaCierreGestionExterna = this.fechaCierreGestionExterna;
+        c.montoResultado = this.montoResultado;
+        c.siActiva = this.siActiva;
+        c.fhUltMod = this.fhUltMod;
+        c.idUserUltMod = this.idUserUltMod;
+        return c;
     }
 }

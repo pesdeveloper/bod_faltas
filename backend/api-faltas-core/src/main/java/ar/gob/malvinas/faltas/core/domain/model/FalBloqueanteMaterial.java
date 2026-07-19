@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 public class FalBloqueanteMaterial {
 
     private final Long id;
+    private int versionRow;
     private final Long actaId;
     private OrigenBloqueanteMaterial origen;
     private EstadoBloqueanteMaterial estado;
@@ -33,9 +34,12 @@ public class FalBloqueanteMaterial {
         this.estado = EstadoBloqueanteMaterial.PENDIENTE;
         this.siActivo = true;
         this.fechaAlta = fechaAlta;
+        this.versionRow = 0;
     }
 
     public Long getId() { return id; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int versionRow) { this.versionRow = versionRow; }
     public Long getActaId() { return actaId; }
 
     public OrigenBloqueanteMaterial getOrigen() { return origen; }
@@ -55,5 +59,16 @@ public class FalBloqueanteMaterial {
 
     public LocalDateTime getFechaCierre() { return fechaCierre; }
     public void setFechaCierre(LocalDateTime fechaCierre) { this.fechaCierre = fechaCierre; }
+
+    public FalBloqueanteMaterial copia() {
+        FalBloqueanteMaterial c = new FalBloqueanteMaterial(id, actaId, fechaAlta);
+        c.versionRow = this.versionRow;
+        c.origen = this.origen;
+        c.estado = this.estado;
+        c.siActivo = this.siActivo;
+        c.descripcion = this.descripcion;
+        c.fechaCierre = this.fechaCierre;
+        return c;
+    }
 }
 

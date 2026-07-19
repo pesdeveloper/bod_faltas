@@ -31,7 +31,7 @@ No presentes:
 - `spring-boot-starter-data-jpa` (prohibido).
 - Hibernate (prohibido).
 - H2 / HSQLDB (no se usa embedded DB).
-- Flyway / Liquibase (decision pendiente; ver `../90-roadmap/current-roadmap.md`).
+- Flyway / Liquibase (NO — ejecucion DDL exclusivamente manual; ver `../50-persistence/ddl-execution-and-test-seeding.md`).
 
 ## 3. Perfiles de persistencia
 
@@ -135,12 +135,14 @@ O con variables de entorno del sistema operativo.
 - Sin JPA/Hibernate: cero referencias en codigo Java.
 - Sin repositorios JDBC de dominio todavia.
 - Sin tablas para enums cerrados. Sin seeds para enums cerrados.
-- Repositorios `InMemory*` siguen activos y sin modificar.
-- Sin migraciones versionadas (Flyway/Liquibase) todavia.
+- Repositorios `InMemory*` siguen activos.
+- Sin Flyway ni Liquibase (DECISION_DDL-EXEC-01 CERRADA: ejecucion DDL exclusivamente manual).
+- Spring no crea, altera ni migra el esquema automaticamente.
+- DDL ejecutado manualmente por Pablo mediante HeidiSQL (script canonico aun no generado).
 
 ## 9. Trabajo posterior
 
-Ver [`../90-roadmap/current-roadmap.md`](../90-roadmap/current-roadmap.md) para el bloque
-obligatorio de diseño y DDL MariaDB (resolucion de `DECISION_DDL-*`, DDL inicial versionado,
-adapters JDBC de dominio y activacion via perfil `jdbc`). Ver [`jdbc-strategy.md`](jdbc-strategy.md)
+Ver [`../90-roadmap/current-roadmap.md`](../90-roadmap/current-roadmap.md) para la
+secuencia de trabajo posterior al cierre del slice vigente (script DDL manual,
+seeder, adapters JDBC de dominio y activacion via perfil `jdbc`). Ver [`jdbc-strategy.md`](jdbc-strategy.md)
 para la estrategia de acceso a datos que ese bloque debe seguir.

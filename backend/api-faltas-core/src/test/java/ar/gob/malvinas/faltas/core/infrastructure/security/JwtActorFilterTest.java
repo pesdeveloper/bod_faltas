@@ -337,4 +337,129 @@ class JwtActorFilterTest {
         verify(chain).doFilter(req, res);
         assertThat(ActorContextHolder.get()).isNull();
     }
+
+    // -----------------------------------------------------------------------
+    // Rutas nuevas: labrar, completar-captura, enriquecer
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/labrar sin Bearer -> 401")
+    void labrar_sin_token_responde_401() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/labrar");
+        req.setRequestURI("/api/faltas/actas/labrar");
+        req.setMethod("POST");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(401);
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/labrar con Bearer valido: pasa; ActorContext contiene sub exacto")
+    void labrar_con_token_valido_pasa_y_actor_es_sub() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/labrar");
+        req.setRequestURI("/api/faltas/actas/labrar");
+        req.setMethod("POST");
+        req.addHeader("Authorization", "Bearer " + JwtTestSupport.token("inspector-01"));
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+        doAnswer(inv -> {
+            assertThat(ActorContextHolder.subOr("x")).isEqualTo("inspector-01");
+            return null;
+        }).when(chain).doFilter(req, res);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(200);
+        verify(chain).doFilter(req, res);
+    }
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/labrar con sub ausente/blank -> 401")
+    void labrar_con_sub_blank_responde_401() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/labrar");
+        req.setRequestURI("/api/faltas/actas/labrar");
+        req.setMethod("POST");
+        req.addHeader("Authorization", "Bearer " + JwtTestSupport.tokenSubVacio());
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(401);
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/{id}/completar-captura sin Bearer -> 401")
+    void completar_captura_sin_token_responde_401() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/5/completar-captura");
+        req.setRequestURI("/api/faltas/actas/5/completar-captura");
+        req.setMethod("POST");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(401);
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/{id}/completar-captura con Bearer valido: pasa; sub exacto")
+    void completar_captura_con_token_valido_pasa() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/5/completar-captura");
+        req.setRequestURI("/api/faltas/actas/5/completar-captura");
+        req.setMethod("POST");
+        req.addHeader("Authorization", "Bearer " + JwtTestSupport.token("inspector-02"));
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+        doAnswer(inv -> {
+            assertThat(ActorContextHolder.subOr("x")).isEqualTo("inspector-02");
+            return null;
+        }).when(chain).doFilter(req, res);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(200);
+        verify(chain).doFilter(req, res);
+    }
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/{id}/enriquecer sin Bearer -> 401")
+    void enriquecer_sin_token_responde_401() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/7/enriquecer");
+        req.setRequestURI("/api/faltas/actas/7/enriquecer");
+        req.setMethod("POST");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(401);
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /api/faltas/actas/{id}/enriquecer con Bearer valido: pasa; sub exacto")
+    void enriquecer_con_token_valido_pasa() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/7/enriquecer");
+        req.setRequestURI("/api/faltas/actas/7/enriquecer");
+        req.setMethod("POST");
+        req.addHeader("Authorization", "Bearer " + JwtTestSupport.token("inspector-03"));
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+        doAnswer(inv -> {
+            assertThat(ActorContextHolder.subOr("x")).isEqualTo("inspector-03");
+            return null;
+        }).when(chain).doFilter(req, res);
+
+        filter.doFilter(req, res, chain);
+
+        assertThat(res.getStatus()).isEqualTo(200);
+        verify(chain).doFilter(req, res);
+    }
 }

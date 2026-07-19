@@ -63,7 +63,7 @@ class LoteCorreoIntentosCanonicoTest {
 
         snapshotRecalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo,
-                FaltasClockTestSupport.FIXED);
+                FaltasClockTestSupport.FIXED, snapshotRepo);
 
         loteService = new LoteCorreoService(
                 loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo,

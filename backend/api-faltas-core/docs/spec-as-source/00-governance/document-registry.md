@@ -35,6 +35,7 @@ transitorio para sostener esa afirmación.
 | `00-governance/glossary.md` | NORMATIVE | YES | VIGENTE | Vocabulario canónico del dominio; un término canónico tiene un único significado. |
 | `00-governance/command-contract-standard.md` | NORMATIVE | YES | VIGENTE | Estándar normativo de contratos de comando: plantilla, orden de ejecución, errores, idempotencia, concurrencia, nueve principios del motor determinista. |
 | `00-governance/ready-for-ddl-gate.md` | SUPPORTING_CURRENT | SUPPORTING | VIGENTE | Cierre formal de la auditoría transversal final y gate `READY_FOR_DDL`; informe de conformidad, no fuente de reglas de dominio. |
+| `00-governance/ready-for-backend-clean-room-reconstruction.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Suficiencia documental para reconstruir backend/domain/application/contracts/InMemory/JDBC contract/model/DDL/seeder/tests sin documentación externa. |
 | `10-domain/lifecycle-states.md` | NORMATIVE | YES | VIGENTE | Dimensiones de estado y lifecycle del acta y sus subagregados. |
 | `10-domain/calendario-plazos-administrativos.md` | NORMATIVE | YES | VIGENTE | Calendario, días no computables y cálculo de plazos administrativos. |
 | `10-domain/firma-notificacion-fallo.md` | NORMATIVE | YES | VIGENTE | Circuito de firma documental y cola notificatoria del fallo. |
@@ -47,5 +48,6 @@ transitorio para sostener esa afirmación.
 | `50-persistence/jdbc-infrastructure.md` | SUPPORTING_CURRENT | SUPPORTING | VIGENTE | Inventario actual y verificable de la infraestructura JDBC base ya incorporada (dependencias, perfiles, configuración), previa a los repositorios de dominio. |
 | `50-persistence/inmemory-mariadb-deltas.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Delta vigente entre el modelo InMemory y el modelo MariaDB objetivo. |
 | `50-persistence/mariadb-logical-model.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Modelo lógico/inventario canónico de tablas, enums y decisiones cerradas de MariaDB; entrada principal al diseño de DDL/JDBC. |
-| `50-persistence/ddl-decisions.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Registro único de decisiones físicas abiertas (`DECISION_DDL-*`) previas al DDL versionado. |
+| `50-persistence/ddl-decisions.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Registro cerrado de 24 decisiones físicas (`DECISION_DDL-*`) para el DDL manual. |
+| `50-persistence/ddl-execution-and-test-seeding.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Mecanismo de ejecucion DDL manual, baseline protegido, contrato del seeder y politica de comentarios SQL obligatorios. |
 | `90-roadmap/current-roadmap.md` | SUPPORTING_CURRENT | SUPPORTING | VIGENTE | Roadmap vigente posterior al cierre de spec-as-source: DDL/JDBC e integraciones externas. |

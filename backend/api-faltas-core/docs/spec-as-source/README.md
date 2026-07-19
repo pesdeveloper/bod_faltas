@@ -26,7 +26,7 @@ slices ni directorio `handoff/`:
 - [`20-application/`](20-application/) — contratos de comandos de aplicación (catálogo general y familia de fallo).
 - [`30-projections/`](30-projections/) — snapshot, bandejas y acciones pendientes derivadas.
 - [`40-api/`](40-api/) — contratos HTTP de los endpoints productivos.
-- [`50-persistence/`](50-persistence/) — estrategia e infraestructura JDBC, deltas InMemory/MariaDB, modelo lógico de MariaDB y decisiones DDL abiertas.
+- [`50-persistence/`](50-persistence/) — estrategia e infraestructura JDBC, deltas InMemory/MariaDB, modelo lógico de MariaDB y decisiones DDL (todas cerradas).
 - [`90-roadmap/`](90-roadmap/) — roadmap vigente posterior al cierre de spec-as-source.
 
 ## 3. Registro documental
@@ -90,15 +90,17 @@ Para cualquier trabajo en `backend/api-faltas-core`:
 6. consultar documentación externa a esta spec (si existiera) únicamente como fuente de auditoría o diseño físico, nunca como autoridad normativa;
 7. detenerse y reportar si existe una contradicción no resuelta.
 
-## 6. Cómo se usa la spec para diseñar el DDL de MariaDB
+## 6. Cómo se usa la spec para construir el DDL manual de MariaDB
 
-El diseño del DDL versionado de MariaDB debe partir de:
+El diseño del DDL manual de MariaDB debe partir de:
 
 1. los documentos `NORMATIVE` (estados, eventos, comandos, endpoints) para las reglas de dominio que las tablas y columnas deben reforzar, nunca redefinir;
 2. [`50-persistence/inmemory-mariadb-deltas.md`](50-persistence/inmemory-mariadb-deltas.md) para los deltas vigentes de identidad, versionRow/OCC, unicidades, atomicidad, transacciones y enums/catálogos;
 3. [`50-persistence/mariadb-logical-model.md`](50-persistence/mariadb-logical-model.md) como matriz de entrada: por cada agregado/repositorio, identidad primaria, clave natural, FKs conceptuales, unicidad física, índices, versionRow/OCC, frontera transaccional y fuente normativa;
-4. [`50-persistence/ddl-decisions.md`](50-persistence/ddl-decisions.md) para las decisiones físicas todavía abiertas (`DECISION_DDL-*`);
-5. [`50-persistence/jdbc-strategy.md`](50-persistence/jdbc-strategy.md) y [`50-persistence/jdbc-infrastructure.md`](50-persistence/jdbc-infrastructure.md) para la estrategia y la infraestructura JDBC ya incorporada.
+4. [`50-persistence/ddl-decisions.md`](50-persistence/ddl-decisions.md) para el historial de decisiones físicas (`DECISION_DDL-*`); todas están cerradas tras el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001-R1`;
+5. [`50-persistence/jdbc-strategy.md`](50-persistence/jdbc-strategy.md) y [`50-persistence/jdbc-infrastructure.md`](50-persistence/jdbc-infrastructure.md) para la estrategia y la infraestructura JDBC ya incorporada;
+6. [`50-persistence/ddl-execution-and-test-seeding.md`](50-persistence/ddl-execution-and-test-seeding.md) para el mecanismo de ejecucion DDL manual, baseline protegido, contrato del seeder y politica de comentarios SQL;
+7. [`00-governance/ready-for-backend-clean-room-reconstruction.md`](00-governance/ready-for-backend-clean-room-reconstruction.md) para el contrato de suficiencia de la spec para reconstruccion clean-room.
 
 El DDL no puede modificar reglas de dominio, estados, eventos, transiciones,
 bandejas ni contratos HTTP vigentes. Toda decisión física que requiera
@@ -110,8 +112,9 @@ análisis durante el diseño del DDL se marca `DECISION_DDL` en
 La auditoría transversal final registrada en
 [`00-governance/ready-for-ddl-gate.md`](00-governance/ready-for-ddl-gate.md)
 declara el estado `READY_FOR_DDL`: la etapa spec-as-source queda formalmente
-cerrada y la siguiente etapa autorizada es diseñar y generar el DDL
-versionado de MariaDB, sin alterar los contratos funcionales vigentes.
+cerrada y la siguiente etapa autorizada es construir el script DDL manual de
+MariaDB y ejecutarlo desde HeidiSQL, sin alterar los contratos funcionales
+vigentes.
 
 ## 8. Qué queda fuera de esta spec
 

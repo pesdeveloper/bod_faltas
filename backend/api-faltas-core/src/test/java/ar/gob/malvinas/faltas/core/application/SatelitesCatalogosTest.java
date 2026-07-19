@@ -40,6 +40,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoMarca;
 import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoModelo;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaArticuloInfringidoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaContravencionRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaMedidaPreventivaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSustanciasAlimenticiasRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaTransitoAlcoholemiaRepository;
@@ -1158,6 +1159,7 @@ class SatelitesCatalogosTest {
         private SnapshotRecalculador recalculador;
         private InMemoryActaTransitoRepository transitoRepo;
         private InMemoryActaContravencionRepository contravencionRepo;
+        private InMemoryActaSnapshotRepository snapshotRepo;
 
         private FalActa crearActa(Long id, TipoActa tipo) {
             return new FalActa(id, "uuid-" + id, tipo, 1L, 1L,
@@ -1167,6 +1169,7 @@ class SatelitesCatalogosTest {
         }
 
         @BeforeEach void setUp() throws Exception {
+            snapshotRepo = new InMemoryActaSnapshotRepository();
             transitoRepo = new InMemoryActaTransitoRepository();
             contravencionRepo = new InMemoryActaContravencionRepository();
 
@@ -1177,7 +1180,7 @@ class SatelitesCatalogosTest {
                     new InMemoryPagoVoluntarioRepository(),
                     new InMemoryFalloActaRepository(),
                     new InMemoryApelacionActaRepository(),
-                    new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                    new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
             // Inyectar repos satelite via reflexion (son @Autowired required=false)
             Field fTransito = SnapshotRecalculador.class.getDeclaredField("actaTransitoRepository");

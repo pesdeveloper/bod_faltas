@@ -13,7 +13,6 @@ import ar.gob.malvinas.faltas.core.domain.exception.QrTokenInvalidoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaQrAcceso;
-import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
@@ -24,7 +23,6 @@ import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Servicio de generacion y resolucion de accesos via QR.
@@ -132,11 +130,10 @@ public class QrActaService {
             }
         }
 
-        registrarEvento(acta.getId(), TipoEventoActa.QRGEN, null, idUser, "QR de acceso generado");
+        registrarEvento(acta.getId(), TipoEventoActa.QRGEN, null, idUser, ahora, "QR de acceso generado");
 
         FalActa actaFinal = actaRepository.buscarPorId(acta.getId()).orElseThrow();
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(actaFinal);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(actaFinal, ahora);
 
         return nuevoToken;
     }
@@ -179,10 +176,9 @@ public class QrActaService {
         qrAccesoRepository.registrar(acceso);
 
         registrarEvento(acta.getId(), TipoEventoActa.QRACC, null,
-                "PORTAL", "Acceso QR registrado [correl=" + (idCorrel != null ? idCorrel : "?") + "]");
+                "PORTAL", ahora, "Acceso QR registrado [correl=" + (idCorrel != null ? idCorrel : "?") + "]");
 
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(acta, ahora);
 
         return new AccesoQrResultado(accId, acta.getId(), ahora, canal, ResultadoAccesoQr.VALIDO);
     }
@@ -255,12 +251,12 @@ public class QrActaService {
         }
     }
 
-    private void registrarEvento(Long actaId, TipoEventoActa tipo, Long idDocuRel, String idUser, String descripcionLegible) {
+    private void registrarEvento(Long actaId, TipoEventoActa tipo, Long idDocuRel, String idUser, LocalDateTime ahora, String descripcionLegible) {
         FalActaEvento evento = FalActaEvento.builder()
                 .actaId(actaId)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.SISTEMA_QR)
-                .fhEvt(faltasClock.now())
+                .fhEvt(ahora)
                 .idDocuRel(idDocuRel)
                 .idUserEvt(idUser)
                 .actorTipo(idUser != null && !"SYS".equals(idUser) ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)

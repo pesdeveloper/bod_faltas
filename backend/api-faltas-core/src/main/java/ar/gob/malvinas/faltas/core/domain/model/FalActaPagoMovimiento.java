@@ -282,7 +282,15 @@ public class FalActaPagoMovimiento {
         public Builder idCierre(Long v) { this.idCierre = v; return this; }
         public Builder idOpe(Long v) { this.idOpe = v; return this; }
         public Builder movimientoOrigenId(Long v) { this.movimientoOrigenId = v; return this; }
-        public Builder motivoAplicacionPagoAnterior(String v) { this.motivoAplicacionPagoAnterior = v; return this; }
+        public Builder motivoAplicacionPagoAnterior(String v) {
+            if (v != null) {
+                v = v.trim();
+                if (v.length() > 500)
+                    throw new IllegalArgumentException("motivoAplicacionPagoAnterior max 500 caracteres");
+            }
+            this.motivoAplicacionPagoAnterior = v;
+            return this;
+        }
         public Builder motivoAnulacionPago(MotivoAnulacionPago v) { this.motivoAnulacionPago = v; return this; }
         public Builder fhPagoProcesado(LocalDateTime v) { this.fhPagoProcesado = v; return this; }
         public Builder fhPagoConfirmado(LocalDateTime v) { this.fhPagoConfirmado = v; return this; }

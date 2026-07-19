@@ -11,7 +11,7 @@
 > lógico por agregado (qué tablas/campos existen); `inmemory-mariadb-deltas.md`
 > describe los deltas físicos transversales (identidad, unicidad, concurrencia,
 > etc.); `ddl-decisions.md` es el registro único de decisiones físicas
-> pendientes/cerradas (`DECISION_DDL-*`). Ninguno de los tres es fuente única
+> cerradas (`DECISION_DDL-*`). Ninguno de los tres es fuente única
 > de verdad ni sustituye a los otros. No contiene SQL/DDL definitivo ni nombres
 > físicos aprobados más allá de los ya usados en la spec vigente. La historia
 > de cómo se llegó a este estado (fases, diarios de slice, modelos MariaDB
@@ -26,7 +26,7 @@
   prevalecen ante cualquier contradicción.
 - Su único propósito es servir de entrada compacta y verificable al diseño de
   DDL/JDBC: qué agregados existen, con qué identidad, qué decisiones físicas
-  siguen abiertas (ver `ddl-decisions.md`).
+  cerradas condicionan cada tabla (ver `ddl-decisions.md`).
 - **Reemplaza y reconcilia** el modelo físico preliminar descrito en los
   documentos históricos `MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md`
   y `DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md` (eliminados de
@@ -44,10 +44,10 @@
 |---|---|
 | Contrato funcional (dominio, comandos, eventos, estados) | CERRADO |
 | Modelo conceptual (agregados, entidades Java, puertos) | LISTO_PARA_DDL |
-| Decisiones físicas pendientes | Ver `ddl-decisions.md` |
+| Decisiones físicas pendientes | **0** — todas las `DECISION_DDL-*` cerradas en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001` (ver `ddl-decisions.md`) |
 
 No se reporta un resumen numérico agregado de "paridad" derivado manualmente:
-cada decisión física pendiente está identificada individualmente en
+cada decisión física relevante está identificada individualmente en
 `ddl-decisions.md` con su propio criterio de cierre.
 
 ## 2. Inventario canónico de tablas MariaDB objetivo (modelo lógico)
@@ -56,10 +56,10 @@ Este inventario describe el modelo lógico de tablas que la spec de dominio ya
 supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 
 **Taxonomía de estados de reconciliación R3:**
-- `RECONCILIADA_R3` — reconciliación profunda completada en R3: Java ↔ histórico 2026-06-23 ↔ spec vigente, campo por campo; deltas documentados; `DECISION_DDL-*` emitidas para toda ambigüedad física.
-- `BASELINE_PRESERVADA_CON_DELTA` — tabla presente y verificada contra el código Java vigente; fuente: `MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md` (ref. Git `HEAD:docs/faltas/...`); delta: sin deltas estructurales detectados en R3 para esta tabla; reglas físicas: preservadas del histórico; decisiones pendientes: ninguna específica identificada más allá de las transversales en `ddl-decisions.md` y `inmemory-mariadb-deltas.md`.
+- `RECONCILIADA_R3` — reconciliación profunda completada en R3: Java ↔ histórico 2026-06-23 ↔ spec vigente, campo por campo; deltas documentados; todas las `DECISION_DDL-*` emitidas y cerradas.
+- `BASELINE_PRESERVADA_CON_DELTA` — tabla presente y verificada contra el código Java vigente; fuente: `MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md` (ref. Git `HEAD:docs/faltas/...`); delta: sin deltas estructurales detectados en R3 para esta tabla; reglas físicas: preservadas del histórico; no hay decisiones pendientes.
 - `LISTO_PARA_DDL` — condición de readiness del modelo conceptual (campos Java verificados; sin bloqueo funcional).
-- `MODELO_CONCEPTUAL_CERRADO` — estructura Java cerrada, con al menos una `DECISION_DDL-*` física pendiente de resolución antes del DDL final.
+- ~~`MODELO_CONCEPTUAL_CERRADO`~~ — categoría eliminada: todas las `DECISION_DDL-*` fueron cerradas en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001`.
 
 ### Dependencias
 
@@ -130,9 +130,9 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 - **Campos:** `tipo_persona SMALLINT NOT NULL` (`FISICA`/`JURIDICA`), `tipo_doc SMALLINT NULL`, `nro_doc VARCHAR(20) NULL`, `apellido VARCHAR NULL` (persona física), `nombres VARCHAR NULL` (persona física), `razon_social VARCHAR(64) NULL` (persona jurídica), `nombre_mostrar VARCHAR(64) NULL` (calculado), `email_principal VARCHAR(160) NULL`, `telefono_principal VARCHAR(20) NULL`, `id_suj BIGINT NULL` (sujeto/rubro de ingresos), `id_bie BIGINT NULL` (cuenta/bien en ingresos), `suj_bie_estado SMALLINT NULL`, `fh_suj_bie_creacion DATETIME(6) NULL`.
 - **Auditoría:** `fh_alta`, `id_user_alta`, `fh_ult_mod`, `id_user_ult_mod`.
 - **Entidad Java:** `FalPersona`. **Puerto:** `PersonaRepository` / `InMemoryPersonaRepository`.
-- **versionRow/OCC:** NO — `FalPersona` no define `versionRow` (verificado contra el código Java vigente).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / PENDING_DDL_DECISION (`DECISION_DDL-PERS-01`, unicidad física).
-- **Clave natural candidata:** `(tipo_doc, nro_doc)` para personas identificadas; ver `ddl-decisions.md`.
+- **versionRow/OCC:** NO — `FalPersona` no define `versionRow` (verificado contra el código Java vigente); no aplica OCC (`DECISION_DDL-PERS-01` CERRADA).
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
+- **Unicidad física:** UNIQUE(`tipo_doc, nro_doc`) WHERE `tipo_doc IS NOT NULL AND nro_doc IS NOT NULL`; personas no identificadas sin restricción (`DECISION_DDL-PERS-01` CERRADA).
 - **No existen** `nombre_completo`, `fh_nacimiento`, `sexo`, `si_identificado`, `si_extranjero`, `id_ign`, `id_indec`, `id_local` como columnas de `fal_persona`: no tienen respaldo en `FalPersona.java`. El nombre para mostrar se calcula desde `apellido`+`nombres` o `razon_social` (método `calcularNombreMostrar()`), nunca se persiste un único campo `nombre_completo`.
 
 #### `fal_persona_domicilio`
@@ -186,29 +186,28 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 #### `fal_acta_snapshot`
 - **Propósito:** proyección operativa resumida del expediente (1:1 con acta), derivada y regenerable. Alimenta bandejas, filtros, badges y habilitación de acciones. No es fuente de verdad; se recalcula en cada transición de dominio.
 - **PK:** `id_acta BIGINT NOT NULL FK` (→ `fal_acta`).
+- **Campos — control de concurrencia:** `version_row INT NOT NULL DEFAULT 0` (OCC; `DECISION_DDL-SNAP-01` CERRADA).
 - **Campos — estado procesal:** `bloque_actual CHAR(4) NULL` (`BloqueActual`), `est_proc_act CHAR(4) NULL` (`EstadoProcesalActa`), `sit_adm_act CHAR(4) NULL` (`SituacionAdministrativaActa`), `resultado_final SMALLINT NULL` (`ResultadoFinalActa`, `EXPLICIT_NUMERIC_CODE`).
-- **Campos — bandejas y acciones:** `cod_bandeja VARCHAR(50) NULL` (`CodigoBandeja`; longitud física pendiente de `DECISION_DDL-SNAP-01`), `sub_bandeja VARCHAR(80) NULL`, `accion_pendiente CHAR(6) NULL` (`AccionPendiente`).
+- **Campos — bandejas y acciones:** `cod_bandeja VARCHAR(50) NULL` (`CodigoBandeja`, `EXPLICIT_STRING_CODE`; longitud física confirmada: max 50 caracteres; `DECISION_DDL-SNAP-01` CERRADA), `sub_bandeja VARCHAR(80) NULL`, `accion_pendiente VARCHAR(50) NULL` (`AccionPendiente`, `EXPLICIT_STRING_CODE`; longitud física confirmada: max 50 caracteres; **no** `CHAR(6)`).
 - **Campos — documentos y notificaciones:** `tiene_documentos BOOLEAN NOT NULL DEFAULT FALSE`, `tiene_docs_pendientes_firma BOOLEAN NOT NULL DEFAULT FALSE`, `tiene_docs_listos_para_notificar BOOLEAN NOT NULL DEFAULT FALSE`, `tiene_notificaciones BOOLEAN NOT NULL DEFAULT FALSE`, `notificacion_en_curso BOOLEAN NOT NULL DEFAULT FALSE`, `bloqueado_cierre BOOLEAN NOT NULL DEFAULT FALSE`, `id_docu_ult BIGINT NULL FK` (→ `fal_documento`), `bloqueado_notificacion BOOLEAN NOT NULL DEFAULT FALSE`.
-- **Campos — valorización operativa:** `valorizacion_operativa_id BIGINT NULL FK` (→ `fal_acta_valorizacion`), `estado_valorizacion_operativa SMALLINT NULL` (`EstadoValorizacion`), `tipo_valorizacion_operativa SMALLINT NULL` (`TipoValorizacionActa`), `monto_operativo_vigente DECIMAL(14,2) NULL`, `si_monto_confirmado BOOLEAN NOT NULL DEFAULT FALSE`.
+- **Campos — valorización operativa:** `valorizacion_operativa_id BIGINT NULL FK` (→ `fal_acta_valorizacion`), `estado_valorizacion_operativa SMALLINT NULL` (`EstadoValorizacion`), `tipo_valorizacion_operativa SMALLINT NULL` (`TipoValorizacionActa`), `monto_operativo_vigente DECIMAL(14,2) NULL` (valorización UX del acta; no es estado económico de pagos), `si_monto_confirmado BOOLEAN NOT NULL DEFAULT FALSE`.
 - **Campos — satélites de acta:** `licencia_provincia_txt VARCHAR(64) NULL`, `licencia_unidad_txt VARCHAR(80) NULL`, `nomenclatura_resumen VARCHAR(120) NULL`, `id_bie_i BIGINT NULL`, `id_bie_c BIGINT NULL`.
 - **Campos — paralización:** `motivo_paralizacion_act SMALLINT NULL` (`MotivoParalizacion`, `EXPLICIT_NUMERIC_CODE`).
-- **Campos — economía de pagos (proyección para UX; no reemplaza `fal_acta_economia_proyeccion`):** `tipo_obligacion_pago SMALLINT NULL` (`TipoObligacionPago`), `estado_obligacion_pago SMALLINT NULL` (`EstadoObligacionPago`), `monto_obligacion_pago DECIMAL(14,2) NULL`, `tipo_forma_pago_vigente SMALLINT NULL` (`TipoFormaPago`), `estado_forma_pago_vigente SMALLINT NULL` (`EstadoFormaPago`), `si_plan_pago BOOLEAN NOT NULL DEFAULT FALSE`, `estado_plan_pago SMALLINT NULL` (`EstadoPlanPago`), `cant_cuotas_plan SMALLINT NULL`, `valor_cuota_plan DECIMAL(14,2) NULL`, `cant_cuotas_pagadas SMALLINT NULL`, `cant_cuotas_mora SMALLINT NULL`, `cant_cuotas_mora_consec SMALLINT NULL`, `cant_dias_mora SMALLINT NULL`, `si_apta_intimacion BOOLEAN NOT NULL DEFAULT FALSE`, `motivo_apta_intimacion SMALLINT NULL` (`MotivoAptitudIntimacion`), `si_pago_procesado BOOLEAN NOT NULL DEFAULT FALSE`, `si_pago_confirmado BOOLEAN NOT NULL DEFAULT FALSE`, `fh_ult_sync_ingresos DATETIME(6) NULL`.
 - **Campos — control técnico:** `ultimo_evento_tipo CHAR(6) NULL` (`TipoEventoActa`, `EXPLICIT_STRING_CODE`), `ultima_actualizacion DATETIME(6) NULL`.
-- **Entidad Java:** `FalActaSnapshot` (PK: `idActa Long`; 45 campos verificados). **Puerto:** `ActaSnapshotRepository` / `InMemoryActaSnapshotRepository`.
-- **versionRow/OCC:** no implementado en InMemory; pendiente de `DECISION_DDL-SNAP-01`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. Deltas identificados:
-  - **Campos en histórico, ausentes en Java** (no incluir en DDL sin decisión): `fh_acta`, `nro_acta`, `tipo_acta`, `id_dep`/`ver_dep`, `id_insp`/`ver_insp`, `id_persona_infractor`, `nombre_infractor`, `doc_infractor_txt`, domicilios/textos/ubicación del hecho, `esta_cerrada`, `si_visible_bandeja`, `prioridad`, bloqueantes separados (`si_bloqueante_med_prev`, `si_bloqueante_rodado`, `si_bloqueante_doc_ret`), gestión externa (`si_gestion_ext`, `gestion_externa_activa_id`, `tipo_gestion_ext`, `estado_gestion_ext`, `resultado_gestion_ext`), fechas de vencimiento (`fh_vto_presentacion`, `fh_vto_apelacion`, `fh_vto_apremio`), `id_evt_ult`, `id_notif_ult`, `fh_snapshot`, `rebuild_id`, `fh_ult_mod`, `id_user_ult_mod`. Ver `DECISION_DDL-SNAP-02`.
-  - **Campos en Java, ausentes en histórico** (presentes en el código Java vigente, ausentes en el modelo 2026-06-23): campos de pagos vinculados, `bloqueado_cierre`, `bloqueado_notificacion`, `tiene_*`, `notificacion_en_curso`, `ultimo_evento_tipo`, `ultima_actualizacion`.
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / PENDING_DDL_DECISION (`DECISION_DDL-SNAP-01` OCC, `DECISION_DDL-SNAP-02` campos históricos) / RECONCILIADA_R3.
+- **Entidad Java:** `FalActaSnapshot` (PK: `idActa Long`; campos verificados). **Puerto:** `ActaSnapshotRepository` / `InMemoryActaSnapshotRepository`.
+- **versionRow/OCC:** IMPLEMENTADO (`DECISION_DDL-SNAP-01` CERRADA). `InMemoryActaSnapshotRepository.guardar()` auto-incrementa `versionRow`.
+- **Economía de pagos:** **NO** transportada en snapshot (`DECISION_DDL-SNAP-02` CERRADA). Los campos históricos `tipo_obligacion_pago`, `estado_obligacion_pago`, `monto_obligacion_pago`, `tipo_forma_pago_vigente`, `estado_forma_pago_vigente`, `si_plan_pago`, `estado_plan_pago`, `cant_cuotas_plan`, `valor_cuota_plan`, `cant_cuotas_pagadas`, `cant_cuotas_mora`, `cant_cuotas_mora_consec`, `cant_dias_mora`, `si_apta_intimacion`, `motivo_apta_intimacion`, `si_pago_procesado`, `si_pago_confirmado`, `fh_ult_sync_ingresos` han sido **eliminados** de `FalActaSnapshot.java` y de esta tabla. Las lecturas económicas salen de `fal_acta_economia_proyeccion`. `SnapshotRecalculador.proyectarPagos()` es no-op confirmado.
+- **Campos históricos excluidos (DECISION_DDL-SNAP-02 CERRADA):** `fh_acta`, `nro_acta`, `tipo_acta`, `id_dep`/`ver_dep`, `id_insp`/`ver_insp`, `id_persona_infractor`, `nombre_infractor`, `doc_infractor_txt`, domicilios/textos/ubicación del hecho, `esta_cerrada`, `si_visible_bandeja`, `prioridad`, bloqueantes separados, gestión externa duplicada, fechas de vencimiento duplicadas, `id_evt_ult`, `id_notif_ult`, `fh_snapshot`, `rebuild_id`, `fh_ult_mod`, `id_user_ult_mod`.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_acta_evidencia`
 - **Propósito:** evidencias físicas vinculadas al acta (imágenes, capturas). Actualmente solo `FIRMA_OLOGRAFA_INFRACTOR` (código 6). No es firma institucional; no participa en `FalDocumentoFirma` ni `FalDocumentoFirmaReq`.
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`.
-- **Campos (verificados contra Java):** `id_acta BIGINT NOT NULL`, `tipo_evid SMALLINT NOT NULL` (`TipoEvidenciaActa`, `EXPLICIT_NUMERIC_CODE`; único valor activo: `FIRMA_OLOGRAFA_INFRACTOR = 6`), `storage_key VARCHAR(255) NOT NULL` (no guardar binario), `fecha_registro DATETIME(6) NULL`.
-- **Entidad Java:** `FalActaEvidencia` (id `Long`, inmutable; campos: `id`, `idActa`, `tipoEvid`, `storageKey`, `fechaRegistro`). **Puerto:** `ActaEvidenciaRepository` / `InMemoryActaEvidenciaRepository`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Delta identificado:** el histórico (sección 2.6) definía 11 columnas adicionales: `nombre_archivo VARCHAR(120)`, `mime_type SMALLINT`, `hash_evid VARCHAR(128)`, `orden_evid SMALLINT`, `fh_captura DATETIME(6)`, `fh_alta DATETIME(6)`, `id_user_alta CHAR(36)`. Ninguna tiene respaldo en `FalActaEvidencia.java` vigente; el campo Java `fechaRegistro` corresponde conceptualmente a `fh_captura`/`fh_alta` del histórico. Decisión física pendiente: `DECISION_DDL-EVID-01`.
+- **Campos (verificados contra Java; `DECISION_DDL-EVID-01` CERRADA):** `id_acta BIGINT NOT NULL`, `tipo_evid SMALLINT NOT NULL` (`TipoEvidenciaActa`, `EXPLICIT_NUMERIC_CODE`; único valor activo: `FIRMA_OLOGRAFA_INFRACTOR = 6`), `storage_key VARCHAR(255) NOT NULL` (no guardar binario), `fecha_registro DATETIME(6) NOT NULL` (instante funcional de captura/incorporación), `hash_evid CHAR(64) NULL` (SHA-256 hexadecimal opcional; si informado debe ser exactamente 64 caracteres hex), `fh_alta DATETIME(6) NOT NULL` (instante técnico de alta), `id_user_alta CHAR(36) NOT NULL` (actor técnico/funcional que incorporó la evidencia).
+- **Campos excluidos (DECISION_DDL-EVID-01 CERRADA):** `nombre_archivo`, `mime_type`, `orden_evid` — pertenecen al metadato del storage, no al registro de dominio. No se agrega `fh_captura` adicional: `fecha_registro` y `fh_alta` cubren las semánticas funcional y técnica. Estos cuatro campos del histórico 2026-06-23 quedan excluidos.
+- **Entidad Java:** `FalActaEvidencia` (id `Long`, inmutable; campos: `id`, `idActa`, `tipoEvid`, `storageKey`, `fechaRegistro`, `hashEvid`, `fhAlta`, `idUserAlta`). Constructor exige `fechaRegistro`, `fhAlta` y `idUserAlta` not-null; `hashEvid` nullable con validación de 64 caracteres hex si presente. **Puerto:** `ActaEvidenciaRepository` / `InMemoryActaEvidenciaRepository`.
 - **Append-only:** SÍ (inmutable post-creación).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO (campos Java) / PENDING_DDL_DECISION (`DECISION_DDL-EVID-01`) / RECONCILIADA_R3.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_observacion`
 - **Propósito:** observaciones tipificadas por entidad.
@@ -305,8 +304,8 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **Campos:** `origen SMALLINT`, `estado SMALLINT`, `si_activo BOOLEAN`, `descripcion TEXT NULL`, `fh_alta DATETIME(6)`, `fh_cierre DATETIME(6) NULL`.
 - **Entidad Java:** `FalBloqueanteMaterial` (id `Long`). **Puerto:** `BloqueanteMaterialRepository` / `InMemoryBloqueanteMaterialRepository`.
 - **Índice de consulta:** `(id_acta, si_activo)` — usado por `existsActivoByActaId`.
-- **versionRow/OCC:** no implementado aún en InMemory (`DECISION_DDL-BLOQ-01`, ver `ddl-decisions.md`).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO (identidad) / BASELINE_PRESERVADA_CON_DELTA / PENDING_DDL_DECISION (`DECISION_DDL-BLOQ-01`, OCC).
+- **versionRow/OCC:** implementado en `InMemoryBloqueanteMaterialRepository.guardar()` (modifica in-place); DDL: `fal_acta_bloqueante_cierre_material.version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-BLOQ-01` CERRADA).
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 ### Documentos, plantillas y firma
 
@@ -314,8 +313,8 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`, `id_plantilla -> fal_documento_plantilla`.
 - **Campos:** `tipo_docu SMALLINT`, `nro_docu VARCHAR(30) NULL`, `estado_docu SMALLINT`, `storage_key VARCHAR(500) NULL`, `hash_docu VARCHAR(128) NULL`, `tipo_firma_req SMALLINT`, `fh_alta`, `id_user_alta`.
 - **Entidad Java:** `FalDocumento`. **Puerto:** `DocumentoRepository` / `InMemoryDocumentoRepository`.
-- **versionRow/OCC:** requerido para el endpoint de numeración (`fal_documento.version_row`, ver `../10-domain/firma-notificacion-fallo.md` y `../20-application/command-contracts.md`); no implementado aún en InMemory (`DECISION_DDL-DOC-01`, ver `ddl-decisions.md`).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / BASELINE_PRESERVADA_CON_DELTA / PENDING_DDL_DECISION (`DECISION_DDL-DOC-01`, OCC).
+- **versionRow/OCC:** implementado en `InMemoryDocumentoRepository.guardar()` (modifica in-place) y en `FalDocumento.versionRow`; DDL: `fal_documento.version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-DOC-01` CERRADA).
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `fal_acta_documento`
 - **Propósito:** tabla pivot relación canónica acta-documento (pertenencia funcional).
@@ -363,8 +362,8 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`, `id_documento -> fal_documento`.
 - **Campos:** `tipo_docu_notificado SMALLINT`, `canal VARCHAR(50)`, `fecha_envio DATETIME(6)`, `estado SMALLINT`, `resultado SMALLINT NULL`, `fecha_resultado DATETIME(6) NULL`, `intentos INT`, `observaciones TEXT NULL`.
 - **Entidad Java:** `FalNotificacion` (id `Long`). **Puerto:** `NotificacionRepository` / `InMemoryNotificacionRepository`.
-- **versionRow/OCC:** no implementado aún en InMemory (`DECISION_DDL-NOTI-01`, ver `ddl-decisions.md`).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / BASELINE_PRESERVADA_CON_DELTA / PENDING_DDL_DECISION (`DECISION_DDL-NOTI-01`, OCC).
+- **versionRow/OCC:** implementado en `InMemoryNotificacionRepository.guardar()` (modifica in-place); DDL: `fal_notificacion.version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-NOTI-01` CERRADA).
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `fal_notificacion_intento`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_notificacion -> fal_notificacion`.
@@ -383,10 +382,10 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 
 #### `fal_acta_fallo`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK conceptuales:** `id_acta -> fal_acta`, `valorizacion_id -> fal_acta_valorizacion`, `fallo_reemplazado_id -> fal_acta_fallo` (self), `documento_id -> fal_documento`.
-- **Campos:** `tipo_fallo SMALLINT NOT NULL`, `estado_fallo` (tipo pendiente: representación en `DECISION_DDL-ENUM-01`; `EstadoFalloActa` es `NO_EXPLICIT_CODE`) `NOT NULL`, `monto_condena DECIMAL(14,2) NULL`, `resultado_fallo SMALLINT NULL`, `fundamentos TEXT NULL`, `documento_id BIGINT NULL`, `valorizacion_id BIGINT NULL`, `fallo_reemplazado_id BIGINT NULL`, `fecha_dictado DATETIME(6) NOT NULL`, `fecha_notificacion DATETIME(6) NULL`, `fecha_resultado_final DATETIME(6) NULL`, `fh_firma DATETIME(6) NULL`, `fh_vto_apelacion DATETIME(6) NULL`, `si_activo BOOLEAN NOT NULL`, `si_firme BOOLEAN NOT NULL DEFAULT FALSE`, `fh_firmeza DATETIME(6) NULL`, `origen_firmeza SMALLINT NULL` (`1=VENCIMIENTO_PLAZO_APELACION, 2=APELACION_RECHAZADA`), `version_row INT NOT NULL DEFAULT 0`.
+- **Campos:** `tipo_fallo SMALLINT NOT NULL`, `estado_fallo SMALLINT NOT NULL` (`EstadoFalloActa`, `EXPLICIT_NUMERIC_CODE`; códigos: `PENDIENTE_FIRMA=1, PENDIENTE_NOTIFICACION=2, NOTIFICADO=3, FIRME=4, REEMPLAZADO=5, SIN_EFECTO=6`; `DECISION_DDL-ENUM-01` CERRADA), `monto_condena DECIMAL(14,2) NULL`, `resultado_fallo SMALLINT NULL`, `fundamentos TEXT NULL`, `documento_id BIGINT NULL`, `valorizacion_id BIGINT NULL`, `fallo_reemplazado_id BIGINT NULL`, `fecha_dictado DATETIME(6) NOT NULL`, `fecha_notificacion DATETIME(6) NULL`, `fecha_resultado_final DATETIME(6) NULL`, `fh_firma DATETIME(6) NULL`, `fh_vto_apelacion DATETIME(6) NULL`, `si_activo BOOLEAN NOT NULL`, `si_firme BOOLEAN NOT NULL DEFAULT FALSE`, `fh_firmeza DATETIME(6) NULL`, `origen_firmeza SMALLINT NULL` (`1=VENCIMIENTO_PLAZO_APELACION, 2=APELACION_RECHAZADA`), `version_row INT NOT NULL DEFAULT 0`.
 - **Auditoría:** `fh_alta`, `id_user_alta`, `fh_mod`, `id_user_mod`.
 - **Entidad Java:** `FalActaFallo` (id `Long`, `versionRow` presente). **Puerto:** `FalloActaRepository` / `InMemoryFalloActaRepository`.
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / BASELINE_PRESERVADA_CON_DELTA / PENDING_DDL_DECISION (`DECISION_DDL-ENUM-01`, columna `estado_fallo`).
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 > **Nota de firmeza:** la firmeza de condena es inline en `fal_acta_fallo`
 > (`si_firme`, `fh_firmeza`, `origen_firmeza`). No existe una tabla propia de
@@ -399,11 +398,11 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 
 #### `fal_acta_apelacion`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK conceptuales:** `id_acta -> fal_acta`, `fallo_id -> fal_acta_fallo`, `documento_resolucion_id -> fal_documento`.
-- **Campos:** `fallo_id BIGINT NOT NULL`, `estado_apelacion` (tipo pendiente: representación en `DECISION_DDL-ENUM-01`; `EstadoApelacionActa` es `NO_EXPLICIT_CODE`) `NOT NULL`, `fecha_presentacion DATETIME(6) NOT NULL`, `canal_apelacion SMALLINT NOT NULL`, `tipo_presentacion SMALLINT NOT NULL`, `texto_apelacion TEXT NULL`, `presentante VARCHAR(300) NULL`, `fundamentos TEXT NULL`, `observaciones TEXT NULL`, `si_activa BOOLEAN NOT NULL`, `fecha_resolucion DATETIME(6) NULL`, `fundamentos_resolucion TEXT NULL`, `observaciones_resolucion TEXT NULL`, `documento_resolucion_id BIGINT NULL`, `version_row INT NOT NULL DEFAULT 0`.
+- **Campos:** `fallo_id BIGINT NOT NULL`, `estado_apelacion SMALLINT NOT NULL` (`EstadoApelacionActa`, `EXPLICIT_NUMERIC_CODE`; códigos: `PRESENTADA=1, EN_ANALISIS=2, RECHAZADA=3, ACEPTADA_ABSUELVE=4, RESUELTA=5, SIN_EFECTO=6`; `DECISION_DDL-ENUM-01` CERRADA), `fecha_presentacion DATETIME(6) NOT NULL`, `canal_apelacion SMALLINT NOT NULL`, `tipo_presentacion SMALLINT NOT NULL`, `texto_apelacion TEXT NULL`, `presentante VARCHAR(300) NULL`, `fundamentos TEXT NULL`, `observaciones TEXT NULL`, `si_activa BOOLEAN NOT NULL`, `fecha_resolucion DATETIME(6) NULL`, `fundamentos_resolucion TEXT NULL`, `observaciones_resolucion TEXT NULL`, `documento_resolucion_id BIGINT NULL`, `version_row INT NOT NULL DEFAULT 0`.
 - **Auditoría:** `fh_alta`, `id_user_alta`, `fh_mod`, `id_user_mod`.
 - **Entidad Java:** `FalActaApelacion` (id `Long`, `falloId Long`, `versionRow` presente). **Puerto:** `ApelacionActaRepository` / `InMemoryApelacionActaRepository`.
 - **Nota de consulta (CMD-FALLO-006):** la apelación relevante para declarar firmeza por apelación rechazada se busca por `fallo_id`, no por "última apelación del acta"; una apelación histórica de otro fallo no debe bloquear ni satisfacer la precondición (ver `../20-application/command-contracts.md`).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / BASELINE_PRESERVADA_CON_DELTA / PENDING_DDL_DECISION (`DECISION_DDL-ENUM-01`, columna `estado_apelacion`).
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `fal_acta_apelacion_documento`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_apelacion -> fal_acta_apelacion`, `id_documento -> fal_documento`.
@@ -430,8 +429,8 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`.
 - **Entidad Java:** `FalGestionExterna` (id `Long`). **Puerto:** `GestionExternaRepository` / `InMemoryGestionExternaRepository`.
 - **Invariante de vigencia:** a lo sumo una `FalGestionExterna` con `si_activa = true` por acta.
-- **versionRow/OCC:** no implementado aún en InMemory (`DECISION_DDL-GEXT-01`, ver `ddl-decisions.md`).
-- **Estado:** MODELO_CONCEPTUAL_CERRADO (identidad y campos) / BASELINE_PRESERVADA_CON_DELTA / PENDING_DDL_DECISION (`DECISION_DDL-GEXT-01`, OCC).
+- **versionRow/OCC:** implementado en `InMemoryGestionExternaRepository.guardar()` (modifica in-place); DDL: `fal_acta_gestion_externa.version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-GEXT-01` CERRADA).
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 ### Pagos
 
@@ -451,25 +450,25 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 #### `fal_acta_obligacion_pago`
 - **Propósito:** cabecera de la obligación de pago (estado jurídico/administrativo, monto original y referencias estructurales). No almacena saldos, conciliación, mora ni flags de reapertura.
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `acta_id -> fal_acta`, `persona_id -> fal_persona`, `valorizacion_id -> fal_acta_valorizacion` (NULL), `fallo_id -> fal_acta_fallo` (NULL), `forma_pago_vigente_id -> fal_acta_forma_pago` (NULL).
-- **Campos (verificados contra Java):** `version_row INT NOT NULL DEFAULT 0` (OCC), `acta_id BIGINT NOT NULL`, `persona_id BIGINT NOT NULL`, `tipo_obligacion SMALLINT NOT NULL` (`TipoObligacionPago`, código 1=PAGO_VOLUNTARIO/2=CONDENA), `valorizacion_id BIGINT NULL`, `fallo_id BIGINT NULL`, `monto_original DECIMAL(14,2) NOT NULL` (escala 2), `estado_obligacion SMALLINT NOT NULL` (`EstadoObligacionPago`, códigos 1–6; catálogo cerrado), `fh_determinacion DATETIME(6) NOT NULL`, `id_user_determinacion CHAR(36) NULL`, `forma_pago_vigente_id BIGINT NULL`, `fh_cancelacion DATETIME(6) NULL`, `si_excluir_escaneo BOOLEAN NOT NULL DEFAULT FALSE`, `fh_ult_sync_ingresos DATETIME(6) NULL`, `si_vigente BOOLEAN NOT NULL`.
+- **Campos (verificados contra Java):** `version_row INT NOT NULL DEFAULT 0` (OCC), `acta_id BIGINT NOT NULL`, `persona_id BIGINT NOT NULL`, `tipo_obligacion SMALLINT NOT NULL` (`TipoObligacionPago`, código 1=PAGO_VOLUNTARIO/2=CONDENA), `valorizacion_id BIGINT NULL`, `fallo_id BIGINT NULL`, `monto_original DECIMAL(14,2) NOT NULL` (escala 2), `estado_obligacion SMALLINT NOT NULL` (`EstadoObligacionPago`, códigos 1–6; catálogo cerrado), `fh_determinacion DATETIME(6) NOT NULL`, `id_user_determinacion CHAR(36) NULL`, `forma_pago_vigente_id BIGINT NULL`, `fh_cancelacion DATETIME(6) NULL`, `si_excluir_escaneo BOOLEAN NOT NULL DEFAULT FALSE`, `fh_ult_sync_ingresos DATETIME(6) NULL`, `si_vigente BOOLEAN NOT NULL`, `origen_obligacion SMALLINT NOT NULL DEFAULT 1` (`OrigenObligacionPago`, `EXPLICIT_NUMERIC_CODE`; `FALTAS=1, APREMIO=2, JUZGADO=3`; default `FALTAS`; `DECISION_DDL-PAGO-03` CERRADA), `obligacion_reemplazada_id BIGINT NULL FK self` (nullable; apunta a la obligación reemplazada; `DECISION_DDL-PAGO-03` CERRADA).
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
 - **Columna generada (DDL):** `acta_id_vigente BIGINT NULL GENERATED ALWAYS AS (CASE WHEN si_vigente THEN acta_id ELSE NULL END)` con `UNIQUE` — unicidad de obligación vigente por acta.
 - **Entidad Java:** `FalActaObligacionPago` (id `Long`, `versionRow` presente). **Puerto:** `ObligacionPagoRepository` / `InMemoryObligacionPagoRepository`.
-- **Enums:** `TipoObligacionPago` (`EXPLICIT_NUMERIC_CODE`), `EstadoObligacionPago` (`EXPLICIT_NUMERIC_CODE`; catálogo: DETERMINADA=1, PENDIENTE_FORMA_PAGO=2, CON_FORMA_PAGO_VIGENTE=3, CANCELADA_POR_PAGO=4, REEMPLAZADA=5, DEJADA_SIN_EFECTO=6).
+- **Enums:** `TipoObligacionPago` (`EXPLICIT_NUMERIC_CODE`), `EstadoObligacionPago` (`EXPLICIT_NUMERIC_CODE`; catálogo: DETERMINADA=1, PENDIENTE_FORMA_PAGO=2, CON_FORMA_PAGO_VIGENTE=3, CANCELADA_POR_PAGO=4, REEMPLAZADA=5, DEJADA_SIN_EFECTO=6), `OrigenObligacionPago` (`EXPLICIT_NUMERIC_CODE`; `DECISION_DDL-PAGO-03` CERRADA).
 - **Modelo (decisión cerrada):** unifica pago voluntario (`tipo=1`) y pago de condena (`tipo=2`); `FalPagoVoluntario` y `FalPagoCondena` (id `String`) son vistas de aplicación sobre esta tabla unificada, no entidades físicas separadas.
 - **Resolución de pago aplicado a obligación anterior:** no agrega ningún campo a esta tabla. `ResolverPagoObligacionAnteriorCommand` (evento `PAGRES`) nunca crea una obligación nueva por diferencia: aplica el pago original completo, sin recortar, contra la obligación vigente existente mediante un movimiento en `fal_acta_pago_movimiento` (ver esa tabla). El saldo resultante se deriva siempre de `fal_acta_economia_proyeccion`; un excedente (pago mayor al saldo pendiente) es informativo, no una obligación.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas detectados:** (a) `origen_obligacion SMALLINT NOT NULL` (catálogo FALTAS/APREMIO/JUZGADO) — presente en histórico, **ausente en Java**: ver `DECISION_DDL-PAGO-03`; (b) `obligacion_reemplazada_id BIGINT NULL` — presente en histórico, **ausente en Java**: ver `DECISION_DDL-PAGO-03`; (c) `fh_ult_sync_ingresos` — **en Java, ausente en histórico** (presente en código Java vigente, ausente en modelo 2026-06-23; incluir en DDL); (d) columna generada `acta_id_vigente` — DDL-only, no en Java.
-- **Estado:** MODELO_CONCEPTUAL_CERRADO / PENDING_DDL_DECISION (`DECISION_DDL-PAGO-01` identidad física vistas, `DECISION_DDL-PAGO-03` campos históricos ausentes en Java) / RECONCILIADA_R3.
+- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas resueltos:** (a) `origen_obligacion SMALLINT NOT NULL` — incorporado a Java y DDL (`DECISION_DDL-PAGO-03` CERRADA); (b) `obligacion_reemplazada_id BIGINT NULL` — incorporado a Java y DDL (`DECISION_DDL-PAGO-03` CERRADA); (c) `fh_ult_sync_ingresos` — en Java vigente, incluido en DDL; (d) columna generada `acta_id_vigente` — DDL-only, no en Java.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_acta_forma_pago`
 - **Propósito:** instrumento de pago vigente/histórico de una obligación (recibo al cobro, plan de pago, refinanciación). El historial se preserva (`si_vigente=false` en reemplazadas).
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `obligacion_pago_id -> fal_acta_obligacion_pago`, `forma_reemplazada_id -> fal_acta_forma_pago` (self, NULL).
-- **Campos (verificados contra Java):** `version_row INT NOT NULL DEFAULT 0` (OCC), `obligacion_pago_id BIGINT NOT NULL`, `nro_forma SMALLINT NOT NULL` (positivo, único por obligación), `tipo_forma_pago SMALLINT NOT NULL` (`TipoFormaPago`; catálogo: RECIBO_AL_COBRO=1/PLAN_PAGO=2/REFINANCIACION=3), `estado_forma_pago SMALLINT NOT NULL` (`EstadoFormaPago`; catálogo cerrado, 6 valores), `monto_forma DECIMAL(14,2) NOT NULL` (escala 2; inmutable mientras vigente), `cmte_em CHAR(2) NULL`, `pref_em SMALLINT NULL`, `nro_em INT NULL` (terna completa o totalmente NULL), `cmte_pg CHAR(2) NULL`, `pref_pg SMALLINT NULL`, `nro_pg INT NULL` (terna completa o totalmente NULL), `forma_reemplazada_id BIGINT NULL`, `fh_generacion DATETIME(6) NOT NULL`, `fh_pago_procesado DATETIME(6) NULL`, `fh_pago_confirmado DATETIME(6) NULL`, `fh_baja DATETIME(6) NULL`, `motivo_baja SMALLINT NULL` (`MotivoBajaFormaPago`, `EXPLICIT_NUMERIC_CODE`), `si_vigente BOOLEAN NOT NULL`, `si_excluir_escaneo BOOLEAN NOT NULL DEFAULT FALSE`.
+- **Campos (verificados contra Java):** `version_row INT NOT NULL DEFAULT 0` (OCC), `obligacion_pago_id BIGINT NOT NULL`, `nro_forma SMALLINT NOT NULL` (positivo, único por obligación), `tipo_forma_pago SMALLINT NOT NULL` (`TipoFormaPago`; catálogo: RECIBO_AL_COBRO=1/PLAN_PAGO=2/REFINANCIACION=3), `estado_forma_pago SMALLINT NOT NULL` (`EstadoFormaPago`; catálogo cerrado, 6 valores), `monto_forma DECIMAL(14,2) NOT NULL` (escala 2; inmutable mientras vigente), `cmte_em CHAR(2) NULL`, `pref_em SMALLINT NULL`, `nro_em INT NULL` (terna completa o totalmente NULL), `cmte_pg CHAR(2) NULL`, `pref_pg SMALLINT NULL`, `nro_pg INT NULL` (terna completa o totalmente NULL), `forma_reemplazada_id BIGINT NULL`, `fh_generacion DATETIME(6) NOT NULL`, `fh_pago_procesado DATETIME(6) NULL`, `fh_pago_confirmado DATETIME(6) NULL`, `fh_baja DATETIME(6) NULL`, `motivo_baja SMALLINT NULL` (`MotivoBajaFormaPago`, `EXPLICIT_NUMERIC_CODE`), `si_vigente BOOLEAN NOT NULL`, `si_excluir_escaneo BOOLEAN NOT NULL DEFAULT FALSE`, `fh_vencimiento DATETIME(6) NULL` (informativo; no rechaza pagos fuera de término; `DECISION_DDL-FORMA-01` CERRADA).
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
 - **Columnas generadas (DDL):** `obligacion_pago_id_vigente BIGINT NULL GENERATED ALWAYS AS (CASE WHEN si_vigente THEN obligacion_pago_id ELSE NULL END) UNIQUE`, `tipo_forma_pago_vigente SMALLINT NULL GENERATED ALWAYS AS (CASE WHEN si_vigente THEN tipo_forma_pago ELSE NULL END)`.
 - **Entidad Java:** `FalActaFormaPago` (`versionRow` presente). **Enums:** `TipoFormaPago` (`EXPLICIT_NUMERIC_CODE`), `EstadoFormaPago` (`EXPLICIT_NUMERIC_CODE`), `MotivoBajaFormaPago` (`EXPLICIT_NUMERIC_CODE`).
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Delta detectado:** `fh_vencimiento DATETIME(6) NULL` — presente en histórico 2026-06-23 (campo modificable/extensible del vencimiento del recibo), **ausente en `FalActaFormaPago.java`** vigente. Ver `DECISION_DDL-FORMA-01`. Columnas generadas son DDL-only.
-- **Estado:** LISTO_PARA_DDL (campos Java) / PENDING_DDL_DECISION (`DECISION_DDL-FORMA-01` fh_vencimiento) / RECONCILIADA_R3.
+- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Delta resuelto:** `fh_vencimiento DATETIME(6) NULL` — incorporado a Java y DDL (`DECISION_DDL-FORMA-01` CERRADA). Columnas generadas son DDL-only.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_acta_plan_pago_ref`
 - **Propósito:** cabecera estructural resumida del plan de pago externo (Ingresos/Tesorería). Sin tabla de cuotas; el cronograma se consulta en Ingresos.
@@ -478,8 +477,8 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **Columna generada (DDL):** `obligacion_pago_id_vigente BIGINT NULL GENERATED ALWAYS AS (CASE WHEN si_vigente THEN obligacion_pago_id ELSE NULL END) UNIQUE`.
 - **Entidad Java:** `FalActaPlanPagoRef` (`versionRow` presente). **Enums:** `EstadoPlanPago` (`EXPLICIT_NUMERIC_CODE`).
 - **Nota:** no existe tabla de cuotas (`fal_acta_plan_pago_cuota`); el seguimiento fino de cuotas descripto en un diseño histórico preliminar (2026-06-23, eliminado; historia en Git) no se implementó en el código Java vigente.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas detectados:** `fh_ultimo_pago` y `fh_ult_sync_ingresos` — en Java, ausentes en histórico 2026-06-23; ver `DECISION_DDL-PLAN-01`. Columna generada `obligacion_pago_id_vigente` es DDL-only.
-- **Estado:** LISTO_PARA_DDL (campos Java) / PENDING_DDL_DECISION (`DECISION_DDL-PLAN-01` campos nuevos vs histórico) / RECONCILIADA_R3.
+- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas resueltos:** `fh_ultimo_pago` y `fh_ult_sync_ingresos` — en Java vigente, incluidos en DDL (`DECISION_DDL-PLAN-01` CERRADA). Columna generada `obligacion_pago_id_vigente` es DDL-only.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_acta_pago_movimiento`
 - **Propósito:** registro append-only de cada hecho económico real (emisión, pago procesado, pago confirmado, reverso, anulación de emisión, pago aplicado a obligación anterior). Tabla inmutable post-inserción; no tiene `versionRow`.
@@ -487,7 +486,7 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **Campos — identificadores y tipo:** `obligacion_pago_id BIGINT NOT NULL`, `forma_pago_id BIGINT NULL`, `plan_pago_ref_id BIGINT NULL`, `tipo_movimiento SMALLINT NOT NULL` (`TipoMovimientoPago`; DEUDA_EMITIDA=1/PAGO_PROCESADO=2/PAGO_CONFIRMADO=3/PAGO_REVERTIDO=4/EMISION_ANULADA=5), `origen_movimiento SMALLINT NOT NULL` (`OrigenMovimiento`; catálogo cerrado 8 valores), `origen_confirmacion SMALLINT NULL` (`OrigenConfirmacion`; catálogo cerrado 6 valores), `evidencia_documento_id BIGINT NULL`, `clasificacion_pago SMALLINT NOT NULL DEFAULT 1` (`ClasificacionPago`; **catálogo Java vigente**: NORMAL=1/DUPLICADO_REAL=2/EXCEDENTE=3/OBLIGACION_ANTERIOR=4 — difiere del histórico 2026-06-23 que tenía 3 valores y códigos distintos; ver `DECISION_DDL-MOV-04`), `nro_cuota SMALLINT NULL`.
 - **Campos — importes:** `importe_capital DECIMAL(14,2) NULL`, `importe_rima DECIMAL(14,2) NULL`, `importe_total DECIMAL(14,2) NULL` (invariante Java: si los tres informados, `capital + rima == total`).
 - **Campos — referencias EM/PG:** `cmte_em CHAR(2) NULL`, `pref_em SMALLINT NULL`, `nro_em INT NULL` (terna EM completa o NULL total), `cmte_pg CHAR(2) NULL`, `pref_pg SMALLINT NULL`, `nro_pg INT NULL` (terna PG completa o NULL total; obligatoria en `PAGO_CONFIRMADO` original sin `movimiento_origen_id`).
-- **Campos — contexto operativo:** `id_cierre BIGINT NULL`, `id_ope BIGINT NULL`, `movimiento_origen_id BIGINT NULL FK self` (reversos: apunta al movimiento original; PAGRES: apunta al `PAGANT` original; unicidad de aplicación garantizada por `UNIQUE(movimiento_origen_id) WHERE NOT NULL` — ver `DECISION_DDL-PAGO-MOV-01`), `motivo_anulacion_pago SMALLINT NULL` (`MotivoAnulacionPago`; CONTRACARGO=1/ANULACION_TESORERIA=2/ERROR_OPERATIVO=3/DUPLICADO=4/REVERSION_MEDIO_PAGO=5/OTRO=6), `motivo_aplicacion_pago_anterior VARCHAR(?) NULL` (fuente de verdad para idempotencia de PAGRES; nunca se deriva de `descripcionLegible` del evento; longitud física pendiente: ver `DECISION_DDL-MOV-03`).
+- **Campos — contexto operativo:** `id_cierre BIGINT NULL`, `id_ope BIGINT NULL`, `movimiento_origen_id BIGINT NULL FK self` (reversos: apunta al movimiento original; PAGRES: apunta al `PAGANT` original; unicidad de aplicación garantizada por columna generada nullable + `UNIQUE` — ver `DECISION_DDL-PAGO-MOV-01` CERRADA), `motivo_anulacion_pago SMALLINT NULL` (`MotivoAnulacionPago`; CONTRACARGO=1/ANULACION_TESORERIA=2/ERROR_OPERATIVO=3/DUPLICADO=4/REVERSION_MEDIO_PAGO=5/OTRO=6), `motivo_aplicacion_pago_anterior VARCHAR(500) NULL` (fuente de verdad para idempotencia de PAGRES; nunca se deriva de `descripcionLegible` del evento; longitud: 500 caracteres máximo, trim obligatorio; `DECISION_DDL-MOV-03` CERRADA).
 - **Campos — fechas y referencia:** `fh_pago_procesado DATETIME(6) NULL`, `fh_pago_confirmado DATETIME(6) NULL`, `referencia_externa VARCHAR(80) NULL` (longitud confirmada por validación Java: max 80 caracteres).
 - **Campos — fecha funcional:** `fh_movimiento DATETIME(6) NOT NULL` (inmutable; fecha efectiva del hecho económico).
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL` (Java Builder valida NOT NULL y non-blank; histórico 2026-06-23 erróneamente lo mostraba nullable).
@@ -497,14 +496,14 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **`ClasificacionPago.OBLIGACION_ANTERIOR`:** un `PAGO_CONFIRMADO` registrado contra una obligación con `siVigente=false` se clasifica siempre así (derivado del estado de la obligación destino, nunca elegido por el actor) y emite `PAGANT` en lugar de `PAGCNF`/`PCOCNF`. No es un valor que el actor pueda declarar contra una obligación vigente (rechazado con 422). Ver `../10-domain/states-events-catalogs.md`.
 - **Campos de recibo `cmtePG`/`prefPG`/`nroPG`:** terna completa o totalmente `NULL` (no parcial); obligatoria (completa) en todo movimiento `PAGO_CONFIRMADO` original (`movimientoOrigenId == null`); el movimiento de aplicación PAGRES puede tenerla `NULL`. `origenMovimiento + cmtePG + prefPG + nroPG` es la clave de negocio de un recibo físico; ver `DECISION_DDL-PAGO-MOV-01`.
 - **Resolución de pago aplicado a obligación anterior (`PAGRES`), sin tabla propia:** el movimiento de aplicación creado por `ResolverPagoObligacionAnteriorCommand` es un `FalActaPagoMovimiento` más: `tipoMovimiento=PAGO_CONFIRMADO`, `clasificacionPago=NORMAL`, `movimientoOrigenId` = id del `PAGANT` original, `importeTotal` igual al importe total del `PAGANT` (sin recortar contra el saldo pendiente), `motivoAplicacionPagoAnterior` con el motivo normalizado. Un reintento compatible devuelve los datos históricos de la primera aplicación. Ver `../20-application/command-contracts.md`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas detectados:**
-  - `tipo_vencimiento_pago SMALLINT NULL` — en histórico, **ausente en Java**; ver `DECISION_DDL-MOV-01`.
-  - `fh_recepcion_tecnica DATETIME(6) NULL` — en histórico, **ausente en Java**; ver `DECISION_DDL-MOV-02`.
-  - `motivo_aplicacion_pago_anterior VARCHAR(?)` — **en Java, ausente en histórico** (agregado para PAGRES); longitud pendiente: `DECISION_DDL-MOV-03`.
-  - `ClasificacionPago` catálogo: histórico tenía 3 valores (NORMAL=1/OBLIGACION_ANTERIOR=2/DUPLICADO_REAL=3); Java tiene 4 valores con códigos distintos (NORMAL=1/DUPLICADO_REAL=2/EXCEDENTE=3/OBLIGACION_ANTERIOR=4). Java es autoritativo; ver `DECISION_DDL-MOV-04`.
-  - `movimiento_origen_id` (Java) ← generaliza `movimiento_anulado_id` (histórico); misma columna, uso ampliado.
+- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas resueltos:**
+  - `tipo_vencimiento_pago SMALLINT NULL` — excluido (`DECISION_DDL-MOV-01` CERRADA; derivable de `fh_movimiento` + `fal_acta_forma_pago.fh_vencimiento`).
+  - `fh_recepcion_tecnica DATETIME(6) NULL` — excluido (`DECISION_DDL-MOV-02` CERRADA; `fh_alta` cubre la semántica técnica).
+  - `motivo_aplicacion_pago_anterior VARCHAR(500)` — incorporado a Java y DDL (`DECISION_DDL-MOV-03` CERRADA).
+  - `ClasificacionPago` catálogo: autoritativo Java 4 valores (`DECISION_DDL-MOV-04` CERRADA).
+  - `movimiento_origen_id` (Java) generaliza `movimiento_anulado_id` (histórico); misma columna, uso ampliado.
   - `id_user_alta` nullabilidad: histórico decía nullable, Java valida NOT NULL → DDL usa NOT NULL.
-- **Estado:** LISTO_PARA_DDL (campos Java) / PENDING_DDL_DECISION (`DECISION_DDL-MOV-01`, `DECISION_DDL-MOV-02`, `DECISION_DDL-MOV-03`, `DECISION_DDL-MOV-04`) / RECONCILIADA_R3.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_acta_economia_proyeccion`
 - **Propósito:** proyección económica actual por acta (1:1); mutable, regenerable, optimizada para consultas. No es fuente histórica ni jurídica. Incluye importes, saldos, conciliación actual, mora, plan caído calculado, aptitud de intimación y flags de pago.
@@ -519,8 +518,8 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **Campos — plan caído calculado:** `si_plan_caido_calculado BOOLEAN NOT NULL DEFAULT FALSE`, `fh_desde_plan_caido_calculado DATETIME(6) NULL`, `motivo_plan_caido_calculado SMALLINT NULL` (`MotivoPlanCaidoCalculado`; CUOTAS_EN_MORA=1/MORA_CONSECUTIVA=2/ANTIGUEDAD_MORA=3/REGLA_INGRESOS=4/COMBINADA=5).
 - **Campos — aptitud de intimación:** `si_apta_intimacion BOOLEAN NOT NULL DEFAULT FALSE`, `fh_apta_intimacion DATETIME(6) NULL`, `motivo_apta_intimacion SMALLINT NULL` (`MotivoAptitudIntimacion`).
 - **Campo — reapertura:** `si_reapertura_requerida BOOLEAN NOT NULL DEFAULT FALSE` (reverso posterior al cierre; no reabre automáticamente).
-- **Campos — watermarks técnicos:** `ultimo_movimiento_id_proyectado BIGINT NULL FK`, `fh_corte_economico DATETIME(6) NULL` (Java: nullable; histórico: NOT NULL — ver `DECISION_DDL-ECPR-01`), `fh_ultima_sincronizacion DATETIME(6) NULL`, `origen_ultima_actualizacion SMALLINT NOT NULL DEFAULT 1` (`OrigenUltimaActualizacion`; TIEMPO_REAL=1/SINCRONIZACION_NOCTURNA=2/REBUILD=3/CORRECCION_CONTROLADA=4).
-- **Campos — última modificación:** `fh_ult_mod DATETIME(6) NULL` (Java: nullable; histórico: NOT NULL — ver `DECISION_DDL-ECPR-01`), `id_user_ult_mod CHAR(36) NULL`.
+- **Campos — watermarks técnicos:** `ultimo_movimiento_id_proyectado BIGINT NULL FK`, `fh_corte_economico DATETIME(6) NULL` (puede ser NULL antes del primer cálculo; `DECISION_DDL-ECPR-01` CERRADA), `fh_ultima_sincronizacion DATETIME(6) NULL`, `origen_ultima_actualizacion SMALLINT NOT NULL DEFAULT 1` (`OrigenUltimaActualizacion`; TIEMPO_REAL=1/SINCRONIZACION_NOCTURNA=2/REBUILD=3/CORRECCION_CONTROLADA=4).
+- **Campos — última modificación:** `fh_ult_mod DATETIME(6) NOT NULL` (audit obligatorio; `DECISION_DDL-ECPR-01` CERRADA; la aplicación suministra desde `FaltasClock`; `InMemoryEconomiaProyeccionRepository.save()` lanza si es null), `id_user_ult_mod CHAR(36) NULL`.
 - **Campo derivado (no físico):** `si_cancelada` — no es columna propia; se deriva de `estado_obligacion = CANCELADA_POR_PAGO` en código.
 - **Entidad Java:** `FalActaEconomiaProyeccion` (`actaId Long` PK; `versionRow` presente; 47 campos verificados). **Puerto:** `EconomiaProyeccionRepository` / `InMemoryEconomiaProyeccionRepository`. **Servicios:** `EconomiaProyeccionRecalculador`, `ProcesoNocturnoEconomicoService`.
 - **Nota:** no existe `fal_acta_pago_conciliacion`; esta tabla es mutable/regenerable, no fuente histórica.
@@ -531,7 +530,7 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
   - `fh_ult_mod` nullabilidad: histórico dice NOT NULL, Java es nullable → `DECISION_DDL-ECPR-01`.
   - `referencia_ultima_conciliacion VARCHAR(80)` — confirmada por histórico; sin discrepancia.
   - Todos los demás campos coinciden en tipo y nullabilidad con el histórico 2026-06-23.
-- **Estado:** LISTO_PARA_DDL (campos Java) / PENDING_DDL_DECISION (`DECISION_DDL-ECPR-01` nullabilidad fh_corte/fh_ult_mod) / RECONCILIADA_R3.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### Paridad de concurrencia/idempotencia para resolución de pago anterior
 
@@ -541,9 +540,9 @@ la garantía productiva requerida en el adapter MariaDB para
 
 | Aspecto | InMemory vigente | MariaDB requerido |
 |---|---|---|
-| Exclusión | método de instancia `synchronized` en `ResolverPagoObligacionAnteriorService.resolver` (monitor `this`, no estático) | `versionRow` de `FalActaObligacionPago` + transacción; unicidad física de aplicación (`DECISION_DDL-PAGO-MOV-01`, pendiente) |
+| Exclusión | método de instancia `synchronized` en `ResolverPagoObligacionAnteriorService.resolver` (monitor `this`, no estático) | `versionRow` de `FalActaObligacionPago` + transacción; unicidad física de aplicación (`DECISION_DDL-PAGO-MOV-01` CERRADA) |
 | Alcance | serializa llamadas concurrentes sobre la misma instancia del servicio; no es mecanismo multiinstancia | OCC + `UNIQUE`, sin dependencia de locks JVM |
-| Unicidad | verificación previa en memoria (`PagoMovimientoRepository.findByMovimientoOrigenId`) | constraint única parcial/condicional sobre `movimiento_origen_id` en `fal_acta_pago_movimiento`, forma final pendiente en `DECISION_DDL-PAGO-MOV-01` |
+| Unicidad | verificación previa en memoria (`PagoMovimientoRepository.findByMovimientoOrigenId`) | constraint única parcial/condicional sobre `movimiento_origen_id` en `fal_acta_pago_movimiento`; columna generada nullable + `UNIQUE` (`DECISION_DDL-PAGO-MOV-01` CERRADA) |
 | Idempotencia | reintento con el mismo `movimientoPagoId`, misma obligación aplicada y motivo equivalente (comparado contra el campo estructurado `motivoAplicacionPagoAnterior`, nunca parseado de `descripcionLegible`) devuelve el mismo resultado sin crear movimiento ni evento adicional, reportando actor/motivo/fecha **históricos** de la primera aplicación; distinta obligación o motivo es conflicto (409) | verificar existencia por `movimiento_origen_id` antes de aplicar; recargar tras conflicto OCC en la obligación vigente; el resultado reportado debe leerse del registro histórico, no de la solicitud de reintento |
 | Evidencia InMemory | `ResolverPagoObligacionAnteriorTest` | — |
 
@@ -634,7 +633,7 @@ adapter MariaDB para `POST /api/faltas/documentos/{id}/numerar`:
 - **Entidad Java:** `FalRubroVersion`. Tabla de dominio Faltas con sincronización externa (Informix); no es infraestructura técnica.
 - **Campos versionados (histórico 2026-06-23):** `row_hash`, `previous_row_hash`, `source_operation`, `close_operation`, `si_version_actual`, `valid_from`, `valid_to`, `synced_at`.
 - **Puerto:** `RubroVersionRepository` / `InMemoryRubroVersionRepository`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** PREEXISTING_CANONICAL_ADOPTED — tabla preexistente en el baseline; el DDL del dominio la adopta sin crearla, alterarla ni administrar sus datos. Unica tabla Faltas preexistente de las 65 canonicas (ver `50-persistence/ddl-execution-and-test-seeding.md`).
 
 #### `fal_motivo_archivo`
 - **Entidad Java:** `FalMotivoArchivo`. **Puerto:** `MotivoArchivoRepository` / `InMemoryMotivoArchivoRepository`.
@@ -645,13 +644,13 @@ adapter MariaDB para `POST /api/faltas/documentos/{id}/numerar`:
 #### `fal_dia_no_computable`
 - **Propósito:** registro de excepciones locales al calendario administrativo (feriados, asuetos). Las reglas fijas (domingo, 1-ene, 1-may) no se persisten; ver `../10-domain/calendario-plazos-administrativos.md`.
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos (verificados contra Java):** `fecha DATE NOT NULL`, `tipo [representación física pendiente de DECISION_DDL-ENUM-01] NOT NULL` (`TipoDiaNoComputable`; `NO_EXPLICIT_CODE`: FERIADO/ASUETO_ADMINISTRATIVO/OTRO; ver `DECISION_DDL-ENUM-01`), `descripcion VARCHAR(160) NOT NULL` (max 160 validado en constructor Java), `origen [representación física pendiente de DECISION_DDL-ENUM-01] NOT NULL` (`OrigenDiaNoComputable`; `NO_EXPLICIT_CODE`: MANUAL/SINCRONIZACION_EXTERNA; ver `DECISION_DDL-ENUM-01`), `referencia_externa VARCHAR(200) NULL` (obligatoria para SINCRONIZACION_EXTERNA, null para MANUAL; max 200 validado), `si_activo BOOLEAN NOT NULL DEFAULT TRUE`.
+- **Campos (verificados contra Java):** `fecha DATE NOT NULL`, `tipo SMALLINT NOT NULL` (`TipoDiaNoComputable`, `EXPLICIT_NUMERIC_CODE`; `FERIADO=1, ASUETO_ADMINISTRATIVO=2, OTRO=3`; `DECISION_DDL-ENUM-01` CERRADA), `descripcion VARCHAR(160) NOT NULL` (max 160 validado en constructor Java), `origen SMALLINT NOT NULL` (`OrigenDiaNoComputable`, `EXPLICIT_NUMERIC_CODE`; `MANUAL=1, SINCRONIZACION_EXTERNA=2`; `DECISION_DDL-ENUM-01` CERRADA), `referencia_externa VARCHAR(200) NULL` (obligatoria para SINCRONIZACION_EXTERNA, null para MANUAL; max 200 validado), `si_activo BOOLEAN NOT NULL DEFAULT TRUE`.
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL` (max 36 validado), `fh_baja DATETIME(6) NULL`, `id_user_baja CHAR(36) NULL` (max 36; se establece al desactivar).
 - **OCC/versionRow:** no aplica; las excepciones se desactivan (`si_activo=false`) pero nunca se editan campos sustantivos.
 - **UK/unicidad:** unicidad física requerida sobre `fecha` con `si_activo=TRUE` (implementación candidata: columna generada o índice parcial; ver `inmemory-mariadb-deltas.md`, sección de unicidades).
 - **Fuente:** código Java vigente (`FalDiaNoComputable.java`). Sin contraparte en modelo histórico 2026-06-23 (tabla ausente en ese baseline; no hay deltas que reportar).
 - **Entidad Java:** `FalDiaNoComputable`. **Puertos:** `DiaNoComputableRepository` / `InMemoryDiaNoComputableRepository`. **Fuente normativa:** `../10-domain/calendario-plazos-administrativos.md`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 ### Tablas de infraestructura no persistidas por el dominio Faltas
 
@@ -671,8 +670,8 @@ explícito. Se distinguen tres categorías (ver `DECISION_DDL-ENUM-01` en
 - `EXPLICIT_STRING_CODE`: el enum expone `codigo()` de tipo `String` estable.
   Persistencia candidata: `CHAR`/`VARCHAR` exacta con constraint.
 - `NO_EXPLICIT_CODE`: el enum no expone `codigo()`. Prohibido `ordinal()`.
-  Prohibido `name()` sin decisión explícita. Representación física pendiente
-  de `DECISION_DDL-ENUM-01`.
+  Prohibido `name()` sin decisión explícita. **0 enums en esta categoría** tras el
+  cierre de `DECISION_DDL-ENUM-01`.
 
 | Enum | Categoría | Notas |
 |---|---|---|
@@ -682,9 +681,11 @@ explícito. Se distinguen tres categorías (ver `DECISION_DDL-ENUM-01` en
 | `ResultadoFinalActa` (10 valores, 0–9) | `EXPLICIT_NUMERIC_CODE` | Ver sección 4 (Decisión P1); código 5 (`FALLO_CONDENATORIO_PAGADO`) es LEGACY_RESERVED, ver `DECISION_DDL-RF-005` |
 | `ActorTipoEvento` (1–6) | `EXPLICIT_NUMERIC_CODE` | `fal_acta_evento.actor_tipo` |
 | `OrigenEvento` (1–8) | `EXPLICIT_NUMERIC_CODE` | `fal_acta_evento.origen_evt` |
-| `EstadoFalloActa` | `NO_EXPLICIT_CODE` | Sin `codigo()` verificado contra el enum Java vigente; representación física pendiente de `DECISION_DDL-ENUM-01`; valores en `../10-domain/states-events-catalogs.md` |
-| `EstadoApelacionActa` | `NO_EXPLICIT_CODE` | Sin `codigo()` verificado contra el enum Java vigente; representación física pendiente de `DECISION_DDL-ENUM-01`; valores en `../10-domain/states-events-catalogs.md` |
-| `EstadoPagoCondena` | `NO_EXPLICIT_CODE` | Sin `codigo()` verificado contra el enum Java vigente; representación física pendiente de `DECISION_DDL-ENUM-01`; valores en `../10-domain/states-events-catalogs.md` |
+| `EstadoFalloActa` (`PENDIENTE_FIRMA=1, PENDIENTE_NOTIFICACION=2, NOTIFICADO=3, FIRME=4, REEMPLAZADO=5, SIN_EFECTO=6`) | `EXPLICIT_NUMERIC_CODE` | `DECISION_DDL-ENUM-01` CERRADA; `codigo()` expuesto en enum Java |
+| `EstadoApelacionActa` (`PRESENTADA=1, EN_ANALISIS=2, RECHAZADA=3, ACEPTADA_ABSUELVE=4, RESUELTA=5, SIN_EFECTO=6`) | `EXPLICIT_NUMERIC_CODE` | `DECISION_DDL-ENUM-01` CERRADA; `codigo()` expuesto en enum Java |
+| `EstadoPagoCondena` (`NO_APLICA=1, PENDIENTE=2, INFORMADO=3, CONFIRMADO=4, OBSERVADO=5`) | `EXPLICIT_NUMERIC_CODE` | `DECISION_DDL-ENUM-01` CERRADA; `codigo()` expuesto en enum Java |
+| `TipoDiaNoComputable` (`FERIADO=1, ASUETO_ADMINISTRATIVO=2, OTRO=3`) | `EXPLICIT_NUMERIC_CODE` | `DECISION_DDL-ENUM-01` CERRADA; `codigo()` expuesto en enum Java |
+| `OrigenDiaNoComputable` (`MANUAL=1, SINCRONIZACION_EXTERNA=2`) | `EXPLICIT_NUMERIC_CODE` | `DECISION_DDL-ENUM-01` CERRADA; `codigo()` expuesto en enum Java |
 | `ResultadoResolucionApelacion` y demás enums funcionales no listados arriba | Ver `../10-domain/states-events-catalogs.md` y `../10-domain/lifecycle-states.md` | Fuente normativa de valores; este documento no repite la tabla ni asume categoría sin verificar el enum Java |
 | `BloqueActual`, `TipoEventoActa`, `EstadoProcesalActa`, `SituacionAdministrativaActa` | `EXPLICIT_STRING_CODE` | Código `String` corto (`CHAR(4/6)`); patrón correcto para estos cuatro; no aplican `SMALLINT` |
 
@@ -742,7 +743,7 @@ código Java vigente (verificado contra el árbol de fuentes de este HEAD).
 ## 5. Cierre
 
 - Bloqueadores funcionales internos: ninguno.
-- Decisiones físicas pendientes: ver `ddl-decisions.md`; ninguna reabre
+- Decisiones físicas abiertas: 0. Ver `ddl-decisions.md`; ninguna reabre
   dominio, contratos de comando, eventos o estados.
 - Integraciones externas (Ingresos/Tesorería, Informix, geo, IDP): no bloquean
   el diseño inicial de DDL; ver `../90-roadmap/current-roadmap.md`.

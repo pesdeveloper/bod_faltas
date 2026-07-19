@@ -75,6 +75,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRep
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -131,6 +134,7 @@ class NotificacionPositivaCanonicaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         relojFijo = new FaltasClock(Clock.fixed(INSTANTE, FaltasClock.ZONE));
         relojServicio = new CountingClock(relojFijo);
         contadorNroActa = 90_000_000;
@@ -150,7 +154,7 @@ class NotificacionPositivaCanonicaTest {
 
         // Reloj fijo separado del CountingClock del servicio para el recalculo de snapshot.
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo);
+                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), relojFijo);
@@ -174,6 +178,9 @@ class NotificacionPositivaCanonicaTest {
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoRepo, recalc, relojFijo);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // 1. Pieza previa
@@ -279,7 +286,7 @@ class NotificacionPositivaCanonicaTest {
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, new InMemoryPagoVoluntarioRepository(),
-                falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo);
+                falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo, snapshotRepo);
         NotificacionService notif45 = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, new NoOpBloqueantesMaterialesChecker(), relojServicio,
@@ -360,7 +367,7 @@ class NotificacionPositivaCanonicaTest {
         NotificacionService notifBloq = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo,
                 new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, new InMemoryPagoVoluntarioRepository(),
-                        falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo),
+                        falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo, snapshotRepo),
                 falloRepo, conBloqueantes, relojServicio,
                 intentoRepo, new InMemoryPersonaDomicilioRepository(), plazosConCalendarioVacio(30));
 
@@ -890,7 +897,7 @@ class NotificacionPositivaCanonicaTest {
     private NotificacionService notifServiceCon(PlazosAdministrativosService plazos) {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, new InMemoryPagoVoluntarioRepository(),
-                falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo);
+                falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo, snapshotRepo);
         return new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
                 falloRepo, new NoOpBloqueantesMaterialesChecker(), relojServicio,

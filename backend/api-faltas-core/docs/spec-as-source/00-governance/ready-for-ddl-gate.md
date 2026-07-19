@@ -4,14 +4,14 @@
 > **Autoridad DDL:** SUPPORTING
 > Este documento es un informe/gate de conformidad, no una fuente de reglas de
 > dominio. Es el cierre formal de la etapa spec-as-source y la puerta de
-> entrada al bloque de diseño y generación del DDL versionado de MariaDB. No
+> entrada al bloque de diseño y ejecución del DDL manual de MariaDB. No
 > redefine reglas de dominio: certifica que la spec normativa (`00-governance/`,
 > `10-domain/`, `20-application/`, documentos NORMATIVE) es consistente,
 > trazable contra el código vigente y suficiente para iniciar el DDL. Ante
 > contradicción sobre una regla de dominio, prevalecen los documentos temáticos
 > y de contrato de comandos (ver `README.md`, sección de precedencia).
 
-**Fecha de la última auditoría transversal:** 2026-07-13 (auditoría original); estructura documental reorganizada en el slice de consolidación temática (2026-07-17); reconciliación triple del modelo lógico MariaDB (ítem 19) completada en R2 (11 tablas) y R3 (15 tablas nuevas, 26 acumuladas) el 2026-07-17, sin reabrir dominio ni contratos; R3 abrió 11 nuevas `DECISION_DDL-*` físicas (todas no bloqueantes para el diseño inicial de DDL).
+**Fecha de auditoría y cierre:** 2026-07-18. Cierre de las 24 decisiones `DECISION_DDL-*` (20 originales + 4 transversales) en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001`.
 **Alcance:** `backend/api-faltas-core/docs/spec-as-source/**` (fuera de continuidad externa a este árbol) y su trazabilidad contra el código vigente del módulo `backend/api-faltas-core`.
 **Naturaleza:** documental, de trazabilidad, de conformidad código/spec y de preparación para DDL. No es un slice funcional, no reabre los siete comandos canónicos (`CMD-FALLO-001..007`), no migra JDBC ni genera SQL.
 
@@ -19,17 +19,31 @@
 
 La auditoría transversal aprueba todos los ítems del checklist (sección
 "Checklist final" más abajo). No quedan bloqueadores internos. La etapa
-spec-as-source queda formalmente cerrada; la siguiente etapa autorizada es el
-diseño y la generación del DDL versionado de MariaDB (ver "Entrada del
-siguiente bloque").
+spec-as-source queda formalmente cerrada; la siguiente etapa autorizada es
+construir el script DDL manual y ejecutarlo manualmente desde HeidiSQL (ver
+"Entrada del siguiente bloque").
 
-`READY_FOR_DDL` significa que la spec-as-source está lista para **iniciar**
-el diseño físico y resolver cada `DECISION_DDL-*` pendiente listada en
-[`50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md). NO
-significa que el DDL final ya esté completamente decidido: las decisiones
-físicas abiertas (identidad de algunos agregados, OCC multi-nodo,
-representación de enums `NO_EXPLICIT_CODE`, unicidad física, etc.) se
-resuelven explícitamente durante ese bloque, no antes.
+`READY_FOR_DDL` significa que la spec-as-source está lista para **construir
+el script DDL manual** de MariaDB y ejecutarlo manualmente desde HeidiSQL
+(ver [`50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md)
+y [`50-persistence/ddl-execution-and-test-seeding.md`](../50-persistence/ddl-execution-and-test-seeding.md)).
+
+Condiciones vigentes:
+
+- MariaDB objetivo: 12.3.2, Windows x64, InnoDB, utf8mb4, utf8mb4_uca1400_ai_ci,
+  lower_case_table_names = 1.
+- 24 decisiones DDL cerradas; 0 abiertas.
+- 0 enums `NO_EXPLICIT_CODE` vigentes; todos los enums persistibles relevantes
+  tienen `codigo()` explícito tras `DECISION_DDL-ENUM-01` CERRADA.
+- 65 tablas canónicas finales: 1 preexistente adoptada (`fal_rubro_version`,
+  `PREEXISTING_CANONICAL_ADOPTED`) + 64 a crear por el script canónico.
+- DDL automático: NO. Flyway: NO. Liquibase: NO.
+  Migraciones históricas/incrementales: NO.
+- Ejecución: manual por Pablo desde HeidiSQL.
+- Script canónico fuera del runtime/classpath.
+- Script DDL ejecutable: **aún no creado**.
+- Adapters JDBC de dominio: **aún no creados**.
+- Seeder: **aún no implementado**.
 
 ## Base normativa
 
@@ -49,7 +63,7 @@ Esta auditoría se apoya en, y no reemplaza a, los siguientes documentos:
 - [`../40-api/http-contracts.md`](../40-api/http-contracts.md) — contratos HTTP.
 - [`../50-persistence/inmemory-mariadb-deltas.md`](../50-persistence/inmemory-mariadb-deltas.md) — delta InMemory/MariaDB vigente.
 - [`../50-persistence/mariadb-logical-model.md`](../50-persistence/mariadb-logical-model.md) — modelo lógico e inventario de tablas.
-- [`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md) — decisiones físicas pendientes/cerradas.
+- [`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md) — registro cerrado de las 24 decisiones físicas.
 
 ## Checklist final
 
@@ -70,10 +84,10 @@ Esta auditoría se apoya en, y no reemplaza a, los siguientes documentos:
 | 13 | Tests | PASS | Suite completa verde (ver "Evidencia de tests"); guardrail documental fortalecido | `SpecAsSourceGuardrailTest` |
 | 14 | Pago de condena coherente | PASS | `../10-domain/states-events-catalogs.md`, `../20-application/command-contracts.md`, `../40-api/http-contracts.md` y `../20-application/fallo-command-contracts.md` afirman la misma regla: `PCOCNF` se registra siempre que la confirmación supera sus precondiciones; los bloqueantes materiales activos solo impiden `CIERRA`, nunca rechazan la confirmación; sin duplicación de `InformarPagoCondenaCommand` fuera de `20-application/` | `../10-domain/states-events-catalogs.md`, `../20-application/command-contracts.md`, `../40-api/http-contracts.md`, `../20-application/fallo-command-contracts.md`, guardrail G-15 |
 | 15 | Documentos vigentes sin cronología histórica | PASS | `../90-roadmap/current-roadmap.md`, `../50-persistence/jdbc-strategy.md`, `../50-persistence/jdbc-infrastructure.md` y `../20-application/command-contracts.md` sin identificadores de bloques/fases históricas, conteos de build ni `Tests run:` de diario, y sin headings de cierre/fix/numeración histórica | guardrail G-17 |
-| 16 | Estrategia de enums clasificada | PASS | Enums persistibles clasificados en tres categorías (`EXPLICIT_NUMERIC_CODE`, `EXPLICIT_STRING_CODE`, `NO_EXPLICIT_CODE`) verificadas por reflexión contra el código Java vigente; sin afirmación universal de "todo enum tiene código numérico" | `../50-persistence/inmemory-mariadb-deltas.md`, `../50-persistence/mariadb-logical-model.md`, `../50-persistence/jdbc-strategy.md`, guardrail G-16 |
-| 17 | `DECISION_DDL-ENUM-01` registrada | PASS | Decisión física explícita para la representación de `EstadoFalloActa`, `EstadoApelacionActa`, `EstadoPagoCondena` (enums `NO_EXPLICIT_CODE`), con alternativas y criterio de cierre; sin códigos inventados | `../50-persistence/ddl-decisions.md`, guardrail G-16 |
+| 16 | Estrategia de enums clasificada | PASS | Enums persistibles clasificados. 0 enums `NO_EXPLICIT_CODE` vigentes. Códigos exactos validados contra Java/spec/modelo lógico. | `../50-persistence/inmemory-mariadb-deltas.md`, `../50-persistence/mariadb-logical-model.md`, `../50-persistence/jdbc-strategy.md`, guardrail G-16 |
+| 17 | `DECISION_DDL-ENUM-01` cerrada | PASS | `DECISION_DDL-ENUM-01` CERRADA. `EstadoFalloActa`, `EstadoApelacionActa`, `EstadoPagoCondena`, `TipoDiaNoComputable` y `OrigenDiaNoComputable` tienen código `SMALLINT` explícito. 0 enums `NO_EXPLICIT_CODE` vigentes. | `../50-persistence/ddl-decisions.md`, guardrail G-16 |
 | 18 | Estructura temática única | PASS | Estructura `00-governance/`, `10-domain/`, `20-application/`, `30-projections/`, `40-api/`, `50-persistence/`, `90-roadmap/` sin numeración residual (`02-99`) ni carpeta `handoff/` dentro de la spec; cero documentos históricos activos (`docs/`, `docs-trabajo/`, `docs/guia_qa/`, `backend/api-faltas-prototipo/docs/` eliminados) | `document-registry.md`, guardrail `SpecAsSourceGuardrailTest` (G-19), reproducible con `git grep`/`Get-ChildItem` sobre la raíz del repositorio |
-| 19 | Paridad campo-a-campo del modelo lógico MariaDB | PASS | **Inventario total:** 65 tablas en scope. **11 exhaustivas R2:** reconciliación triple campo a campo para `fal_acta_evento`, `fal_acta_qr_acceso`, `fal_persona`, `fal_persona_domicilio`, `fal_acta` y sus 6 satélites; desalineaciones corregidas. **15 `RECONCILIADA_R3`:** `fal_firmante`, `fal_firmante_version`, `fal_firmante_version_habilitacion` (corrección de PK: era surrogate en spec, real es compuesta sin campo `id`), `fal_acta_snapshot`, `fal_acta_evidencia`, `fal_acta_obligacion_pago`, `fal_acta_forma_pago`, `fal_acta_plan_pago_ref`, `fal_acta_pago_movimiento` (catálogo `ClasificacionPago` difiere histórico/Java; `movimientoOrigenId` generaliza `movimiento_anulado_id`), `fal_acta_economia_proyeccion`, `num_politica`, `num_talonario`, `num_talonario_ambito`, `num_talonario_inspector`, `num_talonario_movimiento`. **Total reconciliación profunda:** 11 exhaustivas R2 + 15 `RECONCILIADA_R3` = 26. **39 `BASELINE_PRESERVADA_CON_DELTA`:** tablas restantes con baseline histórico 2026-06-23; `ESTRUCTURAL_YA_RECONCILIADA_R0_R1` eliminado; `fal_dia_no_computable` incorporada (ausente del histórico; sección propia añadida). **R3 abrió 11 nuevas `DECISION_DDL-*`** (SNAP-01/02, EVID-01, PAGO-03, FORMA-01, PLAN-01, MOV-01/02/03/04, ECPR-01): todas físicas, ninguna reabre dominio, contratos ni estados | `../50-persistence/mariadb-logical-model.md`, `MariaDbLogicalModelParityGuardrailTest` (38 tests exactos tras R3.1), `../50-persistence/ddl-decisions.md` (11 nuevas entradas R3) |
+| 19 | Paridad campo-a-campo del modelo lógico MariaDB | PASS | 65 tablas canónicas. 39 Nivel B (38 `BASELINE_PRESERVADA_CON_DELTA` + 1 `PREEXISTING_CANONICAL_ADOPTED` `fal_rubro_version`). 64 a crear. 26 reconciliadas profundamente (triple paridad campo a campo). 24 decisiones físicas cerradas. 0 abiertas. Guardrails activos: `MariaDbLogicalModelParityGuardrailTest`, `SpecAsSourceGuardrailTest` G-21..G-27. | `../50-persistence/mariadb-logical-model.md`, `MariaDbLogicalModelParityGuardrailTest`, `../50-persistence/ddl-decisions.md` |
 
 ## Política de seguridad por comando
 
@@ -98,15 +112,21 @@ para usuario final, por lo que no aplica JWT de usuario final ni matcher en
 Bearer obligatorio con actor extraído exclusivamente de
 `ActorContextHolder.get().sub()`.
 
+## Decisiones físicas cerradas
+
+Las 24 decisiones `DECISION_DDL-*` (20 originales + 4 transversales nuevas) fueron resueltas
+en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001`. Ver
+[`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md).
+
+- MariaDB 12.3.2 conocida, Windows x64, InnoDB, utf8mb4.
+- Ejecucion manual aprobada (no Flyway, no Liquibase, no DDL automatico).
+- Baseline protegido documentado (ver `../50-persistence/ddl-execution-and-test-seeding.md`).
+- 24 decisiones cerradas, 0 abiertas.
+- Script canonico de DDL del dominio: **aun no creado**.
+
 ## Bloqueadores internos
 
 Ninguno.
-
-## Decisiones físicas pendientes (no bloquean el diseño inicial)
-
-Las decisiones de diseño físico/DDL pendientes están listadas y trazadas en
-[`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md).
-Ninguna reabre dominio, contratos de comando, eventos ni estados.
 
 ## Dependencias externas no bloqueantes para DDL
 
@@ -122,9 +142,21 @@ se documentan conceptualmente en `../90-roadmap/current-roadmap.md`:
 
 ## Entrada del siguiente bloque
 
-- Generar el paquete DDL versionado de MariaDB a partir de `../50-persistence/inmemory-mariadb-deltas.md`, `../50-persistence/mariadb-logical-model.md` y `../50-persistence/ddl-decisions.md`.
-- No alterar contratos funcionales, estados, eventos, transiciones ni bandejas vigentes.
-- InMemory continúa como oráculo de paridad hasta cerrar la paridad de infraestructura JDBC.
+1. Construir/revisar el script DDL manual canónico a partir de
+   `../50-persistence/inmemory-mariadb-deltas.md`,
+   `../50-persistence/mariadb-logical-model.md` y
+   `../50-persistence/ddl-decisions.md`.
+2. Ejecutar el DDL manualmente desde HeidiSQL contra MariaDB 12.3.2.
+3. Implementar el seeder (ver contrato en
+   `../50-persistence/ddl-execution-and-test-seeding.md`).
+4. Implementar los adapters JDBC de dominio.
+5. Validar el backend real contra MariaDB.
+6. UX discovery/redesign en fase posterior.
+
+No alterar contratos funcionales, estados, eventos, transiciones ni bandejas
+vigentes. No mezclar DDL + adapters JDBC en un único movimiento.
+InMemory continúa como oráculo de paridad hasta cerrar la paridad de
+infraestructura JDBC.
 
 ## Evidencia de tests
 
@@ -147,9 +179,8 @@ consolidación documental se registra en el informe final de este slice
 históricos adicionales, ver guardrail G-17).
 
 Guardrail documental: `SpecAsSourceGuardrailTest` (ver detalle de guardrails
-G-1..G-20 en el Javadoc de la clase, ajustado para la estructura temática de
-este slice) y `MariaDbLogicalModelParityGuardrailTest` (paridad campo-a-campo
-del modelo lógico MariaDB, ítem 19 del checklist).
+G-1..G-26 en el Javadoc de la clase) y `MariaDbLogicalModelParityGuardrailTest`
+(paridad campo-a-campo del modelo lógico MariaDB, ítem 19 del checklist).
 
 ---
 

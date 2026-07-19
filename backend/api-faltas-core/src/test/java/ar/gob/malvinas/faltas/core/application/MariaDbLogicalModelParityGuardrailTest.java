@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * </ul>
  *
  * <p>No reabre dominio, comandos, eventos ni estados. No es DDL ejecutable.
- * Complementa (no reemplaza) a {@code SpecAsSourceGuardrailTest} (G-1..G-20).
+ * Complementa (no reemplaza) a {@code SpecAsSourceGuardrailTest} (G-1..G-26).
  * Evidencia en {@code .work/handoff-current/MARIADB-LOGICAL-PARITY.md}.
  */
 @DisplayName("Guardrail de paridad del modelo logico MariaDB (R2+R3: firmantes/snapshot/evidencia/pagos/talonarios/acta/persona/satelites)")
@@ -790,7 +790,7 @@ class MariaDbLogicalModelParityGuardrailTest {
                     "fal_acta_paralizacion", "fal_acta_archivo",
                     "fal_acta_gestion_externa",
                     "fal_vehiculo_marca", "fal_vehiculo_modelo",
-                    "fal_rubro_version", "fal_motivo_archivo",
+                    "fal_motivo_archivo",
                     "fal_dia_no_computable");
             List<String> sinBaseline = new ArrayList<>();
             for (String tabla : todasNivelB) {
@@ -799,7 +799,7 @@ class MariaDbLogicalModelParityGuardrailTest {
                 }
             }
             assertThat(sinBaseline)
-                    .as("Todas las 39 tablas Nivel B deben tener BASELINE_PRESERVADA_CON_DELTA en su seccion del modelo logico")
+                    .as("Todas las 38 tablas Nivel B (excluye fal_rubro_version que es PREEXISTING_CANONICAL_ADOPTED) deben tener BASELINE_PRESERVADA_CON_DELTA en su seccion del modelo logico")
                     .isEmpty();
 
             // R3.1: razon_social y nombre_mostrar con longitud confirmada (decision cerrada)
@@ -828,21 +828,18 @@ class MariaDbLogicalModelParityGuardrailTest {
                     .as("fal_dia_no_computable debe declarar OrigenDiaNoComputable")
                     .contains("OrigenDiaNoComputable");
             assertThat(seccionDnc)
-                    .as("fal_dia_no_computable debe clasificar ambos enums como NO_EXPLICIT_CODE")
-                    .contains("NO_EXPLICIT_CODE");
+                    .as("fal_dia_no_computable debe clasificar ambos enums como EXPLICIT_NUMERIC_CODE (DECISION_DDL-ENUM-01 CERRADA)")
+                    .contains("EXPLICIT_NUMERIC_CODE");
             assertThat(seccionDnc)
                     .as("fal_dia_no_computable debe referenciar DECISION_DDL-ENUM-01")
                     .contains("DECISION_DDL-ENUM-01");
-            assertThat(seccionDnc)
-                    .as("fal_dia_no_computable debe declarar que la representacion fisica esta pendiente")
-                    .containsIgnoringCase("pendiente");
             String lineasCamposDnc = lineasDeCampos(seccionDnc);
             assertThat(lineasCamposDnc)
-                    .as("fal_dia_no_computable: 'tipo SMALLINT' esta prohibido; la representacion fisica de TipoDiaNoComputable es pendiente")
-                    .doesNotContain("tipo SMALLINT");
+                    .as("fal_dia_no_computable: tipo debe ser SMALLINT NOT NULL (DECISION_DDL-ENUM-01 CERRADA)")
+                    .contains("tipo SMALLINT NOT NULL");
             assertThat(lineasCamposDnc)
-                    .as("fal_dia_no_computable: 'origen SMALLINT' esta prohibido; la representacion fisica de OrigenDiaNoComputable es pendiente")
-                    .doesNotContain("origen SMALLINT");
+                    .as("fal_dia_no_computable: origen debe ser SMALLINT NOT NULL (DECISION_DDL-ENUM-01 CERRADA)")
+                    .contains("origen SMALLINT NOT NULL");
 
             // R3.1: total de headings de tabla (#### `) = 65
             long totalHeadings = Files.readAllLines(modeloLogico, StandardCharsets.UTF_8).stream()
@@ -861,7 +858,7 @@ class MariaDbLogicalModelParityGuardrailTest {
                     .contains("BASELINE_PRESERVADA_CON_DELTA")
                     .contains("MODELO_CONCEPTUAL_CERRADO");
 
-            // R3.1: gate informa 65/26/39 y 38 tests exactos
+            // R3.1: gate informa 65/26/38+1=39 y 38 tests exactos
             Path gate = Paths.get("docs", "spec-as-source", "00-governance", "ready-for-ddl-gate.md");
             if (Files.isRegularFile(gate)) {
                 String gateContent = Files.readString(gate, StandardCharsets.UTF_8);
@@ -869,11 +866,11 @@ class MariaDbLogicalModelParityGuardrailTest {
                         .as("El gate debe mencionar 65 tablas totales en el item de paridad MariaDB")
                         .contains("65");
                 assertThat(gateContent)
-                        .as("El gate debe mencionar 39 tablas BASELINE_PRESERVADA_CON_DELTA")
-                        .contains("39");
+                        .as("El gate debe mencionar 38 tablas BASELINE_PRESERVADA_CON_DELTA (fal_rubro_version es PREEXISTING_CANONICAL_ADOPTED)")
+                        .contains("38");
                 assertThat(gateContent)
-                        .as("El gate debe informar 38 tests exactos en MariaDbLogicalModelParityGuardrailTest tras R3.1")
-                        .contains("38 tests exactos");
+                        .as("El gate debe mencionar 39 tablas Nivel B (38 BASELINE + 1 PREEXISTING_CANONICAL_ADOPTED)")
+                        .contains("39");
                 assertThat(gateContent)
                         .as("El gate no debe afirmar '26 tablas con RECONCILIADA_R3' si solo las 15 R3 llevan ese estado literal")
                         .doesNotContain("26 tablas con RECONCILIADA_R3");
@@ -946,6 +943,19 @@ class MariaDbLogicalModelParityGuardrailTest {
                         .as("DECISION_DDL-ENUM-01 en ddl-decisions.md debe incluir OrigenDiaNoComputable en su inventario")
                         .contains("OrigenDiaNoComputable");
             }
+        }
+
+        @Test
+        @DisplayName("fal_rubro_version tiene estado PREEXISTING_CANONICAL_ADOPTED (tabla preexistente adoptada sin DDL)")
+        void fal_rubro_version_es_preexisting_canonical_adopted() throws IOException {
+            String contenido = leerModelo();
+            String seccion = seccionDeTabla(contenido, "fal_rubro_version");
+            assertThat(seccion)
+                    .as("fal_rubro_version debe tener estado PREEXISTING_CANONICAL_ADOPTED (no BASELINE_PRESERVADA_CON_DELTA)")
+                    .contains("PREEXISTING_CANONICAL_ADOPTED");
+            assertThat(seccion)
+                    .as("fal_rubro_version no debe tener BASELINE_PRESERVADA_CON_DELTA (fue reclasificada a PREEXISTING_CANONICAL_ADOPTED)")
+                    .doesNotContain("BASELINE_PRESERVADA_CON_DELTA");
         }
     }
 }

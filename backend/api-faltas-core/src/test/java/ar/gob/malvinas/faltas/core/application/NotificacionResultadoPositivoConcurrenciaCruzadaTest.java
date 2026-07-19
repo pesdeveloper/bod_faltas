@@ -52,6 +52,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.RepeatedTest;
 
@@ -112,6 +115,7 @@ class NotificacionResultadoPositivoConcurrenciaCruzadaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         relojFijo = new FaltasClock(Clock.fixed(INSTANTE, FaltasClock.ZONE));
         relojCompartido = new CountingClock(relojFijo);
         contadorNroActa = 60_000_000;
@@ -131,7 +135,7 @@ class NotificacionResultadoPositivoConcurrenciaCruzadaTest {
         var pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo);
+                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), relojFijo);
@@ -158,6 +162,9 @@ class NotificacionResultadoPositivoConcurrenciaCruzadaTest {
                 new NoOpBloqueantesMaterialesChecker(),
                 PlazosTestSupport.conCalendarioVacio(relojFijo));
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     /**
      * Repetido 5 veces para aumentar la probabilidad de observar ambos ordenes de llegada.

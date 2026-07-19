@@ -16,6 +16,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.*;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -66,6 +69,7 @@ class ActaFlujoDocumentalFuncionalTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -83,7 +87,7 @@ class ActaFlujoDocumentalFuncionalTest {
         ApelacionActaRepository apelRepo = new InMemoryApelacionActaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
@@ -121,6 +125,9 @@ class ActaFlujoDocumentalFuncionalTest {
         // Seed plantillas mock
         PlantillasMockSeeder.seedar(plantillaRepo, contenidoRepo, defaultRepo);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     private Long labrarCapturarEnriquecer() {
         Long id = actaService.labrar(new LabrarActaCommand(

@@ -92,7 +92,7 @@ class DocumentoFirmaReqTest {
         NotificacionRepository notifRepo = new InMemoryNotificacionRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo, plantillaRepo,

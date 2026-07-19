@@ -18,14 +18,14 @@ La infraestructura JDBC base (dependencias, perfiles, `DataSource`, prueba condi
 ya esta incorporada; el inventario verificable de esa infraestructura vive en
 [`jdbc-infrastructure.md`](jdbc-infrastructure.md). Este documento no repite ese inventario.
 
-Sin repositorios JDBC de dominio, migraciones versionadas, DDL productivo ni
+Sin repositorios JDBC de dominio, DDL productivo ni
 JPA/Hibernate todavia.
 
 ## 2. Orden de trabajo para el bloque DDL
 
-1. Resolver cada `DECISION_DDL-*` listada en [`ddl-decisions.md`](ddl-decisions.md).
+1. **0 decisiones `DECISION_DDL-*` pendientes** — todas 24 cerradas en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001` (ver [`ddl-decisions.md`](ddl-decisions.md)).
 2. Disenar el DDL fisico consistente con esas decisiones.
-3. Crear migraciones versionadas, deterministas y reproducibles.
+3. Crear el script canonico de DDL del dominio Faltas (64 tablas), versionado en Git bajo `database/`, ejecutado manualmente por Pablo via HeidiSQL (DECISION_DDL-EXEC-01).
 4. Implementar los adapters JDBC de los puertos de repositorio de dominio (sin modificar
    las interfaces existentes ni los servicios de aplicacion).
 5. Probar paridad de comportamiento contra InMemory (misma suite funcional, sin
@@ -89,8 +89,8 @@ No todo enum de dominio expone un codigo explicito. Se distinguen tres categoria
 - `EXPLICIT_STRING_CODE`: el enum expone `codigo()` de tipo `String` estable. Persistencia
   candidata: columna `CHAR`/`VARCHAR` exacta con constraint.
 - `NO_EXPLICIT_CODE`: el enum no expone `codigo()`. Prohibido persistir `ordinal()`.
-  Prohibido persistir `name()` sin una decision explicita. Representacion fisica
-  pendiente de `DECISION_DDL-ENUM-01`.
+  Prohibido persistir `name()` sin una decision explicita. **0 enums en esta
+  categoría** tras el cierre de `DECISION_DDL-ENUM-01`.
 
 Los catalogos documentales listados en la seccion 7 de este documento
 (`TipoDocu`, `EstadoDocu`, `EstadoFirma`, `TipoFirmaReq`, `MomentoNumeracionDocu`,
@@ -98,9 +98,9 @@ Los catalogos documentales listados en la seccion 7 de este documento
 `EXPLICIT_NUMERIC_CODE` verificados contra el codigo Java vigente: exponen `codigo()`
 `short` y su persistencia candidata es `SMALLINT` sin tabla fisica administrable.
 
-`EstadoFalloActa`, `EstadoApelacionActa` y `EstadoPagoCondena` son `NO_EXPLICIT_CODE`:
-no exponen `codigo()`. Su representacion fisica queda pendiente de
-`DECISION_DDL-ENUM-01` en [`ddl-decisions.md`](ddl-decisions.md); no tienen todavia una columna `SMALLINT` cerrada.
+`EstadoFalloActa`, `EstadoApelacionActa`, `EstadoPagoCondena`, `TipoDiaNoComputable` y
+`OrigenDiaNoComputable` son `EXPLICIT_NUMERIC_CODE` tras la aplicacion de
+`DECISION_DDL-ENUM-01` CERRADA: exponen `codigo()` numerico; persistencia: `SMALLINT NOT NULL`.
 
 No crear tablas para catalogos cerrados `EXPLICIT_NUMERIC_CODE`/`EXPLICIT_STRING_CODE`.
 No crear seeds/inserts para esos enums (no hay tabla fisica que poblar).
@@ -178,7 +178,7 @@ Enums de numeracion de talonario, todos `SMALLINT` sin tabla fisica: `ClaseNumer
 | LocalDate           | DATE          | `JdbcClient` mapea automaticamente              |
 | enum `EXPLICIT_NUMERIC_CODE` | SMALLINT | `.codigo()` para guardar; `desdeCodigo()` para leer |
 | enum `EXPLICIT_STRING_CODE`  | CHAR/VARCHAR | `.codigo()` para guardar; `desdeCodigo()` para leer |
-| enum `NO_EXPLICIT_CODE`      | pendiente `DECISION_DDL-ENUM-01` | sin conversion cerrada todavia |
+| enum `NO_EXPLICIT_CODE`      | N/A — 0 enums en esta categoría | sin conversion pendiente; todos los enums relevantes tienen `codigo()` |
 | BigDecimal          | DECIMAL(p,s)  | directo                                         |
 
 Reglas:
@@ -215,9 +215,7 @@ de [`ddl-decisions.md`](ddl-decisions.md); este documento no repite esa matriz.
 
 | Riesgo | Nivel | Mitigacion |
 |---|---|---|
-| Identidad UUID/String pendiente en varios agregados | MEDIO | Resolver via las `DECISION_DDL-*` de `ddl-decisions.md` al migrar cada uno |
 | Numeracion: duplicacion bajo concurrencia | ALTO | SEQUENCE + constraints unicas (`id_talonario`, `nro_talonario`) en `num_talonario_movimiento`; OCC `fal_documento.version_row` |
 | Numeracion: conflicto OCC bajo carrera | MEDIO | Recargar tras conflicto OCC; devolver numero ya asignado si compatible; conflicto funcional si incompatible |
 | Numeracion: saltos tecnicos de SEQUENCE | BAJO | Aceptables para talonarios electronicos; no reutilizar valores avanzados; sin huecos ilegales |
-| Enums `NO_EXPLICIT_CODE` sin representacion fisica | MEDIO | Resolver `DECISION_DDL-ENUM-01` antes del DDL de las tablas afectadas |
 | Seeds de catalogos incompletos | MEDIO | Enums `EXPLICIT_NUMERIC_CODE`/`EXPLICIT_STRING_CODE` tienen codigo Java; los datos configurables necesitan carga real |

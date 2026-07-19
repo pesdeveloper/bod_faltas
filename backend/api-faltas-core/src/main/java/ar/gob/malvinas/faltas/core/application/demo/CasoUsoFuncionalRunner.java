@@ -6,6 +6,8 @@ import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
 import ar.gob.malvinas.faltas.core.infrastructure.config.PlazosAdministrativosProperties;
@@ -82,7 +84,7 @@ public class CasoUsoFuncionalRunner {
                 new RepositoryBloqueantesMaterialesChecker(bloqueanteMaterialRepo);
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, faltasClock);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, faltasClock, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), faltasClock);
@@ -151,17 +153,28 @@ public class CasoUsoFuncionalRunner {
     /**
      * Ejecuta el flujo funcional para el codigo de acta dado.
      * Crea el acta desde cero y la lleva al estado esperado ejecutando servicios reales.
+     *
+     * El actor "runner-funcional" es tecnico del runner de pruebas, no un actor humano
+     * ni un fallback productivo. Si existe un contexto previo, lo restaura al terminar.
      */
     public CasoUsoFuncionalEjecucionResultado ejecutar(String codigoActaMock) {
-        ActaMockFuncionalDefinicion def = DatasetFuncionalDominioCatalog.buscarPorCodigo(codigoActaMock);
         List<String> pasos = new ArrayList<>();
         List<String> advertencias = new ArrayList<>();
+        ActorContext anterior = ActorContextHolder.get();
+        ActorContextHolder.set(new ActorContext("runner-funcional"));
+        ActaMockFuncionalDefinicion def = null;
         try {
+            def = DatasetFuncionalDominioCatalog.buscarPorCodigo(codigoActaMock);
             return ejecutarDefinicion(def, pasos, advertencias);
         } catch (Exception e) {
             advertencias.add("ERROR_EJECUCION: " + e.getMessage());
             return CasoUsoFuncionalEjecucionResultado.parcial(
-                    codigoActaMock, def.casoUsoPrincipal(), null, pasos, advertencias);
+                    codigoActaMock,
+                    def != null ? def.casoUsoPrincipal() : "DESCONOCIDO",
+                    null, pasos, advertencias);
+        } finally {
+            if (anterior != null) ActorContextHolder.set(anterior);
+            else ActorContextHolder.clear();
         }
     }
 

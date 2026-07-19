@@ -53,7 +53,7 @@ class QrActaServiceTest {
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, new InMemoryNotificacionRepository(),
-                pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         service = new QrActaService(actaRepo, eventoRepo, snapshotRepo, qrAccesoRepo, recalc, tokenProtector, FaltasClockTestSupport.FIXED);
     }
@@ -639,7 +639,7 @@ class QrActaServiceTest {
             SnapshotRecalculador recalc = new SnapshotRecalculador(
                     eventoRepo, docRepo, notifRepo, new InMemoryPagoVoluntarioRepository(),
                     falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(),
-                    FaltasClockTestSupport.FIXED);
+                    FaltasClockTestSupport.FIXED, snapshotRepo);
 
             notifSvc = new NotificacionIntentoService(
                     intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc,

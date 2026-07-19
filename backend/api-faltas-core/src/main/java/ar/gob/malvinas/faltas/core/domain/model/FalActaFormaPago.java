@@ -44,6 +44,7 @@ public class FalActaFormaPago {
     private boolean siExcluirEscaneo;
     private final LocalDateTime fhAlta;
     private final String idUserAlta;
+    private LocalDateTime fhVencimiento;
 
     public FalActaFormaPago(
             Long id,
@@ -143,6 +144,8 @@ public class FalActaFormaPago {
     public void setSiExcluirEscaneo(boolean v) { this.siExcluirEscaneo = v; }
     public LocalDateTime getFhAlta() { return fhAlta; }
     public String getIdUserAlta() { return idUserAlta; }
+    public LocalDateTime getFhVencimiento() { return fhVencimiento; }
+    public void setFhVencimiento(LocalDateTime v) { this.fhVencimiento = v; }
 
     public boolean estaPagada() {
         return estadoFormaPago == EstadoFormaPago.PAGADA;
@@ -175,6 +178,7 @@ public class FalActaFormaPago {
         c.motivoBaja = this.motivoBaja;
         c.siVigente = this.siVigente;
         c.siExcluirEscaneo = this.siExcluirEscaneo;
+        c.fhVencimiento = this.fhVencimiento;
         return c;
     }
 }

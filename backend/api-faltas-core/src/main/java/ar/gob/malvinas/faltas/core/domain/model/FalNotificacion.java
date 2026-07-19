@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 public class FalNotificacion {
 
     private final Long id;
+    private int versionRow;
     private final Long idActa;
     private final Long idDocumento;
     private final TipoDocu tipoDocumentoNotificado;
@@ -53,6 +54,7 @@ public class FalNotificacion {
         this.fechaEnvio = fechaEnvio;
         this.estado = EstadoNotificacion.EN_PROCESO;
         this.intentos = 1;
+        this.versionRow = 0;
     }
 
     public FalNotificacion(
@@ -127,6 +129,8 @@ public class FalNotificacion {
     // -------------------------------------------------------------------------
 
     public Long getId() { return id; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int versionRow) { this.versionRow = versionRow; }
     public Long getIdActa() { return idActa; }
     public Long getIdDocumento() { return idDocumento; }
     public TipoDocu getTipoDocumentoNotificado() { return tipoDocumentoNotificado; }
@@ -167,5 +171,19 @@ public class FalNotificacion {
 
     public boolean estaActiva() {
         return estado != EstadoNotificacion.SIN_EFECTO;
+    }
+
+    public FalNotificacion copia() {
+        FalNotificacion c = new FalNotificacion(id, idActa, idDocumento, tipoDocumentoNotificado,
+                canal, fechaEnvio, fhAlta, idUserAlta);
+        c.versionRow = this.versionRow;
+        c.estado = this.estado;
+        c.resultado = this.resultado;
+        c.fechaResultado = this.fechaResultado;
+        c.intentos = this.intentos;
+        c.observaciones = this.observaciones;
+        c.fhUltMod = this.fhUltMod;
+        c.idUserUltMod = this.idUserUltMod;
+        return c;
     }
 }

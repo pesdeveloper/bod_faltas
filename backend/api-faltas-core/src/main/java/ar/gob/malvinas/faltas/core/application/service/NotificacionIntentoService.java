@@ -24,7 +24,6 @@ import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
-import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
 import ar.gob.malvinas.faltas.core.domain.model.FalLoteCorreo;
 import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
@@ -158,10 +157,9 @@ public class NotificacionIntentoService {
         if (acta != null) {
             TipoEventoActa tipoEvt = nroIntento == 1 ? TipoEventoActa.NOTINT : TipoEventoActa.NOTREI;
             registrarEvento(acta.getId(), tipoEvt,
-                    notificacionId, id, idUser,
+                    notificacionId, id, idUser, ahora,
                     "Intento #" + nroIntento + " canal=" + canal + (loteId != null ? " lote=" + loteId : ""));
-            FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-            snapshotRepository.guardar(snap);
+            snapshotRecalculador.recalcularYGuardar(acta, ahora);
         }
 
         return intentoRepository.buscarPorId(id).orElseThrow();
@@ -204,10 +202,9 @@ public class NotificacionIntentoService {
         FalActa acta = actaRepository.buscarPorId(notif.getIdActa()).orElse(null);
         if (acta != null) {
             registrarEvento(acta.getId(), TipoEventoActa.NOTRVE,
-                    notificacionId, id, idUser,
+                    notificacionId, id, idUser, ahora,
                     "Reintento post vencimiento #" + nroIntento + " canal=" + canal);
-            FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-            snapshotRepository.guardar(snap);
+            snapshotRecalculador.recalcularYGuardar(acta, ahora);
         }
 
         return intentoRepository.buscarPorId(id).orElseThrow();
@@ -490,8 +487,7 @@ public class NotificacionIntentoService {
             }
 
             // 16. recalcular y guardar snapshot
-            FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-            snapshotRepository.guardar(snap);
+            snapshotRecalculador.recalcularYGuardar(acta, ahoraPortal);
 
             return intentoRepository.buscarPorId(id).orElseThrow();
         }
@@ -521,12 +517,12 @@ public class NotificacionIntentoService {
      * Usado por registrarIntento y registrarReintentoPorVencimiento donde el instante
      * es el propio de cada metodo.
      */
-    private void registrarEvento(Long idActa, TipoEventoActa tipo, Long idNotifRel, Long idIntento, String idUser, String descripcionLegible) {
+    private void registrarEvento(Long idActa, TipoEventoActa tipo, Long idNotifRel, Long idIntento, String idUser, LocalDateTime ahora, String descripcionLegible) {
         FalActaEvento evento = FalActaEvento.builder()
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.SERVICIO_NOTIFICACION)
-                .fhEvt(faltasClock.now())
+                .fhEvt(ahora)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUser)
                 .actorTipo(ActorTipoEvento.NOTIFICADOR)

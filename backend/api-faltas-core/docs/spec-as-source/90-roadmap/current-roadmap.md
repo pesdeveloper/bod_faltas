@@ -8,9 +8,11 @@
 > La evolucion historica se conserva en Git y no forma parte de la spec-as-source
 > activa.
 
-**Fecha de actualización:** 2026-07-13
+**Fecha de actualización:** 2026-07-18
 **Estado:** spec-as-source auditada transversalmente; puerta `READY_FOR_DDL` evaluada en
-[`../00-governance/ready-for-ddl-gate.md`](../00-governance/ready-for-ddl-gate.md).
+[`../00-governance/ready-for-ddl-gate.md`](../00-governance/ready-for-ddl-gate.md);
+todas las `DECISION_DDL-*` cerradas (ver
+[`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md)).
 
 ## 1. Baseline vigente
 
@@ -23,9 +25,9 @@ Estado verificado:
   del circuito cerrados y verificados contra el código vigente;
 - modelo conceptual de tablas objetivo MariaDB listo (ver
   [`../50-persistence/mariadb-logical-model.md`](../50-persistence/mariadb-logical-model.md));
-  las decisiones físicas todavía abiertas quedan registradas como `DECISION_DDL-*` en
-  [`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md) y no bloquean el
-  inicio del diseño físico;
+  todas las `DECISION_DDL-*` están cerradas (ver
+  [`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md)); 0 enums
+  0 enums `NO_EXPLICIT_CODE` vigentes;
 - `FaltasClock` como abstracción temporal canónica;
 - concurrencia optimista InMemory estabilizada;
 - contrato global de errores HTTP cerrado mediante `ErrorResponse` y `GlobalFaltasControllerAdvice`;
@@ -33,7 +35,7 @@ Estado verificado:
 - infraestructura JDBC base incorporada: dependencia Spring JDBC, driver MariaDB, perfil `jdbc`,
   configuración de `DataSource` y prueba condicionada de infraestructura (ver
   [`../50-persistence/jdbc-infrastructure.md`](../50-persistence/jdbc-infrastructure.md));
-- sin repositorios JDBC de dominio, migraciones versionadas, DDL productivo, Flyway/Liquibase, Testcontainers ni JPA/Hibernate todavía.
+- sin repositorios JDBC de dominio ni JPA/Hibernate todavía; sin Flyway/Liquibase por DECISION_DDL-EXEC-01 (no se incorporarán); sin Testcontainers ni DDL productivo todavía.
 
 Las definiciones activas de paridad y estrategia de persistencia se encuentran en:
 
@@ -42,13 +44,24 @@ Las definiciones activas de paridad y estrategia de persistencia se encuentran e
 - [`../50-persistence/inmemory-mariadb-deltas.md`](../50-persistence/inmemory-mariadb-deltas.md)
 - [`../50-persistence/jdbc-strategy.md`](../50-persistence/jdbc-strategy.md)
 
-## 2. Siguiente bloque obligatorio: diseño y DDL MariaDB
+## 2. Siguiente secuencia de trabajo
 
-Objetivo:
+### 2.1 Cerrar y auditar el slice vigente
 
-Resolver las decisiones físicas todavía abiertas (`DECISION_DDL-*` en `ddl-decisions.md`) y
-diseñar/incorporar el DDL versionado de MariaDB, sin alterar el comportamiento funcional ya
-validado por la implementación InMemory.
+Prerequisito: slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001-R3` cerrado y
+auditado externamente.
+
+### 2.2 Construir/revisar script DDL manual
+
+Objetivo: construir el script canónico completo de recreación del dominio BOD
+Faltas (64 tablas nuevas + adopción de `fal_rubro_version`) consistente con
+las 24 decisiones `DECISION_DDL-*` cerradas (ver `ddl-decisions.md`), sin
+alterar el comportamiento funcional ya validado por la implementación InMemory.
+
+El script DDL:
+- vive en Git fuera del runtime/classpath (bajo `database/`);
+- se ejecuta manualmente por Pablo desde HeidiSQL (`DECISION_DDL-EXEC-01`);
+- sin Flyway, sin Liquibase, sin ejecución automática al arrancar Spring.
 
 Guardrails:
 
@@ -56,38 +69,39 @@ Guardrails:
 - No cambiar reglas de dominio para adaptarlas a la persistencia.
 - No cambiar estados, eventos, transiciones, bandejas ni contratos HTTP.
 - No introducir JPA si la estrategia vigente define JDBC explícito.
-- Toda decisión física debe derivarse del modelo canónico y de las matrices de paridad
+- Toda decisión física deriva del modelo canónico
   (`inmemory-mariadb-deltas.md`, `mariadb-logical-model.md`).
-- Las migraciones deben ser versionadas, deterministas y reproducibles.
-- Las restricciones de base deben reforzar, no redefinir, las invariantes de dominio.
-- La suite existente debe continuar completamente verde.
-- Los tests de integración MariaDB deben agregarse sin sustituir los tests InMemory.
+- Las restricciones de base deben reforzar, no redefinir, las invariantes de
+  dominio.
 
-Pendientes reales que quedan bajo este bloque:
+### 2.3 Ejecutar DDL manualmente
 
-- Resolución de cada `DECISION_DDL-*` listada en `ddl-decisions.md` (incluye `DECISION_DDL-ENUM-01`:
-  representación física de los enums persistibles sin `codigo()`).
-- DDL MariaDB versionado (migraciones deterministas y reproducibles).
-- Implementaciones JDBC de los puertos de repositorio de dominio.
-- Transacciones por comando (una única transacción por operación de aplicación).
-- Unicidades y FKs físicas (ver `inmemory-mariadb-deltas.md`, secciones 3 y 5).
-- OCC/bloqueos multinodo (ver `inmemory-mariadb-deltas.md`, sección 12).
-- Migración de datos existentes (si aplica) al esquema físico definitivo.
+Ejecutar el script canónico desde HeidiSQL contra MariaDB 12.3.2.
+Verificar el baseline con el contrato del seeder.
 
-### Criterio de cierre del bloque DDL
+### 2.4 Implementar seeder
 
-Este bloque podrá cerrarse únicamente con:
+Ver contrato en `../50-persistence/ddl-execution-and-test-seeding.md`
+(operaciones VERIFY/SEED/RESET_TEST_DATA/RESET_AND_SEED, allowlists, baseline
+protegido).
 
-- cada `DECISION_DDL-*` de `ddl-decisions.md` resuelta o explícitamente diferida con justificación;
-- infraestructura MariaDB definida;
-- configuración por entorno documentada;
-- DDL inicial versionado;
-- convenciones de nombres, tipos, claves e índices verificadas contra `mariadb-logical-model.md`;
-- estrategia transaccional y de concurrencia documentada (ver `inmemory-mariadb-deltas.md`, secciones 6 y 12);
-- compatibilidad con el modelo vigente demostrada;
-- build completo exitoso;
-- cero regresiones en la suite InMemory;
-- sin cambios funcionales fuera del alcance autorizado.
+### 2.5 Implementar adapters JDBC
+
+Implementar `JdbcXxxRepository` para cada puerto de repositorio de dominio,
+sin modificar las interfaces existentes ni los servicios de aplicación.
+Tests de integración JDBC separados; no sustituir los tests InMemory.
+
+### 2.6 Validar backend real contra MariaDB
+
+- Suite existente completamente verde sin cambios funcionales.
+- Tests de integración MariaDB verdes.
+- OCC/bloqueos multinodo verificados (ver `inmemory-mariadb-deltas.md`,
+  sección 12).
+
+### 2.7 UX discovery/redesign (fase posterior)
+
+Hoy existe una demo navegable in-memory. El frontend productivo y el
+discovery de UX son fases posteriores a la validación con MariaDB real.
 
 ## 3. Integraciones externas
 
@@ -104,7 +118,6 @@ generación del DDL de MariaDB:
 ## 4. Mejoras no bloqueantes
 
 - Revisión del mapeo `INSPECTOR_NO_ENCONTRADO` para `FirmanteNoEncontradoException` (ver `../00-governance/command-contract-standard.md`, tabla de errores); requiere decisión explícita, no se corrige silenciosamente.
-- Refinamiento de la clasificación `DECISION_DDL` por columna en `../50-persistence/inmemory-mariadb-deltas.md` a medida que avance el diseño físico.
 - Decisión funcional pendiente sobre la seguridad de `pago-condena/confirmar`, `pago-condena/observar` y
   `GET pago-condena` (hoy `permitAll` en `SecurityConfig`; ver `../40-api/http-contracts.md`).
 

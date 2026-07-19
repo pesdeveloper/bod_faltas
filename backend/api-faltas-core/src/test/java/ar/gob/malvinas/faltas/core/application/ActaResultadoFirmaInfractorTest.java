@@ -27,6 +27,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaReposito
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -46,6 +49,7 @@ class ActaResultadoFirmaInfractorTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         ActaEventoRepository eventoRepo = new InMemoryActaEventoRepository();
         ActaSnapshotRepository snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -58,9 +62,12 @@ class ActaResultadoFirmaInfractorTest {
                 new InMemoryFalloActaRepository(),
                 new InMemoryApelacionActaRepository(),
                 new InMemoryPagoCondenaRepository()
-        , FaltasClockTestSupport.FIXED);
+        , FaltasClockTestSupport.FIXED, snapshotRepo);
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalculador, evidenciaRepo, FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     private LabrarActaCommand cmdLabrar(ResultadoFirmaInfractor resultado, List<EvidenciaActaItem> evidencias) {
         return new LabrarActaCommand(

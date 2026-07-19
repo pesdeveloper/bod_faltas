@@ -79,7 +79,7 @@ class FirmaFalloNotificacionCanonicaTest {
                 new InMemoryPagoVoluntarioRepository(), falloRepo,
                 new InMemoryApelacionActaRepository(),
                 new InMemoryPagoCondenaRepository(),
-                FaltasClockTestSupport.FIXED);
+                FaltasClockTestSupport.FIXED, snapshotRepo);
 
         TalonarioService talonarioService = new TalonarioService(
                 new InMemoryTalonarioRepository(),

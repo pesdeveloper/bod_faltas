@@ -71,6 +71,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepos
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEvidenciaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -117,6 +120,7 @@ class GestionExternaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -130,7 +134,7 @@ class GestionExternaTest {
         gestionExternaRepo = new InMemoryGestionExternaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
@@ -159,6 +163,9 @@ class GestionExternaTest {
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // Helpers
@@ -1132,7 +1139,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService servicioConBloqueantes = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             servicioConBloqueantes.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId).stream()
@@ -1266,7 +1273,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService svc = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             svc.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
@@ -1281,7 +1288,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService svc = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             svc.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
@@ -1306,7 +1313,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService svc = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             svc.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(actaId).orElseThrow();

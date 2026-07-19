@@ -5,12 +5,12 @@ import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.ActaService;
-import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
-import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvidencia;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.web.dto.CompletarCapturaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.EnriquecerActaRequest;
@@ -41,6 +41,10 @@ public class ActaController {
 
     @PostMapping("/labrar")
     public ResponseEntity<ComandoResultado> labrar(@Valid @RequestBody LabrarActaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         LabrarActaCommand cmd = new LabrarActaCommand(
                 req.tipoActa(), req.idDependencia(), req.idInspector(),
                 req.fechaActa(), req.domicilioHecho(), req.domicilioInfractor(),
@@ -55,6 +59,10 @@ public class ActaController {
     public ResponseEntity<ComandoResultado> completarCaptura(
             @PathVariable Long id,
             @RequestBody(required = false) CompletarCapturaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         CompletarCapturaCommand cmd = new CompletarCapturaCommand(
                 id, req != null ? req.observaciones() : null);
         return ResponseEntity.ok(actaService.completarCaptura(cmd));
@@ -64,6 +72,10 @@ public class ActaController {
     public ResponseEntity<ComandoResultado> enriquecer(
             @PathVariable Long id,
             @RequestBody(required = false) EnriquecerActaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         EnriquecerActaCommand cmd = new EnriquecerActaCommand(
                 id, req != null ? req.observaciones() : null);
         return ResponseEntity.ok(actaService.enriquecer(cmd));

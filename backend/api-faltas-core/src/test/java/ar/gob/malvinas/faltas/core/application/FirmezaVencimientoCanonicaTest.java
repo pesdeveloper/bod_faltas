@@ -76,6 +76,9 @@ import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 import ar.gob.malvinas.faltas.core.support.IntentoTestSupport;
 import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -152,6 +155,7 @@ class FirmezaVencimientoCanonicaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -165,7 +169,7 @@ class FirmezaVencimientoCanonicaTest {
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo,
-                pagoCondRepo, FaltasClockTestSupport.FIXED);
+                pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
@@ -197,6 +201,9 @@ class FirmezaVencimientoCanonicaTest {
                 actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo,
                 recalc, testClock);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // -------------------------------------------------------------------------
     // Helpers de fixture

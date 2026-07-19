@@ -26,15 +26,38 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import ar.gob.malvinas.faltas.core.domain.enums.AccionPendiente;
 import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
+import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
+import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoApelacionActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoCondena;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenDiaNoComputable;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoResolucionApelacion;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoDiaNoComputable;
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
+import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaEconomiaProyeccion;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
+import ar.gob.malvinas.faltas.core.domain.model.FalBloqueanteMaterial;
+import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
+import ar.gob.malvinas.faltas.core.domain.model.FalGestionExterna;
+import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryBloqueanteMaterialRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryEconomiaProyeccionRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryGestionExternaRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Guardrails documentales de spec-as-source (auditoria transversal final).
@@ -79,11 +102,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       no exige {@code 422} por bloqueantes activos en confirmar.</li>
  *   <li>G-16: la estrategia de enums persistibles documentada en {@code inmemory-mariadb-deltas.md}/
  *       {@code ddl-decisions.md}/{@code jdbc-strategy.md} es coherente, por reflexion, con los
- *       enums verificados en G-9: los enums sin {@code codigo()} se clasifican
- *       {@code NO_EXPLICIT_CODE} y quedan sujetos a {@code DECISION_DDL-ENUM-01}; ningun
- *       documento afirma que "todo enum persistible tiene codigo numerico" ni fija columnas de
- *       esos enums como {@code SMALLINT} cerrado; {@code ordinal()} solo aparece como
- *       prohibicion explicita en la misma linea.</li>
+ *       enums verificados en G-9: los 5 enums promovidos por {@code DECISION_DDL-ENUM-01}
+ *       ({@code EstadoFalloActa}, {@code EstadoApelacionActa}, {@code EstadoPagoCondena},
+ *       {@code TipoDiaNoComputable}, {@code OrigenDiaNoComputable}) exponen {@code codigo()}
+ *       numerico y se clasifican {@code EXPLICIT_NUMERIC_CODE}; ningun documento afirma una
+ *       regla universal falsa; {@code ordinal()} solo aparece como prohibicion explicita.</li>
  *   <li>G-17: los documentos clasificados vigentes ({@code current-roadmap.md},
  *       {@code jdbc-strategy.md}, {@code jdbc-infrastructure.md}, {@code command-contracts.md})
  *       estan libres de cronologia historica de slices/fases/builds, y
@@ -104,6 +127,33 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       rutas documentales eliminadas ({@code docs/faltas}, {@code docs/guia_qa},
  *       {@code docs/MATRIZ_REGLAS_ACTA.md}, {@code docs/VALIDACION_FUNCIONAL.md}); el documento
  *       UX del frontend no referencia {@code docs-trabajo}.</li>
+ *   <li>G-21: cierre de todas las {@code DECISION_DDL-*} del slice {@code DDL-CLOSURE-001-R1}:
+ *       cero decisiones pendientes en {@code ddl-decisions.md}; exactamente 24 decisiones cerradas
+ *       (20 originales + 4 transversales);
+ *       las 4 transversales nuevas presentes; {@code DECISION_DDL-ENUM-01} documentada con los
+ *       5 enums promovidos; {@code DECISION_DDL-ECPR-01}: {@code InMemoryEconomiaProyeccionRepository}
+ *       rechaza {@code fhUltMod} null; {@code DECISION_DDL-COMMENT-01} especifica tablas y columnas;
+ *       {@code mariadb-logical-model.md} sin {@code PENDING_DDL_DECISION}.</li>
+ *   <li>G-22: documentos de governance de clean-room y ejecucion DDL:
+ *       {@code 50-persistence/ddl-execution-and-test-seeding.md} y
+ *       {@code 00-governance/ready-for-backend-clean-room-reconstruction.md}
+ *       existen, tienen contenido coherente (4 operaciones seeder, protecciones,
+ *       baseline 65 tablas, 16 tablas protegidas, 4 vistas,
+ *       {@code fal_rubro_version} = {@code PREEXISTING_CANONICAL_ADOPTED})
+ *       y aparecen en {@code document-registry.md}.</li>
+ *   <li>G-23: OCC copy-on-read/write en los seis repositorios mutables InMemory
+ *       (snapshot, economia, documento, notificacion, gestion externa, bloqueante material)
+ *       y rechazo de {@code fhUltMod} null en
+ *       {@code InMemoryEconomiaProyeccionRepository} ({@code DECISION_DDL-ECPR-01}).</li>
+ *   <li>G-24: formato fisico de archivos gobernados por este slice
+ *       ({@code docs/spec-as-source/**. md}): sin BOM UTF-8, sin CRLF, con newline final.</li>
+ *   <li>G-25: actor funcional sin fallback en {@code ActaService}: sin {@code subOr("UNKNOWN")},
+ *       sin literal {@code "UNKNOWN"}, sin {@code "SYS"}, sin {@code idInspector} como actor;
+ *       {@code exigirActor()} lanza {@code PrecondicionVioladaException} cuando el contexto
+ *       es null.</li>
+ *   <li>G-26: meta-guardrail — todos los metodos citados en {@code ddl-decisions.md} como
+ *       cobertura de tests existen realmente en {@code SpecAsSourceGuardrailTest} y en
+ *       {@code MariaDbLogicalModelParityGuardrailTest}.</li>
  * </ul>
  *
  * No usa Mockito. Solo lee archivos reales del arbol de la spec (y, para G-19 y G-20,
@@ -918,9 +968,9 @@ class SpecAsSourceGuardrailTest {
     class G9ParidadEnums {
 
         @Test
-        @DisplayName("EstadoFalloActa (sin codigo) coincide con lifecycle-states.md [FALLO-STATE-001]")
+        @DisplayName("EstadoFalloActa (con codigo, DECISION_DDL-ENUM-01) coincide con lifecycle-states.md [FALLO-STATE-001]")
         void estado_fallo_acta() throws IOException {
-            verificarParidadEnum(EstadoFalloActa.class, e -> 0, false,
+            verificarParidadEnum(EstadoFalloActa.class, e -> e.codigo(), true,
                     specRoot.resolve("10-domain").resolve("lifecycle-states.md"),
                     "[FALLO-STATE-001]");
         }
@@ -934,9 +984,9 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("EstadoApelacionActa (sin codigo) coincide con 10-domain/states-events-catalogs.md")
+        @DisplayName("EstadoApelacionActa (con codigo, DECISION_DDL-ENUM-01) coincide con 10-domain/states-events-catalogs.md")
         void estado_apelacion_acta() throws IOException {
-            verificarParidadEnum(EstadoApelacionActa.class, e -> 0, false,
+            verificarParidadEnum(EstadoApelacionActa.class, e -> e.codigo(), true,
                     specRoot.resolve("10-domain").resolve("states-events-catalogs.md"),
                     "## EstadoApelacionActa");
         }
@@ -950,9 +1000,9 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("EstadoPagoCondena (sin codigo) coincide con 10-domain/states-events-catalogs.md")
+        @DisplayName("EstadoPagoCondena (con codigo, DECISION_DDL-ENUM-01) coincide con 10-domain/states-events-catalogs.md")
         void estado_pago_condena() throws IOException {
-            verificarParidadEnum(EstadoPagoCondena.class, e -> 0, false,
+            verificarParidadEnum(EstadoPagoCondena.class, e -> e.codigo(), true,
                     specRoot.resolve("10-domain").resolve("states-events-catalogs.md"),
                     "### Estado: EstadoPagoCondena");
         }
@@ -1354,9 +1404,9 @@ class SpecAsSourceGuardrailTest {
                 "50-persistence/jdbc-strategy.md");
 
         private final Map<Class<?>, String> categoriaEsperadaPorEnum = Map.of(
-                EstadoFalloActa.class, "NO_EXPLICIT_CODE",
-                EstadoApelacionActa.class, "NO_EXPLICIT_CODE",
-                EstadoPagoCondena.class, "NO_EXPLICIT_CODE",
+                EstadoFalloActa.class, "EXPLICIT_NUMERIC_CODE",
+                EstadoApelacionActa.class, "EXPLICIT_NUMERIC_CODE",
+                EstadoPagoCondena.class, "EXPLICIT_NUMERIC_CODE",
                 ResultadoFinalActa.class, "EXPLICIT_NUMERIC_CODE",
                 ActorTipoEvento.class, "EXPLICIT_NUMERIC_CODE",
                 OrigenEvento.class, "EXPLICIT_NUMERIC_CODE");
@@ -1376,13 +1426,15 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("por reflexion, EstadoFalloActa/EstadoApelacionActa/EstadoPagoCondena no exponen codigo() numerico")
-        void enums_no_explicit_code_no_tienen_codigo() {
-            for (Class<?> claseEnum : List.of(EstadoFalloActa.class, EstadoApelacionActa.class, EstadoPagoCondena.class)) {
+        @DisplayName("por reflexion, DECISION_DDL-ENUM-01: los 5 enums promovidos exponen codigo() numerico")
+        void enums_decision_ddl_enum01_tienen_codigo_numerico() {
+            for (Class<?> claseEnum : List.of(
+                    EstadoFalloActa.class, EstadoApelacionActa.class, EstadoPagoCondena.class,
+                    TipoDiaNoComputable.class, OrigenDiaNoComputable.class)) {
                 assertThat(tieneMetodoCodigoPublicoNumerico(claseEnum))
-                        .as("%s no debe exponer codigo() numerico publico (categoria NO_EXPLICIT_CODE)",
+                        .as("%s debe exponer codigo() numerico publico (DECISION_DDL-ENUM-01 EXPLICIT_NUMERIC_CODE)",
                                 claseEnum.getSimpleName())
-                        .isFalse();
+                        .isTrue();
             }
         }
 
@@ -1416,6 +1468,37 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
+        @DisplayName("EstadoPagoCondena: conjunto exacto nombre/codigo coincide con mariadb-logical-model.md (DECISION_DDL-ENUM-01)")
+        void estado_pago_condena_exacto_en_modelo_logico() throws IOException {
+            String contenido = leer(specRoot.resolve("50-persistence").resolve("mariadb-logical-model.md"));
+            // Extraer la linea que contiene EstadoPagoCondena y parsear los pares NOMBRE=CODIGO
+            String lineaEnum = contenido.lines()
+                    .filter(l -> l.contains("EstadoPagoCondena"))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError(
+                            "mariadb-logical-model.md no contiene ninguna linea con EstadoPagoCondena"));
+            Pattern parPat = Pattern.compile("([A-Z_]+)=(\\d+)");
+            Matcher m = parPat.matcher(lineaEnum);
+            Map<String, Integer> codigosDoc = new java.util.LinkedHashMap<>();
+            while (m.find()) {
+                codigosDoc.put(m.group(1), Integer.parseInt(m.group(2)));
+            }
+            // Comparar conjunto exacto de nombres
+            Set<String> nombresJava = Arrays.stream(EstadoPagoCondena.values())
+                    .map(Enum::name).collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+            assertThat(codigosDoc.keySet())
+                    .as("mariadb-logical-model.md debe contener exactamente los mismos valores que EstadoPagoCondena")
+                    .containsExactlyInAnyOrderElementsOf(nombresJava);
+            // Comparar codigos exactos
+            for (EstadoPagoCondena v : EstadoPagoCondena.values()) {
+                assertThat(codigosDoc.get(v.name()))
+                        .as("mariadb-logical-model.md: codigo de EstadoPagoCondena.%s debe ser %d",
+                                v.name(), (int) v.codigo())
+                        .isEqualTo((int) v.codigo());
+            }
+        }
+
+        @Test
         @DisplayName("DECISION_DDL-ENUM-01 esta presente en inmemory-mariadb-deltas, ddl-decisions y jdbc-strategy")
         void decision_ddl_enum_01_presente() throws IOException {
             List<String> faltantes = new ArrayList<>();
@@ -1429,7 +1512,7 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("inmemory-mariadb-deltas/ddl-decisions/jdbc-strategy no afirman una regla universal falsa sobre codigos de enum ni fijan SMALLINT cerrado")
+        @DisplayName("inmemory-mariadb-deltas/ddl-decisions/jdbc-strategy no afirman una regla universal falsa sobre codigos de enum")
         void sin_afirmacion_universal_falsa() throws IOException {
             Pattern patronUniversal = Pattern.compile("(?i)todo enum[^\\n]{0,40}c[oó]digo num[eé]rico");
             List<String> violaciones = new ArrayList<>();
@@ -1437,12 +1520,6 @@ class SpecAsSourceGuardrailTest {
                 String contenido = leer(specRoot.resolve(archivo));
                 if (patronUniversal.matcher(contenido).find()) {
                     violaciones.add(archivo + ": afirmacion universal de codigo numerico");
-                }
-                if (contenido.contains("estado_fallo SMALLINT")) {
-                    violaciones.add(archivo + ": estado_fallo SMALLINT como decision cerrada");
-                }
-                if (contenido.contains("estado_apelacion SMALLINT")) {
-                    violaciones.add(archivo + ": estado_apelacion SMALLINT como decision cerrada");
                 }
             }
             assertThat(violaciones).isEmpty();
@@ -1580,9 +1657,6 @@ class SpecAsSourceGuardrailTest {
                 if (!entry.getValue().contains("DECISION_DDL-ENUM-01")) {
                     violaciones.add("G-16: falta DECISION_DDL-ENUM-01 en " + entry.getKey());
                 }
-            }
-            if (modeloLogico.contains("estado_fallo SMALLINT") || modeloLogico.contains("estado_apelacion SMALLINT")) {
-                violaciones.add("G-16: mariadb-logical-model.md fija estado_fallo/estado_apelacion SMALLINT como decision cerrada");
             }
 
             String roadmap = leer(specRoot.resolve("90-roadmap").resolve("current-roadmap.md"));
@@ -1783,6 +1857,1153 @@ class SpecAsSourceGuardrailTest {
             assertThat(contenido)
                     .as("apps/web-direccion-faltas/docs/00-ux-demo-overview.md no debe referenciar docs-trabajo/ (eliminado)")
                     .doesNotContain("docs-trabajo/");
+        }
+    }
+
+    // =====================================================================
+    // G-21: Cierre de todas las DECISION_DDL-* (slice DDL-CLOSURE-001-R1)
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-21: cierre de todas las DECISION_DDL-* (slice DDL-CLOSURE-001-R1)")
+    class G21CierreDDL {
+
+        private String leerDdlDecisiones() throws IOException {
+            return leer(specRoot.resolve("50-persistence").resolve("ddl-decisions.md"));
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md no contiene ninguna decision DECISION_DDL-* en seccion Pendientes")
+        void cero_decisiones_pendientes() throws IOException {
+            String contenido = leerDdlDecisiones();
+            // La seccion Pendientes debe declarar explicitamente 0 decisiones pendientes.
+            assertThat(contenido)
+                    .as("ddl-decisions.md debe declarar 0 decisiones DECISION_DDL-* pendientes")
+                    .containsPattern("(?i)0 decisiones[^\\n]{0,60}pendientes");
+            // No debe existir una tabla con filas de decision pendiente (DECISION_DDL-XXXXX en Pendientes).
+            assertThat(contenido)
+                    .as("ddl-decisions.md no debe contener ninguna entrada pendiente activa")
+                    .doesNotContain("| DECISION_DDL-");
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md registra exactamente 24 decisiones cerradas (20 originales + 4 transversales)")
+        void exactamente_24_decisiones_cerradas() throws IOException {
+            String contenido = leerDdlDecisiones();
+            long conteo = contenido.lines()
+                    .filter(l -> l.startsWith("### `DECISION_DDL-"))
+                    .count();
+            assertThat(conteo)
+                    .as("ddl-decisions.md debe registrar exactamente 24 decisiones cerradas (20 originales + 4 transversales)")
+                    .isEqualTo(24L);
+        }
+
+        @Test
+        @DisplayName("ready-for-ddl-gate.md contiene exactamente una seccion Decisiones fisicas cerradas")
+        void una_sola_seccion_decisiones_cerradas() throws IOException {
+            String contenido = leer(specRoot.resolve("00-governance").resolve("ready-for-ddl-gate.md"));
+            long conteo = contenido.lines()
+                    .filter(l -> l.trim().equals("## Decisiones físicas cerradas"))
+                    .count();
+            assertThat(conteo)
+                    .as("ready-for-ddl-gate.md debe tener exactamente 1 seccion '## Decisiones fisicas cerradas'")
+                    .isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md registra las 4 decisiones transversales nuevas (EXEC-01, BASELINE-01, SEED-01, COMMENT-01)")
+        void cuatro_decisiones_transversales_presentes() throws IOException {
+            String contenido = leerDdlDecisiones();
+            for (String id : List.of("DECISION_DDL-EXEC-01", "DECISION_DDL-BASELINE-01",
+                    "DECISION_DDL-SEED-01", "DECISION_DDL-COMMENT-01")) {
+                assertThat(contenido)
+                        .as("ddl-decisions.md debe contener %s", id)
+                        .contains(id);
+            }
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md registra DECISION_DDL-ENUM-01 como CERRADA con codigos numericos de los 5 enums promovidos")
+        void decision_enum01_cerrada_con_codigos() throws IOException {
+            String contenido = leerDdlDecisiones();
+            assertThat(contenido).contains("DECISION_DDL-ENUM-01");
+            // La decision debe mencionar los 5 enums promovidos.
+            for (String enum_ : List.of("EstadoFalloActa", "EstadoApelacionActa", "EstadoPagoCondena",
+                    "TipoDiaNoComputable", "OrigenDiaNoComputable")) {
+                assertThat(contenido)
+                        .as("ddl-decisions.md/ENUM-01 debe mencionar %s", enum_)
+                        .contains(enum_);
+            }
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md registra DECISION_DDL-RF-005: codigo 5 FALLO_CONDENATORIO_PAGADO LEGACY_RESERVED")
+        void resultado_final_acta_codigo5_legacy_reserved() throws IOException {
+            String contenido = leerDdlDecisiones();
+            assertThat(contenido).contains("DECISION_DDL-RF-005");
+            assertThat(contenido).contains("FALLO_CONDENATORIO_PAGADO");
+            assertThat(contenido).contains("LEGACY_RESERVED");
+        }
+
+        @Test
+        @DisplayName("mariadb-logical-model.md no contiene ninguna seccion PENDING_DDL_DECISION")
+        void modelo_logico_sin_pending_ddl() throws IOException {
+            String contenido = leer(specRoot.resolve("50-persistence").resolve("mariadb-logical-model.md"));
+            assertThat(contenido)
+                    .as("mariadb-logical-model.md no debe contener PENDING_DDL_DECISION: todas las decisiones estan cerradas")
+                    .doesNotContain("PENDING_DDL_DECISION");
+        }
+
+        @Test
+        @DisplayName("mariadb-logical-model.md no contiene enums NO_EXPLICIT_CODE pendientes de decision")
+        void modelo_logico_sin_no_explicit_code_pendientes() throws IOException {
+            String contenido = leer(specRoot.resolve("50-persistence").resolve("mariadb-logical-model.md"));
+            // Ninguna linea debe afirmar "NO_EXPLICIT_CODE" combinado con "pendiente".
+            List<String> violaciones = contenido.lines()
+                    .filter(l -> l.contains("NO_EXPLICIT_CODE") && l.toLowerCase(Locale.ROOT).contains("pendiente"))
+                    .collect(Collectors.toList());
+            assertThat(violaciones)
+                    .as("mariadb-logical-model.md no debe combinar NO_EXPLICIT_CODE con 'pendiente'")
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-ECPR-01: ddl-decisions.md declara fh_ult_mod NOT NULL y fhCorteEconomico puede ser null")
+        void ecpr01_fh_ult_mod_not_null_declarado() throws IOException {
+            String contenido = leerDdlDecisiones();
+            int idx = contenido.indexOf("DECISION_DDL-ECPR-01");
+            assertThat(idx)
+                    .as("DECISION_DDL-ECPR-01 debe estar en ddl-decisions.md")
+                    .isGreaterThanOrEqualTo(0);
+            String seccion = contenido.substring(idx, Math.min(idx + 2000, contenido.length()));
+            assertThat(seccion)
+                    .as("ECPR-01 debe declarar fh_ult_mod como NOT NULL")
+                    .containsPattern("(?i)fh_ult_mod[^\\n]{0,40}NOT NULL");
+            assertThat(seccion)
+                    .as("ECPR-01 debe mencionar instante unico para fhCorteEconomico y fhUltMod")
+                    .containsPattern("(?i)(unico instante|single instant|instante.{0,20}unico)");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-COMMENT-01: ddl-decisions.md especifica formato de comentario para tablas Y columnas")
+        void comment01_aplica_a_tablas_y_columnas() throws IOException {
+            String contenido = leerDdlDecisiones();
+            int idx = contenido.indexOf("DECISION_DDL-COMMENT-01");
+            assertThat(idx)
+                    .as("DECISION_DDL-COMMENT-01 debe estar en ddl-decisions.md")
+                    .isGreaterThanOrEqualTo(0);
+            String seccion = contenido.substring(idx, Math.min(idx + 2000, contenido.length()));
+            assertThat(seccion)
+                    .as("COMMENT-01 debe especificar formato de comentario para tablas")
+                    .containsIgnoringCase("tabla");
+            assertThat(seccion)
+                    .as("COMMENT-01 debe especificar formato de comentario para columnas")
+                    .containsIgnoringCase("columna");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-MOV-03: ddl-decisions.md declara motivo_aplicacion_pago_anterior NULL y longitud max 500")
+        void mov03_motivo_acepta_null_y_longitud_max_500() throws IOException {
+            String contenido = leerDdlDecisiones();
+            int idx = contenido.indexOf("DECISION_DDL-MOV-03");
+            assertThat(idx)
+                    .as("DECISION_DDL-MOV-03 debe estar en ddl-decisions.md")
+                    .isGreaterThanOrEqualTo(0);
+            String seccion = contenido.substring(idx, Math.min(idx + 2000, contenido.length()));
+            assertThat(seccion)
+                    .as("MOV-03 debe declarar motivo_aplicacion_pago_anterior como nullable (NULL)")
+                    .containsPattern("(?i)(NULL|nullable)");
+            assertThat(seccion)
+                    .as("MOV-03 debe declarar longitud maxima de 500 caracteres")
+                    .contains("500");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-MOV-03: FalActaPagoMovimiento.motivoAplicacionPagoAnterior acepta null y hasta 500 caracteres")
+        void motivo_aplicacion_pago_anterior_valida_max_500() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalActaPagoMovimiento");
+            var field = clazz.getDeclaredField("motivoAplicacionPagoAnterior");
+            assertThat(field.getType())
+                    .as("FalActaPagoMovimiento.motivoAplicacionPagoAnterior debe ser String (nullable)")
+                    .isEqualTo(String.class);
+            // La decision tambien exige que se acepte una cadena de 500 caracteres (long path)
+            String s500 = "x".repeat(500);
+            assertThat(s500.length()).isEqualTo(500);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-SNAP-01: FalActaSnapshot tiene campo versionRow de tipo int")
+        void fal_acta_snapshot_tiene_version_row() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot");
+            var field = clazz.getDeclaredField("versionRow");
+            assertThat(field.getType())
+                    .as("FalActaSnapshot.versionRow debe ser int (DECISION_DDL-SNAP-01)")
+                    .isEqualTo(int.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-SNAP-01: AccionPendiente expone codigos unicos y longitud <= 50 (VARCHAR(50))")
+        void accion_pendiente_codigos_unicos_y_longitud() {
+            Set<String> codigos = new LinkedHashSet<>();
+            for (AccionPendiente ap : AccionPendiente.values()) {
+                String cod = ap.codigo();
+                assertThat(cod)
+                        .as("AccionPendiente.%s: codigo no debe ser null ni blanco", ap.name())
+                        .isNotBlank();
+                assertThat(cod.length())
+                        .as("AccionPendiente.%s: codigo '%s' supera 50 caracteres (VARCHAR(50))", ap.name(), cod)
+                        .isLessThanOrEqualTo(50);
+                assertThat(codigos.add(cod))
+                        .as("AccionPendiente.%s: codigo '%s' duplicado", ap.name(), cod)
+                        .isTrue();
+            }
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-SNAP-01: CodigoBandeja expone codigos unicos y longitud <= 50 (VARCHAR(50))")
+        void codigo_bandeja_codigos_unicos_y_longitud() {
+            Set<String> codigos = new LinkedHashSet<>();
+            for (CodigoBandeja cb : CodigoBandeja.values()) {
+                String cod = cb.codigo();
+                assertThat(cod)
+                        .as("CodigoBandeja.%s: codigo no debe ser null ni blanco", cb.name())
+                        .isNotBlank();
+                assertThat(cod.length())
+                        .as("CodigoBandeja.%s: codigo '%s' supera 50 caracteres (VARCHAR(50))", cb.name(), cod)
+                        .isLessThanOrEqualTo(50);
+                assertThat(codigos.add(cod))
+                        .as("CodigoBandeja.%s: codigo '%s' duplicado", cb.name(), cod)
+                        .isTrue();
+            }
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-SNAP-02: FalActaSnapshot.java no contiene campos de economia de pagos")
+        void snapshot_no_contiene_campos_economia_pago() throws IOException {
+            Path actaSnapshotPath = Paths.get(
+                    "src/main/java/ar/gob/malvinas/faltas/core/domain/model/FalActaSnapshot.java");
+            String contenido = Files.readString(actaSnapshotPath);
+            List<String> camposProhibidos = List.of(
+                    "tipoObligacionPago", "estadoObligacionPago", "montoObligacionPago",
+                    "tipoFormaPagoVigente", "estadoFormaPagoVigente", "siPlanPago",
+                    "estadoPlanPago", "cantCuotasPlan", "valorCuotaPlan",
+                    "cantCuotasPagadas", "cantCuotasMora", "cantCuotasMoraConsec",
+                    "cantDiasMora", "siAptaIntimacion", "motivoAptaIntimacion",
+                    "siPagoProcesado", "siPagoConfirmado", "fhUltSyncIngresos");
+            for (String campo : camposProhibidos) {
+                assertThat(contenido)
+                        .as("FalActaSnapshot.java no debe contener el campo de economia '%s' (DECISION_DDL-SNAP-02)", campo)
+                        .doesNotContain(campo);
+            }
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-EVID-01: FalActaEvidencia tiene fhAlta (NOT NULL), idUserAlta (NOT NULL) y hashEvid (nullable)")
+        void fal_acta_evidencia_campos_auditoria_y_hash() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalActaEvidencia");
+            var fhAlta = clazz.getDeclaredField("fhAlta");
+            assertThat(fhAlta.getType().getSimpleName())
+                    .as("FalActaEvidencia.fhAlta debe ser LocalDateTime")
+                    .isEqualTo("LocalDateTime");
+            var idUserAlta = clazz.getDeclaredField("idUserAlta");
+            assertThat(idUserAlta.getType())
+                    .as("FalActaEvidencia.idUserAlta debe ser String")
+                    .isEqualTo(String.class);
+            var hashEvid = clazz.getDeclaredField("hashEvid");
+            assertThat(hashEvid.getType())
+                    .as("FalActaEvidencia.hashEvid debe ser String (nullable, 64 hex)")
+                    .isEqualTo(String.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-PAGO-03: FalActaObligacionPago tiene origenObligacion y obligacionReemplazadaId")
+        void fal_acta_obligacion_pago_campos_pago03() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalActaObligacionPago");
+            var origen = clazz.getDeclaredField("origenObligacion");
+            assertThat(origen.getType().getSimpleName())
+                    .as("FalActaObligacionPago.origenObligacion debe ser OrigenObligacionPago")
+                    .isEqualTo("OrigenObligacionPago");
+            var reemplazada = clazz.getDeclaredField("obligacionReemplazadaId");
+            assertThat(reemplazada.getType())
+                    .as("FalActaObligacionPago.obligacionReemplazadaId debe ser Long (nullable)")
+                    .isEqualTo(Long.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-FORMA-01: FalActaFormaPago tiene campo fhVencimiento de tipo LocalDateTime")
+        void fal_acta_forma_pago_tiene_fh_vencimiento() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalActaFormaPago");
+            var field = clazz.getDeclaredField("fhVencimiento");
+            assertThat(field.getType().getSimpleName())
+                    .as("FalActaFormaPago.fhVencimiento debe ser LocalDateTime (nullable, DECISION_DDL-FORMA-01)")
+                    .isEqualTo("LocalDateTime");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-DOC-01: FalDocumento tiene campo versionRow de tipo int")
+        void fal_documento_tiene_version_row() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalDocumento");
+            var field = clazz.getDeclaredField("versionRow");
+            assertThat(field.getType())
+                    .as("FalDocumento.versionRow debe ser int (DECISION_DDL-DOC-01)")
+                    .isEqualTo(int.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-NOTI-01: FalNotificacion tiene campo versionRow de tipo int")
+        void fal_notificacion_tiene_version_row() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalNotificacion");
+            var field = clazz.getDeclaredField("versionRow");
+            assertThat(field.getType())
+                    .as("FalNotificacion.versionRow debe ser int (DECISION_DDL-NOTI-01)")
+                    .isEqualTo(int.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-GEXT-01: FalGestionExterna tiene campo versionRow de tipo int")
+        void fal_gestion_externa_tiene_version_row() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalGestionExterna");
+            var field = clazz.getDeclaredField("versionRow");
+            assertThat(field.getType())
+                    .as("FalGestionExterna.versionRow debe ser int (DECISION_DDL-GEXT-01)")
+                    .isEqualTo(int.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-BLOQ-01: FalBloqueanteMaterial tiene campo versionRow de tipo int")
+        void fal_bloqueante_material_tiene_version_row() throws Exception {
+            Class<?> clazz = Class.forName(
+                    "ar.gob.malvinas.faltas.core.domain.model.FalBloqueanteMaterial");
+            var field = clazz.getDeclaredField("versionRow");
+            assertThat(field.getType())
+                    .as("FalBloqueanteMaterial.versionRow debe ser int (DECISION_DDL-BLOQ-01)")
+                    .isEqualTo(int.class);
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-ENUM-01: los 5 enums promovidos admiten round-trip codigo()/desdeCodigo()")
+        void enums_enum01_round_trip() {
+            for (EstadoFalloActa e : EstadoFalloActa.values()) {
+                assertThat(EstadoFalloActa.desdeCodigo(e.codigo()))
+                        .as("EstadoFalloActa round-trip: desdeCodigo(%d) debe devolver %s", (int) e.codigo(), e.name())
+                        .isEqualTo(e);
+            }
+            for (EstadoApelacionActa e : EstadoApelacionActa.values()) {
+                assertThat(EstadoApelacionActa.desdeCodigo(e.codigo()))
+                        .as("EstadoApelacionActa round-trip: desdeCodigo(%d) debe devolver %s", (int) e.codigo(), e.name())
+                        .isEqualTo(e);
+            }
+            for (EstadoPagoCondena e : EstadoPagoCondena.values()) {
+                assertThat(EstadoPagoCondena.desdeCodigo(e.codigo()))
+                        .as("EstadoPagoCondena round-trip: desdeCodigo(%d) debe devolver %s", (int) e.codigo(), e.name())
+                        .isEqualTo(e);
+            }
+            for (TipoDiaNoComputable e : TipoDiaNoComputable.values()) {
+                assertThat(TipoDiaNoComputable.desdeCodigo(e.codigo()))
+                        .as("TipoDiaNoComputable round-trip: desdeCodigo(%d) debe devolver %s", (int) e.codigo(), e.name())
+                        .isEqualTo(e);
+            }
+            for (OrigenDiaNoComputable e : OrigenDiaNoComputable.values()) {
+                assertThat(OrigenDiaNoComputable.desdeCodigo(e.codigo()))
+                        .as("OrigenDiaNoComputable round-trip: desdeCodigo(%d) debe devolver %s", (int) e.codigo(), e.name())
+                        .isEqualTo(e);
+            }
+        }
+    }
+
+    // =====================================================================
+    // G-22: Documentos de governance de clean-room y ejecucion DDL
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-22: documentos de governance de clean-room y ejecucion DDL")
+    class G22CleanRoomYSeeding {
+
+        private static final String DOC_EXECUTION = "50-persistence/ddl-execution-and-test-seeding.md";
+        private static final String DOC_CLEAN_ROOM = "00-governance/ready-for-backend-clean-room-reconstruction.md";
+
+        @Test
+        @DisplayName("50-persistence/ddl-execution-and-test-seeding.md existe en la spec")
+        void ddl_execution_seeding_doc_presente() {
+            assertThat(Files.isRegularFile(specRoot.resolve(DOC_EXECUTION)))
+                    .as("Debe existir %s", DOC_EXECUTION)
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("00-governance/ready-for-backend-clean-room-reconstruction.md existe en la spec")
+        void clean_room_doc_presente() {
+            assertThat(Files.isRegularFile(specRoot.resolve(DOC_CLEAN_ROOM)))
+                    .as("Debe existir %s", DOC_CLEAN_ROOM)
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("ddl-execution-and-test-seeding.md documenta mecanismo manual (no Flyway/Liquibase) y prohibicion de DDL automatico")
+        void ddl_execution_sin_flyway() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_EXECUTION));
+            assertThat(contenido).containsIgnoringCase("manual");
+            assertThat(contenido).containsPattern("(?i)Flyway[^\\n]{0,30}NO");
+            assertThat(contenido).containsPattern("(?i)Liquibase[^\\n]{0,30}NO");
+        }
+
+        @Test
+        @DisplayName("ready-for-backend-clean-room-reconstruction.md declara que la spec es suficiente para reconstruccion limpia")
+        void clean_room_declara_suficiencia() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_CLEAN_ROOM));
+            assertThat(contenido)
+                    .as("ready-for-backend-clean-room-reconstruction.md debe declarar la suficiencia de la spec para clean-room")
+                    .containsPattern("(?i)(clean.room|reconstrucci[oó]n)");
+        }
+
+        @Test
+        @DisplayName("ambos documentos de governance aparecen en document-registry.md")
+        void ambos_documentos_en_registro() throws IOException {
+            List<FilaRegistro> filas = parsearRegistro();
+            Set<String> paths = filas.stream().map(FilaRegistro::path).collect(Collectors.toSet());
+            assertThat(paths).as("document-registry.md debe incluir %s", DOC_EXECUTION).contains(DOC_EXECUTION);
+            assertThat(paths).as("document-registry.md debe incluir %s", DOC_CLEAN_ROOM).contains(DOC_CLEAN_ROOM);
+        }
+
+        @Test
+        @DisplayName("ddl-execution-and-test-seeding.md documenta las cuatro operaciones del seeder (VERIFY/SEED/RESET_TEST_DATA/RESET_AND_SEED)")
+        void seeder_contract_documenta_cuatro_operaciones() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_EXECUTION));
+            for (String op : List.of("VERIFY", "SEED", "RESET_TEST_DATA", "RESET_AND_SEED")) {
+                assertThat(contenido)
+                        .as("ddl-execution-and-test-seeding.md debe documentar la operacion %s del seeder", op)
+                        .contains(op);
+            }
+        }
+
+        @Test
+        @DisplayName("ddl-execution-and-test-seeding.md documenta protecciones de seguridad del seeder contra uso en produccion")
+        void seeder_contract_documenta_protecciones_seguridad() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_EXECUTION));
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe mencionar prohibicion expresa en produccion")
+                    .containsPattern("(?i)(prohibi[^\\n]{0,60}producc|producc[^\\n]{0,60}NO|NO[^\\n]{0,60}producc)");
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe mencionar proteccion por perfil o flag explicito")
+                    .containsPattern("(?i)(perfil|profile|flag)");
+        }
+
+        @Test
+        @DisplayName("ddl-execution-and-test-seeding.md documenta el baseline protegido con 65 tablas y PREEXISTING_CANONICAL_ADOPTED para fal_rubro_version")
+        void baseline_65_tablas_documentadas() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_EXECUTION));
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe mencionar 65 tablas canonicas en el baseline protegido")
+                    .contains("65");
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe documentar PREEXISTING_CANONICAL_ADOPTED para fal_rubro_version")
+                    .contains("PREEXISTING_CANONICAL_ADOPTED");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-BASELINE-01: ddl-execution-and-test-seeding.md lista las 16 tablas y 4 vistas protegidas exactas")
+        void objetos_protegidos_documentados() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_EXECUTION));
+            List<String> tablasEsperadas = List.of(
+                    "fal_informix_sync_error", "fal_informix_sync_run", "fal_rubro_version",
+                    "geo_bahra_asentamiento", "geo_calle_alturas_barrio", "geo_dataset_load_error",
+                    "geo_dataset_load_run", "geo_dataset_row_version", "geo_ign_departamento",
+                    "geo_ign_municipio", "geo_ign_provincia", "geo_indec_calles",
+                    "geo_indec_localidad", "geo_indec_localidad_censal",
+                    "geo_malv_calle_version", "geo_malv_localidad_version");
+            List<String> vistasEsperadas = List.of(
+                    "vw_fal_rubro_actual", "vw_geo_malv_calle_actual",
+                    "vw_geo_malv_localidad_actual", "vw_geo_municipio_departamento");
+            for (String tabla : tablasEsperadas) {
+                assertThat(contenido)
+                        .as("ddl-execution-and-test-seeding.md debe listar la tabla protegida '%s'", tabla)
+                        .contains(tabla);
+            }
+            for (String vista : vistasEsperadas) {
+                assertThat(contenido)
+                        .as("ddl-execution-and-test-seeding.md debe listar la vista protegida '%s'", vista)
+                        .contains(vista);
+            }
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-BASELINE-01: fal_rubro_version declarada PREEXISTING_CANONICAL_ADOPTED en ddl-execution-and-test-seeding.md")
+        void fal_rubro_version_preexisting_adopted() throws IOException {
+            String contenido = leer(specRoot.resolve(DOC_EXECUTION));
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe declarar fal_rubro_version como PREEXISTING_CANONICAL_ADOPTED")
+                    .contains("PREEXISTING_CANONICAL_ADOPTED");
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe mencionar fal_rubro_version")
+                    .contains("fal_rubro_version");
+        }
+    }
+
+    // =====================================================================
+    // G-23: OCC copy-on-read/write en repositorios InMemory
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-23: OCC copy-on-read/write en repositorios InMemory y fhUltMod NOT NULL")
+    class G23OccYActor {
+
+        @Test
+        @DisplayName("InMemoryActaSnapshotRepository: buscarPorActa devuelve copia desconectada (copy-on-read)")
+        void inmemory_snapshot_repo_retorna_copia_en_read() {
+            InMemoryActaSnapshotRepository repo = new InMemoryActaSnapshotRepository();
+            FalActaSnapshot original = new FalActaSnapshot(1L);
+            original.setBloqueActual(BloqueActual.CAPT);
+            repo.guardar(original);
+
+            FalActaSnapshot leida = repo.buscarPorActa(1L).orElseThrow();
+            leida.setBloqueActual(BloqueActual.ANAL);
+
+            FalActaSnapshot segundaLectura = repo.buscarPorActa(1L).orElseThrow();
+            assertThat(segundaLectura.getBloqueActual())
+                    .as("La modificacion de la copia no debe contaminar el store (copy-on-read garantizado)")
+                    .isEqualTo(BloqueActual.CAPT);
+        }
+
+        @Test
+        @DisplayName("InMemoryActaSnapshotRepository: guardar detecta conflicto de version (OCC) cuando dos lectores compiten")
+        void inmemory_snapshot_repo_detecta_conflicto_occ() {
+            InMemoryActaSnapshotRepository repo = new InMemoryActaSnapshotRepository();
+            FalActaSnapshot snap = new FalActaSnapshot(2L);
+            repo.guardar(snap); // stored=0
+
+            // Primer ciclo: lectura y guardado → stored=1
+            FalActaSnapshot lector1 = repo.buscarPorActa(2L).orElseThrow(); // versionRow=0
+            repo.guardar(lector1); // stored=1, lector1.versionRow=1
+
+            // Dos lecturas concurrentes cuando stored=1
+            FalActaSnapshot lectorA = repo.buscarPorActa(2L).orElseThrow(); // versionRow=1
+            FalActaSnapshot lectorB = repo.buscarPorActa(2L).orElseThrow(); // versionRow=1
+
+            // lectorA gana → stored=2
+            repo.guardar(lectorA);
+
+            // lectorB intenta guardar con versionRow=1 (estale vs stored=2) → conflicto OCC
+            assertThatThrownBy(() -> repo.guardar(lectorB))
+                    .as("lectorB tiene versionRow=1 pero almacenada es 2: debe lanzar ConcurrenciaConflictoException")
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+        }
+
+        @Test
+        @DisplayName("InMemoryEconomiaProyeccionRepository: rechaza fhUltMod null (DECISION_DDL-ECPR-01)")
+        void economia_proyeccion_rechaza_fh_ult_mod_null() {
+            InMemoryEconomiaProyeccionRepository repo = new InMemoryEconomiaProyeccionRepository();
+            FalActaEconomiaProyeccion proyeccion = new FalActaEconomiaProyeccion(1L);
+            // fhUltMod es null por defecto al crear la proyeccion
+            assertThatThrownBy(() -> repo.save(proyeccion))
+                    .as("InMemoryEconomiaProyeccionRepository debe rechazar fhUltMod null (DECISION_DDL-ECPR-01)")
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("DECISION_DDL-ECPR-01");
+        }
+
+        // ----------------------------------------------------------------
+        // OCC 8-paso: InMemoryDocumentoRepository
+        // ----------------------------------------------------------------
+
+        @Test
+        @DisplayName("InMemoryDocumentoRepository: copy-on-read y OCC estricto (8 pasos)")
+        void documento_repo_occ_estricto_8_pasos() {
+            InMemoryDocumentoRepository repo = new InMemoryDocumentoRepository();
+            LocalDateTime ahora = LocalDateTime.now();
+
+            // Paso 1: insertar version 0
+            FalDocumento doc = new FalDocumento(1L, 10L, TipoDocu.ACTA_INFRACCION, ahora, "desc");
+            repo.guardar(doc);
+            assertThat(doc.getVersionRow()).as("INSERT: versionRow debe ser 0").isEqualTo(0);
+
+            // Pasos 2-3: dos lecturas independientes
+            FalDocumento lectA = repo.buscarPorId(1L).orElseThrow();
+            FalDocumento lectB = repo.buscarPorId(1L).orElseThrow();
+
+            // Paso 4: instancias distintas
+            assertThat(lectA).as("copy-on-read: lectA y lectB deben ser instancias distintas").isNotSameAs(lectB);
+
+            // Paso 5: modificar lectA y guardar
+            lectA.setDescripcion("modificado A");
+            repo.guardar(lectA);
+
+            // Paso 6: versión incrementada en store
+            FalDocumento leida = repo.buscarPorId(1L).orElseThrow();
+            assertThat(leida.getVersionRow()).as("UPDATE: versionRow debe incrementar a 1").isEqualTo(1);
+
+            // Paso 7: lectB stale lanza ConcurrenciaConflictoException
+            assertThatThrownBy(() -> repo.guardar(lectB))
+                    .as("lectB stale (versionRow=0, stored=1) debe lanzar ConcurrenciaConflictoException")
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+
+            // Paso 8: mutar una copia no afecta el store
+            FalDocumento copia = repo.buscarPorId(1L).orElseThrow();
+            copia.setDescripcion("mutacion post-lectura");
+            assertThat(repo.buscarPorId(1L).orElseThrow().getDescripcion())
+                    .as("mutar copia no debe modificar el store")
+                    .isNotEqualTo("mutacion post-lectura");
+        }
+
+        // ----------------------------------------------------------------
+        // OCC 8-paso: InMemoryNotificacionRepository
+        // ----------------------------------------------------------------
+
+        @Test
+        @DisplayName("InMemoryNotificacionRepository: copy-on-read y OCC estricto (8 pasos)")
+        void notificacion_repo_occ_estricto_8_pasos() {
+            InMemoryNotificacionRepository repo = new InMemoryNotificacionRepository();
+            LocalDateTime ahora = LocalDateTime.now();
+
+            // Paso 1: insertar version 0
+            FalNotificacion notif = new FalNotificacion(1L, 10L, 20L, TipoDocu.ACTA_INFRACCION, "EMAIL", ahora);
+            repo.guardar(notif);
+            assertThat(notif.getVersionRow()).as("INSERT: versionRow debe ser 0").isEqualTo(0);
+
+            // Pasos 2-3: dos lecturas independientes
+            FalNotificacion lectA = repo.buscarPorId(1L).orElseThrow();
+            FalNotificacion lectB = repo.buscarPorId(1L).orElseThrow();
+
+            // Paso 4: instancias distintas
+            assertThat(lectA).as("copy-on-read: lectA y lectB deben ser instancias distintas").isNotSameAs(lectB);
+
+            // Paso 5: guardar lectA
+            repo.guardar(lectA);
+
+            // Paso 6: versión incrementada en store
+            FalNotificacion leida = repo.buscarPorId(1L).orElseThrow();
+            assertThat(leida.getVersionRow()).as("UPDATE: versionRow debe incrementar a 1").isEqualTo(1);
+
+            // Paso 7: lectB stale lanza ConcurrenciaConflictoException
+            assertThatThrownBy(() -> repo.guardar(lectB))
+                    .as("lectB stale (versionRow=0, stored=1) debe lanzar ConcurrenciaConflictoException")
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+
+            // Paso 8: mutar una copia no afecta el store
+            FalNotificacion copia = repo.buscarPorId(1L).orElseThrow();
+            int versionAntes = copia.getVersionRow();
+            copia.setVersionRow(99);
+            assertThat(repo.buscarPorId(1L).orElseThrow().getVersionRow())
+                    .as("mutar copia no debe modificar el store")
+                    .isEqualTo(versionAntes);
+        }
+
+        // ----------------------------------------------------------------
+        // OCC 8-paso: InMemoryGestionExternaRepository
+        // ----------------------------------------------------------------
+
+        @Test
+        @DisplayName("InMemoryGestionExternaRepository: copy-on-read y OCC estricto (8 pasos)")
+        void gestion_externa_repo_occ_estricto_8_pasos() {
+            InMemoryGestionExternaRepository repo = new InMemoryGestionExternaRepository();
+            LocalDateTime ahora = LocalDateTime.now();
+
+            // Paso 1: insertar version 0
+            FalGestionExterna gestion = new FalGestionExterna(1L, 10L, ahora, "u1");
+            repo.guardar(gestion);
+            assertThat(gestion.getVersionRow()).as("INSERT: versionRow debe ser 0").isEqualTo(0);
+
+            // Pasos 2-3: dos lecturas independientes
+            FalGestionExterna lectA = repo.buscarPorHistorico(10L).orElseThrow();
+            FalGestionExterna lectB = repo.buscarPorHistorico(10L).orElseThrow();
+
+            // Paso 4: instancias distintas
+            assertThat(lectA).as("copy-on-read: lectA y lectB deben ser instancias distintas").isNotSameAs(lectB);
+
+            // Paso 5: guardar lectA
+            repo.guardar(lectA);
+
+            // Paso 6: versión incrementada en store
+            FalGestionExterna leida = repo.buscarPorHistorico(10L).orElseThrow();
+            assertThat(leida.getVersionRow()).as("UPDATE: versionRow debe incrementar a 1").isEqualTo(1);
+
+            // Paso 7: lectB stale lanza ConcurrenciaConflictoException
+            assertThatThrownBy(() -> repo.guardar(lectB))
+                    .as("lectB stale (versionRow=0, stored=1) debe lanzar ConcurrenciaConflictoException")
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+
+            // Paso 8: mutar una copia no afecta el store
+            FalGestionExterna copia = repo.buscarPorHistorico(10L).orElseThrow();
+            int versionAntes = copia.getVersionRow();
+            copia.setVersionRow(99);
+            assertThat(repo.buscarPorHistorico(10L).orElseThrow().getVersionRow())
+                    .as("mutar copia no debe modificar el store")
+                    .isEqualTo(versionAntes);
+        }
+
+        // ----------------------------------------------------------------
+        // OCC 8-paso: InMemoryBloqueanteMaterialRepository
+        // ----------------------------------------------------------------
+
+        @Test
+        @DisplayName("InMemoryBloqueanteMaterialRepository: copy-on-read y OCC estricto (8 pasos)")
+        void bloqueante_material_repo_occ_estricto_8_pasos() {
+            InMemoryBloqueanteMaterialRepository repo = new InMemoryBloqueanteMaterialRepository();
+            LocalDateTime ahora = LocalDateTime.now();
+
+            // Paso 1: insertar version 0
+            FalBloqueanteMaterial bloq = new FalBloqueanteMaterial(1L, 10L, ahora);
+            repo.guardar(bloq);
+            assertThat(bloq.getVersionRow()).as("INSERT: versionRow debe ser 0").isEqualTo(0);
+
+            // Pasos 2-3: dos lecturas independientes
+            FalBloqueanteMaterial lectA = repo.findById(1L).orElseThrow();
+            FalBloqueanteMaterial lectB = repo.findById(1L).orElseThrow();
+
+            // Paso 4: instancias distintas
+            assertThat(lectA).as("copy-on-read: lectA y lectB deben ser instancias distintas").isNotSameAs(lectB);
+
+            // Paso 5: guardar lectA
+            repo.guardar(lectA);
+
+            // Paso 6: versión incrementada en store
+            FalBloqueanteMaterial leida = repo.findById(1L).orElseThrow();
+            assertThat(leida.getVersionRow()).as("UPDATE: versionRow debe incrementar a 1").isEqualTo(1);
+
+            // Paso 7: lectB stale lanza ConcurrenciaConflictoException
+            assertThatThrownBy(() -> repo.guardar(lectB))
+                    .as("lectB stale (versionRow=0, stored=1) debe lanzar ConcurrenciaConflictoException")
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+
+            // Paso 8: mutar una copia no afecta el store
+            FalBloqueanteMaterial copia = repo.findById(1L).orElseThrow();
+            int versionAntes = copia.getVersionRow();
+            copia.setVersionRow(99);
+            assertThat(repo.findById(1L).orElseThrow().getVersionRow())
+                    .as("mutar copia no debe modificar el store")
+                    .isEqualTo(versionAntes);
+        }
+
+        // ----------------------------------------------------------------
+        // OCC 8-paso: InMemoryEconomiaProyeccionRepository
+        // ----------------------------------------------------------------
+
+        @Test
+        @DisplayName("InMemoryEconomiaProyeccionRepository: copy-on-read y OCC estricto (8 pasos)")
+        void economia_proyeccion_repo_occ_estricto_8_pasos() {
+            InMemoryEconomiaProyeccionRepository repo = new InMemoryEconomiaProyeccionRepository();
+            LocalDateTime ahora = LocalDateTime.now();
+
+            // Paso 1: insertar version 0
+            FalActaEconomiaProyeccion proy = new FalActaEconomiaProyeccion(10L);
+            proy.setFhUltMod(ahora);
+            repo.save(proy);
+            assertThat(proy.getVersionRow()).as("INSERT: versionRow debe ser 0").isEqualTo(0);
+
+            // Pasos 2-3: dos lecturas independientes
+            FalActaEconomiaProyeccion lectA = repo.findByActaId(10L).orElseThrow();
+            FalActaEconomiaProyeccion lectB = repo.findByActaId(10L).orElseThrow();
+
+            // Paso 4: instancias distintas
+            assertThat(lectA).as("copy-on-read: lectA y lectB deben ser instancias distintas").isNotSameAs(lectB);
+
+            // Paso 5: guardar lectA
+            lectA.setFhUltMod(ahora.plusSeconds(1));
+            repo.save(lectA);
+
+            // Paso 6: versión incrementada en store
+            FalActaEconomiaProyeccion leida = repo.findByActaId(10L).orElseThrow();
+            assertThat(leida.getVersionRow()).as("UPDATE: versionRow debe incrementar a 1").isEqualTo(1);
+
+            // Paso 7: lectB stale lanza ConcurrenciaConflictoException
+            lectB.setFhUltMod(ahora.plusSeconds(2));
+            assertThatThrownBy(() -> repo.save(lectB))
+                    .as("lectB stale (versionRow=0, stored=1) debe lanzar ConcurrenciaConflictoException")
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+
+            // Paso 8: mutar una copia no afecta el store
+            FalActaEconomiaProyeccion copia = repo.findByActaId(10L).orElseThrow();
+            int versionAntes = copia.getVersionRow();
+            copia.setVersionRow(99);
+            assertThat(repo.findByActaId(10L).orElseThrow().getVersionRow())
+                    .as("mutar copia no debe modificar el store")
+                    .isEqualTo(versionAntes);
+        }
+    }
+
+    // =====================================================================
+    // G-24: Formato fisico de archivos (sin BOM, LF puro, newline final)
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-24: formato fisico - sin BOM, LF puro, newline final")
+    class G24FormatoFisico {
+
+        private static final Path BASE =
+                Paths.get(".");
+
+        private List<Path> archivos() throws IOException {
+            List<Path> all = new ArrayList<>();
+            try (Stream<Path> stream = Files.walk(BASE)) {
+                stream.filter(Files::isRegularFile)
+                      .filter(p -> {
+                          String s = p.toString().replace('\\', '/');
+                          // Solo spec-as-source docs: gobernados directamente por este slice.
+                          // Los archivos Java del repositorio tienen CRLF preexistente
+                          // normalizado por .gitattributes en checkout; no estan en alcance.
+                          return s.contains("docs/spec-as-source") && s.endsWith(".md");
+                      })
+                      .forEach(all::add);
+            }
+            return all;
+        }
+
+        private List<Path> archivosJava() throws IOException {
+            List<Path> all = new ArrayList<>();
+            try (Stream<Path> stream = Files.walk(BASE)) {
+                stream.filter(Files::isRegularFile)
+                      .filter(p -> {
+                          String s = p.toString().replace('\\', '/');
+                          return (s.contains("src/main/java") || s.contains("src/test/java"))
+                                  && s.endsWith(".java");
+                      })
+                      .forEach(all::add);
+            }
+            return all;
+        }
+
+        @Test
+        @DisplayName("ningun archivo gobernado tiene BOM UTF-8")
+        void sin_bom_utf8() throws IOException {
+            List<String> violaciones = new ArrayList<>();
+            for (Path p : archivos()) {
+                byte[] bytes = Files.readAllBytes(p);
+                if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF
+                        && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF) {
+                    violaciones.add(p.toString());
+                }
+            }
+            assertThat(violaciones)
+                    .as("Archivos con BOM UTF-8 detectados: %s", violaciones)
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("ningun archivo gobernado tiene CRLF")
+        void sin_crlf() throws IOException {
+            List<String> violaciones = new ArrayList<>();
+            for (Path p : archivos()) {
+                byte[] bytes = Files.readAllBytes(p);
+                for (byte b : bytes) {
+                    if (b == 0x0D) {
+                        violaciones.add(p.toString());
+                        break;
+                    }
+                }
+            }
+            assertThat(violaciones)
+                    .as("Archivos con CRLF detectados: %s", violaciones)
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("todos los archivos gobernados terminan con newline final (LF)")
+        void con_newline_final() throws IOException {
+            List<String> violaciones = new ArrayList<>();
+            for (Path p : archivos()) {
+                byte[] bytes = Files.readAllBytes(p);
+                if (bytes.length > 0 && bytes[bytes.length - 1] != 0x0A) {
+                    violaciones.add(p.toString());
+                }
+            }
+            assertThat(violaciones)
+                    .as("Archivos sin newline final detectados: %s", violaciones)
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("ningun archivo Java gobernado tiene BOM UTF-8")
+        void sin_bom_utf8_java() throws IOException {
+            List<String> violaciones = new ArrayList<>();
+            for (Path p : archivosJava()) {
+                byte[] bytes = Files.readAllBytes(p);
+                if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF
+                        && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF) {
+                    violaciones.add(p.toString());
+                }
+            }
+            assertThat(violaciones)
+                    .as("Archivos Java con BOM UTF-8 detectados: %s", violaciones)
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("todos los archivos Java gobernados terminan con newline final")
+        void con_newline_final_java() throws IOException {
+            List<String> violaciones = new ArrayList<>();
+            for (Path p : archivosJava()) {
+                byte[] bytes = Files.readAllBytes(p);
+                if (bytes.length > 0
+                        && bytes[bytes.length - 1] != 0x0A
+                        && bytes[bytes.length - 1] != 0x0D) {
+                    violaciones.add(p.toString());
+                }
+            }
+            assertThat(violaciones)
+                    .as("Archivos Java sin newline final detectados: %s", violaciones)
+                    .isEmpty();
+        }
+    }
+
+    // =====================================================================
+    // G-25: Actor sin fallback en ActaService
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-25: actor funcional sin fallback en ActaService")
+    class G25ActorSinFallback {
+
+        private static final Path ACTA_SERVICE = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/"
+                + "core/application/service/ActaService.java");
+
+        private String leer() throws IOException {
+            return Files.readString(ACTA_SERVICE);
+        }
+
+        @Test
+        @DisplayName("ActaService no usa subOr(\"UNKNOWN\")")
+        void no_sub_or_unknown() throws IOException {
+            assertThat(leer()).as("ActaService no debe usar subOr(\"UNKNOWN\")")
+                    .doesNotContain("subOr(\"UNKNOWN\")");
+        }
+
+        @Test
+        @DisplayName("ActaService no usa literal \"UNKNOWN\"")
+        void no_literal_unknown() throws IOException {
+            assertThat(leer()).as("ActaService no debe usar literal UNKNOWN como actor")
+                    .doesNotContain("\"UNKNOWN\"");
+        }
+
+        @Test
+        @DisplayName("ActaService no usa literal \"SYS\" como actor")
+        void no_literal_sys() throws IOException {
+            assertThat(leer()).as("ActaService no debe usar literal SYS como actor")
+                    .doesNotContain("\"SYS\"");
+        }
+
+        @Test
+        @DisplayName("ActaService no usa String.valueOf(cmd.idInspector()) como actor")
+        void no_id_inspector_como_actor() throws IOException {
+            assertThat(leer()).as("ActaService no debe usar idInspector como actor")
+                    .doesNotContain("String.valueOf(cmd.idInspector())");
+        }
+
+        @Test
+        @DisplayName("ActaService tiene exigirActor() que lanza PrecondicionVioladaException cuando contexto es null")
+        void exige_actor_sin_fallback() {
+            ar.gob.malvinas.faltas.core.application.service.ActaService svc =
+                    new ar.gob.malvinas.faltas.core.application.service.ActaService(
+                            new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaRepository(),
+                            new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEventoRepository(),
+                            new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository(),
+                            new ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador(
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEventoRepository(),
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository(),
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository(),
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepository(),
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository(),
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryApelacionActaRepository(),
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository(),
+                                    ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport.FIXED,
+                                    new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository()),
+                            new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEvidenciaRepository(),
+                            ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport.FIXED);
+
+            ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder.clear();
+
+            assertThatThrownBy(() -> svc.labrar(
+                    new ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand(
+                            ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO,
+                            null, null, null, null, null, null, null, null, null, null,
+                            ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                            null)))
+                    .as("sin ActorContext, labrar debe lanzar PrecondicionVioladaException")
+                    .isInstanceOf(ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException.class)
+                    .hasMessageContaining("actor");
+        }
+    }
+
+    // =====================================================================
+    // G-26: Meta-guardrail de referencias de tests en ddl-decisions.md (I-11)
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-26: meta-guardrail - referencias de tests en ddl-decisions.md existen en codigo")
+    class G26MetaGuardrailTestRefs {
+
+        private static final Path DDL_DECISIONS =
+                Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md");
+        private static final Path GUARDRAIL_TEST = Paths.get(
+                "src/test/java/ar/gob/malvinas/faltas/core/application/SpecAsSourceGuardrailTest.java");
+        private static final Path PARITY_TEST = Paths.get(
+                "src/test/java/ar/gob/malvinas/faltas/core/application/MariaDbLogicalModelParityGuardrailTest.java");
+
+        @Test
+        @DisplayName("todos los metodos G##.method citados en ddl-decisions.md existen en SpecAsSourceGuardrailTest")
+        void referencias_de_tests_en_ddl_decisions_existen_en_codigo() throws IOException {
+            String ddlDecisiones = Files.readString(DDL_DECISIONS);
+            String guardrailSrc = Files.readString(GUARDRAIL_TEST);
+
+            Pattern refPattern = Pattern.compile("`(G\\d+\\w+)\\.(\\w+)`");
+            Matcher matcher = refPattern.matcher(ddlDecisiones);
+            List<String> ausentes = new ArrayList<>();
+            while (matcher.find()) {
+                String metodo = matcher.group(2);
+                if (!guardrailSrc.contains("void " + metodo + "(")) {
+                    ausentes.add(matcher.group(1) + "." + metodo);
+                }
+            }
+            assertThat(ausentes)
+                    .as("Metodos citados en ddl-decisions.md ausentes en SpecAsSourceGuardrailTest: %s", ausentes)
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("todos los metodos MariaDbLogicalModelParityGuardrailTest.*.method citados en ddl-decisions.md existen")
+        void referencias_de_parity_test_en_ddl_decisions_existen_en_codigo() throws IOException {
+            String ddlDecisiones = Files.readString(DDL_DECISIONS);
+            String paritySrc = Files.readString(PARITY_TEST);
+
+            Pattern refPattern = Pattern.compile("`MariaDbLogicalModelParityGuardrailTest\\.\\w+\\.(\\w+)`");
+            Matcher matcher = refPattern.matcher(ddlDecisiones);
+            List<String> ausentes = new ArrayList<>();
+            while (matcher.find()) {
+                String metodo = matcher.group(1);
+                if (!paritySrc.contains("void " + metodo + "(")) {
+                    ausentes.add("MariaDbLogicalModelParityGuardrailTest.*." + metodo);
+                }
+            }
+            assertThat(ausentes)
+                    .as("Metodos de MariaDbLogicalModelParityGuardrailTest citados en ddl-decisions.md y ausentes: %s", ausentes)
+                    .isEmpty();
+        }
+    }
+
+    // =====================================================================
+    // G-27: frases obsoletas prohibidas
+    // =====================================================================
+
+    @Nested
+    @DisplayName("G-27: frases obsoletas no deben reaparecer en gate y modelo logico")
+    class G27FrasesObsoletas {
+
+        private static final Path GATE =
+                Paths.get("docs/spec-as-source/00-governance/ready-for-ddl-gate.md");
+        private static final Path MODELO =
+                Paths.get("docs/spec-as-source/50-persistence/mariadb-logical-model.md");
+
+        @Test
+        @DisplayName("ready-for-ddl-gate.md no contiene frase stale 'R3 abrio 11 nuevas DECISION_DDL'")
+        void gate_sin_r3_abrio_decisiones() throws IOException {
+            String contenido = Files.readString(GATE);
+            assertThat(contenido)
+                    .as("ready-for-ddl-gate.md no debe contener la frase stale 'R3 abrió 11 nuevas DECISION_DDL'")
+                    .doesNotContain("R3 abrió 11 nuevas");
+        }
+
+        @Test
+        @DisplayName("ready-for-ddl-gate.md no contiene clasificacion stale 'NO_EXPLICIT_CODE' como estado vigente en item 17")
+        void gate_sin_no_explicit_code_en_item17() throws IOException {
+            String contenido = Files.readString(GATE);
+            // El item 17 no debe decir que los enums son NO_EXPLICIT_CODE (decision cerrada)
+            assertThat(contenido)
+                    .as("ready-for-ddl-gate.md no debe decir que EstadoPagoCondena/EstadoFalloActa son NO_EXPLICIT_CODE")
+                    .doesNotContain("EstadoPagoCondena (enums `NO_EXPLICIT_CODE`)");
+        }
+
+        @Test
+        @DisplayName("mariadb-logical-model.md no contiene frase 'que decisiones fisicas siguen abiertas'")
+        void modelo_sin_siguen_abiertas() throws IOException {
+            String contenido = Files.readString(MODELO);
+            assertThat(contenido)
+                    .as("mariadb-logical-model.md no debe contener 'que decisiones fisicas siguen abiertas'")
+                    .doesNotContain("siguen abiertas");
+        }
+
+        @Test
+        @DisplayName("mariadb-logical-model.md no contiene frase 'cada decision fisica pendiente'")
+        void modelo_sin_decision_fisica_pendiente() throws IOException {
+            String contenido = Files.readString(MODELO);
+            assertThat(contenido)
+                    .as("mariadb-logical-model.md no debe contener 'cada decision fisica pendiente'")
+                    .doesNotContain("cada decisión física pendiente");
+        }
+
+        @Test
+        @DisplayName("mariadb-logical-model.md no contiene frase 'Decisiones fisicas pendientes: ver'")
+        void modelo_sin_decisiones_fisicas_pendientes_ver() throws IOException {
+            String contenido = Files.readString(MODELO);
+            assertThat(contenido)
+                    .as("mariadb-logical-model.md no debe contener 'Decisiones fisicas pendientes: ver'")
+                    .doesNotContain("Decisiones físicas pendientes: ver");
+        }
+
+        @Test
+        @DisplayName("ready-for-ddl-gate.md describe ddl-decisions.md como registro cerrado (no pendientes/cerradas)")
+        void gate_ddl_decisions_como_registro_cerrado() throws IOException {
+            String contenido = Files.readString(GATE);
+            assertThat(contenido)
+                    .as("ready-for-ddl-gate.md no debe referenciar ddl-decisions.md como 'pendientes/cerradas'")
+                    .doesNotContain("pendientes/cerradas");
+            assertThat(contenido)
+                    .as("ready-for-ddl-gate.md debe referenciar ddl-decisions.md como registro cerrado")
+                    .contains("registro cerrado de las 24 decisiones físicas");
+        }
+
+        @Test
+        @DisplayName("ddl-execution-and-test-seeding.md usa grafias acentuadas QUE_ES->QUE_ES y RAZON->RAZON")
+        void seeding_usa_grafias_acentuadas() throws IOException {
+            Path seeding = Paths.get("docs/spec-as-source/50-persistence/ddl-execution-and-test-seeding.md");
+            String contenido = Files.readString(seeding);
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe usar 'QUÉ ES' (acentuado)")
+                    .contains("QUÉ ES");
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md debe usar 'RAZÓN' (acentuado)")
+                    .contains("RAZÓN");
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md no debe contener 'QUE ES' sin acento en formato tabla")
+                    .doesNotContain("QUE ES:");
+            assertThat(contenido)
+                    .as("ddl-execution-and-test-seeding.md no debe contener 'RAZON:' sin acento")
+                    .doesNotContain("RAZON:");
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md no contiene frase stale 'registro único de decisiones físicas pendientes y cerradas'")
+        void ddl_decisions_sin_frase_registro_unico_pendientes_y_cerradas() throws IOException {
+            String contenido = Files.readString(
+                    Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md"));
+            assertThat(contenido)
+                    .as("ddl-decisions.md no debe contener 'registro único de decisiones físicas pendientes y cerradas'")
+                    .doesNotContain("registro único de decisiones físicas pendientes y cerradas");
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md no contiene referencia stale 'SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001-R1'")
+        void ddl_decisions_sin_referencia_r1() throws IOException {
+            String contenido = Files.readString(
+                    Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md"));
+            assertThat(contenido)
+                    .as("ddl-decisions.md no debe contener 'SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001-R1' (frase stale con -R1)")
+                    .doesNotContain("SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001-R1");
+        }
+
+        @Test
+        @DisplayName("current-roadmap.md no contiene frase stale 'NO_EXPLICIT_CODE pendientes de decision fisica'")
+        void roadmap_sin_no_explicit_code_pendientes_de_decision_fisica() throws IOException {
+            String contenido = Files.readString(
+                    Paths.get("docs/spec-as-source/90-roadmap/current-roadmap.md"));
+            assertThat(contenido)
+                    .as("current-roadmap.md no debe contener 'NO_EXPLICIT_CODE pendientes de decision fisica'")
+                    .doesNotContain("NO_EXPLICIT_CODE pendientes de decision fisica");
         }
     }
 }

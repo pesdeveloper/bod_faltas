@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.domain.model;
 
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoObligacionPago;
+import ar.gob.malvinas.faltas.core.domain.enums.OrigenObligacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoObligacionPago;
 
 import java.math.BigDecimal;
@@ -18,6 +19,9 @@ import java.time.LocalDateTime;
  * PAGO_VOLUNTARIO: nace de valorizacion confirmada, falloId NULL.
  * CONDENA: exige falloId y valorizacion coherente.
  *
+ * origenObligacion obligatorio, default FALTAS para nuevas obligaciones internas (DECISION_DDL-PAGO-03).
+ * obligacionReemplazadaId nullable: apunta a la obligacion anterior reemplazada.
+ *
  * Montos escala 2.
  */
 public class FalActaObligacionPago {
@@ -27,6 +31,8 @@ public class FalActaObligacionPago {
     private final Long actaId;
     private final Long personaId;
     private final TipoObligacionPago tipoObligacion;
+    private OrigenObligacionPago origenObligacion;
+    private Long obligacionReemplazadaId;
     private Long valorizacionId;
     private Long falloId;
     private final BigDecimal montoOriginal;
@@ -68,6 +74,7 @@ public class FalActaObligacionPago {
         this.actaId = actaId;
         this.personaId = personaId;
         this.tipoObligacion = tipoObligacion;
+        this.origenObligacion = OrigenObligacionPago.FALTAS;
         this.montoOriginal = montoOriginal.setScale(2, RoundingMode.HALF_UP);
         this.estadoObligacion = EstadoObligacionPago.DETERMINADA;
         this.fhDeterminacion = fhDeterminacion;
@@ -83,6 +90,17 @@ public class FalActaObligacionPago {
     public Long getActaId() { return actaId; }
     public Long getPersonaId() { return personaId; }
     public TipoObligacionPago getTipoObligacion() { return tipoObligacion; }
+    public OrigenObligacionPago getOrigenObligacion() { return origenObligacion; }
+    public void setOrigenObligacion(OrigenObligacionPago v) {
+        if (v == null) throw new IllegalArgumentException("origenObligacion no puede ser null");
+        this.origenObligacion = v;
+    }
+    public Long getObligacionReemplazadaId() { return obligacionReemplazadaId; }
+    public void setObligacionReemplazadaId(Long v) {
+        if (v != null && v.equals(this.id))
+            throw new IllegalArgumentException("obligacionReemplazadaId no puede ser igual al propio id");
+        this.obligacionReemplazadaId = v;
+    }
     public Long getValorizacionId() { return valorizacionId; }
     public void setValorizacionId(Long v) { this.valorizacionId = v; }
     public Long getFalloId() { return falloId; }
@@ -141,6 +159,8 @@ public class FalActaObligacionPago {
                 id, actaId, personaId, tipoObligacion, montoOriginal,
                 fhDeterminacion, idUserDeterminacion, fhAlta, idUserAlta);
         c.versionRow = this.versionRow;
+        c.origenObligacion = this.origenObligacion;
+        c.obligacionReemplazadaId = this.obligacionReemplazadaId;
         c.valorizacionId = this.valorizacionId;
         c.falloId = this.falloId;
         c.estadoObligacion = this.estadoObligacion;

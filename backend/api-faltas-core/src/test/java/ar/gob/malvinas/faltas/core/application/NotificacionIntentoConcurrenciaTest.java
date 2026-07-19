@@ -49,7 +49,7 @@ class NotificacionIntentoConcurrenciaTest {
         var pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         var apelRepo = new InMemoryApelacionActaRepository();
         var pagoCondRepo = new InMemoryPagoCondenaRepository();
-        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
+        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         intentoService = new NotificacionIntentoService(
                 intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, loteRepo, FaltasClockTestSupport.FIXED,

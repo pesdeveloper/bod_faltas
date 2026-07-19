@@ -83,7 +83,7 @@ class DocumentoGeneracionDesdePlantillaTest {
 
         ar.gob.malvinas.faltas.core.repository.NotificacionRepository notifRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo, plantillaRepo,

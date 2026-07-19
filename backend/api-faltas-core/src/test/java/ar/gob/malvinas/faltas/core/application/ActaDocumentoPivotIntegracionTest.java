@@ -54,7 +54,7 @@ class ActaDocumentoPivotIntegracionTest {
         recalculador = new SnapshotRecalculador(
                 eventoRepo, docRepo, new InMemoryNotificacionRepository(),
                 pagoVolRepo, falloRepo, new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
         // Inyectar pivot via reflection (campo @Autowired(required=false))
         ReflectionTestUtils.setField(recalculador, "actaDocumentoRepository", pivotRepo);
 

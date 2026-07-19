@@ -41,6 +41,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRep
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -69,6 +72,7 @@ class PersonaIntegracionTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         personaRepo = new InMemoryPersonaRepository();
         domRepo = new InMemoryPersonaDomicilioRepository();
         actaRepo = new InMemoryActaRepository();
@@ -84,11 +88,14 @@ class PersonaIntegracionTest {
                 new InMemoryPagoVoluntarioRepository(),
                 new InMemoryFalloActaRepository(),
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), personaRepo, FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // Acta con persona

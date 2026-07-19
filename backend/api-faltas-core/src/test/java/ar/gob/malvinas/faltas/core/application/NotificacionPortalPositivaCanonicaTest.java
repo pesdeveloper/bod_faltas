@@ -72,6 +72,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -132,6 +135,7 @@ class NotificacionPortalPositivaCanonicaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         relojFijo = new FaltasClock(Clock.fixed(INSTANTE, FaltasClock.ZONE));
         relojPortal = new CountingClock(relojFijo);
         contadorNroActa = 70_000_000;
@@ -151,7 +155,7 @@ class NotificacionPortalPositivaCanonicaTest {
         var pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo);
+                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), relojFijo);
@@ -181,6 +185,9 @@ class NotificacionPortalPositivaCanonicaTest {
                 new NoOpBloqueantesMaterialesChecker(),
                 PlazosTestSupport.conCalendarioVacio(relojFijo));
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // 1. Pieza previa con intento previo activo
@@ -1088,7 +1095,7 @@ class NotificacionPortalPositivaCanonicaTest {
             PlazosAdministrativosService plazos, BloqueantesMaterialesChecker checker) {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, new InMemoryPagoVoluntarioRepository(),
-                falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo);
+                falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), relojFijo, snapshotRepo);
         return new NotificacionIntentoService(
                 intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc,
                 loteRepo, relojPortal, falloRepo, docRepo, checker, plazos);

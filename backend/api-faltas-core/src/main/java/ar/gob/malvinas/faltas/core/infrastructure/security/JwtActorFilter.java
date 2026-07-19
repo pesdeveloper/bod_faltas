@@ -45,6 +45,9 @@ public class JwtActorFilter extends OncePerRequestFilter {
     static final String PREFIJO_NOTIF_POSITIVA = "/api/faltas/notificaciones/";
     static final String SUFIJO_NOTIF_POSITIVA = "/positiva";
     static final String PREFIJO_ACTAS = "/api/faltas/actas/";
+    static final String RUTA_LABRAR = "/api/faltas/actas/labrar";
+    static final String SUFIJO_COMPLETAR_CAPTURA = "/completar-captura";
+    static final String SUFIJO_ENRIQUECER = "/enriquecer";
     static final String SUFIJO_VENCER_PLAZO = "/firmeza/vencer-plazo-apelacion";
     static final String SUFIJO_APELACION_RECHAZADA = "/firmeza/por-apelacion-rechazada";
     static final String SUFIJO_PAGO_CONDENA_INFORMAR = "/pago-condena/informar";
@@ -114,6 +117,11 @@ public class JwtActorFilter extends OncePerRequestFilter {
         if (uri.endsWith(SUFIJO_FIRMAR_REAL)) return true;
         if (uri.endsWith(SUFIJO_ENVIAR_NOTIF)) return true;
         if (uri.startsWith(PREFIJO_NOTIF_POSITIVA) && uri.endsWith(SUFIJO_NOTIF_POSITIVA)) return true;
+        if (RUTA_LABRAR.equals(uri) && "POST".equalsIgnoreCase(request.getMethod())) return true;
+        if (uri.startsWith(PREFIJO_ACTAS) && uri.endsWith(SUFIJO_COMPLETAR_CAPTURA)
+                && "POST".equalsIgnoreCase(request.getMethod())) return true;
+        if (uri.startsWith(PREFIJO_ACTAS) && uri.endsWith(SUFIJO_ENRIQUECER)
+                && "POST".equalsIgnoreCase(request.getMethod())) return true;
         if (uri.startsWith(PREFIJO_ACTAS) && uri.endsWith(SUFIJO_VENCER_PLAZO)
                 && "POST".equalsIgnoreCase(request.getMethod())) return true;
         if (uri.startsWith(PREFIJO_ACTAS) && uri.endsWith(SUFIJO_APELACION_RECHAZADA)

@@ -33,6 +33,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalNormativaFaltas;
 import ar.gob.malvinas.faltas.core.domain.model.FalTarifarioUnidadFaltas;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaArticuloInfringidoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEventoRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaValorizacionItemRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaValorizacionRepository;
@@ -98,9 +99,11 @@ class ValorizacionInvariantesR1Test {
         private SnapshotRecalculador recalcConValorizacion;
         private SnapshotRecalculador recalcSinValorizacion;
         private FalActa acta;
+        private InMemoryActaSnapshotRepository snapshotRepo;
 
         @BeforeEach
         void setUp() {
+            snapshotRepo = new InMemoryActaSnapshotRepository();
             actaRepo = new InMemoryActaRepository();
             normativaRepo = new InMemoryNormativaRepository();
             articuloImputadoRepo = new InMemoryActaArticuloInfringidoRepository();
@@ -122,10 +125,10 @@ class ValorizacionInvariantesR1Test {
 
             recalcConValorizacion = new SnapshotRecalculador(
                     eventoRepo, docRepo, notifRepo, pagoVRepo, falloRepo, apelacionRepo, pagoCondenaRepo,
-                    valorizacionService, FaltasClockTestSupport.FIXED);
+                    valorizacionService, FaltasClockTestSupport.FIXED, snapshotRepo);
 
             recalcSinValorizacion = new SnapshotRecalculador(
-                    eventoRepo, docRepo, notifRepo, pagoVRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                    eventoRepo, docRepo, notifRepo, pagoVRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
             acta = actaRepo.guardar(new FalActa(actaRepo.nextId(), "uuid-r1a", TipoActa.TRANSITO,
                     1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,

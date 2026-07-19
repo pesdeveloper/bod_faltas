@@ -113,14 +113,14 @@ posteriores cuando sus reglas sean absorbidas tematicamente.
 
 [FALLO-STATE-001] El enum `EstadoFalloActa` contiene exactamente estos valores:
 
-| Valor | Descripcion |
-|---|---|
-| `PENDIENTE_FIRMA` | Fallo dictado; documento generado; pendiente de firma obligatoria |
-| `PENDIENTE_NOTIFICACION` | Ultima firma obligatoria confirmada; `fhFirma` registrado; fallo listo para continuar el circuito notificatorio. La cabecera `FalNotificacion` se prepara cuando la plantilla es notificable. |
-| `NOTIFICADO` | Resultado notificatorio positivo registrado; `fhNotificacion` registrado |
-| `FIRME` | Firmeza de condena declarada; `fhFirmeza` registrado |
-| `REEMPLAZADO` | Fallo sustituido por otro (estado lateral terminal) |
-| `SIN_EFECTO` | Fallo invalidado o dejado sin efecto (estado lateral terminal) |
+| Valor | Codigo | Descripcion |
+|---|---|---|
+| `PENDIENTE_FIRMA` | 1 | Fallo dictado; documento generado; pendiente de firma obligatoria |
+| `PENDIENTE_NOTIFICACION` | 2 | Ultima firma obligatoria confirmada; `fhFirma` registrado; fallo listo para continuar el circuito notificatorio. La cabecera `FalNotificacion` se prepara cuando la plantilla es notificable. |
+| `NOTIFICADO` | 3 | Resultado notificatorio positivo registrado; `fhNotificacion` registrado |
+| `FIRME` | 4 | Firmeza de condena declarada; `fhFirmeza` registrado |
+| `REEMPLAZADO` | 5 | Fallo sustituido por otro (estado lateral terminal) |
+| `SIN_EFECTO` | 6 | Fallo invalidado o dejado sin efecto (estado lateral terminal) |
 
 > `DICTADO` y `FIRMADO` no son estados del fallo. Son hechos persistidos en
 > `fhDictado` y `fhFirma` respectivamente. No deben reintroducirse como valores

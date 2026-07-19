@@ -169,4 +169,63 @@ class ObligacionPagoTest {
             assertThat(repo.findByActaId(99L)).isEmpty();
         }
     }
+
+    @Nested
+    @DisplayName("H-validaciones: origenObligacion y obligacionReemplazadaId (DECISION_DDL-PAGO-03)")
+    class HValidaciones {
+
+        @Test
+        @DisplayName("H-1: origenObligacion default FALTAS al construir")
+        void origen_default_faltas() {
+            FalActaObligacionPago o = nueva(10L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
+            assertThat(o.getOrigenObligacion())
+                    .as("origenObligacion por defecto debe ser FALTAS")
+                    .isEqualTo(ar.gob.malvinas.faltas.core.domain.enums.OrigenObligacionPago.FALTAS);
+        }
+
+        @Test
+        @DisplayName("H-2: setOrigenObligacion(null) -> IllegalArgumentException")
+        void origen_null_rechazado() {
+            FalActaObligacionPago o = nueva(11L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
+            assertThatThrownBy(() -> o.setOrigenObligacion(null))
+                    .as("setOrigenObligacion(null) debe lanzar IllegalArgumentException")
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("null");
+        }
+
+        @Test
+        @DisplayName("H-3: setOrigenObligacion(valor valido) se acepta")
+        void origen_valido_aceptado() {
+            FalActaObligacionPago o = nueva(12L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
+            o.setOrigenObligacion(ar.gob.malvinas.faltas.core.domain.enums.OrigenObligacionPago.FALTAS);
+            assertThat(o.getOrigenObligacion())
+                    .isEqualTo(ar.gob.malvinas.faltas.core.domain.enums.OrigenObligacionPago.FALTAS);
+        }
+
+        @Test
+        @DisplayName("H-4: setObligacionReemplazadaId(mismo id) -> IllegalArgumentException (autorreferencia)")
+        void obligacion_reemplazada_autorreferencia_rechazada() {
+            FalActaObligacionPago o = nueva(20L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
+            assertThatThrownBy(() -> o.setObligacionReemplazadaId(20L))
+                    .as("obligacionReemplazadaId == id debe lanzar IllegalArgumentException")
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("id");
+        }
+
+        @Test
+        @DisplayName("H-5: setObligacionReemplazadaId(null) se acepta (nullable)")
+        void obligacion_reemplazada_null_aceptado() {
+            FalActaObligacionPago o = nueva(21L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
+            o.setObligacionReemplazadaId(null);
+            assertThat(o.getObligacionReemplazadaId()).isNull();
+        }
+
+        @Test
+        @DisplayName("H-6: setObligacionReemplazadaId(id diferente) se acepta")
+        void obligacion_reemplazada_id_diferente_aceptado() {
+            FalActaObligacionPago o = nueva(22L, 1L, TipoObligacionPago.PAGO_VOLUNTARIO, BigDecimal.TEN);
+            o.setObligacionReemplazadaId(21L);
+            assertThat(o.getObligacionReemplazadaId()).isEqualTo(21L);
+        }
+    }
 }
