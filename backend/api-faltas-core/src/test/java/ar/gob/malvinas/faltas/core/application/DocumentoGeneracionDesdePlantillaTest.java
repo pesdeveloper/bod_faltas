@@ -113,7 +113,7 @@ class DocumentoGeneracionDesdePlantillaTest {
 
     private FalDocumentoPlantilla crearPlantillaActivaNoNumerada(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Nombre " + codigo, null,
+                codigo, "Nombre " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -125,7 +125,7 @@ class DocumentoGeneracionDesdePlantillaTest {
 
     private FalDocumentoPlantilla crearPlantillaActivaNumeradaMomentoEnvio(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Nombre " + codigo, null,
+                codigo, "Nombre " + codigo,
                 TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                 TipoFirmaReq.FIRMA_AUTORIDAD,
                 true, MomentoNumeracionDocu.AL_ENVIAR_A_FIRMA,
@@ -140,7 +140,7 @@ class DocumentoGeneracionDesdePlantillaTest {
 
     private FalDocumentoPlantilla crearPlantillaActivaFirmaMultiple(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Nombre " + codigo, null,
+                codigo, "Nombre " + codigo,
                 TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                 TipoFirmaReq.FIRMA_MULTIPLE,
                 true, MomentoNumeracionDocu.AL_FIRMAR,
@@ -158,7 +158,7 @@ class DocumentoGeneracionDesdePlantillaTest {
 
     private FalDocumentoPlantilla crearPlantillaActivaFirmaInspector(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Nombre " + codigo, null,
+                codigo, "Nombre " + codigo,
                 TipoDocu.ACTA_INFRACCION, AccionDocumental.GENERAR_ACTA_INFRACCION, TipoActa.TRANSITO,
                 TipoFirmaReq.FIRMA_INSPECTOR,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -331,7 +331,7 @@ class DocumentoGeneracionDesdePlantillaTest {
         void falla_si_plantilla_no_activa() {
             FalActa acta = crearActa();
             CrearDocumentoPlantillaCommand cmdP = new CrearDocumentoPlantillaCommand(
-                    "PLNT-8C3-013", "Inactiva", null,
+                    "PLNT-8C3-013", "Inactiva",
                     TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,
@@ -350,7 +350,7 @@ class DocumentoGeneracionDesdePlantillaTest {
         void falla_si_plantilla_vencida() {
             FalActa acta = crearActa();
             CrearDocumentoPlantillaCommand cmdP = new CrearDocumentoPlantillaCommand(
-                    "PLNT-8C3-014", "Vencida", null,
+                    "PLNT-8C3-014", "Vencida",
                     TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,
@@ -416,7 +416,7 @@ class DocumentoGeneracionDesdePlantillaTest {
         void al_crear_intenta_numerar_falla_sin_dependencia() {
             FalActa acta = crearActa();
             CrearDocumentoPlantillaCommand cmdP = new CrearDocumentoPlantillaCommand(
-                    "PLNT-8C3-018", "Al crear", null,
+                    "PLNT-8C3-018", "Al crear",
                     TipoDocu.ACTA_INFRACCION, AccionDocumental.GENERAR_ACTA_INFRACCION, TipoActa.TRANSITO,
                     TipoFirmaReq.FIRMA_INSPECTOR,
                     true, MomentoNumeracionDocu.AL_CREAR,
@@ -449,7 +449,7 @@ class DocumentoGeneracionDesdePlantillaTest {
         void plantilla_numerada_al_emitir_genera_borrador_sin_nro() {
             FalActa acta = crearActa();
             CrearDocumentoPlantillaCommand cmdP = new CrearDocumentoPlantillaCommand(
-                    "PLNT-8C3-020", "Al emitir", null,
+                    "PLNT-8C3-020", "Al emitir",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_AUTORIDAD,
                     true, MomentoNumeracionDocu.AL_EMITIR,

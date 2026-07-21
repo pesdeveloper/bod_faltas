@@ -60,7 +60,7 @@ class FalPersonaDomicilioTest {
                 null, null,
                 "0750100001", 1L, "12345", 2L,
                 "Av. Pioneros 100", null, true, null, null,
-                "Av. Pioneros 100, Malvinas Argentinas", null, false,
+                "Av. Pioneros 100, Malvinas Argentinas", false,
                 null, null, null, "SYS");
     }
 
@@ -72,7 +72,7 @@ class FalPersonaDomicilioTest {
                 1001L, 2001L,
                 null, null, null, null,
                 "Rivadavia 500", 500, false, null, "1002",
-                "Rivadavia 500, San Martin", null, false,
+                "Rivadavia 500, San Martin", false,
                 null, null, null, "SYS");
     }
 
@@ -167,7 +167,7 @@ class FalPersonaDomicilioTest {
                             true, false, false,
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, UT_MALVINAS,
                             null, null, "0750100001", 1L, "12345", 2L,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("idProvincia");
@@ -182,7 +182,7 @@ class FalPersonaDomicilioTest {
                             true, false, false,
                             PROV_MALVINAS, UnidadTerritorialTipo.DEPARTAMENTO, UT_MALVINAS,
                             null, null, "0750100001", 1L, "12345", 2L,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("MUNICIPIO");
@@ -197,7 +197,7 @@ class FalPersonaDomicilioTest {
                             true, false, false,
                             PROV_MALVINAS, UnidadTerritorialTipo.MUNICIPIO, 99999,
                             null, null, "0750100001", 1L, "12345", 2L,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("60515");
@@ -212,7 +212,7 @@ class FalPersonaDomicilioTest {
                             true, false, false,
                             PROV_MALVINAS, UnidadTerritorialTipo.MUNICIPIO, UT_MALVINAS,
                             1001L, null, "0750100001", 1L, "12345", 2L,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("idLocalidad");
@@ -262,7 +262,7 @@ class FalPersonaDomicilioTest {
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                             1001L, 2001L,
                             "0750100001", null, null, null,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("locales Malvinas");
@@ -278,7 +278,7 @@ class FalPersonaDomicilioTest {
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                             1001L, 2001L,
                             null, null, "12345", null,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("locales Malvinas");
@@ -303,7 +303,7 @@ class FalPersonaDomicilioTest {
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                             1001L, 2001L,
                             null, null, null, null,
-                            null, 100, true, null, null, null, null, false,
+                            null, 100, true, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("altura");
@@ -319,7 +319,7 @@ class FalPersonaDomicilioTest {
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                             1001L, 2001L,
                             null, null, null, null,
-                            null, -5, false, null, null, null, null, false,
+                            null, -5, false, null, null, null, false,
                             null, null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("negativa");
@@ -344,7 +344,7 @@ class FalPersonaDomicilioTest {
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                             1001L, 2001L,
                             null, null, null, null,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             BigDecimal.valueOf(-34.5), null, null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("juntos");
@@ -360,7 +360,7 @@ class FalPersonaDomicilioTest {
                             (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                             1001L, 2001L,
                             null, null, null, null,
-                            null, null, true, null, null, null, null, false,
+                            null, null, true, null, null, null, false,
                             BigDecimal.valueOf(-34.5), BigDecimal.valueOf(-58.5), null, "SYS"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("origenUbicacion");
@@ -375,7 +375,7 @@ class FalPersonaDomicilioTest {
                     (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                     1001L, 2001L,
                     null, null, null, null,
-                    null, null, true, null, null, null, null, false,
+                    null, null, true, null, null, null, false,
                     BigDecimal.valueOf(-34.5), BigDecimal.valueOf(-58.5),
                     OrigenUbicacion.PUNTO_MANUAL, "SYS");
             assertThat(d.tieneCoordenadas()).isTrue();
@@ -403,7 +403,7 @@ class FalPersonaDomicilioTest {
                     PROV_MALVINAS, UnidadTerritorialTipo.MUNICIPIO, UT_MALVINAS,
                     null, null, "0750100002", 1L, "12346", 2L,
                     "Bolivar 50", null, true, null, null,
-                    "Bolivar 50, Malvinas Argentinas", null, false,
+                    "Bolivar 50, Malvinas Argentinas", false,
                     null, null, null, "SYS");
 
             domRepo.marcarPrincipal(d2.getId());
@@ -436,7 +436,7 @@ class FalPersonaDomicilioTest {
                     PROV_MALVINAS, UnidadTerritorialTipo.MUNICIPIO, UT_MALVINAS,
                     null, null, "0750100002", 1L, "12346", 2L,
                     "Calle Legal 1", null, true, null, null,
-                    "Calle Legal 1, Malvinas Argentinas", null, false,
+                    "Calle Legal 1, Malvinas Argentinas", false,
                     null, null, null, "SYS");
 
             assertThat(domRepo.buscarPrincipalActivo(personaId, TipoDomicilio.REAL)).isPresent();
@@ -466,7 +466,7 @@ class FalPersonaDomicilioTest {
                     true, false, false,
                     (short) 1, UnidadTerritorialTipo.MUNICIPIO, 62049,
                     1001L, null, null, null, null, null,
-                    null, null, true, null, null, "Exterior", null, false,
+                    null, null, true, null, null, "Exterior", false,
                     null, null, null, "SYS");
 
             List<FalPersonaDomicilio> notificables = domRepo.buscarNotificablesPorPersonaId(personaId);
@@ -642,7 +642,7 @@ class FalPersonaDomicilioTest {
                 null, null,
                 null, null, null, null,
                 "Calle sin numero", null, true, null, null,
-                "Calle sin numero, localidad desconocida", null, true,
+                "Calle sin numero, localidad desconocida", true,
                 null, null, null, "SYS");
         assertThat(d.isSiNormalizadoParcial()).isTrue();
         assertThat(d.getCalleTxt()).isEqualTo("Calle sin numero");

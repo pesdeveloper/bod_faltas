@@ -17,10 +17,10 @@ import java.time.LocalDateTime;
 public class FalActaContravencion {
 
     private final Long actaId;
-    private Long idSujI;
-    private Long idBieI;
-    private Long idSujC;
-    private Long idBieC;
+    private Integer idSujI;
+    private Integer idBieI;
+    private Integer idSujC;
+    private Integer idBieC;
     private Short circ;
     private String secc;
     private String frac;
@@ -61,22 +61,34 @@ public class FalActaContravencion {
 
     public Long getActaId() { return actaId; }
 
-    public Long getIdSujI() { return idSujI; }
-    public Long getIdBieI() { return idBieI; }
+    public Integer getIdSujI() { return idSujI; }
+    public Integer getIdBieI() { return idBieI; }
 
-    public void setSujetoInmueble(Long idSujI, Long idBieI) {
+    public void setSujetoInmueble(Integer idSujI, Integer idBieI) {
         if (siNomenclaturaManual && idBieI != null)
             throw new IllegalArgumentException("idBieI debe ser null en carga manual excepcional");
+        if (idSujI != null && (idSujI < 1 || idSujI > 255))
+            throw new IllegalArgumentException(
+                    "idSujI debe estar entre 1 y 255; valor: " + idSujI);
+        if (idBieI != null && (idBieI < 1 || idBieI > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBieI debe estar entre 1 y 9.999.999; valor: " + idBieI);
         this.idSujI = idSujI;
         this.idBieI = idBieI;
     }
 
-    public Long getIdSujC() { return idSujC; }
-    public Long getIdBieC() { return idBieC; }
+    public Integer getIdSujC() { return idSujC; }
+    public Integer getIdBieC() { return idBieC; }
 
-    public void setSujetoComercio(Long idSujC, Long idBieC) {
+    public void setSujetoComercio(Integer idSujC, Integer idBieC) {
         if ((idSujC == null) != (idBieC == null))
             throw new IllegalArgumentException("Id_Suj_c e Id_Bie_c deben informarse juntos");
+        if (idSujC != null && (idSujC < 1 || idSujC > 255))
+            throw new IllegalArgumentException(
+                    "idSujC debe estar entre 1 y 255; valor: " + idSujC);
+        if (idBieC != null && (idBieC < 1 || idBieC > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBieC debe estar entre 1 y 9.999.999; valor: " + idBieC);
         this.idSujC = idSujC;
         this.idBieC = idBieC;
     }

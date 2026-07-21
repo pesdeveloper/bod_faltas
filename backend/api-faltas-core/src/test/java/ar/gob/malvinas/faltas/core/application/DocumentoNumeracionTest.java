@@ -205,7 +205,7 @@ class DocumentoNumeracionTest {
     private FalDocumentoPlantilla crearPlantillaConNumeracion(String codigo, TipoDocu tipoDocu,
             MomentoNumeracionDocu momento) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 tipoDocu, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 true, momento,
@@ -216,7 +216,7 @@ class DocumentoNumeracionTest {
 
     private FalDocumentoPlantilla crearPlantillaSinNumeracion(String codigo) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla sin numeracion " + codigo, null,
+                codigo, "Plantilla sin numeracion " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -506,7 +506,7 @@ class DocumentoNumeracionTest {
         void falla_si_sin_plantilla() {
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, 1L,
-                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(), "sin plantilla");
+                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() ->

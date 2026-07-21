@@ -80,7 +80,7 @@ class LoteCorreoIntentosCanonicoTest {
                 null, null, null, null,
                 "Av. Libertad 100", 100, false,
                 null, null, "Av. Libertad 100, Malvinas",
-                null, false, null, null, null,
+                false, null, null, null,
                 FaltasClockTestSupport.FIXED.now(), ACTOR));
         FalActa acta = new FalActa(actaId, "UUID-" + actaId, TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 9), FaltasClockTestSupport.FIXED.now(),

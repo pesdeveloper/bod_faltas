@@ -123,7 +123,7 @@ class NotificacionEnvioIntentoTest {
         Long id = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 id, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                FaltasClockTestSupport.FIXED.now(), "Documento Test",
+                FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.FIRMADO, TipoFirmaReq.NO_REQUIERE,
                 null, FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
@@ -134,7 +134,7 @@ class NotificacionEnvioIntentoTest {
         Long id = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 id, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                FaltasClockTestSupport.FIXED.now(), "Sin firmar",
+                FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.NO_REQUIERE,
                 null, FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
@@ -151,7 +151,7 @@ class NotificacionEnvioIntentoTest {
                 null, null,
                 null, null, null, null,
                 "Av. Test 100", 100, false, null, "1000",
-                "Av. Test 100, Test Ciudad", null, false,
+                "Av. Test 100, Test Ciudad", false,
                 null, null, null,
                 FaltasClockTestSupport.FIXED.now(), "sys");
         domicilioRepo.guardar(d);

@@ -62,7 +62,7 @@ public class DocumentoController {
             @PathVariable Long idActa,
             @Valid @RequestBody GenerarDocumentoRequest req) {
         GenerarDocumentoCommand cmd = new GenerarDocumentoCommand(
-                idActa, req.tipoDocumento(), req.descripcion());
+                idActa, req.tipoDocumento());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(documentoService.generarDocumento(cmd));
     }

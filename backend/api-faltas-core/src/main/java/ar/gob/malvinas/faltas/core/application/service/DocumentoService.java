@@ -144,8 +144,7 @@ public class DocumentoService {
                 idDoc,
                 acta.getId(),
                 cmd.tipoDocumento(),
-                faltasClock.now(),
-                cmd.descripcion()
+                faltasClock.now()
         );
         documentoRepository.guardar(doc);
 
@@ -202,7 +201,6 @@ public class DocumentoService {
                 cmd.idActa(),
                 plantilla.getTipoDocu(),
                 faltasClock.now(),
-                null,
                 EstadoDocu.BORRADOR,
                 plantilla.getTipoFirmaReq(),
                 plantilla.getId(),

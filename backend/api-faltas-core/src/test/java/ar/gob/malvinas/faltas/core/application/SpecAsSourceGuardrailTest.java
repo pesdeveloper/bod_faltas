@@ -1887,15 +1887,15 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("ddl-decisions.md registra exactamente 24 decisiones cerradas (20 originales + 4 transversales)")
+        @DisplayName("ddl-decisions.md registra exactamente 27 decisiones cerradas (20 originales + 4 transversales + 3 CORRECCION-10)")
         void exactamente_24_decisiones_cerradas() throws IOException {
             String contenido = leerDdlDecisiones();
             long conteo = contenido.lines()
                     .filter(l -> l.startsWith("### `DECISION_DDL-"))
                     .count();
             assertThat(conteo)
-                    .as("ddl-decisions.md debe registrar exactamente 24 decisiones cerradas (20 originales + 4 transversales)")
-                    .isEqualTo(24L);
+                    .as("ddl-decisions.md debe registrar exactamente 27 decisiones cerradas (20 originales + 4 transversales + 3 CORRECCION-10)")
+                    .isEqualTo(27L);
         }
 
         @Test
@@ -2419,7 +2419,7 @@ class SpecAsSourceGuardrailTest {
             LocalDateTime ahora = LocalDateTime.now();
 
             // Paso 1: insertar version 0
-            FalDocumento doc = new FalDocumento(1L, 10L, TipoDocu.ACTA_INFRACCION, ahora, "desc");
+            FalDocumento doc = new FalDocumento(1L, 10L, TipoDocu.ACTA_INFRACCION, ahora);
             repo.guardar(doc);
             assertThat(doc.getVersionRow()).as("INSERT: versionRow debe ser 0").isEqualTo(0);
 
@@ -2431,7 +2431,7 @@ class SpecAsSourceGuardrailTest {
             assertThat(lectA).as("copy-on-read: lectA y lectB deben ser instancias distintas").isNotSameAs(lectB);
 
             // Paso 5: modificar lectA y guardar
-            lectA.setDescripcion("modificado A");
+            lectA.setNroDocu("modificado A");
             repo.guardar(lectA);
 
             // Paso 6: versión incrementada en store
@@ -2445,8 +2445,8 @@ class SpecAsSourceGuardrailTest {
 
             // Paso 8: mutar una copia no afecta el store
             FalDocumento copia = repo.buscarPorId(1L).orElseThrow();
-            copia.setDescripcion("mutacion post-lectura");
-            assertThat(repo.buscarPorId(1L).orElseThrow().getDescripcion())
+            copia.setNroDocu("mutacion post-lectura");
+            assertThat(repo.buscarPorId(1L).orElseThrow().getNroDocu())
                     .as("mutar copia no debe modificar el store")
                     .isNotEqualTo("mutacion post-lectura");
         }

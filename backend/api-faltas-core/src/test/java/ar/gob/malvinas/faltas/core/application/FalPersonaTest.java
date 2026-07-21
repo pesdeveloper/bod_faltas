@@ -253,7 +253,7 @@ class FalPersonaTest {
         void idBie_sin_idSuj_rechazado() {
             FalPersona p = service.crear(TipoPersona.FISICA, null, null, "Test", null, null, null, null, null, "USR1");
             assertThatThrownBy(() ->
-                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, null, 42L, null, "USR1"))
+                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, null, 42, null, "USR1"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -262,7 +262,7 @@ class FalPersonaTest {
         void idSuj_debe_ser_20() {
             FalPersona p = service.crear(TipoPersona.FISICA, null, null, "Test", null, null, null, null, null, "USR1");
             assertThatThrownBy(() ->
-                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 99L, 42L, FaltasClockTestSupport.FIXED.now(), "USR1"))
+                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 99, 42, FaltasClockTestSupport.FIXED.now(), "USR1"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("20");
         }
@@ -272,9 +272,9 @@ class FalPersonaTest {
         void activa_exige_todos_campos() {
             FalPersona p = service.crear(TipoPersona.FISICA, null, null, "Test", null, null, null, null, null, "USR1");
             LocalDateTime fh = FaltasClockTestSupport.FIXED.now();
-            FalPersona act = service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 20L, 5001L, fh, "USR1");
-            assertThat(act.getIdSuj()).isEqualTo(20L);
-            assertThat(act.getIdBie()).isEqualTo(5001L);
+            FalPersona act = service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA, 20, 5001, fh, "USR1");
+            assertThat(act.getIdSuj()).isEqualTo(20);
+            assertThat(act.getIdBie()).isEqualTo(5001);
             assertThat(act.getSujBieEstado()).isEqualTo(SujBieEstado.ACTIVA);
             assertThat(act.tieneCuentaActiva()).isTrue();
         }
@@ -284,7 +284,7 @@ class FalPersonaTest {
         void sin_cuenta_rechaza_campos() {
             FalPersona p = service.crear(TipoPersona.FISICA, null, null, "Test", null, null, null, null, null, "USR1");
             assertThatThrownBy(() ->
-                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.SIN_CUENTA, 20L, null, null, "USR1"))
+                    service.actualizarVinculoIngresos(p.getId(), SujBieEstado.SIN_CUENTA, 20, null, null, "USR1"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -417,13 +417,13 @@ class FalPersonaTest {
         assertThat(p.getApellido()).isEqualTo("Desconocido");
     }
 
-    @Test
-    @DisplayName("Cuenta Ingresos ACTIVA: tieneCuentaActiva retorna true")
-    void persona_cuenta_activa() {
-        FalPersona p = service.crear(TipoPersona.FISICA, TipoDocumentoPersona.DNI, "45678901",
-                "ConCuenta", null, null, null, null, null, "USR1");
-        FalPersona act = service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA,
-                20L, 9001L, FaltasClockTestSupport.FIXED.now(), "SYS");
-        assertThat(act.tieneCuentaActiva()).isTrue();
-    }
+        @Test
+        @DisplayName("Cuenta Ingresos ACTIVA: tieneCuentaActiva retorna true")
+        void persona_cuenta_activa() {
+            FalPersona p = service.crear(TipoPersona.FISICA, TipoDocumentoPersona.DNI, "45678901",
+                    "ConCuenta", null, null, null, null, null, "USR1");
+            FalPersona act = service.actualizarVinculoIngresos(p.getId(), SujBieEstado.ACTIVA,
+                    20, 9001, FaltasClockTestSupport.FIXED.now(), "SYS");
+            assertThat(act.tieneCuentaActiva()).isTrue();
+        }
 }

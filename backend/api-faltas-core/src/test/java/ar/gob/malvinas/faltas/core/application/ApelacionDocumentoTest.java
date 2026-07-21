@@ -101,7 +101,7 @@ class ApelacionDocumentoTest {
                 "Dir", null, null, null, "Inf", nro, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
         actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriched"));
-        String docId = docService.generarDocumento(new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, "Acta")).idEntidadAfectada();
+        String docId = docService.generarDocumento(new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION)).idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(docId), "Insp", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(new EnviarNotificacionCommand(actaId, Long.parseLong(docId), CanalNotificacion.EMAIL, "test@malvinas.gob.ar", null, null, "test-user")).idEntidadAfectada();
         notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(notifId)), null, "test-actor"));

@@ -98,7 +98,7 @@ public class FalloActaService {
         Long idDoc = documentoRepository.nextId();
         FalDocumento doc = new FalDocumento(
                 idDoc, acta.getId(), TipoDocu.ACTO_ADMINISTRATIVO,
-                ahora, "Fallo absolutorio");
+                ahora);
         doc.setStorageKey("storage/" + acta.getId() + "/fallo/" + idDoc);
         documentoRepository.guardar(doc);
 
@@ -142,7 +142,7 @@ public class FalloActaService {
         Long idDoc = documentoRepository.nextId();
         FalDocumento doc = new FalDocumento(
                 idDoc, acta.getId(), TipoDocu.ACTO_ADMINISTRATIVO,
-                ahora, "Fallo condenatorio");
+                ahora);
         doc.setStorageKey("storage/" + acta.getId() + "/fallo/" + idDoc);
         documentoRepository.guardar(doc);
 

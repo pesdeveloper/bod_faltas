@@ -63,7 +63,7 @@ class ActaDocumentoConcurrenciaTest {
     }
 
     private FalDocumento crearDoc(Long id, TipoDocu tipo) {
-        FalDocumento doc = new FalDocumento(id, 1L, tipo, AHORA, "desc-" + id);
+        FalDocumento doc = new FalDocumento(id, 1L, tipo, AHORA);
         docRepo.guardar(doc);
         return doc;
     }

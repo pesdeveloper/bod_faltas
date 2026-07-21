@@ -51,7 +51,7 @@ public class InMemoryPersonaRepository implements PersonaRepository, ResettableI
     }
 
     @Override
-    public List<FalPersona> buscarPorIdSujBie(Long idSuj, Long idBie) {
+    public List<FalPersona> buscarPorIdSujBie(Integer idSuj, Integer idBie) {
         return store.values().stream()
                 .filter(p -> idSuj != null && idSuj.equals(p.getIdSuj())
                         && idBie != null && idBie.equals(p.getIdBie()))

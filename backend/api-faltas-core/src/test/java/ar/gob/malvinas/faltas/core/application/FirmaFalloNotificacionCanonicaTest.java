@@ -263,7 +263,7 @@ class FirmaFalloNotificacionCanonicaTest {
             // Plantilla notificable
             idPlantilla = plantillaRepo.nextPlantillaId();
             FalDocumentoPlantilla plantilla = new FalDocumentoPlantilla(
-                    idPlantilla, "PLT-FALLO-01", "Plantilla fallo canonico", null,
+                    idPlantilla, "PLT-FALLO-01", "Plantilla fallo canonico",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_INTERNA,
                     false, MomentoNumeracionDocu.NO_APLICA,
@@ -277,7 +277,7 @@ class FirmaFalloNotificacionCanonicaTest {
             idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
                     idDoc, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                    FaltasClockTestSupport.FIXED.now(), "Fallo absolutorio",
+                    FaltasClockTestSupport.FIXED.now(),
                     EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA,
                     idPlantilla, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
@@ -372,7 +372,7 @@ class FirmaFalloNotificacionCanonicaTest {
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
                     idDoc, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                    FaltasClockTestSupport.FIXED.now(), "Fallo",
+                    FaltasClockTestSupport.FIXED.now(),
                     EstadoDocu.FIRMADO, TipoFirmaReq.NO_REQUIERE,
                     null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
@@ -419,7 +419,7 @@ class FirmaFalloNotificacionCanonicaTest {
                     null, null, null, null, null,
                     null, null, null, null,
                     "Dir 10", 10, false, null, null, "Dir 10, Malvinas",
-                    null, false, null, null, null,
+                    false, null, null, null,
                     FaltasClockTestSupport.FIXED.now(), USER));
             acta.setIdDomicilioNotifAct(domId5a);
             actaRepo.guardar(acta);
@@ -427,7 +427,7 @@ class FirmaFalloNotificacionCanonicaTest {
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
                     idDoc, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                    FaltasClockTestSupport.FIXED.now(), "Fallo directo",
+                    FaltasClockTestSupport.FIXED.now(),
                     EstadoDocu.FIRMADO, TipoFirmaReq.NO_REQUIERE,
                     null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
@@ -470,7 +470,7 @@ class FirmaFalloNotificacionCanonicaTest {
                     null, null, null, null, null,
                     null, null, null, null,
                     "Dir 10", 10, false, null, null, "Dir 10, Malvinas",
-                    null, false, null, null, null,
+                    false, null, null, null,
                     FaltasClockTestSupport.FIXED.now(), USER));
             acta.setIdDomicilioNotifAct(domId5a);
             actaRepo.guardar(acta);
@@ -478,7 +478,7 @@ class FirmaFalloNotificacionCanonicaTest {
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
                     idDoc, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                    FaltasClockTestSupport.FIXED.now(), "Fallo lote",
+                    FaltasClockTestSupport.FIXED.now(),
                     EstadoDocu.FIRMADO, TipoFirmaReq.NO_REQUIERE,
                     null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
@@ -538,7 +538,7 @@ class FirmaFalloNotificacionCanonicaTest {
                     null, null, null, null, null,
                     null, null, null, null,
                     "Dir 10", 10, false, null, null, "Dir 10, Malvinas",
-                    null, false, null, null, null,
+                    false, null, null, null,
                     FaltasClockTestSupport.FIXED.now(), USER));
             acta.setIdDomicilioNotifAct(domId5a);
             actaRepo.guardar(acta);
@@ -546,7 +546,7 @@ class FirmaFalloNotificacionCanonicaTest {
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
                     idDoc, idActa, TipoDocu.ACTO_ADMINISTRATIVO,
-                    FaltasClockTestSupport.FIXED.now(), "Fallo abs",
+                    FaltasClockTestSupport.FIXED.now(),
                     EstadoDocu.FIRMADO, TipoFirmaReq.NO_REQUIERE,
                     null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);

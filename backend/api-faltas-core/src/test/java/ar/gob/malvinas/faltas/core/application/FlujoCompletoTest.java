@@ -204,7 +204,7 @@ class FlujoCompletoTest {
             actaService.enriquecer(new EnriquecerActaCommand(idActa, "enriquecido"));
 
             ComandoResultado resultado = docService.generarDocumento(
-                    new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION, "Acta principal"));
+                    new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION));
 
             assertThat(resultado.tipoEvento()).isEqualTo(TipoEventoActa.DOCGEN.codigo());
 
@@ -230,7 +230,7 @@ class FlujoCompletoTest {
         void firmar_documento_correcto() {
             Long idActa = labrarYCompletarCaptura();
             String idDoc = docService.generarDocumento(
-                    new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION, "Desc"))
+                    new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION))
                     .idEntidadAfectada();
 
             ComandoResultado resultado = docService.firmarDocumento(
@@ -562,7 +562,7 @@ class FlujoCompletoTest {
 
     private String generarYFirmarDoc(Long idActa) {
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION, "Desc"))
+                new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "Inspector", "DIGITAL", null));
         return idDoc;

@@ -99,7 +99,7 @@ class ActaDocumentoPivotIntegracionTest {
         FalActa acta = crearActaConBloque(1L, BloqueActual.ANAL);
 
         // Crear documento y asociar via pivot
-        FalDocumento doc = new FalDocumento(100L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA, "fallo");
+        FalDocumento doc = new FalDocumento(100L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
         doc.setStorageKey("storage/1/fallo/100");
         docRepo.guardar(doc);
         pivotRepo.asociarComoPrincipalAtomico(1L, 100L, RolDocuActa.FALLO, "SYS", AHORA);
@@ -129,9 +129,9 @@ class ActaDocumentoPivotIntegracionTest {
         FalActa acta = crearActaConBloque(1L, BloqueActual.ANAL);
 
         // Agregar acta principal y notificacion
-        FalDocumento actaPrincipal = new FalDocumento(200L, 1L, TipoDocu.ACTA_INFRACCION, AHORA, "acta");
-        FalDocumento notif = new FalDocumento(201L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "notif");
-        FalDocumento fallo = new FalDocumento(202L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA, "fallo");
+        FalDocumento actaPrincipal = new FalDocumento(200L, 1L, TipoDocu.ACTA_INFRACCION, AHORA);
+        FalDocumento notif = new FalDocumento(201L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA);
+        FalDocumento fallo = new FalDocumento(202L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
         docRepo.guardar(actaPrincipal);
         docRepo.guardar(notif);
         docRepo.guardar(fallo);
@@ -152,8 +152,8 @@ class ActaDocumentoPivotIntegracionTest {
     void integracion05_reemplazoPivotActualizaDocuUlt() {
         FalActa acta = crearActaConBloque(1L, BloqueActual.ANAL);
 
-        FalDocumento fallo1 = new FalDocumento(300L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA, "fallo1");
-        FalDocumento fallo2 = new FalDocumento(301L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA, "fallo2");
+        FalDocumento fallo1 = new FalDocumento(300L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
+        FalDocumento fallo2 = new FalDocumento(301L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
         docRepo.guardar(fallo1);
         docRepo.guardar(fallo2);
 

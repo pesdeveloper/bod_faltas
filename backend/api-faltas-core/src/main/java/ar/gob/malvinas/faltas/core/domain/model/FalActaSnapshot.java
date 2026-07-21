@@ -62,8 +62,8 @@ public class FalActaSnapshot {
     private String licenciaProvinciaTxt;
     private String licenciaUnidadTxt;
     private String nomenclaturaResumen;
-    private Long idBieI;
-    private Long idBieC;
+    private Integer idBieI;
+    private Integer idBieC;
 
     // Campos de paralizacion y archivo - 8F-11G
     private MotivoParalizacion motivoParalizacionAct;
@@ -160,11 +160,21 @@ public class FalActaSnapshot {
     public String getNomenclaturaResumen() { return nomenclaturaResumen; }
     public void setNomenclaturaResumen(String nomenclaturaResumen) { this.nomenclaturaResumen = nomenclaturaResumen; }
 
-    public Long getIdBieI() { return idBieI; }
-    public void setIdBieI(Long idBieI) { this.idBieI = idBieI; }
+    public Integer getIdBieI() { return idBieI; }
+    public void setIdBieI(Integer idBieI) {
+        if (idBieI != null && (idBieI < 1 || idBieI > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBieI debe estar entre 1 y 9.999.999; valor: " + idBieI);
+        this.idBieI = idBieI;
+    }
 
-    public Long getIdBieC() { return idBieC; }
-    public void setIdBieC(Long idBieC) { this.idBieC = idBieC; }
+    public Integer getIdBieC() { return idBieC; }
+    public void setIdBieC(Integer idBieC) {
+        if (idBieC != null && (idBieC < 1 || idBieC > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBieC debe estar entre 1 y 9.999.999; valor: " + idBieC);
+        this.idBieC = idBieC;
+    }
 
     public MotivoParalizacion getMotivoParalizacionAct() { return motivoParalizacionAct; }
     public void setMotivoParalizacionAct(MotivoParalizacion motivoParalizacionAct) { this.motivoParalizacionAct = motivoParalizacionAct; }

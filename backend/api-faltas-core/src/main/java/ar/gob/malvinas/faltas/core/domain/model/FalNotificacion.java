@@ -29,6 +29,8 @@ public class FalNotificacion {
     private ResultadoNotificacion resultado;
     private LocalDateTime fechaResultado;
     private int intentos;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated
     private String observaciones;
     private LocalDateTime fhUltMod;
     private String idUserUltMod;
@@ -149,7 +151,11 @@ public class FalNotificacion {
     public int getIntentos() { return intentos; }
     public void incrementarIntento() { this.intentos++; }
 
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). NO PERSISTIR. */
+    @Deprecated
     public String getObservaciones() { return observaciones; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). NO PERSISTIR. */
+    @Deprecated
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
 
     public LocalDateTime getFhUltMod() { return fhUltMod; }

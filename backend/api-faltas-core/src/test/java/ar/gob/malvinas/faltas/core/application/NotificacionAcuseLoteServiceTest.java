@@ -69,7 +69,7 @@ class NotificacionAcuseLoteServiceTest {
                 null, null, null, null,
                 "Av. Libertad 100", 100, false,
                 null, null, "Av. Libertad 100, Malvinas",
-                null, false, null, null, null,
+                false, null, null, null,
                 AHORA, "SYS"));
         FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
                 java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
@@ -474,7 +474,7 @@ class NotificacionAcuseLoteServiceTest {
                     null, null, null, null,
                     "Av. Libertad 100", 100, false,
                     null, null, "Av. Libertad 100, Malvinas",
-                    null, false, null, null, null,
+                    false, null, null, null,
                     AHORA, "SYS"));
             FalActa actaValida = new FalActa(1L, "UUID-1", TipoActa.TRANSITO, 1L, 1L,
                     java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,

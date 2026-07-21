@@ -141,7 +141,7 @@ class AuditoriaTest {
         @DisplayName("fechaGeneracion (fh_alta) y idUserAlta presentes")
         void alta_auditoria() {
             FalDocumento doc = new FalDocumento(1L, 100L, TipoDocu.ACTO_ADMINISTRATIVO,
-                    FECHA_TEST, "desc",
+                    FECHA_TEST,
                     ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.BORRADOR,
                     ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.FIRMA_INTERNA,
                     null, USUARIO_TEST);

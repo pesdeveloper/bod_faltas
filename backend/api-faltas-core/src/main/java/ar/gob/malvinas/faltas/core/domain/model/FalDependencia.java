@@ -9,7 +9,14 @@ import java.time.LocalDateTime;
  * La dependencia es el ambito organizacional al que pertenece un inspector
  * y que determina el tipo de acta que puede labrar.
  *
+ * Campos fisicos canonicos (corrección FULL-R1):
+ * - cod_dep VARCHAR(20) NULL (unico donde informado, no usar 'codigo_dependencia')
+ * - nom_dep VARCHAR(120) NOT NULL (no usar 'nombre VARCHAR(200)')
+ * - id_dep_padre BIGINT NULL (FK autoreferencial; NULL = raiz)
+ * - si_activa BOOLEAN NOT NULL
+ *
  * La estructura en detalle (tipo_acta, vigencias) vive en FalDependenciaVersion.
+ * tipo_acta NO vive en esta tabla maestro.
  *
  * Slice 8A-1: implementacion in-memory. Slice 9: reemplazar por JDBC.
  */

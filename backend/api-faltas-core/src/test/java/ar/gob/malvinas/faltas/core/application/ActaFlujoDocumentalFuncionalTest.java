@@ -145,7 +145,7 @@ class ActaFlujoDocumentalFuncionalTest {
     private Long labrarYLlegarAAnalis() {
         Long id = labrarCapturarEnriquecer();
         Long docId = Long.parseLong(docService.generarDocumento(
-                new GenerarDocumentoCommand(id, TipoDocu.ACTA_INFRACCION, null))
+                new GenerarDocumentoCommand(id, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada());
         docService.firmarDocumento(new FirmarDocumentoCommand(docId, "Inspector", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(
@@ -193,7 +193,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void redaccion_borrador_storage_null() {
             Long actaId = labrarYLlegarAAnalis();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO))
                     .idEntidadAfectada());
 
             DocumentoRedaccionResponse resp = redaccionService.crearRedaccionConContextoActa(
@@ -214,7 +214,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void redaccion_borrador_variables_combinadas() {
             Long actaId = labrarYLlegarAAnalis();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO))
                     .idEntidadAfectada());
 
             DocumentoRedaccionResponse resp = redaccionService.crearRedaccionConContextoActa(
@@ -238,7 +238,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void pdf_mock_generado_storage_mock() {
             Long actaId = labrarYLlegarAAnalis();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO))
                     .idEntidadAfectada());
 
             DocumentoRedaccionResponse redaccion = redaccionService.crearRedaccionConContextoActa(
@@ -285,7 +285,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void notificar_sin_firma_lanza_precondicion() {
             Long actaId = labrarCapturarEnriquecer();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
                     .idEntidadAfectada());
 
             assertThatThrownBy(() ->

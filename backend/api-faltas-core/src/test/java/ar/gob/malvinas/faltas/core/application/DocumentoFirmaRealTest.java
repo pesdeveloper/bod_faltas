@@ -132,7 +132,7 @@ class DocumentoFirmaRealTest {
     private FalDocumentoPlantilla crearPlantillaConReq(String codigo, MomentoNumeracionDocu momento, short rolFirmaReq) {
         boolean requiereNum = (momento != MomentoNumeracionDocu.NO_APLICA);
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                 TipoFirmaReq.FIRMA_INTERNA,
                 requiereNum, momento,
@@ -145,7 +145,7 @@ class DocumentoFirmaRealTest {
 
     private FalDocumentoPlantilla crearPlantillaConDosReqs(String codigo) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla dos reqs " + codigo, null,
+                codigo, "Plantilla dos reqs " + codigo,
                 TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                 TipoFirmaReq.FIRMA_MULTIPLE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -457,7 +457,7 @@ class DocumentoFirmaRealTest {
         void test23_falla_mecanismoIncompatible() {
             FalActa acta = crearActa();
             FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                    "PL-M01", "Plantilla mecanismo 5", null,
+                    "PL-M01", "Plantilla mecanismo 5",
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
                     false, false, true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
@@ -479,7 +479,7 @@ class DocumentoFirmaRealTest {
         void test24_firmaOK_mecanismoCompatible() {
             FalActa acta = crearActa();
             FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                    "PL-M02", "Plantilla mecanismo OK", null,
+                    "PL-M02", "Plantilla mecanismo OK",
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
                     false, false, true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
@@ -693,7 +693,7 @@ class DocumentoFirmaRealTest {
         @Test
         @DisplayName("41. TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR es independiente de firma documental")
         void test41_firmaInfractor_esIndependiente() {
-            assertThat(TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR.codigo()).isEqualTo((short) 6);
+            assertThat(TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR.codigo()).isEqualTo((short) 48);
             for (TipoFirma t : TipoFirma.values()) assertThat(t.name()).doesNotContain("INFRACTOR");
         }
     }
@@ -712,7 +712,7 @@ class DocumentoFirmaRealTest {
             FalFirmante firmante = crearFirmanteConHabilitacion(TipoDocu.NOTIFICACION_ACTA.codigo(), (short) 1, null);
             // Plantilla notificable (siNotificable=true) para verificar creacion de FalNotificacion
             FalDocumentoPlantilla plantillaBase = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                    "PL-IDP01", "Plantilla IDP01", null,
+                    "PL-IDP01", "Plantilla IDP01",
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
                     true, false, true,

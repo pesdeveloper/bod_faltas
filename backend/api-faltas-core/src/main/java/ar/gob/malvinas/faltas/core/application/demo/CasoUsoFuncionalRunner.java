@@ -301,7 +301,7 @@ public class CasoUsoFuncionalRunner {
 
     private Long generarDocumento(Long actaId, TipoDocu tipo) {
         return Long.parseLong(
-                docService.generarDocumento(new GenerarDocumentoCommand(actaId, tipo, null))
+                docService.generarDocumento(new GenerarDocumentoCommand(actaId, tipo))
                         .idEntidadAfectada());
     }
 

@@ -33,6 +33,8 @@ public class NumTalonario {
     private boolean siActivo;
     private boolean siBloqueado;
     private String codDesbloqueo;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated
     private String obsTalonario;
     private final LocalDateTime fhAlta;
     private final String idUserAlta;
@@ -95,8 +97,10 @@ public class NumTalonario {
     public void setSiBloqueado(boolean siBloqueado) { this.siBloqueado = siBloqueado; }
     public String getCodDesbloqueo() { return codDesbloqueo; }
     public void setCodDesbloqueo(String codDesbloqueo) { this.codDesbloqueo = codDesbloqueo; }
-    public String getObsTalonario() { return obsTalonario; }
-    public void setObsTalonario(String obsTalonario) { this.obsTalonario = obsTalonario; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated public String getObsTalonario() { return obsTalonario; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated public void setObsTalonario(String obsTalonario) { this.obsTalonario = obsTalonario; }
     public LocalDateTime getFhAlta() { return fhAlta; }
     public String getIdUserAlta() { return idUserAlta; }
 

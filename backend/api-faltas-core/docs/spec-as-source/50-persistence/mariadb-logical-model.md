@@ -66,51 +66,59 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 #### `fal_dependencia`
 - **Propósito:** unidades administrativas (organismos/dependencias).
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos:** `codigo_dependencia VARCHAR(20)`, `nombre VARCHAR(200)`, `tipo_acta SMALLINT`, `si_activo BOOLEAN`.
-- **Auditoría:** `fh_alta`, `id_user_alta`.
+- **Campos:** `cod_dep VARCHAR(8) NULL` (único donde informado, UNIQUE permisivo en NULL), `nom_dep VARCHAR(48) NOT NULL`, `id_dep_padre BIGINT NULL` (FK auto-referencial; agr. vía ALTER), `si_activa BOOLEAN NOT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Nota:** `tipo_acta` NO vive en el maestro; vive en `fal_dependencia_version`. Nombres prohibidos: `codigo_dependencia`, `id_dependencia_padre`, `nombre VARCHAR(120/200)`.
+- **CHECK:** `id_dep_padre IS NULL OR id_dep_padre <> id`.
 - **Entidad Java:** `FalDependencia`. **Puerto:** `DependenciaRepository` / `InMemoryDependenciaRepository`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): cod_dep VARCHAR(8), nom_dep VARCHAR(48), CHECK autorreferencial / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_dependencia_version`
 - **Propósito:** versiones de la dependencia con datos cambiantes.
-- **PK:** `id_dependencia + version_dep` (compuesta). **FK:** `id_dependencia -> fal_dependencia`.
-- **Campos:** `nombre_version`, `tipo_acta SMALLINT`, `si_activo`, `fh_vig_desde`, `fh_vig_hasta`.
-- **Entidad Java:** `FalDependenciaVersion`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **PK:** `(id_dep, ver_dep)` (compuesta). **FK:** `id_dep -> fal_dependencia(id)`.
+- **Campos:** `nom_dep VARCHAR(48) NULL`, `id_dep_padre BIGINT NULL`, `ver_dep_padre SMALLINT NULL`, `tipo_acta SMALLINT NOT NULL` (define el único tipo de acta que puede labrar esta dependencia), `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL`, `si_activa BOOLEAN NOT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **FK histórica:** `(id_dep_padre, ver_dep_padre) -> fal_dependencia_version(id_dep, ver_dep)`; padre y versión: ambos NULL o ambos NOT NULL.
+- **Entidad Java:** `FalDependenciaVersion`. **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): PK renombrada a id_dep/ver_dep, nom_dep VARCHAR(48) / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Inspectores
 
 #### `fal_inspector`
-- **Propósito:** inspectores/agentes del organismo.
-- **PK:** `id BIGINT AUTO_INCREMENT`. **Campos:** `legajo VARCHAR(20)`, `apellido`, `nombre`, `si_activo BOOLEAN`.
-- **Entidad Java:** `FalInspector`. **Puerto:** `InspectorRepository` / `InMemoryInspectorRepository`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Propósito:** inspectores/agentes del organismo habilitados para labrar actas.
+- **PK:** `id BIGINT AUTO_INCREMENT`.
+- **Campos:** `id_user CHAR(36) NOT NULL UNIQUE` (UUID IDP, único por inspector), `legajo_insp INT NOT NULL` (numérico estricto; > 0; con índice UNIQUE), `nom_insp VARCHAR(36) NOT NULL`, `si_activo BOOLEAN NOT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **CHECK:** `legajo_insp > 0`.
+- **Nota:** los campos `legajo VARCHAR(20)`, `apellido`, `nombre` son INCORRECTOS. La definición canónica usa `legajo_insp INT` y `nom_insp VARCHAR(36)`.
+- **Entidad Java:** `FalInspector`. **Puerto:** `InspectorRepository` / `InMemoryInspectorRepository`. **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): nom_insp VARCHAR(36), legajo_insp INT / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_inspector_version`
 - **Propósito:** versión del inspector con datos del período.
-- **PK:** `id_inspector + version_insp` (compuesta). **FK:** `id_inspector -> fal_inspector`.
-- **Entidad Java:** `FalInspectorVersion`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
-- **Nota histórica:** los campos de firma maestra del inspector fueron eliminados del modelo (decisión previa a este slice); la firma no se registra en esta tabla.
+- **PK:** `(id_insp, ver_insp)` (compuesta). **FK:** `id_insp -> fal_inspector(id)`.
+- **Campos:** `legajo_insp INT NOT NULL` (tipo exacto coincide con fal_inspector.legajo_insp), `nom_insp VARCHAR(36) NOT NULL`, `id_dep BIGINT NULL`, `ver_dep SMALLINT NULL`, `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL`, `si_activo BOOLEAN NOT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **FK:** `(id_dep, ver_dep) -> fal_dependencia_version(id_dep, ver_dep)`; ambos NULL o ambos NOT NULL.
+- **Entidad Java:** `FalInspectorVersion`. **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): nom_insp VARCHAR(36), PK id_insp/ver_insp, tipos FK exactos / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Firmantes
 
 #### `fal_firmante`
 - **Propósito:** maestro de firmantes/autorizados para firma; gestiona el padrón de usuarios habilitados para firmar documentos.
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos:** `id_user CHAR(36) NOT NULL UNIQUE` (usuario IDP, único por firmante), `nom_firmante VARCHAR(128) NOT NULL` (nombre visible actual; histórico vive en versiones), `si_activo BOOLEAN NOT NULL`.
+- **Campos:** `id_user CHAR(36) NOT NULL UNIQUE` (usuario IDP, único por firmante), `nom_firmante VARCHAR(48) NOT NULL` (nombre visible actual; histórico vive en versiones), `si_activo BOOLEAN NOT NULL`.
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
 - **Entidad Java:** `FalFirmante` (id `Long`). **Puerto:** `FirmanteRepository` / `InMemoryFirmanteRepository`.
 - **No** guardar certificados, binarios, firmas concretas ni metadata pesada. Baja lógica vía `si_activo`; no borrado físico si firmó documentos.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. Sin discrepancias. Tipos confirmados: `id_user CHAR(36)`, `nom_firmante VARCHAR(128)`, `si_activo BOOLEAN`, auditoría `DATETIME(6)` / `CHAR(36)`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): nom_firmante VARCHAR(48) / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `fal_firmante_version`
 - **Propósito:** versionado histórico de roles, cargo, dependencia y vigencia del firmante; congela el contexto vigente en cada cambio relevante.
-- **PK:** `id_firmante + ver_firmante` (compuesta; `ver_firmante SMALLINT`, inicia en 1). **FK:** `id_firmante -> fal_firmante`.
-- **Campos:** `id_user CHAR(36) NOT NULL` (snapshot del IDP al crear la versión), `nom_firmante VARCHAR(128) NOT NULL` (snapshot histórico), `rol_firmante VARCHAR(40) NULL` (descriptivo opcional; no define autorización documental), `cargo_firmante VARCHAR(128) NULL`, `id_dep BIGINT NULL FK` (→ `fal_dependencia`; nullable si no aplica), `ver_dep SMALLINT NULL` (obligatorio si hay `id_dep`), `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL` (NULL si vigente), `si_activo BOOLEAN NOT NULL`.
+- **PK:** `(id_firmante, ver_firmante)` (compuesta; `ver_firmante SMALLINT`, inicia en 1). **FK:** `id_firmante -> fal_firmante`.
+- **Campos:** `id_user CHAR(36) NOT NULL` (snapshot del IDP), `nom_firmante VARCHAR(48) NOT NULL` (snapshot histórico; mismo ancho que fal_firmante.nom_firmante para representar el mismo nombre sin truncar), `rol_firmante VARCHAR(64) NULL` (rol descriptivo/institucional; opcional), `cargo_firmante VARCHAR(64) NULL`, `id_dep BIGINT NULL FK` (→ `fal_dependencia`; nullable si no aplica), `ver_dep SMALLINT NULL` (obligatorio si hay `id_dep`), `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL` (NULL si vigente), `si_activo BOOLEAN NOT NULL`.
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
-- **Entidad Java:** `FalFirmanteVersion` (PK compuesta; campos: `idFirmante Long`, `verFirmante int`, `idUser String`, `nomFirmante String`, `rolFirmante String`, `cargoFirmante String`, `idDep Long`, `verDep Short`, `fhVigDesde LocalDate`, `fhVigHasta LocalDate`, `siActivo boolean`, auditoría). **Puerto:** no listado aparte (acceso vía `FirmanteRepository`).
-- **Reglas:** `rol_firmante` es descriptivo/institucional; la autorización documental concreta va en `fal_firmante_version_habilitacion`. `tipo_firma` NO va en esta tabla. Al versionar: versión anterior cierra `fh_vig_hasta` + `si_activo = false`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. Sin discrepancias. Todos los campos con tipos confirmados del histórico (CHAR/VARCHAR/DATE/BOOLEAN/DATETIME(6)).
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Entidad Java:** `FalFirmanteVersion` (PK compuesta). **Puerto:** acceso vía `FirmanteRepository`.
+- **Reglas:** `rol_firmante` y `cargo_firmante` son descriptivos/institucionales. `tipo_firma` NO va en esta tabla. Al versionar: versión anterior cierra `fh_vig_hasta` + `si_activo = false`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): nom_firmante VARCHAR(48), rol_firmante VARCHAR(64), cargo_firmante VARCHAR(64) / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `fal_firmante_version_habilitacion`
 - **Propósito:** define qué tipos de documento y qué roles de firma puede satisfacer una versión concreta de firmante; es la fuente de autorización documental por firmante.
@@ -127,61 +135,67 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 #### `fal_persona`
 - **Propósito:** maestro de personas (infractores, presentantes).
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos:** `tipo_persona SMALLINT NOT NULL` (`FISICA`/`JURIDICA`), `tipo_doc SMALLINT NULL`, `nro_doc VARCHAR(20) NULL`, `apellido VARCHAR NULL` (persona física), `nombres VARCHAR NULL` (persona física), `razon_social VARCHAR(64) NULL` (persona jurídica), `nombre_mostrar VARCHAR(64) NULL` (calculado), `email_principal VARCHAR(160) NULL`, `telefono_principal VARCHAR(20) NULL`, `id_suj BIGINT NULL` (sujeto/rubro de ingresos), `id_bie BIGINT NULL` (cuenta/bien en ingresos), `suj_bie_estado SMALLINT NULL`, `fh_suj_bie_creacion DATETIME(6) NULL`.
-- **Auditoría:** `fh_alta`, `id_user_alta`, `fh_ult_mod`, `id_user_ult_mod`.
+- **Campos nombres:** `tipo_persona SMALLINT NOT NULL` (1=FISICA, 2=JURIDICA), `apellido VARCHAR(24) NULL` (persona física), `nombres VARCHAR(36) NULL` (persona física), `razon_social VARCHAR(64) NULL` (persona jurídica), `nombre_mostrar VARCHAR(64) NULL` (calculado).
+- **Campos documento (HUMAN_DECISION_CLOSED):** `tipo_documento SMALLINT NOT NULL` (TipoDocumentoPersona: 1=DNI, 2=CUIT, 3=CUIL, 4=PASAPORTE, 5=DNI_EXTRANJERO, 9=OTRO), `prefijo_cuit_cuil TINYINT UNSIGNED NULL`, `nro_doc INT UNSIGNED NOT NULL` (BETWEEN 1 AND 99999999), `digito_verificador TINYINT UNSIGNED NULL`.
+- **Coherencia documento:** DNI/PASAPORTE/OTRO: prefijo NULL, digito NULL. CUIT/CUIL: prefijo 0–99, nro_doc, digito 0–9.
+- **Campos contacto:** `email_principal VARCHAR(160) NULL`, `telefono_principal VARCHAR(20) NULL`.
+- **Campos rubro/ingresos:** `id_suj TINYINT UNSIGNED NULL` (código tipo de sujeto en Ingresos Municipales; catálogo abierto: 1=INMUEBLE, 2=COMERCIO, 3=RODADO, 18=CEMENTERIO, 20=FALTAS, 99=VARIOS; rango físico 1-255; no CHECK IN), `id_bie MEDIUMINT UNSIGNED NULL` (id del bien/cuenta dentro del tipo de sujeto; rango físico 1-9999999; requiere id_suj), `suj_bie_estado SMALLINT NULL`, `fh_suj_bie_creacion DATETIME(6) NULL`. Java usa `Integer` para ambos. `HUMAN_DECISION_CLOSED — FULL-R1.2-CORRECCION-10`
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
+- **Unicidad:** columna generada `doc_key VARCHAR(12) GENERATED ALWAYS AS (LPAD(CAST(nro_doc AS CHAR), 8, '0')) STORED` con `UNIQUE (tipo_documento, doc_key)`.
+- **versionRow/OCC:** NO — `fal_persona` no define `versionRow` (`DECISION_DDL-PERS-01` CERRADA).
+- **Prohibido:** `observacion`, campo único `nro_doc VARCHAR`, apellido/nombres > 24/36.
 - **Entidad Java:** `FalPersona`. **Puerto:** `PersonaRepository` / `InMemoryPersonaRepository`.
-- **versionRow/OCC:** NO — `FalPersona` no define `versionRow` (verificado contra el código Java vigente); no aplica OCC (`DECISION_DDL-PERS-01` CERRADA).
-- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
-- **Unicidad física:** UNIQUE(`tipo_doc, nro_doc`) WHERE `tipo_doc IS NOT NULL AND nro_doc IS NOT NULL`; personas no identificadas sin restricción (`DECISION_DDL-PERS-01` CERRADA).
-- **No existen** `nombre_completo`, `fh_nacimiento`, `sexo`, `si_identificado`, `si_extranjero`, `id_ign`, `id_indec`, `id_local` como columnas de `fal_persona`: no tienen respaldo en `FalPersona.java`. El nombre para mostrar se calcula desde `apellido`+`nombres` o `razon_social` (método `calcularNombreMostrar()`), nunca se persiste un único campo `nombre_completo`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): documento estructurado SMALLINT+TINYINT+INT UNSIGNED, apellido VARCHAR(24), nombres VARCHAR(36) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_persona_domicilio`
 - **Propósito:** domicilios de personas (infractor, notificación); no es el lugar del hecho (eso vive en `fal_acta`). **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `persona_id -> fal_persona`, `acta_origen_id -> fal_acta` (NULL, acta donde nació el domicilio).
-- **Campos:** `tipo_domicilio SMALLINT NOT NULL`, `origen_domicilio SMALLINT NOT NULL`, `modo_domicilio SMALLINT NOT NULL` (`MALVINAS_LOCAL`/`EXTERNO`), `si_activo BOOLEAN NOT NULL`, `si_notificable BOOLEAN NOT NULL`, `si_principal BOOLEAN NOT NULL`, `id_provincia SMALLINT NULL`, `unidad_territorial_tipo SMALLINT NULL`, `id_unidad_territorial INT NULL`, `id_localidad BIGINT NULL` (solo modo `EXTERNO`), `id_calle BIGINT NULL` (solo modo `EXTERNO`), `id_loc_malvinas VARCHAR(8) NULL` (solo modo `MALVINAS_LOCAL`; preserva ceros iniciales, no convertir a número), `localidad_malvinas_version_id BIGINT NULL FK` (solo modo `MALVINAS_LOCAL`), `id_tca_malvinas VARCHAR(10) NULL` (solo modo `MALVINAS_LOCAL`; preserva ceros iniciales, no convertir a número), `calle_malvinas_version_id BIGINT NULL FK` (solo modo `MALVINAS_LOCAL`), `calle_txt VARCHAR NULL`, `altura INT NULL`, `si_sin_altura BOOLEAN NOT NULL`, `unidad_funcional VARCHAR NULL`, `codigo_postal VARCHAR NULL`, `domicilio_txt VARCHAR NULL` (cache legible, mutable), `validacion_domicilio VARCHAR NULL`, `si_normalizado_parcial BOOLEAN NOT NULL`, `lat DECIMAL NULL`, `lon DECIMAL NULL`, `origen_ubicacion SMALLINT NULL`.
-- **Auditoría:** `fh_alta`, `id_user_alta`, `fh_ult_mod`, `id_user_ult_mod`.
+- **Campos:** `tipo_domicilio SMALLINT NOT NULL`, `origen_domicilio SMALLINT NOT NULL` (CONTENIDO: OrigenDomicilio enum; USO: identifica el circuito que generó este domicilio; REGLA: debe informarse siempre; VALORES: leer de OrigenDomicilio.java), `modo_domicilio SMALLINT NOT NULL` (MALVINAS_LOCAL/EXTERNO), `si_activo BOOLEAN NOT NULL`, `si_notificable BOOLEAN NOT NULL`, `si_principal BOOLEAN NOT NULL`, `id_provincia SMALLINT NULL`, `unidad_territorial_tipo SMALLINT NULL`, `id_unidad_territorial INT NULL`, `id_localidad BIGINT NULL` (solo modo EXTERNO), `id_calle BIGINT NULL` (solo modo EXTERNO), `id_loc_malvinas VARCHAR(8) NULL`, `localidad_malvinas_version_id BIGINT NULL FK` (→ `geo_malv_localidad_version.localidad_version_id`), `id_tca_malvinas VARCHAR(10) NULL`, `calle_malvinas_version_id BIGINT NULL FK` (→ `geo_malv_calle_version.calle_version_id`), `calle_txt VARCHAR(48) NULL`, `altura INT NULL`, `si_sin_altura BOOLEAN NOT NULL`, `unidad_funcional VARCHAR(20) NULL`, `codigo_postal VARCHAR(10) NULL`, `domicilio_txt VARCHAR(196) NULL` (cache legible, mutable), `si_normalizado_parcial BOOLEAN NOT NULL`, `lat DECIMAL(10,7) NULL`, `lon DECIMAL(10,7) NULL`, `origen_ubicacion SMALLINT NULL`.
+- **Eliminado:** `validacion_domicilio` — no reemplazar por otro texto ambiguo.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
 - **Entidad Java:** `FalPersonaDomicilio`. **Puerto:** `PersonaDomicilioRepository` / `InMemoryPersonaDomicilioRepository`.
-- **versionRow/OCC:** NO — `FalPersonaDomicilio` no define `versionRow` (verificado contra el código Java vigente); baja lógica vía `si_activo=false`, nunca borrado físico.
-- **No existen** `id_calle_version` (BIGINT único), `nro_puerta`/`piso`/`dpto`, `localidad_id`, `texto_libre`, ni `id_tca`/`id_loc` como `BIGINT`: el modelo real distingue `id_calle` (BIGINT, modo `EXTERNO`) de `id_tca_malvinas` (**VARCHAR**, modo `MALVINAS_LOCAL`), usa `altura`+`unidad_funcional` en lugar de `nro_puerta`/`piso`/`dpto`, `id_localidad` en lugar de `localidad_id`, y `domicilio_txt` en lugar de `texto_libre`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **versionRow/OCC:** NO. Baja lógica vía `si_activo=false`, nunca borrado físico.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): calle_txt VARCHAR(48), domicilio_txt VARCHAR(196), sin validacion_domicilio, FK GEO canónicas / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Acta core
 
 #### `fal_acta`
 - **Propósito:** agregado raíz del expediente de faltas. Guarda identidad administrativa, estado actual (tripla canónica), captura, lugar del hecho, QR y numeración.
-- **PK:** `id BIGINT AUTO_INCREMENT`. **UK:** `uuid_tecnico CHAR(36)`, `codigo_qr VARCHAR(512)`.
+- **PK:** `id BIGINT AUTO_INCREMENT`. **UK:** `id_tecnico CHAR(36)`, `codigo_qr VARCHAR(128)`.
 - **FK conceptuales:** `id_talonario -> num_talonario`, `id_insp + ver_insp -> fal_inspector_version`, `id_dep + ver_dep -> fal_dependencia_version`, `id_persona_infractor -> fal_persona`, `id_domicilio_infractor_act -> fal_persona_domicilio`, `id_domicilio_notif_act -> fal_persona_domicilio`, `localidad_infr_malvinas_version_id -> geo_malv_localidad_version`, `calle_infr_malvinas_version_id -> geo_malv_calle_version`, `id_motivo_archivo_actual -> fal_motivo_archivo`.
 - **Campos — identidad y numeración:** `nro_acta VARCHAR(30) NULL`, `id_talonario BIGINT NULL`, `nro_talonario_usado INT NULL`.
 - **Campos — tipo y captura:** `tipo_acta SMALLINT NOT NULL`, `origen_captura SMALLINT NOT NULL`, `id_dispositivo_captura VARCHAR(80) NULL`, `id_user_captura CHAR(36) NULL`, `fh_captura DATETIME(6) NOT NULL`, `lat_captura DOUBLE NULL`, `lon_captura DOUBLE NULL`, `precision_captura_m DOUBLE NULL`, `fh_pos_captura DATETIME(6) NULL`, `origen_pos_captura SMALLINT NULL`.
 - **Campos — fecha funcional:** `fecha_acta DATE NOT NULL`, `fecha_labrado DATETIME(6) NOT NULL`.
-- **Campos — dependencia e inspector (versionados):** `id_dep BIGINT NOT NULL`, `ver_dep INT NOT NULL`, `id_insp BIGINT NULL`, `ver_insp INT NULL` (obligatoria si hay inspector).
+- **Campos — dependencia e inspector (versionados):** `id_dep BIGINT NOT NULL`, `ver_dep SMALLINT NOT NULL`, `id_insp BIGINT NULL`, `ver_insp SMALLINT NULL` (obligatoria si hay inspector).
 - **Campos — infractor y domicilios:** `id_persona_infractor BIGINT NOT NULL` (toda acta tiene sujeto técnico), `id_domicilio_infractor_act BIGINT NULL`, `id_domicilio_notif_act BIGINT NULL`. Nombre/documento/domicilio del infractor NO se almacenan en `fal_acta`: se obtienen de `fal_persona`/`fal_persona_domicilio` vía estas FK; el snapshot los proyecta como vista derivada.
-- **Campos — resumen del hecho:** `resumen_hecho VARCHAR(1000) NULL`, `domicilio_hecho VARCHAR(500) NULL` (compatibilidad; el lugar del hecho normalizado vive en los campos siguientes).
+- **Campos — resumen del hecho:** `resumen_hecho VARCHAR(1000) NULL`, `domicilio_hecho VARCHAR(196) NULL` (texto libre del lugar del hecho).
 - **Campos — lugar del hecho (nomenclatura local Malvinas):** `id_loc_infr_malvinas VARCHAR(8) NULL`, `localidad_infr_malvinas_version_id BIGINT NULL`, `id_tca_infr_malvinas VARCHAR(10) NULL`, `calle_infr_malvinas_version_id BIGINT NULL`.
 - **Campos — lugar del hecho (altura):** `altura_infr INT NULL`, `altura_origen_infr SMALLINT NULL`, `si_altura_infr_estimada BOOLEAN NOT NULL DEFAULT FALSE`.
 - **Campos — lugar del hecho (coordenadas finales):** `lat_infr DOUBLE NULL`, `lon_infr DOUBLE NULL` (precisión física candidata a `DECISION_DDL`, ver nota), `origen_ubicacion_infr SMALLINT NULL`, `si_ubicacion_infr_manual BOOLEAN NOT NULL DEFAULT FALSE`.
-- **Campos — texto libre del lugar del hecho:** `si_dom_txt_infr BOOLEAN NOT NULL DEFAULT FALSE`, `dom_txt_infr VARCHAR(255) NULL`.
+- **Campos — texto libre del lugar del hecho:** `si_dom_txt_infr BOOLEAN NOT NULL DEFAULT FALSE`, `dom_txt_infr VARCHAR(196) NULL`.
 - **Campos — contexto geográfico:** `si_eje_urb BOOLEAN NOT NULL DEFAULT FALSE`.
-- **Campos — QR:** `codigo_qr VARCHAR(512) NOT NULL`, `qr_payload_version SMALLINT NOT NULL DEFAULT 0`.
+- **Campos — QR:** `codigo_qr VARCHAR(128) NOT NULL`, `qr_payload_version SMALLINT NOT NULL DEFAULT 0`.
+- **Nota QR:** 128 caracteres permiten el token firmado completo formato `QR0.<uuid-acta>.<version>.<firma-hmac-base64url>`. No guardar imagen QR, payload masivo, domicilio, datos personales ni URL completa arbitraria.
 - **Campos — estado actual (tripla canónica):** `bloque_actual CHAR(4) NOT NULL`, `est_proc_act CHAR(4) NOT NULL`, `sit_adm_act CHAR(4) NOT NULL`.
 - **Campos — resultado y cierre:** `resultado_final SMALLINT NOT NULL`, `resultado_firma_infractor SMALLINT NOT NULL`, `id_motivo_archivo_actual BIGINT NULL`, `permite_reingreso BOOLEAN NULL`, `fh_cierre DATETIME(6) NULL` (funcional), `fh_archivo DATETIME(6) NULL` (funcional).
-- **Auditoría:** `fh_alta`, `id_user_alta`, `fh_ult_mod`, `id_user_ult_mod`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
 - **Entidad Java:** `FalActa` (id `Long`). **Puerto:** `ActaRepository` / `InMemoryActaRepository`.
 - **versionRow/OCC:** SI (`versionRow` en `FalActa`, default 0).
 - **Orden determinístico:** no aplica (entidad única por expediente).
 - **No existen** `estado_procesal`/`situacion_administrativa` como `SMALLINT`, ni `id_persona` como nombre de FK: los nombres reales son `est_proc_act`/`sit_adm_act`, y ambos junto con `bloque_actual` son **CHAR(4)** (código `String` estable del enum, no `SMALLINT`); la FK a persona se llama `id_persona_infractor` y es **NOT NULL**.
-- **Nota de precisión física:** el modelo histórico (`MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md`, eliminado; historia en Git) proponía `lat_infr`/`lon_infr` como `DECIMAL(12,8)`; el tipo Java vigente es `Double`. La elección final de tipo físico (`DOUBLE` vs `DECIMAL(12,8)`) es una decisión de diseño DDL, no un gap funcional; no se abre un nuevo `DECISION_DDL-*` en este slice porque no bloquea `READY_FOR_DDL` ni reabre dominio.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Nota de precisión física:** `lat_infr`/`lon_infr` tipo Java `Double`; en DDL usar `DOUBLE` o `DECIMAL(10,7)` según coherencia con `fal_persona_domicilio` (lat/lon DECIMAL(10,7)).
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): ver_dep/ver_insp SMALLINT (tipo exacto FK), codigo_qr VARCHAR(128), domicilio_hecho VARCHAR(196), dom_txt_infr VARCHAR(196) / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Eventos, snapshot, evidencias y observaciones
 
 #### `fal_acta_evento`
 - **Propósito:** log append-only de eventos del expediente (timeline de hechos reales de dominio).
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `acta_id -> fal_acta`, `id_docu_rel -> fal_documento` (NULL), `id_notif_rel -> fal_notificacion` (NULL).
-- **Campos:** `tipo_evt CHAR(6) NOT NULL` (código estable del enum `TipoEventoActa`, **no** `SMALLINT`), `origen_evt SMALLINT NOT NULL`, `fh_evt DATETIME(6) NOT NULL`, `bloque_func CHAR(4) NULL`, `est_proc_ant CHAR(4) NULL`, `est_proc_nvo CHAR(4) NULL`, `sit_adm_ant CHAR(4) NULL`, `sit_adm_nva CHAR(4) NULL`, `actor_tipo SMALLINT NULL`, `actor_id CHAR(36) NULL`, `actor_ref VARCHAR(80) NULL`, `id_docu_rel BIGINT NULL`, `id_notif_rel BIGINT NULL`, `id_pres_rel BIGINT NULL`, `id_user_evt CHAR(36) NULL`, `si_evt_cierre BOOLEAN NOT NULL`, `si_evt_ext BOOLEAN NOT NULL`, `si_permite_reing BOOLEAN NOT NULL`, `descripcion_legible VARCHAR(255) NULL`, `correlacion_id VARCHAR(60) NULL`.
+- **Campos:** `tipo_evt CHAR(6) NOT NULL` (código estable del enum `TipoEventoActa`, **no** `SMALLINT`), `origen_evt SMALLINT NOT NULL`, `fh_evt DATETIME(6) NOT NULL`, `bloque_func CHAR(4) NULL`, `est_proc_ant CHAR(4) NULL`, `est_proc_nvo CHAR(4) NULL`, `sit_adm_ant CHAR(4) NULL`, `sit_adm_nva CHAR(4) NULL`, `actor_tipo SMALLINT NULL`, `actor_id CHAR(36) NULL`, `id_docu_rel BIGINT NULL`, `id_notif_rel BIGINT NULL`, `id_pres_rel BIGINT NULL`, `id_user_evt CHAR(36) NULL`, `si_evt_cierre BOOLEAN NOT NULL`, `si_evt_ext BOOLEAN NOT NULL`, `si_permite_reing BOOLEAN NOT NULL`, `correlacion_id CHAR(36) NULL`.
+- **Eliminado:** `actor_ref VARCHAR(80)` — identidad estructurada vía actor_tipo + actor_id. `descripcion_legible VARCHAR(255)` — reconstruible desde tipo_evento + actor + timestamp; no persistir.
+- **Cambiado:** `correlacion_id` es `CHAR(36)` (UUID); no `VARCHAR(60)`.
 - **Entidad Java:** `FalActaEvento` (id `Long`, inmutable). **Puerto:** `ActaEventoRepository` / `InMemoryActaEventoRepository`.
-- **Orden determinístico:** por `fh_evt + id` (desempate por `id` autoincremental); append-only, nunca se actualiza ni borra. **No existe** un campo `orden_logico`: el propio Javadoc de `FalActaEvento` declara explícitamente "el orden del timeline es fhEvt + id; no se usa campo ordenLogico".
-- **No usa payload JSON:** el detalle estructurado vive en la tabla funcional correspondiente y el evento conserva la FK (`id_docu_rel`, `id_notif_rel`, `id_pres_rel`). Confirmado por el Javadoc de `FalActaEvento` ("No se usa payload JSON") y por el modelo histórico (`MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md`, eliminado; historia en Git: "La tabla no guarda payload libre" / "No usar `payload_json`"). No existen `id_documento`, `id_notificacion`, `id_operador`, `descripcion` ni `fecha_evento` con esos nombres: los nombres reales son `id_docu_rel`, `id_notif_rel`, (`actor_id`/`actor_ref`/`id_user_evt` en lugar de un único `id_operador`), `descripcion_legible` y `fh_evt`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Orden determinístico:** por `fhEvt + id` (`fh_evt + id` en DDL); append-only, nunca se actualiza ni borra. No existe `orden_logico`. No usa payload JSON.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): sin actor_ref, sin descripcion_legible, correlacion_id CHAR(36) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_snapshot`
 - **Propósito:** proyección operativa resumida del expediente (1:1 con acta), derivada y regenerable. Alimenta bandejas, filtros, badges y habilitación de acciones. No es fuente de verdad; se recalcula en cada transición de dominio.
@@ -191,7 +205,7 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 - **Campos — bandejas y acciones:** `cod_bandeja VARCHAR(50) NULL` (`CodigoBandeja`, `EXPLICIT_STRING_CODE`; longitud física confirmada: max 50 caracteres; `DECISION_DDL-SNAP-01` CERRADA), `sub_bandeja VARCHAR(80) NULL`, `accion_pendiente VARCHAR(50) NULL` (`AccionPendiente`, `EXPLICIT_STRING_CODE`; longitud física confirmada: max 50 caracteres; **no** `CHAR(6)`).
 - **Campos — documentos y notificaciones:** `tiene_documentos BOOLEAN NOT NULL DEFAULT FALSE`, `tiene_docs_pendientes_firma BOOLEAN NOT NULL DEFAULT FALSE`, `tiene_docs_listos_para_notificar BOOLEAN NOT NULL DEFAULT FALSE`, `tiene_notificaciones BOOLEAN NOT NULL DEFAULT FALSE`, `notificacion_en_curso BOOLEAN NOT NULL DEFAULT FALSE`, `bloqueado_cierre BOOLEAN NOT NULL DEFAULT FALSE`, `id_docu_ult BIGINT NULL FK` (→ `fal_documento`), `bloqueado_notificacion BOOLEAN NOT NULL DEFAULT FALSE`.
 - **Campos — valorización operativa:** `valorizacion_operativa_id BIGINT NULL FK` (→ `fal_acta_valorizacion`), `estado_valorizacion_operativa SMALLINT NULL` (`EstadoValorizacion`), `tipo_valorizacion_operativa SMALLINT NULL` (`TipoValorizacionActa`), `monto_operativo_vigente DECIMAL(14,2) NULL` (valorización UX del acta; no es estado económico de pagos), `si_monto_confirmado BOOLEAN NOT NULL DEFAULT FALSE`.
-- **Campos — satélites de acta:** `licencia_provincia_txt VARCHAR(64) NULL`, `licencia_unidad_txt VARCHAR(80) NULL`, `nomenclatura_resumen VARCHAR(120) NULL`, `id_bie_i BIGINT NULL`, `id_bie_c BIGINT NULL`.
+- **Campos — satélites de acta:** `licencia_provincia_txt VARCHAR(64) NULL`, `licencia_unidad_txt VARCHAR(80) NULL`, `nomenclatura_resumen VARCHAR(120) NULL`, `id_bie_i MEDIUMINT UNSIGNED NULL` (proyección de fal_acta_contravencion.id_bie_i), `id_bie_c MEDIUMINT UNSIGNED NULL` (proyección de fal_acta_contravencion.id_bie_c). Java usa `Integer`. `HUMAN_DECISION_CLOSED — FULL-R1.2-CORRECCION-10`
 - **Campos — paralización:** `motivo_paralizacion_act SMALLINT NULL` (`MotivoParalizacion`, `EXPLICIT_NUMERIC_CODE`).
 - **Campos — control técnico:** `ultimo_evento_tipo CHAR(6) NULL` (`TipoEventoActa`, `EXPLICIT_STRING_CODE`), `ultima_actualizacion DATETIME(6) NULL`.
 - **Entidad Java:** `FalActaSnapshot` (PK: `idActa Long`; campos verificados). **Puerto:** `ActaSnapshotRepository` / `InMemoryActaSnapshotRepository`.
@@ -201,19 +215,24 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 - **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
 
 #### `fal_acta_evidencia`
-- **Propósito:** evidencias físicas vinculadas al acta (imágenes, capturas). Actualmente solo `FIRMA_OLOGRAFA_INFRACTOR` (código 6). No es firma institucional; no participa en `FalDocumentoFirma` ni `FalDocumentoFirmaReq`.
+- **Propósito:** repositorio de evidencias del acta: documentos, multimedia y firma ológrafa del infractor. No es firma institucional; no participa en `FalDocumentoFirma` ni `FalDocumentoFirmaReq`. `HUMAN_DECISION_CLOSED — FULL-R1.2-CORRECCION-10`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`.
-- **Campos (verificados contra Java; `DECISION_DDL-EVID-01` CERRADA):** `id_acta BIGINT NOT NULL`, `tipo_evid SMALLINT NOT NULL` (`TipoEvidenciaActa`, `EXPLICIT_NUMERIC_CODE`; único valor activo: `FIRMA_OLOGRAFA_INFRACTOR = 6`), `storage_key VARCHAR(255) NOT NULL` (no guardar binario), `fecha_registro DATETIME(6) NOT NULL` (instante funcional de captura/incorporación), `hash_evid CHAR(64) NULL` (SHA-256 hexadecimal opcional; si informado debe ser exactamente 64 caracteres hex), `fh_alta DATETIME(6) NOT NULL` (instante técnico de alta), `id_user_alta CHAR(36) NOT NULL` (actor técnico/funcional que incorporó la evidencia).
+- **Campos (verificados contra Java; `DECISION_DDL-EVID-01` CERRADA):** `id_acta BIGINT NOT NULL`, `tipo_evid SMALLINT NOT NULL` (`TipoEvidenciaActa`, `EXPLICIT_NUMERIC_CODE`; catálogo aprobado: `FOTO=4, VIDEO=8, AUDIO=12, PDF=16, DOCUMENTO_OFIMATICO=20, PLANILLA_CALCULO=24, FIRMA_OLOGRAFA_INFRACTOR=48`; códigos 28-44 reservados), `storage_key VARCHAR(255) NOT NULL` (no guardar binario), `fecha_registro DATETIME(6) NOT NULL` (instante funcional de captura/incorporación), `hash_evid CHAR(64) NULL` (SHA-256 hexadecimal opcional; si informado debe ser exactamente 64 caracteres hex), `fh_alta DATETIME(6) NOT NULL` (instante técnico de alta), `id_user_alta CHAR(36) NOT NULL` (actor técnico/funcional que incorporó la evidencia).
 - **Campos excluidos (DECISION_DDL-EVID-01 CERRADA):** `nombre_archivo`, `mime_type`, `orden_evid` — pertenecen al metadato del storage, no al registro de dominio. No se agrega `fh_captura` adicional: `fecha_registro` y `fh_alta` cubren las semánticas funcional y técnica. Estos cuatro campos del histórico 2026-06-23 quedan excluidos.
 - **Entidad Java:** `FalActaEvidencia` (id `Long`, inmutable; campos: `id`, `idActa`, `tipoEvid`, `storageKey`, `fechaRegistro`, `hashEvid`, `fhAlta`, `idUserAlta`). Constructor exige `fechaRegistro`, `fhAlta` y `idUserAlta` not-null; `hashEvid` nullable con validación de 64 caracteres hex si presente. **Puerto:** `ActaEvidenciaRepository` / `InMemoryActaEvidenciaRepository`.
 - **Append-only:** SÍ (inmutable post-creación).
-- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
+- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3 / ACTUALIZADA_CORRECCION-10.
 
 #### `fal_observacion`
-- **Propósito:** observaciones tipificadas por entidad.
-- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`.
-- **Campos:** `entidad_tipo SMALLINT`, `entidad_id BIGINT`, `texto TEXT`, `id_user_alta`, `fh_alta`.
-- **Entidad Java:** `FalObservacion`. **Puerto:** `ObservacionRepository` / `InMemoryObservacionRepository`. **Enum:** `EntidadTipoObservada` (22 códigos). **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Propósito:** registro polimórfico append-only de notas libres vinculadas a cualquier entidad observable del dominio. Ver spec completa en `40-domain/observaciones.md`.
+- **PK:** `id BIGINT AUTO_INCREMENT`.
+- **Campos:** `entidad_tipo SMALLINT NOT NULL` (EntidadTipoObservada, 22 códigos), `entidad_id BIGINT NOT NULL`, `id_acta_contexto BIGINT NULL FK` (→ fal_acta, ON DELETE CASCADE), `origen_observacion SMALLINT NOT NULL` (OrigenObservacion: 1=USUARIO, 2=SISTEMA, 3=INTEGRACION), `observacion VARCHAR(512) NOT NULL`, `si_activa BOOLEAN NOT NULL DEFAULT TRUE`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_baja DATETIME(6) NULL`, `id_user_baja CHAR(36) NULL`.
+- **CHECK:** `CHAR_LENGTH(TRIM(observacion)) BETWEEN 1 AND 512`; baja coherente (si_activa=TRUE ⟺ fh_baja/id_user_baja NULL; si_activa=FALSE ⟺ ambos NOT NULL).
+- **Índices:** `(entidad_tipo, entidad_id, si_activa, fh_alta)`, `(id_acta_contexto, fh_alta)`.
+- **No tiene** `version_row`: no se edita; corrección vía baja lógica + nueva inserción.
+- **Triggers:** 21 triggers AFTER DELETE (uno por tabla observable, excepto fal_acta que usa CASCADE). Ver `40-domain/observaciones.md` sección 5.
+- **Entidad Java:** `FalObservacion`. **Puerto:** `ObservacionRepository` / `InMemoryObservacionRepository`. **Enums:** `EntidadTipoObservada` (22 códigos), `OrigenObservacion` (3 códigos).
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): spec completa en observaciones.md / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Normativa
 
@@ -221,10 +240,17 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 - **Entidad Java:** `FalDependenciaNormativa`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_normativa_faltas`
-- **Entidad Java:** `FalNormativaFaltas`. **Puerto:** `NormativaRepository` / `InMemoryNormativaRepository`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **PK:** `id BIGINT AUTO_INCREMENT`.
+- **Campos:** `codigo_norma VARCHAR(8) NOT NULL UNIQUE`, `nombre_norma VARCHAR(64) NOT NULL`, `tipo_norma SMALLINT NOT NULL`, `numero_norma INT NULL`, `anio_norma SMALLINT NULL`, `fecha_promulgacion DATE NULL`, `fecha_publicacion DATE NULL`, `si_activa BOOLEAN NOT NULL`, `fh_vig_desde DATE NULL`, `fh_vig_hasta DATE NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalNormativaFaltas`. **Puerto:** `NormativaRepository` / `InMemoryNormativaRepository`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): codigo_norma VARCHAR(8), nombre_norma VARCHAR(64) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_articulo_normativa_faltas`
-- **Entidad Java:** `FalArticuloNormativaFaltas`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_normativa -> fal_normativa_faltas`.
+- **Campos:** `id_normativa BIGINT NOT NULL`, `codigo_articulo VARCHAR(16) NOT NULL`, `nombre_articulo VARCHAR(64) NOT NULL`, `descripcion_articulo VARCHAR(128) NULL` (no usar TEXT para descripción breve), `tipo_infraccion SMALLINT NOT NULL`, `categoria_infraccion SMALLINT NULL`, `si_admite_medida_preventiva BOOLEAN NOT NULL DEFAULT FALSE`, `si_activo BOOLEAN NOT NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Restricción:** `UNIQUE(id_normativa, codigo_articulo)`.
+- **Entidad Java:** `FalArticuloNormativaFaltas`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): codigo_articulo VARCHAR(16), nombre_articulo VARCHAR(64), descripcion_articulo VARCHAR(128) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_tarifario_unidad_faltas`
 - **Propósito:** valores unitarios por artículo para cálculo de valorización.
@@ -245,12 +271,16 @@ supone (nombres, campos, FKs conceptuales). No es DDL ejecutable.
 #### `fal_acta_articulo_infringido`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`, `id_articulo -> fal_articulo_normativa_faltas`.
 - **Unicidad física requerida:** UK activo `(id_acta, id_articulo)`.
-- **Entidad Java:** `FalActaArticuloInfringido`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Eliminado:** `observaciones TEXT` — centralizar en fal_observacion(ARTICULO_INFRINGIDO).
+- **Entidad Java:** `FalActaArticuloInfringido`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): sin observaciones, UK activo confirmado / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_valorizacion`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`.
-- **Campos:** `monto_total DECIMAL(14,2)`, `fh_calculo DATETIME(6)`, `si_vigente BOOLEAN`.
-- **Entidad Java:** `FalActaValorizacion` (`versionRow` presente). **Operación atómica:** `confirmarVigenteAtomico` garantiza una sola valorización vigente CONFIRMADA por acta+tipo. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Campos:** `version_row INT NOT NULL DEFAULT 0` (OCC), `tipo_valorizacion SMALLINT NOT NULL`, `estado_valorizacion SMALLINT NOT NULL`, `monto_total DECIMAL(14,2) NOT NULL`, `fh_calculo DATETIME(6) NOT NULL`, `si_vigente BOOLEAN NOT NULL`, `si_confirmada BOOLEAN NOT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalActaValorizacion` (`versionRow` presente). **Operación atómica:** `confirmarVigenteAtomico` garantiza una sola valorización vigente CONFIRMADA por acta+tipo.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): monto_total NOT NULL, fh_calculo NOT NULL, nombres canónicos confirmados / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_valorizacion_item`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_valorizacion -> fal_acta_valorizacion`.
@@ -280,16 +310,18 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **Entidad Java:** `FalActaVehiculo`. **FK:** `marca_vehiculo_id -> fal_vehiculo_marca`, `modelo_vehiculo_id -> fal_vehiculo_modelo`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_contravencion`
-- **Propósito:** nomenclatura catastral y rubro del acta de contravención/comercio, instanciada históricamente al labrar (no se actualiza si Catastro cambia después). **PK+FK:** `acta_id BIGINT` (1:1, solo `tipo_acta=CONTRAVENCION`/`COMERCIO`).
-- **Campos:** `id_suj_i BIGINT NULL`, `id_bie_i BIGINT NULL` (cuenta inmueble/CVP; NULL solo si no hay cuenta disponible o carga manual/excepcional), `id_suj_c BIGINT NULL`, `id_bie_c BIGINT NULL` (cuenta comercio; juntos), `circ SMALLINT NULL`, `secc VARCHAR(2) NULL`, `frac VARCHAR(7) NULL`, `mza VARCHAR(7) NULL`, `parc VARCHAR(7) NULL`, `ufun VARCHAR(7) NULL`, `ucomp VARCHAR(20) NULL`, `origen_nomencl SMALLINT NOT NULL`, `si_nomenclatura_manual BOOLEAN NOT NULL`, `motivo_nomenclatura_manual SMALLINT NULL` (obligatorio si manual), `rubro_id BIGINT NULL FK` (junto con `id_rub`), `id_rub INT NULL` (referencia externa `informix.rubrocom.id_rub`), `ambito_ctv SMALLINT NULL`, `ambito_ctv_txt VARCHAR(80) NULL` (obligatorio solo si `ambito_ctv=OTRO`).
-- **Auditoría:** `fh_alta`, `id_user_alta`.
-- **Entidad Java:** `FalActaContravencion`. **FK:** `rubro_id -> fal_rubro_version`. **No existe** `nomenclatura_txt` como columna propia: el resumen legible se proyecta en `fal_acta_snapshot.nomenclatura_resumen`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Propósito:** nomenclatura catastral y rubro del acta de contravención/comercio, instanciada históricamente al labrar. **PK+FK:** `acta_id BIGINT` (1:1, solo `tipo_acta=CONTRAVENCION`/`COMERCIO`).
+- **Campos:** `id_suj_i TINYINT UNSIGNED NULL` (código tipo de sujeto en Ingresos Municipales; CHECK: BETWEEN 1 AND 255; catálogo abierto), `id_bie_i MEDIUMINT UNSIGNED NULL` (CHECK: BETWEEN 1 AND 9999999), `id_suj_c TINYINT UNSIGNED NULL` (código tipo de sujeto en Ingresos Municipales; CHECK: BETWEEN 1 AND 255; catálogo abierto), `id_bie_c MEDIUMINT UNSIGNED NULL` (CHECK: BETWEEN 1 AND 9999999), `circ SMALLINT NULL`, `secc VARCHAR(2) NULL`, `frac VARCHAR(7) NULL`, `mza VARCHAR(7) NULL`, `parc VARCHAR(7) NULL`, `ufun VARCHAR(7) NULL`, `ucomp VARCHAR(20) NULL`, `origen_nomencl SMALLINT NOT NULL`, `si_nomenclatura_manual BOOLEAN NOT NULL`, `motivo_nomenclatura_manual SMALLINT NULL`, `rubro_id BIGINT NULL FK` (→ `fal_rubro_version.rubro_id`), `id_rub INT NULL`, `ambito_ctv SMALLINT NULL`, `ambito_ctv_txt VARCHAR(48) NULL` (obligatorio solo si `ambito_ctv=OTRO`).
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalActaContravencion` (idSujI/idBieI/idSujC/idBieC son `Integer`). **No existe** `nomenclatura_txt` como columna propia.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001 / FULL-R1.2-CORRECCION-10): id_suj TINYINT UNSIGNED BETWEEN 1 AND 255, id_bie MEDIUMINT UNSIGNED, ambito_ctv_txt VARCHAR(48), CHECK confirmados / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_sustancias_alimenticias`
-- **Propósito:** datos de actas de sustancias alimenticias/bromatología. **PK+FK:** `acta_id BIGINT` (1:1, solo circuito sustancias/bromatología).
-- **Campos:** `rubro_id BIGINT NULL FK` (junto con `id_rub`), `id_rub INT NULL`, `ambito_ctv SMALLINT NULL`, `ambito_ctv_txt VARCHAR(80) NULL` (obligatorio solo si `ambito_ctv=OTRO`), `descripcion_sustancias TEXT NULL`.
-- **Auditoría:** `fh_alta`, `id_user_alta`.
-- **Entidad Java:** `FalActaSustanciasAlimenticias`. **FK:** `rubro_id -> fal_rubro_version`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Propósito:** datos de actas de sustancias alimenticias/bromatología. **PK+FK:** `acta_id BIGINT` (1:1).
+- **Campos:** `rubro_id BIGINT NULL FK` (→ `fal_rubro_version.rubro_id`), `id_rub INT NULL`, `ambito_ctv SMALLINT NULL`, `ambito_ctv_txt VARCHAR(48) NULL`, `descripcion_sustancias TEXT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalActaSustanciasAlimenticias`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): ambito_ctv_txt VARCHAR(48) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_medida_preventiva`
 - **Propósito:** medida preventiva efectivamente aplicada al acta (no es catálogo). **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `acta_id -> fal_acta` (1 acta : N medidas).
@@ -311,10 +343,12 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 
 #### `fal_documento`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`, `id_plantilla -> fal_documento_plantilla`.
-- **Campos:** `tipo_docu SMALLINT`, `nro_docu VARCHAR(30) NULL`, `estado_docu SMALLINT`, `storage_key VARCHAR(500) NULL`, `hash_docu VARCHAR(128) NULL`, `tipo_firma_req SMALLINT`, `fh_alta`, `id_user_alta`.
+- **Campos:** `tipo_docu SMALLINT NOT NULL`, `nro_docu VARCHAR(30) NULL`, `estado_docu SMALLINT NOT NULL`, `storage_key VARCHAR(196) NULL` (clave técnica generada por backend; formato: faltas/actas/<uuid-acta>/documentos/<uuid-documento>.pdf; no es URL pública; no contiene binario), `hash_docu VARCHAR(128) NULL`, `tipo_firma_req SMALLINT NOT NULL`, `fh_generacion DATETIME(6) NULL`, `id_talonario BIGINT NULL FK`, `nro_talonario_usado INT NULL`.
+- **Eliminado:** `descripcion` — derivable desde plantilla; nombre comunica uso.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **versionRow/OCC:** `version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-DOC-01` CERRADA).
 - **Entidad Java:** `FalDocumento`. **Puerto:** `DocumentoRepository` / `InMemoryDocumentoRepository`.
-- **versionRow/OCC:** implementado en `InMemoryDocumentoRepository.guardar()` (modifica in-place) y en `FalDocumento.versionRow`; DDL: `fal_documento.version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-DOC-01` CERRADA).
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): storage_key VARCHAR(196), sin descripcion / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_documento`
 - **Propósito:** tabla pivot relación canónica acta-documento (pertenencia funcional).
@@ -326,25 +360,31 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 - **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_documento_firma`
-- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_documento -> fal_documento`, `id_firmante + ver_firmante -> fal_firmante_version`.
-- **Campos:** `estado_firma SMALLINT`, `seq_firma_req SMALLINT`, `tipo_firma SMALLINT`, `storage_key VARCHAR(500) NULL`, `hash_firma VARCHAR(128) NULL`, `fh_firma DATETIME(6) NULL`.
-- **Entidad Java:** `FalDocumentoFirma`. **Idempotencia:** `referenciaFirmaExt` (ver `../10-domain/firma-notificacion-fallo.md`). **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_documento -> fal_documento`, `(id_firmante, ver_firmante) -> fal_firmante_version`.
+- **Campos:** `estado_firma SMALLINT NOT NULL`, `seq_firma_req SMALLINT NOT NULL`, `tipo_firma SMALLINT NOT NULL`, `storage_key VARCHAR(196) NULL` (mismo contrato que fal_documento.storage_key: clave técnica interna), `hash_firma VARCHAR(128) NULL`, `referencia_firma_ext VARCHAR(64) NULL` (id de transacción/solicitud/sobre del proveedor externo; no es la firma ni el certificado; NULL para firma interna), `fh_firma DATETIME(6) NULL`, `id_firmante BIGINT NULL FK`, `ver_firmante SMALLINT NULL`, `id_user_firma CHAR(36) NULL`, `nombre_firmante VARCHAR(48) NULL`, `mensaje_error VARCHAR(512) NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalDocumentoFirma`. **Idempotencia:** `referenciaFirmaExt`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): storage_key VARCHAR(196), referencia_firma_ext VARCHAR(64) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_documento_firma_req`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_documento -> fal_documento`. **Entidad Java:** `FalDocumentoFirmaReq`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_documento_plantilla`
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos:** `codigo VARCHAR(50)`, `nombre VARCHAR(200)`, `tipo_docu SMALLINT`, `accion_documental SMALLINT`, `tipo_acta SMALLINT NULL`, `tipo_firma_req SMALLINT`, `si_requiere_numeracion BOOLEAN`, `momento_numeracion_docu SMALLINT`, `si_notificable BOOLEAN`, `si_genera_pdf BOOLEAN`, `si_seleccionable BOOLEAN`, `si_activa BOOLEAN`, `fh_vig_desde DATE`, `fh_vig_hasta DATE NULL`, `fh_alta DATETIME(6)`, `id_user_alta CHAR(36)`.
-- **Entidad Java:** `FalDocumentoPlantilla`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Campos:** `codigo VARCHAR(12) NOT NULL UNIQUE`, `nombre VARCHAR(64) NOT NULL` (debe comunicar uso e intención), `tipo_docu SMALLINT NOT NULL`, `accion_documental SMALLINT NOT NULL`, `tipo_acta SMALLINT NULL`, `tipo_firma_req SMALLINT NOT NULL`, `si_requiere_numeracion BOOLEAN NOT NULL`, `momento_numeracion_docu SMALLINT NOT NULL`, `si_notificable BOOLEAN NOT NULL`, `si_genera_pdf BOOLEAN NOT NULL`, `si_seleccionable BOOLEAN NOT NULL`, `si_activa BOOLEAN NOT NULL`, `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL`.
+- **Eliminado:** `descripcion` — nombre VARCHAR(64) comunica uso.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalDocumentoPlantilla` (sin campo, constructor ni accessors de `descripcion`). **Estado:** HUMAN_DECISION_CLOSED (FULL-R1.2-CORRECCION-04): codigo VARCHAR(12), nombre VARCHAR(64), sin descripcion / BASELINE_PRESERVADA_CON_DELTA.
+- **Contrato Java/API:** `CrearDocumentoPlantillaCommand`, `CrearDocumentoPlantillaRequest` y `DocumentoPlantillaResponse` no exponen `descripcion`; controller y service no la transportan ni la descartan silenciosamente.
 
 #### `fal_documento_plantilla_firma_req`
 - **PK:** `id_plantilla + seq_firma_req` (compuesta). **Entidad Java:** `FalDocumentoPlantillaFirmaReq`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_documento_plantilla_contenido`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_plantilla -> fal_documento_plantilla`.
-- **Campos:** `version_contenido SMALLINT NOT NULL`, `titulo VARCHAR(200) NOT NULL`, `cuerpo_markdown TEXT NOT NULL`, `encabezado_markdown TEXT NULL`, `pie_markdown TEXT NULL`, `variables_declaradas_json JSON NOT NULL DEFAULT '[]'`, `si_activo BOOLEAN NOT NULL`, `fh_vig_desde DATETIME(6) NOT NULL`, `fh_vig_hasta DATETIME(6) NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
-- **Entidad Java:** `FalDocumentoPlantillaContenido`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Campos:** `version_contenido SMALLINT NOT NULL`, `titulo VARCHAR(64) NOT NULL`, `cuerpo_markdown TEXT NOT NULL`, `encabezado_markdown TEXT NULL`, `pie_markdown TEXT NULL`, `variables_declaradas_json JSON NOT NULL`, `si_activo BOOLEAN NOT NULL`, `fh_vig_desde DATETIME(6) NOT NULL`, `fh_vig_hasta DATETIME(6) NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Contrato de `variables_declaradas_json`:** arreglo de metadatos declarativos; usar exactamente `[]` cuando la plantilla no declara variables. Cada elemento es un objeto y debe contener `namespace`, `campo`, `tipoDato`, `requerida` y `etiqueta`. `tipoDato` tipa el valor esperado, `requerida` es un booleano explícito y `etiqueta` es el nombre legible para UI/diagnóstico. No contiene valores resueltos ni reemplaza `variables_snapshot_json` de la redacción.
+- **Entidad Java:** `FalDocumentoPlantillaContenido` (`MAX_TITULO_LENGTH = 64`; metadatos documentados sin incorporar parser JSON). **Estado:** HUMAN_DECISION_CLOSED (FULL-R1.2-CORRECCION-04): titulo VARCHAR(64), variables declaradas tipadas/requeridas/etiquetadas / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_documento_plantilla_default`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **Índice de consulta:** `(accion_documental, tipo_acta, id_dependencia)`.
@@ -353,39 +393,53 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 
 #### `fal_documento_redaccion`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_documento -> fal_documento`, `id_plantilla_contenido -> fal_documento_plantilla_contenido`, `redaccion_origen_id -> fal_documento_redaccion` (self). **UK:** `id_documento + nro_revision`.
-- **Campos:** `nro_revision SMALLINT NOT NULL`, `redaccion_origen_id BIGINT NULL`, `estado_redaccion SMALLINT NOT NULL` (`BORRADOR=1, CONFIRMADA=2, ANULADA=3`), `contenido_base_markdown TEXT NOT NULL`, `contenido_editable_markdown TEXT NOT NULL`, `variables_snapshot_json JSON NOT NULL DEFAULT '{}'`, `variables_faltantes_json JSON NOT NULL DEFAULT '[]'`, `diagnostico_json JSON NOT NULL DEFAULT '{}'`, `recursos_snapshot_json JSON NULL`, campos de auditoría por hito (creación/regeneración/edición/confirmación/anulación).
-- **Entidad Java:** `FalDocumentoRedaccion`. **Servicios:** `DocumentoCombinacionService`, `DocumentoVariableContextBuilder`, `DocumentoVariableRegistry`, `DocumentoRedaccionService`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Campos:** `nro_revision SMALLINT NOT NULL`, `redaccion_origen_id BIGINT NULL`, `estado_redaccion SMALLINT NOT NULL` (`BORRADOR=1, CONFIRMADA=2, ANULADA=3`), `contenido_editable_markdown TEXT NOT NULL`, `variables_snapshot_json JSON NOT NULL DEFAULT '{}'`, campos de auditoría por hito (creación/confirmación/anulación).
+- **Eliminado:** `contenido_base_markdown` — no duplicar cuerpo de plantilla. `variables_faltantes_json`, `diagnostico_json`, `recursos_snapshot_json` — errores se resuelven antes de confirmar; no persistir estado transitorio de validación.
+- **Reglas:** no se confirma una redacción con variables faltantes; `contenido_editable_markdown` conserva cambios manuales; `variables_snapshot_json` congela los valores utilizados.
+- **versionRow/OCC:** `version_row INT NOT NULL DEFAULT 0` (`versionRow` en `FalDocumentoRedaccion`, default 0). **Repositorio OCC:** `InMemoryDocumentoRedaccionRepository` con semántica copy-on-read/write.
+- **Entidad Java:** `FalDocumentoRedaccion` (`versionRow` presente). **Servicios:** `DocumentoCombinacionService`, `DocumentoVariableContextBuilder`, `DocumentoVariableRegistry`, `DocumentoRedaccionService`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): sin contenido_base_markdown/variables_faltantes_json/diagnostico_json/recursos_snapshot_json; OCC confirmado / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Notificaciones
 
 #### `fal_notificacion`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_acta -> fal_acta`, `id_documento -> fal_documento`.
-- **Campos:** `tipo_docu_notificado SMALLINT`, `canal VARCHAR(50)`, `fecha_envio DATETIME(6)`, `estado SMALLINT`, `resultado SMALLINT NULL`, `fecha_resultado DATETIME(6) NULL`, `intentos INT`, `observaciones TEXT NULL`.
+- **Campos:** `tipo_docu_notificado SMALLINT`, `canal SMALLINT NULL` (CanalNotificacion: 1=CORREO_POSTAL, 2=NOTIFICADOR_MUNICIPAL, 3=PRESENCIAL, 4=PORTAL_INFRACTOR, 5=EMAIL; NULL en estado PENDIENTE_ENVIO; NOT NULL tras iniciarEnvio), `fecha_envio DATETIME(6)`, `estado SMALLINT`, `resultado SMALLINT NULL`, `fecha_resultado DATETIME(6) NULL`, `intentos INT`.
+- **Eliminado:** `observaciones TEXT` — centralizar en fal_observacion(NOTIFICACION).
 - **Entidad Java:** `FalNotificacion` (id `Long`). **Puerto:** `NotificacionRepository` / `InMemoryNotificacionRepository`.
-- **versionRow/OCC:** implementado en `InMemoryNotificacionRepository.guardar()` (modifica in-place); DDL: `fal_notificacion.version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-NOTI-01` CERRADA).
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **versionRow/OCC:** `version_row INT NOT NULL DEFAULT 0` (`DECISION_DDL-NOTI-01` CERRADA).
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): canal SMALLINT, sin observaciones / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_notificacion_intento`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_notificacion -> fal_notificacion`.
-- **Campos:** `nro_intento SMALLINT`, `canal VARCHAR(50)`, `fecha_intento DATETIME(6)`, `resultado SMALLINT`, `detalle TEXT NULL`.
-- **Entidad Java:** `FalNotificacionIntento`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Campos:** `nro_intento SMALLINT NOT NULL`, `canal_notif SMALLINT NOT NULL` (CanalNotificacion: 1=CORREO_POSTAL, 2=NOTIFICADOR_MUNICIPAL, 3=PRESENCIAL, 4=PORTAL_INFRACTOR, 5=EMAIL; nombre canonico SPEC-MODEL-DDL-CLOSURE-001; DDL y Java usan canal_notif), `estado_intento SMALLINT NOT NULL`, `resultado_intento SMALLINT NULL`, `domicilio_notif_id BIGINT NULL FK`, `destino_digital VARCHAR(120) NULL`, `lote_id BIGINT NULL FK`, `referencia_externa VARCHAR(80) NULL`, `fh_intento DATETIME(6) NOT NULL`, `fh_resultado DATETIME(6) NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
+- **Entidad Java:** `FalNotificacionIntento`. **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): canal SMALLINT (no VARCHAR) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_notificacion_acuse`
-- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_notificacion -> fal_notificacion`. **Entidad Java:** `FalNotificacionAcuse`. **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_notificacion -> fal_notificacion`, `intento_id -> fal_notificacion_intento` (NULL).
+- **Campos:** `tipo_acuse SMALLINT NOT NULL`, `canal SMALLINT NOT NULL` (CanalNotificacion: 1=CORREO_POSTAL, 2=NOTIFICADOR_MUNICIPAL, 3=PRESENCIAL, 4=PORTAL_INFRACTOR, 5=EMAIL), `estado_acuse SMALLINT NOT NULL`, `storage_key VARCHAR(196) NULL`, `fh_acuse DATETIME(6) NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalNotificacionAcuse`. **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): canal SMALLINT, storage_key VARCHAR(196) / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_lote_correo`
-- **PK:** `id BIGINT AUTO_INCREMENT`. **Campos:** `tipo_lote SMALLINT`, `fecha_generacion DATETIME(6)`, `estado_lote SMALLINT`, `id_user_alta CHAR(36)`.
+- **PK:** `id BIGINT AUTO_INCREMENT`.
+- **Campos:** `lote_codigo CHAR(20) NOT NULL UNIQUE` (formato LC-YYYYMMDD-NNNNNNNN; generado por backend; inmutable), `tipo_lote SMALLINT NOT NULL`, `fecha_generacion DATETIME(6) NOT NULL`, `estado_lote SMALLINT NOT NULL`.
+- **Auditoría:** `id_user_alta CHAR(36) NOT NULL`, `fh_alta DATETIME(6) NOT NULL`.
+- **CHECK lote_codigo:** `lote_codigo REGEXP '^LC-[0-9]{8}-[0-9]{8}$'`.
 - **Entidad Java:** `FalLoteCorreo`. **Puerto:** `LoteCorreoRepository` / `InMemoryLoteCorreoRepository`.
-- **Clave de idempotencia:** `loteCodigo` (unicidad física requerida, ver `inmemory-mariadb-deltas.md`, sección de unicidades). **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): lote_codigo CHAR(20) formato LC-YYYYMMDD-NNNNNNNN / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Fallo y firmeza
 
 #### `fal_acta_fallo`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK conceptuales:** `id_acta -> fal_acta`, `valorizacion_id -> fal_acta_valorizacion`, `fallo_reemplazado_id -> fal_acta_fallo` (self), `documento_id -> fal_documento`.
-- **Campos:** `tipo_fallo SMALLINT NOT NULL`, `estado_fallo SMALLINT NOT NULL` (`EstadoFalloActa`, `EXPLICIT_NUMERIC_CODE`; códigos: `PENDIENTE_FIRMA=1, PENDIENTE_NOTIFICACION=2, NOTIFICADO=3, FIRME=4, REEMPLAZADO=5, SIN_EFECTO=6`; `DECISION_DDL-ENUM-01` CERRADA), `monto_condena DECIMAL(14,2) NULL`, `resultado_fallo SMALLINT NULL`, `fundamentos TEXT NULL`, `documento_id BIGINT NULL`, `valorizacion_id BIGINT NULL`, `fallo_reemplazado_id BIGINT NULL`, `fecha_dictado DATETIME(6) NOT NULL`, `fecha_notificacion DATETIME(6) NULL`, `fecha_resultado_final DATETIME(6) NULL`, `fh_firma DATETIME(6) NULL`, `fh_vto_apelacion DATETIME(6) NULL`, `si_activo BOOLEAN NOT NULL`, `si_firme BOOLEAN NOT NULL DEFAULT FALSE`, `fh_firmeza DATETIME(6) NULL`, `origen_firmeza SMALLINT NULL` (`1=VENCIMIENTO_PLAZO_APELACION, 2=APELACION_RECHAZADA`), `version_row INT NOT NULL DEFAULT 0`.
-- **Auditoría:** `fh_alta`, `id_user_alta`, `fh_mod`, `id_user_mod`.
+- **Campos:** `tipo_fallo SMALLINT NOT NULL`, `estado_fallo SMALLINT NOT NULL` (`EstadoFalloActa`, `EXPLICIT_NUMERIC_CODE`; códigos: `PENDIENTE_FIRMA=1, PENDIENTE_NOTIFICACION=2, NOTIFICADO=3, FIRME=4, REEMPLAZADO=5, SIN_EFECTO=6`; `DECISION_DDL-ENUM-01` CERRADA), `monto_condena DECIMAL(14,2) NULL`, `resultado_fallo SMALLINT NULL`, `fundamentos TEXT NULL`, `documento_id BIGINT NULL`, `valorizacion_id BIGINT NULL`, `fallo_reemplazado_id BIGINT NULL`, `fh_dictado DATETIME(6) NOT NULL`, `id_user_dictado CHAR(36) NULL`, `fh_firma DATETIME(6) NULL`, `fh_notificacion DATETIME(6) NULL`, `fh_vto_apelacion DATE NULL`, `fh_firmeza DATETIME(6) NULL`, `origen_firmeza SMALLINT NULL` (`1=VENCIMIENTO_PLAZO_APELACION, 2=APELACION_RECHAZADA`), `si_apelable BOOLEAN NOT NULL DEFAULT FALSE`, `si_firme BOOLEAN NOT NULL DEFAULT FALSE`, `si_vigente BOOLEAN NOT NULL DEFAULT TRUE`, `version_row INT NOT NULL DEFAULT 0`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
 - **Entidad Java:** `FalActaFallo` (id `Long`, `versionRow` presente). **Puerto:** `FalloActaRepository` / `InMemoryFalloActaRepository`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Mapeo de nombres históricos → canónicos:** `fecha_dictado` → `fh_dictado` · `fecha_notificacion` → `fh_notificacion` · `si_activo` → `si_vigente` · `fh_vto_apelacion DATETIME(6)` → `fh_vto_apelacion DATE` · campos `fecha_resultado_final`, `fh_mod`, `id_user_mod` eliminados (no existen en Java ni DDL).
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): fh_dictado/fh_notificacion/si_vigente/fh_vto_apelacion DATE/si_apelable confirmados / BASELINE_PRESERVADA_CON_DELTA.
 
 > **Nota de firmeza:** la firmeza de condena es inline en `fal_acta_fallo`
 > (`si_firme`, `fh_firmeza`, `origen_firmeza`). No existe una tabla propia de
@@ -398,11 +452,11 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 
 #### `fal_acta_apelacion`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK conceptuales:** `id_acta -> fal_acta`, `fallo_id -> fal_acta_fallo`, `documento_resolucion_id -> fal_documento`.
-- **Campos:** `fallo_id BIGINT NOT NULL`, `estado_apelacion SMALLINT NOT NULL` (`EstadoApelacionActa`, `EXPLICIT_NUMERIC_CODE`; códigos: `PRESENTADA=1, EN_ANALISIS=2, RECHAZADA=3, ACEPTADA_ABSUELVE=4, RESUELTA=5, SIN_EFECTO=6`; `DECISION_DDL-ENUM-01` CERRADA), `fecha_presentacion DATETIME(6) NOT NULL`, `canal_apelacion SMALLINT NOT NULL`, `tipo_presentacion SMALLINT NOT NULL`, `texto_apelacion TEXT NULL`, `presentante VARCHAR(300) NULL`, `fundamentos TEXT NULL`, `observaciones TEXT NULL`, `si_activa BOOLEAN NOT NULL`, `fecha_resolucion DATETIME(6) NULL`, `fundamentos_resolucion TEXT NULL`, `observaciones_resolucion TEXT NULL`, `documento_resolucion_id BIGINT NULL`, `version_row INT NOT NULL DEFAULT 0`.
-- **Auditoría:** `fh_alta`, `id_user_alta`, `fh_mod`, `id_user_mod`.
+- **Campos:** `fallo_id BIGINT NOT NULL`, `estado_apelacion SMALLINT NOT NULL` (EstadoApelacionActa; códigos: PRESENTADA=1, EN_ANALISIS=2, RECHAZADA=3, ACEPTADA_ABSUELVE=4, RESUELTA=5, SIN_EFECTO=6), `fecha_presentacion DATETIME(6) NOT NULL`, `canal_apelacion SMALLINT NOT NULL`, `tipo_presentacion SMALLINT NOT NULL`, `presentante VARCHAR(64) NULL`, `texto_apelacion TEXT NULL`, `fundamentos TEXT NULL`, `si_activa BOOLEAN NOT NULL`, `fecha_resolucion DATETIME(6) NULL`, `resultado_resolucion SMALLINT NULL`, `fundamentos_resolucion TEXT NULL`, `documento_resolucion_id BIGINT NULL`, `version_row INT NOT NULL DEFAULT 0`.
+- **Eliminado:** `observaciones TEXT`, `observaciones_resolucion TEXT` — centralizar en fal_observacion(APELACION).
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_mod DATETIME(6) NULL`, `id_user_mod CHAR(36) NULL`.
 - **Entidad Java:** `FalActaApelacion` (id `Long`, `falloId Long`, `versionRow` presente). **Puerto:** `ApelacionActaRepository` / `InMemoryApelacionActaRepository`.
-- **Nota de consulta (CMD-FALLO-006):** la apelación relevante para declarar firmeza por apelación rechazada se busca por `fallo_id`, no por "última apelación del acta"; una apelación histórica de otro fallo no debe bloquear ni satisfacer la precondición (ver `../20-application/command-contracts.md`).
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): presentante VARCHAR(64), sin observaciones/observaciones_resolucion, conserva texto_apelacion + fundamentos + fundamentos_resolucion / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_acta_apelacion_documento`
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_apelacion -> fal_acta_apelacion`, `id_documento -> fal_documento`.
@@ -482,28 +536,17 @@ caso; FK `acta_id -> fal_acta`. Un único satélite válido por acta según
 
 #### `fal_acta_pago_movimiento`
 - **Propósito:** registro append-only de cada hecho económico real (emisión, pago procesado, pago confirmado, reverso, anulación de emisión, pago aplicado a obligación anterior). Tabla inmutable post-inserción; no tiene `versionRow`.
-- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `obligacion_pago_id -> fal_acta_obligacion_pago`, `forma_pago_id -> fal_acta_forma_pago` (NULL), `plan_pago_ref_id -> fal_acta_plan_pago_ref` (NULL), `movimiento_origen_id -> fal_acta_pago_movimiento` (self, NULL — reversos y resoluciones PAGRES).
-- **Campos — identificadores y tipo:** `obligacion_pago_id BIGINT NOT NULL`, `forma_pago_id BIGINT NULL`, `plan_pago_ref_id BIGINT NULL`, `tipo_movimiento SMALLINT NOT NULL` (`TipoMovimientoPago`; DEUDA_EMITIDA=1/PAGO_PROCESADO=2/PAGO_CONFIRMADO=3/PAGO_REVERTIDO=4/EMISION_ANULADA=5), `origen_movimiento SMALLINT NOT NULL` (`OrigenMovimiento`; catálogo cerrado 8 valores), `origen_confirmacion SMALLINT NULL` (`OrigenConfirmacion`; catálogo cerrado 6 valores), `evidencia_documento_id BIGINT NULL`, `clasificacion_pago SMALLINT NOT NULL DEFAULT 1` (`ClasificacionPago`; **catálogo Java vigente**: NORMAL=1/DUPLICADO_REAL=2/EXCEDENTE=3/OBLIGACION_ANTERIOR=4 — difiere del histórico 2026-06-23 que tenía 3 valores y códigos distintos; ver `DECISION_DDL-MOV-04`), `nro_cuota SMALLINT NULL`.
-- **Campos — importes:** `importe_capital DECIMAL(14,2) NULL`, `importe_rima DECIMAL(14,2) NULL`, `importe_total DECIMAL(14,2) NULL` (invariante Java: si los tres informados, `capital + rima == total`).
-- **Campos — referencias EM/PG:** `cmte_em CHAR(2) NULL`, `pref_em SMALLINT NULL`, `nro_em INT NULL` (terna EM completa o NULL total), `cmte_pg CHAR(2) NULL`, `pref_pg SMALLINT NULL`, `nro_pg INT NULL` (terna PG completa o NULL total; obligatoria en `PAGO_CONFIRMADO` original sin `movimiento_origen_id`).
-- **Campos — contexto operativo:** `id_cierre BIGINT NULL`, `id_ope BIGINT NULL`, `movimiento_origen_id BIGINT NULL FK self` (reversos: apunta al movimiento original; PAGRES: apunta al `PAGANT` original; unicidad de aplicación garantizada por columna generada nullable + `UNIQUE` — ver `DECISION_DDL-PAGO-MOV-01` CERRADA), `motivo_anulacion_pago SMALLINT NULL` (`MotivoAnulacionPago`; CONTRACARGO=1/ANULACION_TESORERIA=2/ERROR_OPERATIVO=3/DUPLICADO=4/REVERSION_MEDIO_PAGO=5/OTRO=6), `motivo_aplicacion_pago_anterior VARCHAR(500) NULL` (fuente de verdad para idempotencia de PAGRES; nunca se deriva de `descripcionLegible` del evento; longitud: 500 caracteres máximo, trim obligatorio; `DECISION_DDL-MOV-03` CERRADA).
-- **Campos — fechas y referencia:** `fh_pago_procesado DATETIME(6) NULL`, `fh_pago_confirmado DATETIME(6) NULL`, `referencia_externa VARCHAR(80) NULL` (longitud confirmada por validación Java: max 80 caracteres).
-- **Campos — fecha funcional:** `fh_movimiento DATETIME(6) NOT NULL` (inmutable; fecha efectiva del hecho económico).
-- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL` (Java Builder valida NOT NULL y non-blank; histórico 2026-06-23 erróneamente lo mostraba nullable).
-- **Entidad Java:** `FalActaPagoMovimiento` (id `Long`, **no tiene `versionRow`**: append-only estricto). **Puerto:** `PagoMovimientoRepository` / `InMemoryPagoMovimientoRepository`.
-- **Enums:** `TipoMovimientoPago` (`EXPLICIT_NUMERIC_CODE`), `OrigenMovimiento` (`EXPLICIT_NUMERIC_CODE`), `OrigenConfirmacion` (`EXPLICIT_NUMERIC_CODE`), `ClasificacionPago` (`EXPLICIT_NUMERIC_CODE`), `MotivoAnulacionPago` (`EXPLICIT_NUMERIC_CODE`).
-- **Invariante:** vínculo canónico único `movimientoOrigenId` para reversos y para el movimiento de aplicación creado al resolver un pago anterior; append-only, sin edición de movimientos históricos.
-- **`ClasificacionPago.OBLIGACION_ANTERIOR`:** un `PAGO_CONFIRMADO` registrado contra una obligación con `siVigente=false` se clasifica siempre así (derivado del estado de la obligación destino, nunca elegido por el actor) y emite `PAGANT` en lugar de `PAGCNF`/`PCOCNF`. No es un valor que el actor pueda declarar contra una obligación vigente (rechazado con 422). Ver `../10-domain/states-events-catalogs.md`.
-- **Campos de recibo `cmtePG`/`prefPG`/`nroPG`:** terna completa o totalmente `NULL` (no parcial); obligatoria (completa) en todo movimiento `PAGO_CONFIRMADO` original (`movimientoOrigenId == null`); el movimiento de aplicación PAGRES puede tenerla `NULL`. `origenMovimiento + cmtePG + prefPG + nroPG` es la clave de negocio de un recibo físico; ver `DECISION_DDL-PAGO-MOV-01`.
-- **Resolución de pago aplicado a obligación anterior (`PAGRES`), sin tabla propia:** el movimiento de aplicación creado por `ResolverPagoObligacionAnteriorCommand` es un `FalActaPagoMovimiento` más: `tipoMovimiento=PAGO_CONFIRMADO`, `clasificacionPago=NORMAL`, `movimientoOrigenId` = id del `PAGANT` original, `importeTotal` igual al importe total del `PAGANT` (sin recortar contra el saldo pendiente), `motivoAplicacionPagoAnterior` con el motivo normalizado. Un reintento compatible devuelve los datos históricos de la primera aplicación. Ver `../20-application/command-contracts.md`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. **Deltas resueltos:**
-  - `tipo_vencimiento_pago SMALLINT NULL` — excluido (`DECISION_DDL-MOV-01` CERRADA; derivable de `fh_movimiento` + `fal_acta_forma_pago.fh_vencimiento`).
-  - `fh_recepcion_tecnica DATETIME(6) NULL` — excluido (`DECISION_DDL-MOV-02` CERRADA; `fh_alta` cubre la semántica técnica).
-  - `motivo_aplicacion_pago_anterior VARCHAR(500)` — incorporado a Java y DDL (`DECISION_DDL-MOV-03` CERRADA).
-  - `ClasificacionPago` catálogo: autoritativo Java 4 valores (`DECISION_DDL-MOV-04` CERRADA).
-  - `movimiento_origen_id` (Java) generaliza `movimiento_anulado_id` (histórico); misma columna, uso ampliado.
-  - `id_user_alta` nullabilidad: histórico decía nullable, Java valida NOT NULL → DDL usa NOT NULL.
-- **Estado:** LISTO_PARA_DDL / RECONCILIADA_R3.
+- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `obligacion_pago_id -> fal_acta_obligacion_pago`, `forma_pago_id -> fal_acta_forma_pago` (NULL), `plan_pago_ref_id -> fal_acta_plan_pago_ref` (NULL), `movimiento_origen_id -> fal_acta_pago_movimiento` (self, NULL).
+- **Campos — identificadores y tipo:** `obligacion_pago_id BIGINT NOT NULL`, `forma_pago_id BIGINT NULL`, `plan_pago_ref_id BIGINT NULL`, `tipo_movimiento SMALLINT NOT NULL`, `origen_movimiento SMALLINT NOT NULL`, `origen_confirmacion SMALLINT NULL`, `evidencia_documento_id BIGINT NULL`, `clasificacion_pago SMALLINT NOT NULL DEFAULT 1`, `nro_cuota SMALLINT NULL`.
+- **Campos — importes:** `importe_capital DECIMAL(14,2) NULL`, `importe_rima DECIMAL(14,2) NULL`, `importe_total DECIMAL(14,2) NULL`.
+- **Campos — referencias EM/PG:** `cmte_em CHAR(2) NULL`, `pref_em SMALLINT NULL`, `nro_em INT NULL`, `cmte_pg CHAR(2) NULL`, `pref_pg SMALLINT NULL`, `nro_pg INT NULL`.
+- **Campos — contexto:** `id_cierre BIGINT NULL`, `id_ope BIGINT NULL`, `movimiento_origen_id BIGINT NULL FK self`, `motivo_anulacion_pago SMALLINT NULL`.
+- **Eliminado:** `motivo_aplicacion_pago_anterior VARCHAR(500)` — texto libre no estructurado. Idempotencia via movimiento_origen_id + estructuras cerradas. Notas humanas a fal_observacion(MOVIMIENTO_PAGO).
+- **Campos — fechas y referencia:** `fh_pago_procesado DATETIME(6) NULL`, `fh_pago_confirmado DATETIME(6) NULL`, `referencia_externa VARCHAR(80) NULL`, `fh_movimiento DATETIME(6) NOT NULL`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Entidad Java:** `FalActaPagoMovimiento` (id `Long`, sin `versionRow`). **Puerto:** `PagoMovimientoRepository` / `InMemoryPagoMovimientoRepository`.
+- **Decisiones:** `DECISION_DDL-MOV-01` (tipos de importes DECIMAL(14,2) nullable), `DECISION_DDL-MOV-02` (referencias EM/PG cerradas), `DECISION_DDL-MOV-03` (movimiento_origen_id self-FK para idempotencia), `DECISION_DDL-MOV-04` (ClasificacionPago SMALLINT NOT NULL DEFAULT 1; divergencia entre Java y histórico: DEFAULT 1 = CUENTA_CORRIENTE; closed).
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): sin motivo_aplicacion_pago_anterior / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `fal_acta_economia_proyeccion`
 - **Propósito:** proyección económica actual por acta (1:1); mutable, regenerable, optimizada para consultas. No es fuente histórica ni jurídica. Incluye importes, saldos, conciliación actual, mora, plan caído calculado, aptitud de intimación y flags de pago.
@@ -551,20 +594,20 @@ la garantía productiva requerida en el adapter MariaDB para
 #### `num_politica`
 - **Propósito:** define composición del número visible y comportamiento de reinicio anual. Un talonario pertenece a una política.
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos (verificados Java + histórico 2026-06-23):** `codigo VARCHAR(12) NOT NULL UNIQUE`, `descripcion VARCHAR(120) NOT NULL`, `clase_numeracion SMALLINT NOT NULL` (`ClaseNumeracion`; ACTA=1/DOCUMENTO=2), `si_reinicio_anual BOOLEAN NOT NULL`, `si_incluye_prefijo BOOLEAN NOT NULL`, `prefijo VARCHAR(10) NULL`, `si_incluye_anio BOOLEAN NOT NULL`, `formato_anio SMALLINT NULL` (2 o 4 dígitos), `si_incluye_serie BOOLEAN NOT NULL`, `longitud_nro SMALLINT NULL` (en Java: `Short`; histórico SÍ nullable), `formato_visible VARCHAR(60) NOT NULL` (ej. `{PREF}-{ANIO}-{SERIE}-{NRO}`), `si_activa BOOLEAN NOT NULL`, `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL` (NULL si vigente).
-- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Campos:** `codigo VARCHAR(8) NOT NULL UNIQUE`, `apodo VARCHAR(20) NOT NULL` (nombre corto operativo), `descripcion VARCHAR(64) NOT NULL`, `clase_numeracion SMALLINT NOT NULL` (`ClaseNumeracion`; ACTA=1/DOCUMENTO=2), `si_reinicio_anual BOOLEAN NOT NULL`, `si_incluye_prefijo BOOLEAN NOT NULL`, `prefijo VARCHAR(10) NULL`, `si_incluye_anio BOOLEAN NOT NULL`, `formato_anio SMALLINT NULL` (2 o 4 dígitos), `si_incluye_serie BOOLEAN NOT NULL`, `longitud_nro SMALLINT NULL`, `formato_visible VARCHAR(60) NOT NULL` (ej. `{PREF}-{ANIO}-{SERIE}-{NRO}`), `si_activa BOOLEAN NOT NULL`, `fh_vig_desde DATE NOT NULL`, `fh_vig_hasta DATE NULL` (NULL si vigente).
+- **CHECK:** `clase_numeracion IN (1, 2)` (restaurado desde R1.3).
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
 - **Entidad Java:** `NumPolitica` (id `Long`, sin `versionRow`). **Puerto:** `NumeracionRepository` / `InMemoryNumeracionRepository`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. Sin discrepancias. Todos los tipos confirmados. `longitud_nro` nullable confirmado por Java (`Short`; puede ser null) y histórico.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): codigo VARCHAR(8), apodo VARCHAR(20), descripcion VARCHAR(64) / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `num_talonario`
 - **Propósito:** talonario concreto (electrónico o manual físico); referencia a `SEQUENCE` nativa de MariaDB mediante `nombre_secuencia`.
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `politica_id -> num_politica`.
-- **Campos (verificados Java + histórico 2026-06-23):** `version_row INT NOT NULL DEFAULT 0` (OCC), `politica_id BIGINT NOT NULL`, `codigo VARCHAR(12) NOT NULL UNIQUE`, `descripcion VARCHAR(120) NOT NULL`, `tipo_talonario SMALLINT NOT NULL` (`TipoTalonario`; ELECTRONICO/MANUAL_FISICO), `clase_talonario SMALLINT NOT NULL` (`ClaseNumeracion`), `anio SMALLINT NULL` (obligatorio si política reinicia anual), `serie VARCHAR(12) NULL`, `nro_desde INT NOT NULL`, `nro_hasta INT NULL` (NULL si sin límite operativo), `nombre_secuencia VARCHAR(64) NOT NULL UNIQUE` (nombre del objeto `SEQUENCE` real; uno por talonario electrónico; `NOCACHE` recomendado), `si_activo BOOLEAN NOT NULL`, `si_bloqueado BOOLEAN NOT NULL DEFAULT FALSE`, `cod_desbloqueo VARCHAR(64) NULL`, `obs_talonario VARCHAR(255) NULL`.
+- **Campos:** `version_row INT NOT NULL DEFAULT 0` (OCC), `politica_id BIGINT NOT NULL`, `codigo VARCHAR(8) NOT NULL UNIQUE`, `descripcion VARCHAR(48) NOT NULL`, `tipo_talonario SMALLINT NOT NULL` (`TipoTalonario`; ELECTRONICO/MANUAL_FISICO), `clase_talonario SMALLINT NOT NULL` (`ClaseNumeracion`), `anio SMALLINT NULL` (obligatorio si política reinicia anual), `serie VARCHAR(12) NULL`, `nro_desde INT NOT NULL`, `nro_hasta INT NULL` (NULL si sin límite operativo), `nombre_secuencia VARCHAR(64) NOT NULL UNIQUE` (nombre del objeto `SEQUENCE` real; uno por talonario electrónico; `NOCACHE` recomendado), `si_activo BOOLEAN NOT NULL`, `si_bloqueado BOOLEAN NOT NULL DEFAULT FALSE`, `cod_desbloqueo VARCHAR(64) NULL`.
+- **Eliminado:** `obs_talonario` — notas humanas van a `fal_observacion`.
 - **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
 - **Entidad Java:** `NumTalonario` (`versionRow` presente). **Puerto:** `NumeracionRepository` / `InMemoryNumeracionRepository`. Método: `estaOperativo()` = `siActivo && !siBloqueado`.
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. Sin discrepancias. Todos los tipos confirmados: VARCHAR(12) para `codigo`/`serie`, VARCHAR(64) para `nombre_secuencia`/`cod_desbloqueo`, VARCHAR(255) para `obs_talonario`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): codigo VARCHAR(8), descripcion VARCHAR(48), nombre_secuencia VARCHAR(64), cod_desbloqueo VARCHAR(64), sin obs_talonario / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### `num_talonario_ambito`
 - **Propósito:** regla que autoriza dónde aplica un talonario (alcance global, por dependencia o por tipo documental transversal).
@@ -588,11 +631,11 @@ la garantía productiva requerida en el adapter MariaDB para
 - **Propósito:** registro operativo único de cada número de talonario. Fila única por `id_talonario + nro_talonario`; no se borran ni actualizan.
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `id_talonario -> num_talonario`, `acta_id -> fal_acta` (NULL), `documento_id -> fal_documento` (NULL).
 - **Restricción:** `UNIQUE(id_talonario, nro_talonario)` — confirmada en Javadoc de `NumTalonarioMovimiento`.
-- **Campos (verificados Java + histórico 2026-06-23):** `id_talonario BIGINT NOT NULL`, `nro_talonario INT NOT NULL`, `estado_numero SMALLINT NOT NULL` (`EstadoNumeroTalonario`; USADO=1/ANULADO=2/DEVUELTO_SIN_USAR=3/RENDIDO=4/JUSTIFICADO=5), `motivo_anulacion SMALLINT NULL` (`MotivoAnulacionTalonario`; obligatorio si estado=ANULADO), `observacion VARCHAR(500) NULL` (longitud confirmada en histórico 2026-06-23), `acta_id BIGINT NULL` (obligatorio si fue usado para acta), `documento_id BIGINT NULL` (obligatorio si fue usado para documento), `id_dep BIGINT NULL`, `ver_dep SMALLINT NULL`, `id_insp BIGINT NULL`, `ver_insp SMALLINT NULL`, `fh_movimiento DATETIME(6) NOT NULL`, `id_user_movimiento CHAR(36) NOT NULL`.
+- **Campos:** `id_talonario BIGINT NOT NULL`, `nro_talonario INT NOT NULL`, `estado_numero SMALLINT NOT NULL` (`EstadoNumeroTalonario`; USADO=1/ANULADO=2/DEVUELTO_SIN_USAR=3/RENDIDO=4/JUSTIFICADO=5), `motivo_anulacion SMALLINT NULL` (`MotivoAnulacionTalonario`; obligatorio si estado=ANULADO), `acta_id BIGINT NULL` (obligatorio si fue usado para acta), `documento_id BIGINT NULL` (obligatorio si fue usado para documento), `id_dep BIGINT NULL`, `ver_dep SMALLINT NULL`, `id_insp BIGINT NULL`, `ver_insp SMALLINT NULL`, `fh_movimiento DATETIME(6) NOT NULL`, `id_user_movimiento CHAR(36) NOT NULL`.
+- **Eliminado:** `observacion VARCHAR(500)` — centralizar en fal_observacion(TALONARIO_MOVIMIENTO).
 - **Nota:** `NumTalonarioMovimiento` no tiene `fh_alta`/`id_user_alta` separados; usa `fh_movimiento`/`id_user_movimiento`.
 - **Entidad Java:** `NumTalonarioMovimiento` (id `Long`, sin `versionRow`; append-only: no `set*`).
-- **Reconciliación triple:** Java ↔ histórico 2026-06-23 ↔ spec vigente. Sin discrepancias. `observacion VARCHAR(500)` confirmada por histórico. Todos los tipos confirmados.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): sin observacion, tipos FK exactos (ver_dep/ver_insp SMALLINT) / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
 
 #### Paridad de concurrencia/idempotencia para numeración documental
 
@@ -610,24 +653,32 @@ adapter MariaDB para `POST /api/faltas/documentos/{id}/numerar`:
 ### QR y portal
 
 #### `fal_acta_qr_acceso`
-- **Propósito:** log append-only de auditoría de accesos **válidos** realizados vía código QR. Solo se inserta una fila cuando el token fue válido y el acta pudo resolverse; tokens inválidos, corruptos, con scope incorrecto o actas inexistentes **no** producen filas.
+- **Propósito:** log append-only de auditoría de accesos realizados vía código QR (válidos e inválidos). Registra fecha, IP/origen técnico, user-agent y resultado.
 - **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `acta_id -> fal_acta`.
-- **Campos:** `fh_acceso DATETIME(6) NOT NULL`, `canal_acceso SMALLINT NOT NULL`, `ip_origen VARCHAR(45) NULL` (validado IPv4/IPv6), `user_agent VARCHAR(255) NULL` (sanitizado), `resultado_acceso SMALLINT NOT NULL`.
-- **Auditoría:** `fh_alta`.
+- **Campos:** `acta_id BIGINT NOT NULL`, `fh_acceso DATETIME(6) NOT NULL`, `ip_origen VARCHAR(45) NULL` (validado IPv4/IPv6), `user_agent VARCHAR(255) NULL` (sanitizado), `resultado_acceso_qr SMALLINT NOT NULL` (ResultadoAccesoQr: leer códigos del enum canónico; NO inventar valores).
+- **Eliminado:** `canal_acceso_qr` — mientras el único canal sea WEB no aporta variabilidad; no persistir constante sin variabilidad funcional.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`.
 - **Entidad Java:** `FalActaQrAcceso` (inmutable). **Puerto:** `QrAccesoRepository` / `InMemoryQrAccesoRepository`. **Servicio:** `QrActaService`. **Protección de token:** `AesGcmQrTokenProtector`.
-- **No existen** `token_qr`, `url_acceso`, `fh_generacion`, `fh_vencimiento` ni `si_activo`: esta tabla no almacena el token, el payload ni el hash del token (Javadoc de `FalActaQrAcceso`: "No almacena el token, el payload ni el hash del token"), y no es una fila mutable "activa": es un log append-only de accesos ya resueltos. El token en sí y su emisión/vigencia son responsabilidad de `codigo_qr`/`qr_payload_version` en `fal_acta` (ver sección "Acta core") y de `AesGcmQrTokenProtector`, no de esta tabla.
+- **No almacena el token QR** ni URL, fecha de generación ni fecha de vencimiento: esta tabla es un log append-only de accesos realizados. Los tokens se generan por `AesGcmQrTokenProtector` y nunca se persisten.
+- **No existen** `token_qr`, `url_acceso`, `fh_generacion`, `fh_vencimiento` ni `si_activo`: esta tabla es un log append-only de accesos.
 - **Append-only:** SÍ.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): sin canal_acceso_qr, resultado_acceso_qr SMALLINT enum canónico / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Catálogos de dominio adicionales
 
 #### `fal_vehiculo_marca`
+- **PK:** `id BIGINT AUTO_INCREMENT`.
+- **Campos:** `codigo VARCHAR(12) NOT NULL UNIQUE`, `nombre VARCHAR(24) NOT NULL`, `si_activa BOOLEAN NOT NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Regla:** `UNIQUE` funcional por `codigo`; no usar `UNIQUE(nombre)` como reemplazo del código.
 - **Entidad Java:** `FalVehiculoMarca`. **Puerto:** `VehiculoMarcaRepository` / `InMemoryVehiculoMarcaRepository`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): nombre VARCHAR(24), conserva codigo/UNIQUE/flags/auditoría R1.3 / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_vehiculo_modelo`
+- **PK:** `id BIGINT AUTO_INCREMENT`. **FK:** `marca_vehiculo_id -> fal_vehiculo_marca`.
+- **Campos:** `marca_vehiculo_id BIGINT NOT NULL`, `codigo VARCHAR(12) NOT NULL`, `nombre VARCHAR(24) NOT NULL`, `si_activo BOOLEAN NOT NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`.
+- **Restricción:** `UNIQUE(marca_vehiculo_id, codigo)` — la longitud de `nombre` coincide con el fallback de `fal_acta_vehiculo`.
 - **Entidad Java:** `FalVehiculoModelo`. **Puerto:** `VehiculoModeloRepository` / `InMemoryVehiculoModeloRepository`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): nombre VARCHAR(24), conserva codigo/UNIQUE(marca,codigo)/FK/flags/auditoría / BASELINE_PRESERVADA_CON_DELTA.
 
 #### `fal_rubro_version`
 - **Entidad Java:** `FalRubroVersion`. Tabla de dominio Faltas con sincronización externa (Informix); no es infraestructura técnica.
@@ -636,21 +687,25 @@ adapter MariaDB para `POST /api/faltas/documentos/{id}/numerar`:
 - **Estado:** PREEXISTING_CANONICAL_ADOPTED — tabla preexistente en el baseline; el DDL del dominio la adopta sin crearla, alterarla ni administrar sus datos. Unica tabla Faltas preexistente de las 65 canonicas (ver `50-persistence/ddl-execution-and-test-seeding.md`).
 
 #### `fal_motivo_archivo`
+- **PK:** `id BIGINT AUTO_INCREMENT`.
+- **Campos:** `cod_motivo_archivo VARCHAR(8) NOT NULL UNIQUE`, `nombre VARCHAR(64) NOT NULL`, `si_nulidad BOOLEAN NOT NULL`, `si_permite_reingreso BOOLEAN NOT NULL`, `si_requiere_observacion BOOLEAN NOT NULL`, `si_activo BOOLEAN NOT NULL`, `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_ult_mod DATETIME(6) NULL` (HUMAN_DECISION_CLOSED CORRECCION-07: nullable hasta primera modificacion), `id_user_ult_mod CHAR(36) NULL`.
 - **Entidad Java:** `FalMotivoArchivo`. **Puerto:** `MotivoArchivoRepository` / `InMemoryMotivoArchivoRepository`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): cod_motivo_archivo VARCHAR(8), nombre VARCHAR(64), conserva si_nulidad/si_permite_reingreso/si_requiere_observacion/auditoría / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Calendario y excepciones
 
 #### `fal_dia_no_computable`
 - **Propósito:** registro de excepciones locales al calendario administrativo (feriados, asuetos). Las reglas fijas (domingo, 1-ene, 1-may) no se persisten; ver `../10-domain/calendario-plazos-administrativos.md`.
 - **PK:** `id BIGINT AUTO_INCREMENT`.
-- **Campos (verificados contra Java):** `fecha DATE NOT NULL`, `tipo SMALLINT NOT NULL` (`TipoDiaNoComputable`, `EXPLICIT_NUMERIC_CODE`; `FERIADO=1, ASUETO_ADMINISTRATIVO=2, OTRO=3`; `DECISION_DDL-ENUM-01` CERRADA), `descripcion VARCHAR(160) NOT NULL` (max 160 validado en constructor Java), `origen SMALLINT NOT NULL` (`OrigenDiaNoComputable`, `EXPLICIT_NUMERIC_CODE`; `MANUAL=1, SINCRONIZACION_EXTERNA=2`; `DECISION_DDL-ENUM-01` CERRADA), `referencia_externa VARCHAR(200) NULL` (obligatoria para SINCRONIZACION_EXTERNA, null para MANUAL; max 200 validado), `si_activo BOOLEAN NOT NULL DEFAULT TRUE`.
-- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL` (max 36 validado), `fh_baja DATETIME(6) NULL`, `id_user_baja CHAR(36) NULL` (max 36; se establece al desactivar).
-- **OCC/versionRow:** no aplica; las excepciones se desactivan (`si_activo=false`) pero nunca se editan campos sustantivos.
-- **UK/unicidad:** unicidad física requerida sobre `fecha` con `si_activo=TRUE` (implementación candidata: columna generada o índice parcial; ver `inmemory-mariadb-deltas.md`, sección de unicidades).
-- **Fuente:** código Java vigente (`FalDiaNoComputable.java`). Sin contraparte en modelo histórico 2026-06-23 (tabla ausente en ese baseline; no hay deltas que reportar).
+- **Campos:** `fecha DATE NOT NULL`, `tipo SMALLINT NOT NULL` (`TipoDiaNoComputable`; FERIADO=1/ASUETO_ADMINISTRATIVO=2/OTRO=3), `descripcion VARCHAR(64) NOT NULL`, `origen SMALLINT NOT NULL` (`OrigenDiaNoComputable`; MANUAL=1/SINCRONIZACION_EXTERNA=2), `referencia_externa VARCHAR(200) NULL` (obligatoria para SINCRONIZACION_EXTERNA), `si_activo BOOLEAN NOT NULL DEFAULT TRUE`.
+- **Auditoría:** `fh_alta DATETIME(6) NOT NULL`, `id_user_alta CHAR(36) NOT NULL`, `fh_baja DATETIME(6) NULL`, `id_user_baja CHAR(36) NULL`.
+- **CHECK:** `tipo IN (1, 2, 3)`; `origen IN (1, 2)`; `origen = 2 implies referencia_externa IS NOT NULL`.
+- **UK/unicidad:** columna generada `fecha_activa DATE GENERATED ALWAYS AS (CASE WHEN si_activo THEN fecha ELSE NULL END) STORED` con `UNIQUE(fecha_activa)` — un solo día activo por fecha.
+- **OCC/versionRow:** no aplica; desactivación vía `si_activo=false`.
+- **Nombres correctos:** `tipo` y `origen` (no `tipo_dia` ni `origen_dia`).
+- **Enums:** `TipoDiaNoComputable` y `OrigenDiaNoComputable` usan estrategia EXPLICIT_NUMERIC_CODE (`DECISION_DDL-ENUM-01` CERRADA): SMALLINT en DDL, código numérico explícito en Java.
 - **Entidad Java:** `FalDiaNoComputable`. **Puertos:** `DiaNoComputableRepository` / `InMemoryDiaNoComputableRepository`. **Fuente normativa:** `../10-domain/calendario-plazos-administrativos.md`.
-- **Estado:** LISTO_PARA_DDL / BASELINE_PRESERVADA_CON_DELTA / RECONCILIADA_R3.
+- **Estado:** HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): descripcion VARCHAR(64), nombres canónicos tipo/origen / BASELINE_PRESERVADA_CON_DELTA.
 
 ### Tablas de infraestructura no persistidas por el dominio Faltas
 

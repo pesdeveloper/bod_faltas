@@ -19,10 +19,11 @@ _Ninguna entrada pendiente._
 
 ## Cerradas
 
-> **24 decisiones cerradas:** 20 anteriores (RF-005, SNAP-01/02, EVID-01,
+> **27 decisiones cerradas:** 20 anteriores (RF-005, SNAP-01/02, EVID-01,
 > PAGO-03, FORMA-01, PLAN-01, MOV-01..04, ECPR-01, DOC-01, NOTI-01, GEXT-01,
 > BLOQ-01, PERS-01, PAGO-01, PAGO-MOV-01, ENUM-01) + 4 transversales nuevas
-> (EXEC-01, BASELINE-01, SEED-01, COMMENT-01).
+> (EXEC-01, BASELINE-01, SEED-01, COMMENT-01) + 3 nuevas CORRECCION-10
+> (EVID-02, PERS-02, DOCU-02).
 
 ### `DECISION_DDL-RF-005` — `ResultadoFinalActa.FALLO_CONDENATORIO_PAGADO` (código 5)
 
@@ -267,6 +268,40 @@ _Ninguna entrada pendiente._
 | **Consecuencia Java** | Sin cambio. |
 | **Consecuencia DDL futura** | Cada `CREATE TABLE` y `ALTER TABLE` incluirá `COMMENT` de tabla y por columna. |
 | **Tests/guardrails** | `G22CleanRoomYSeeding.ddl_execution_seeding_doc_presente` (verifica que el documento describe la política de comentarios). |
+
+---
+
+## Decisiones FULL-R1.2-CORRECCION-10
+
+### `DECISION_DDL-EVID-02` — `fal_acta_evidencia`: catálogo completo `TipoEvidenciaActa`
+
+| Campo | Detalle |
+|---|---|
+| **Decisión adoptada** | `HUMAN_DECISION_CLOSED — FULL-R1.2-CORRECCION-10`. El único valor activo anterior (`FIRMA_OLOGRAFA_INFRACTOR = 6`) deja de ser válido. El catálogo aprobado es: `FOTO=4, VIDEO=8, AUDIO=12, PDF=16, DOCUMENTO_OFIMATICO=20, PLANILLA_CALCULO=24, FIRMA_OLOGRAFA_INFRACTOR=48`. Códigos 28–44 reservados para futuros tipos. No agregar constantes `RESERVADO_*`. El DDL todavía no fue ejecutado; no existe información productiva; no se crea migración ni compatibilidad temporal. |
+| **Fundamento** | Catálogo de evidencias ampliado: el acta puede adjuntar fotos, videos, audios, documentos y firma ológrafa, no solo firma. La secuencia en múltiplos de 4 deja espacio para futuros tipos sin re-numerar los existentes. La firma queda en el extremo superior actual (48) separada semánticamente de los multimedia. |
+| **Consecuencia Java** | `TipoEvidenciaActa` actualizado con los 7 valores. Tipo del constructor `(short)`. Resolución por código; prohibido `ordinal()`. El código 6 lanza `IllegalArgumentException`. La regla funcional `resultadoFirmaInfractor=FIRMADA` se verifica por `tipo == TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR`, no por posición ni valor numérico. |
+| **Consecuencia DDL futura** | `tipo_evid SMALLINT NOT NULL` (sin cambio de tipo). Comentario actualizado con los 7 códigos. Expresión `único valor activo` eliminada del DDL. |
+| **Tests/guardrails** | `TipoEvidenciaActaGuardrailTest` (7 valores, unicidad, múltiplos de 4, código 6 inválido, código 48 válido, regla de firma). `MariaDbLogicalModelParityGuardrailTest` actualizado. |
+
+### `DECISION_DDL-PERS-02` — `fal_persona` / `fal_acta_contravencion` / `fal_acta_snapshot`: tipos `id_suj` / `id_bie`
+
+| Campo | Detalle |
+|---|---|
+| **Decisión adoptada** | `HUMAN_DECISION_CLOSED — FULL-R1.2-CORRECCION-10`. Tipos físicos aprobados: `id_suj TINYINT UNSIGNED` (rango 1-255), `id_bie MEDIUMINT UNSIGNED` (rango 1-9999999). En Java, ambos se representan como `Integer`. No usar `Long` para estos campos. No usar `byte` (Java `byte` = -128 a 127). `id_suj` no es un identificador único de persona; es el código de tipo de sujeto del sistema de Ingresos Municipales (catálogo abierto). Valores conocidos: 1=INMUEBLE, 2=COMERCIO, 3=RODADO, 18=CEMENTERIO, 20=FALTAS, 99=VARIOS. Prohibido `CHECK id_suj IN (1,2,3,18,20,99)` o variantes cerradas. `id_bie` requiere `id_suj` (CHECK id_bie IS NULL OR id_suj IS NOT NULL). La regla contextual `idSuj=20` para registros originados en Faltas es válida localmente; el rango físico permanece abierto (1-255). |
+| **Fundamento** | `BIGINT` era excesivo para identificadores de catálogo acotado. `TINYINT UNSIGNED` cubre 255 tipos de sujeto; `MEDIUMINT UNSIGNED` cubre hasta 9.999.999 bienes/cuentas. Ingresos puede incorporar nuevos tipos de sujeto sin DDL. |
+| **Consecuencia Java** | `FalPersona.idSuj Long → Integer`, `FalPersona.idBie Long → Integer`. `FalActaContravencion.idSujI/idBieI/idSujC/idBieC Long → Integer`. `FalActaSnapshot.idBieI/idBieC Long → Integer`. `PersonaRepository.buscarPorIdSujBie(Integer, Integer)`. `PersonaService.actualizarVinculoIngresos` usa `Integer`. |
+| **Consecuencia DDL futura** | `fal_persona`: `id_suj TINYINT UNSIGNED NULL`, `id_bie MEDIUMINT UNSIGNED NULL`, CHECK 1-255 y 1-9999999. `fal_acta_contravencion`: CHECK `id_suj_i/c BETWEEN 1 AND 255` (antes BETWEEN 1 AND 99). `fal_acta_snapshot`: `id_bie_i/c MEDIUMINT UNSIGNED NULL` (antes BIGINT). |
+| **Tests/guardrails** | `IdSujBieGuardrailTest` (fronteras, Java Integer, snapshots, copias). `SatelitesCatalogosTest` actualizado. |
+
+### `DECISION_DDL-DOCU-02` — `fal_documento_plantilla`: comentario `momento_numeracion_docu`
+
+| Campo | Detalle |
+|---|---|
+| **Decisión adoptada** | `HUMAN_DECISION_CLOSED — FULL-R1.2-CORRECCION-10`. Comentario del DDL corregido para documentar el catálogo completo: `0=NO_APLICA, 1=AL_CREAR, 2=AL_EMITIR, 3=AL_ENVIAR_A_FIRMA, 4=AL_FIRMAR`. El comentario anterior comenzaba en 1 y omitía los últimos dos valores. El tipo físico `SMALLINT NOT NULL` no cambia en este slice. El enum Java `MomentoNumeracionDocu` ya contenía los 5 valores correctos. |
+| **Fundamento** | Corrección documental pura. El catálogo Java era correcto; el comentario DDL estaba desfasado. |
+| **Consecuencia Java** | Sin cambio en el enum. |
+| **Consecuencia DDL futura** | `momento_numeracion_docu SMALLINT NOT NULL COMMENT '...'` con los 5 valores. |
+| **Tests/guardrails** | `MomentoNumeracionDocuGuardrailTest` (comentario DDL documenta 5 valores, no aparece catálogo anterior). |
 
 ---
 

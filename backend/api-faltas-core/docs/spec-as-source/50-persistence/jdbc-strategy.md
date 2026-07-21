@@ -18,14 +18,15 @@ La infraestructura JDBC base (dependencias, perfiles, `DataSource`, prueba condi
 ya esta incorporada; el inventario verificable de esa infraestructura vive en
 [`jdbc-infrastructure.md`](jdbc-infrastructure.md). Este documento no repite ese inventario.
 
-Sin repositorios JDBC de dominio, DDL productivo ni
-JPA/Hibernate todavia.
+El script DDL canónico de 64 tablas (`database/ddl/create-bod-faltas-domain.sql`,
+trabajo DDL-MARIADB-MANUAL-001-FULL-R1) fue aprobado para ejecución manual controlada;
+el esquema aún no ha sido creado. Sin repositorios JDBC de dominio todavia.
 
 ## 2. Orden de trabajo para el bloque DDL
 
 1. **0 decisiones `DECISION_DDL-*` pendientes** — todas 24 cerradas en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001` (ver [`ddl-decisions.md`](ddl-decisions.md)).
 2. Disenar el DDL fisico consistente con esas decisiones.
-3. Crear el script canonico de DDL del dominio Faltas (64 tablas), versionado en Git bajo `database/`, ejecutado manualmente por Pablo via HeidiSQL (DECISION_DDL-EXEC-01).
+3. **[COMPLETO — APROBADO]** Script DDL del dominio Faltas (64 tablas) versionado en Git bajo `database/ddl/create-bod-faltas-domain.sql`; auditado externamente y aprobado para ejecución manual controlada (DECISION_DDL-EXEC-01). Correcciones aplicadas: `fal_dependencia`, `fal_inspector`, `fal_persona` (FULL-R1). Esquema aún no creado.
 4. Implementar los adapters JDBC de los puertos de repositorio de dominio (sin modificar
    las interfaces existentes ni los servicios de aplicacion).
 5. Probar paridad de comportamiento contra InMemory (misma suite funcional, sin

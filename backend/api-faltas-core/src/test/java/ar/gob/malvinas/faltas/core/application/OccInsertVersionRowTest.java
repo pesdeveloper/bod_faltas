@@ -1,15 +1,18 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoRedaccionDocumento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEconomiaProyeccion;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.domain.model.FalBloqueanteMaterial;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
+import ar.gob.malvinas.faltas.core.domain.model.FalDocumentoRedaccion;
 import ar.gob.malvinas.faltas.core.domain.model.FalGestionExterna;
 import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryBloqueanteMaterialRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRedaccionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryEconomiaProyeccionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryGestionExternaRepository;
@@ -27,12 +30,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Tests de OCC estricto en INSERT: versionRow != 0 en entidad nueva debe lanzar
  * ConcurrenciaConflictoException y la entidad no debe quedar insertada.
  *
- * Cubre los seis repositorios InMemory identificados en R4:
+ * Cubre los siete repositorios InMemory:
  *   InMemoryActaSnapshotRepository, InMemoryDocumentoRepository,
  *   InMemoryNotificacionRepository, InMemoryGestionExternaRepository,
- *   InMemoryBloqueanteMaterialRepository, InMemoryEconomiaProyeccionRepository.
+ *   InMemoryBloqueanteMaterialRepository, InMemoryEconomiaProyeccionRepository,
+ *   InMemoryDocumentoRedaccionRepository.
  */
-@DisplayName("OCC estricto en INSERT: versionRow != 0 rechazado por los 6 repositorios InMemory")
+@DisplayName("OCC estricto en INSERT: versionRow != 0 rechazado por los 7 repositorios InMemory")
 class OccInsertVersionRowTest {
 
     private static final LocalDateTime AHORA = LocalDateTime.of(2026, 7, 18, 12, 0);
@@ -84,7 +88,7 @@ class OccInsertVersionRowTest {
         void insert_con_version_no_cero_lanza_excepcion() {
             InMemoryDocumentoRepository repo = new InMemoryDocumentoRepository();
 
-            FalDocumento doc = new FalDocumento(1L, 1L, TipoDocu.ACTA_INFRACCION, AHORA, "Desc");
+            FalDocumento doc = new FalDocumento(1L, 1L, TipoDocu.ACTA_INFRACCION, AHORA);
             doc.setVersionRow(1);
 
             assertThatThrownBy(() -> repo.guardar(doc))
@@ -96,7 +100,7 @@ class OccInsertVersionRowTest {
         void insert_rechazado_no_queda_en_store() {
             InMemoryDocumentoRepository repo = new InMemoryDocumentoRepository();
 
-            FalDocumento doc = new FalDocumento(1L, 1L, TipoDocu.ACTA_INFRACCION, AHORA, "Desc");
+            FalDocumento doc = new FalDocumento(1L, 1L, TipoDocu.ACTA_INFRACCION, AHORA);
             doc.setVersionRow(1);
 
             try { repo.guardar(doc); } catch (ConcurrenciaConflictoException ignored) {}
@@ -242,6 +246,51 @@ class OccInsertVersionRowTest {
             try { repo.save(proyeccion); } catch (ConcurrenciaConflictoException ignored) {}
 
             assertThat(repo.findByActaId(1L)).isEmpty();
+        }
+    }
+
+    // =========================================================
+    // 7. InMemoryDocumentoRedaccionRepository
+    // =========================================================
+
+    @Nested
+    @DisplayName("InMemoryDocumentoRedaccionRepository - INSERT con versionRow = 1")
+    class DocumentoRedaccionOccInsert {
+
+        private FalDocumentoRedaccion nuevaRedaccion(Long id, Long idDocumento) {
+            return new FalDocumentoRedaccion(
+                    id, idDocumento, 10L,
+                    (short) 1, null,
+                    EstadoRedaccionDocumento.BORRADOR, "Contenido.",
+                    "{}", null, null,
+                    AHORA, "usr-test",
+                    AHORA, "usr-test",
+                    null, null);
+        }
+
+        @Test
+        @DisplayName("guardar redaccion nueva con versionRow=1 lanza ConcurrenciaConflictoException")
+        void insert_con_version_no_cero_lanza_excepcion() {
+            InMemoryDocumentoRedaccionRepository repo = new InMemoryDocumentoRedaccionRepository();
+
+            FalDocumentoRedaccion r = nuevaRedaccion(1L, 100L);
+            r.setVersionRow(1);
+
+            assertThatThrownBy(() -> repo.guardar(r))
+                    .isInstanceOf(ConcurrenciaConflictoException.class);
+        }
+
+        @Test
+        @DisplayName("redaccion con versionRow=1 NO queda insertada tras el rechazo")
+        void insert_rechazado_no_queda_en_store() {
+            InMemoryDocumentoRedaccionRepository repo = new InMemoryDocumentoRedaccionRepository();
+
+            FalDocumentoRedaccion r = nuevaRedaccion(1L, 100L);
+            r.setVersionRow(1);
+
+            try { repo.guardar(r); } catch (ConcurrenciaConflictoException ignored) {}
+
+            assertThat(repo.buscarPorId(1L)).isEmpty();
         }
     }
 }

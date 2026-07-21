@@ -240,7 +240,7 @@ class MariaDbLogicalModelParityGuardrailTest {
             verificarCamposDeTabla(contenido, "fal_persona",
                     List.of(
                             "tipo_persona",
-                            "tipo_doc",
+                            "tipo_documento",
                             "nro_doc",
                             "apellido",
                             "nombres",
@@ -254,7 +254,6 @@ class MariaDbLogicalModelParityGuardrailTest {
                             "fh_suj_bie_creacion"),
                     List.of(
                             "nro_documento VARCHAR",
-                            "tipo_documento SMALLINT",
                             "nombre_completo",
                             "fh_nacimiento",
                             "si_identificado",
@@ -306,10 +305,10 @@ class MariaDbLogicalModelParityGuardrailTest {
                             "unidad_funcional",
                             "codigo_postal",
                             "domicilio_txt",
-                            "validacion_domicilio",
                             "si_normalizado_parcial",
                             "origen_ubicacion SMALLINT"),
                     List.of(
+                            "validacion_domicilio",
                             "id_calle_version",
                             "nro_puerta",
                             "piso VARCHAR",
@@ -356,7 +355,7 @@ class MariaDbLogicalModelParityGuardrailTest {
                             "si_dom_txt_infr",
                             "dom_txt_infr",
                             "si_eje_urb",
-                            "codigo_qr VARCHAR(512)",
+                            "codigo_qr VARCHAR(128)",
                             "qr_payload_version",
                             "id_motivo_archivo_actual",
                             "permite_reingreso",
@@ -469,7 +468,7 @@ class MariaDbLogicalModelParityGuardrailTest {
         void fal_firmante() throws IOException {
             String contenido = leerModelo();
             verificarCamposDeTabla(contenido, "fal_firmante",
-                    List.of("id_user CHAR(36)", "nom_firmante VARCHAR(128)", "si_activo", "fh_alta", "id_user_alta"),
+                    List.of("id_user CHAR(36)", "nom_firmante VARCHAR(48)", "si_activo", "fh_alta", "id_user_alta"),
                     List.of());
             assertThat(seccionDeTabla(contenido, "fal_firmante")).contains("RECONCILIADA_R3");
         }
@@ -629,7 +628,7 @@ class MariaDbLogicalModelParityGuardrailTest {
         void num_politica() throws IOException {
             String contenido = leerModelo();
             verificarCamposDeTabla(contenido, "num_politica",
-                    List.of("codigo VARCHAR(12)", "descripcion VARCHAR(120)", "clase_numeracion",
+                    List.of("codigo VARCHAR(8)", "descripcion VARCHAR(64)", "apodo VARCHAR(20)", "clase_numeracion",
                             "si_reinicio_anual", "si_incluye_prefijo", "longitud_nro",
                             "formato_visible", "fh_vig_desde"),
                     List.of());
@@ -641,10 +640,10 @@ class MariaDbLogicalModelParityGuardrailTest {
         void num_talonario() throws IOException {
             String contenido = leerModelo();
             verificarCamposDeTabla(contenido, "num_talonario",
-                    List.of("version_row", "politica_id", "codigo VARCHAR(12)",
+                    List.of("version_row", "politica_id", "codigo VARCHAR(8)",
                             "nombre_secuencia VARCHAR(64)", "tipo_talonario", "clase_talonario",
-                            "nro_desde", "si_activo", "si_bloqueado", "obs_talonario VARCHAR(255)"),
-                    List.of());
+                            "nro_desde", "si_activo", "si_bloqueado", "descripcion VARCHAR(48)"),
+                    List.of("obs_talonario"));
             assertThat(seccionDeTabla(contenido, "num_talonario")).contains("RECONCILIADA_R3");
         }
 
@@ -677,8 +676,55 @@ class MariaDbLogicalModelParityGuardrailTest {
             String seccion = seccionDeTabla(contenido, "num_talonario_movimiento");
             assertThat(seccion).containsPattern("UNIQUE.*id_talonario.*nro_talonario|UNIQUE.*nro_talonario.*id_talonario")
                     .as("Debe documentar la restriccion UNIQUE(id_talonario, nro_talonario)");
-            assertThat(seccion).contains("observacion VARCHAR(500)").contains("estado_numero");
+            assertThat(seccion).contains("estado_numero");
             assertThat(seccion).contains("RECONCILIADA_R3");
+        }
+    }
+
+    // =====================================================================
+    // FULL-R1.2-CORRECCION-04 — plantillas documentales
+    // =====================================================================
+
+    @Nested
+    @DisplayName("FULL-R1.2-CORRECCION-04: plantilla y contenido versionado")
+    class PlantillasDocumentalesCorreccion04 {
+
+        @Test
+        @DisplayName("fal_documento_plantilla conserva codigo 12, nombre 64 y elimina descripcion de Campos")
+        void plantilla_logica_canonica() throws IOException {
+            String seccion = seccionDeTabla(leerModelo(), "fal_documento_plantilla");
+            String campos = lineasDeCampos(seccion);
+            assertThat(campos)
+                    .contains("codigo VARCHAR(12) NOT NULL")
+                    .contains("nombre VARCHAR(64) NOT NULL")
+                    .doesNotContain("descripcion");
+            assertThat(seccion)
+                    .contains("Eliminado:")
+                    .contains("descripcion")
+                    .contains("CrearDocumentoPlantillaCommand")
+                    .contains("CrearDocumentoPlantillaRequest")
+                    .contains("DocumentoPlantillaResponse")
+                    .contains("FULL-R1.2-CORRECCION-04");
+        }
+
+        @Test
+        @DisplayName("fal_documento_plantilla_contenido declara titulo VARCHAR(64) y metadata tipada/requerida/etiquetada")
+        void contenido_logico_canonico() throws IOException {
+            String seccion = seccionDeTabla(leerModelo(), "fal_documento_plantilla_contenido");
+            String campos = lineasDeCampos(seccion);
+            assertThat(campos)
+                    .contains("titulo VARCHAR(64) NOT NULL")
+                    .doesNotContain("titulo VARCHAR(200)")
+                    .contains("variables_declaradas_json JSON NOT NULL")
+                    .doesNotContain("DEFAULT '[]'");
+            assertThat(seccion)
+                    .contains("namespace")
+                    .contains("campo")
+                    .contains("tipoDato")
+                    .contains("requerida")
+                    .contains("etiqueta")
+                    .contains("[]")
+                    .contains("FULL-R1.2-CORRECCION-04");
         }
     }
 

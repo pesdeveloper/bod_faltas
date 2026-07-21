@@ -38,7 +38,7 @@ public class DocumentoPlantillaController {
     public ResponseEntity<DocumentoPlantillaResponse> crear(
             @Valid @RequestBody CrearDocumentoPlantillaRequest req) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                req.codigo(), req.nombre(), req.descripcion(),
+                req.codigo(), req.nombre(),
                 req.tipoDocu(), req.accionDocumental(), req.tipoActa(),
                 req.tipoFirmaReq(), req.siRequiereNumeracion(), req.momentoNumeracionDocu(),
                 req.siNotificable(), req.siGeneraPdf(), req.siSeleccionable(),

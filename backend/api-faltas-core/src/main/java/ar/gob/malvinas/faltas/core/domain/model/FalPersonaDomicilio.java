@@ -58,7 +58,6 @@ public class FalPersonaDomicilio {
     private final String unidadFuncional;
     private final String codigoPostal;
     private String domicilioTxt;
-    private final String validacionDomicilio;
     private final boolean siNormalizadoParcial;
 
     private final BigDecimal lat;
@@ -95,7 +94,6 @@ public class FalPersonaDomicilio {
             String unidadFuncional,
             String codigoPostal,
             String domicilioTxt,
-            String validacionDomicilio,
             boolean siNormalizadoParcial,
             BigDecimal lat,
             BigDecimal lon,
@@ -134,7 +132,6 @@ public class FalPersonaDomicilio {
         this.unidadFuncional = unidadFuncional;
         this.codigoPostal = codigoPostal;
         this.domicilioTxt = domicilioTxt;
-        this.validacionDomicilio = validacionDomicilio;
         this.siNormalizadoParcial = siNormalizadoParcial;
         this.lat = lat;
         this.lon = lon;
@@ -168,7 +165,6 @@ public class FalPersonaDomicilio {
     public String getUnidadFuncional() { return unidadFuncional; }
     public String getCodigoPostal() { return codigoPostal; }
     public String getDomicilioTxt() { return domicilioTxt; }
-    public String getValidacionDomicilio() { return validacionDomicilio; }
     public boolean isSiNormalizadoParcial() { return siNormalizadoParcial; }
     public BigDecimal getLat() { return lat; }
     public BigDecimal getLon() { return lon; }
@@ -196,7 +192,7 @@ public class FalPersonaDomicilio {
             idProvincia, unidadTerritorialTipo, idUnidadTerritorial, idLocalidad, idCalle,
             idLocMalvinas, localidadMalvinasVersionId, idTcaMalvinas, calleMalvinasVersionId,
             calleTxt, altura, siSinAltura, unidadFuncional, codigoPostal, domicilioTxt,
-            validacionDomicilio, siNormalizadoParcial, lat, lon, origenUbicacion, fhAlta, idUserAlta);
+            siNormalizadoParcial, lat, lon, origenUbicacion, fhAlta, idUserAlta);
         c.fhUltMod = this.fhUltMod;
         c.idUserUltMod = this.idUserUltMod;
         return c;

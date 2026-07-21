@@ -138,7 +138,9 @@ O con variables de entorno del sistema operativo.
 - Repositorios `InMemory*` siguen activos.
 - Sin Flyway ni Liquibase (DECISION_DDL-EXEC-01 CERRADA: ejecucion DDL exclusivamente manual).
 - Spring no crea, altera ni migra el esquema automaticamente.
-- DDL ejecutado manualmente por Pablo mediante HeidiSQL (script canonico aun no generado).
+- Script DDL canonico aprobado para ejecución manual controlada: `database/ddl/create-bod-faltas-domain.sql`
+  (64 tablas TO_CREATE + adopcion de `fal_rubro_version`; trabajo DDL-MARIADB-MANUAL-001-FULL-R1;
+  auditado externamente; esquema aún no creado; ejecución por Pablo mediante HeidiSQL).
 
 ## 9. Trabajo posterior
 

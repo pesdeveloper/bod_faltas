@@ -6,16 +6,18 @@ import ar.gob.malvinas.faltas.core.domain.enums.ResultadoAccesoQr;
 import java.time.LocalDateTime;
 
 /**
- * Registro de auditoria de un acceso valido realizado via codigo QR.
+ * Registro de auditoria de accesos realizados via codigo QR (validos e invalidos).
  *
  * Tabla: fal_acta_qr_acceso.
- * Semantica append-only: solo se inserta un registro si el token fue valido y
- * el acta pudo ser resuelta. Tokens invalidos, corruptos, con scope incorrecto,
- * actas inexistentes u otros errores NO producen filas en esta tabla.
+ * Semantica append-only.
  *
  * No almacena el token, el payload ni el hash del token.
  * No almacena datos personales del accedente.
  * IP y user-agent son tecnicos, no ciudadanos.
+ *
+ * HUMAN_DECISION_CLOSED (SPEC-MODEL-DDL-CLOSURE-001): canalAcceso eliminado del DDL mientras
+ * el unico canal sea WEB; no persistir constante sin variabilidad funcional.
+ * resultado_acceso_qr es SMALLINT (ResultadoAccesoQr enum).
  */
 public class FalActaQrAcceso {
 
@@ -25,6 +27,8 @@ public class FalActaQrAcceso {
     private final Long id;
     private final Long actaId;
     private final LocalDateTime fhAcceso;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Canal WEB es constante; no persistir. */
+    @Deprecated
     private final CanalAccesoQr canalAcceso;
     private final String ipOrigen;
     private final String userAgent;
@@ -88,6 +92,8 @@ public class FalActaQrAcceso {
     public Long getId() { return id; }
     public Long getActaId() { return actaId; }
     public LocalDateTime getFhAcceso() { return fhAcceso; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Canal WEB es constante. */
+    @Deprecated
     public CanalAccesoQr getCanalAcceso() { return canalAcceso; }
     public String getIpOrigen() { return ipOrigen; }
     public String getUserAgent() { return userAgent; }

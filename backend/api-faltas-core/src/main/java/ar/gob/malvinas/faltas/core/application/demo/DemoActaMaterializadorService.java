@@ -186,7 +186,7 @@ public class DemoActaMaterializadorService {
                         true,
                         d.getFhGeneracion() != null ? d.getFhGeneracion().toString() : null,
                         d.getPlantillaId(),
-                        d.getDescripcion()
+                        null
                 ))
                 .toList();
     }

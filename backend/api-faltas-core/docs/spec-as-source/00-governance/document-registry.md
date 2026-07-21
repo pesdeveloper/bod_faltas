@@ -44,10 +44,11 @@ transitorio para sostener esa afirmación.
 | `20-application/command-contracts.md` | NORMATIVE | YES | VIGENTE | Catálogo general de comandos, precondiciones y efectos fuera de la familia fallo. |
 | `30-projections/snapshot-bandejas-acciones.md` | NORMATIVE | YES | VIGENTE | Matriz de snapshot, bandejas y acciones pendientes derivadas. |
 | `40-api/http-contracts.md` | NORMATIVE | YES | VIGENTE | Contratos HTTP: endpoints, requests, responses, errores. |
-| `50-persistence/jdbc-strategy.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Estrategia de incorporación de MariaDB/JDBC; entrada del bloque DDL, sin SQL definitivo. |
+| `50-persistence/jdbc-strategy.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Estrategia de incorporación de MariaDB/JDBC; script DDL canónico FULL-R1 aprobado para ejecución manual controlada; esquema aún no creado. |
 | `50-persistence/jdbc-infrastructure.md` | SUPPORTING_CURRENT | SUPPORTING | VIGENTE | Inventario actual y verificable de la infraestructura JDBC base ya incorporada (dependencias, perfiles, configuración), previa a los repositorios de dominio. |
 | `50-persistence/inmemory-mariadb-deltas.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Delta vigente entre el modelo InMemory y el modelo MariaDB objetivo. |
-| `50-persistence/mariadb-logical-model.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Modelo lógico/inventario canónico de tablas, enums y decisiones cerradas de MariaDB; entrada principal al diseño de DDL/JDBC. |
+| `50-persistence/mariadb-logical-model.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Modelo lógico/inventario canónico de tablas, enums y decisiones cerradas de MariaDB; entrada principal al diseño de DDL/JDBC. Correcciones FULL-R1 incorporadas. |
 | `50-persistence/ddl-decisions.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Registro cerrado de 24 decisiones físicas (`DECISION_DDL-*`) para el DDL manual. |
 | `50-persistence/ddl-execution-and-test-seeding.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Mecanismo de ejecucion DDL manual, baseline protegido, contrato del seeder y politica de comentarios SQL obligatorios. |
+| `40-domain/observaciones.md` | PRE_DDL_PLAN | SUPPORTING | VIGENTE | Spec completa de centralización de observaciones libres en `fal_observacion`: tabla, enums (EntidadTipoObservada/OrigenObservacion), triggers AFTER DELETE y matriz de clasificación de campos libres. |
 | `90-roadmap/current-roadmap.md` | SUPPORTING_CURRENT | SUPPORTING | VIGENTE | Roadmap vigente posterior al cierre de spec-as-source: DDL/JDBC e integraciones externas. |

@@ -105,14 +105,14 @@ public class FalActa {
 
     // --- Lugar del hecho: texto libre ---
     private boolean siDomTxtInfr;               // si_dom_txt_infr BOOLEAN default false
-    private String domTxtInfr;                   // dom_txt_infr VARCHAR(255) NULL
+    private String domTxtInfr;                   // dom_txt_infr VARCHAR(196) NULL
     private String observaciones;                // compatibilidad con campo previo
 
     // --- Contexto geografico ---
     private boolean siEjeUrb;                    // si_eje_urb BOOLEAN default false
 
     // --- QR ---
-    private String codigoQr;                     // codigo_qr VARCHAR(512) NOT NULL UNIQUE
+    private String codigoQr;                     // codigo_qr VARCHAR(128) NOT NULL UNIQUE — token firmado formato QR0.<uuid>.<ver>.<hmac-base64url>
     private Integer qrPayloadVersion;            // qr_payload_version SMALLINT default 0
 
     // --- Estado actual (tripla canonica) ---

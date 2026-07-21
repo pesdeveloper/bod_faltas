@@ -14,14 +14,26 @@ import java.time.LocalDateTime;
  * - FISICA: razonSocial debe ser null; apellido/nombres opcionales pero debe tener al menos una forma de identificacion.
  * - JURIDICA: apellido y nombres deben ser null; razonSocial o nombreMostrar obligatorios.
  * - tipoDoc y nroDoc se informan juntos o ambos quedan null.
- * - nroDoc: max 20 caracteres, no puede ser vacio si presente.
- * - nombreMostrar: calculado; max 64 caracteres.
+ * - apellido: max 24 caracteres (VARCHAR(24) en MariaDB - HUMAN_DECISION_CLOSED).
+ * - nombres: max 36 caracteres (VARCHAR(36) en MariaDB - HUMAN_DECISION_CLOSED).
+ * - razonSocial: max 64 caracteres (VARCHAR(64) en MariaDB).
+ * - nombreMostrar: calculado; max 64 caracteres (VARCHAR(64) en MariaDB).
  * - emailPrincipal: max 160 caracteres.
  * - telefonoPrincipal: max 20 caracteres.
  * - Para Faltas, idSuj debe ser 20 cuando se informa.
  * - idBie no puede existir sin idSuj.
+ * - idSuj: codigo de tipo de sujeto en Ingresos Municipales; rango 1-255 (TINYINT UNSIGNED); catalogo abierto.
+ * - idBie: identificador de bien o cuenta; rango 1-9999999 (MEDIUMINT UNSIGNED).
+ * - Usar Integer (no Long) para idSuj e idBie (HUMAN_DECISION_CLOSED FULL-R1.2-CORRECCION-10).
  *
- * No tiene versionRow: fal_persona no lo define en MariaDB.
+ * Estructura fisica del documento (HUMAN_DECISION_CLOSED - SPEC-MODEL-DDL-CLOSURE-001):
+ * - tipo_documento SMALLINT NOT NULL (TipoDocumentoPersona)
+ * - prefijo_cuit_cuil TINYINT UNSIGNED NULL (solo CUIT/CUIL: 0-99)
+ * - nro_doc INT UNSIGNED NOT NULL (solo parte numerica: 1-99999999)
+ * - digito_verificador TINYINT UNSIGNED NULL (solo CUIT/CUIL: 0-9)
+ * Los campos tipoDoc/nroDoc se mantienen por compatibilidad durante la transicion al adapter JDBC.
+ *
+ * No tiene versionRow: fal_persona no lo define en MariaDB (DECISION_DDL-PERS-01 CERRADA).
  */
 public class FalPersona {
 
@@ -31,6 +43,11 @@ public class FalPersona {
     private TipoDocumentoPersona tipoDoc;
     private String nroDoc;
 
+    // Estructura fisica del documento (HUMAN_DECISION_CLOSED - SPEC-MODEL-DDL-CLOSURE-001):
+    // tipo_documento SMALLINT, prefijo_cuit_cuil TINYINT UNSIGNED NULL, nro_doc INT UNSIGNED, digito_verificador TINYINT UNSIGNED NULL
+    private Integer prefijoCuitCuil;
+    private Integer digitoVerificador;
+
     private String apellido;
     private String nombres;
     private String razonSocial;
@@ -39,8 +56,8 @@ public class FalPersona {
     private String emailPrincipal;
     private String telefonoPrincipal;
 
-    private Long idSuj;
-    private Long idBie;
+    private Integer idSuj;
+    private Integer idBie;
     private SujBieEstado sujBieEstado;
     private LocalDateTime fhSujBieCreacion;
 
@@ -71,14 +88,16 @@ public class FalPersona {
     public TipoPersona getTipoPersona() { return tipoPersona; }
     public TipoDocumentoPersona getTipoDoc() { return tipoDoc; }
     public String getNroDoc() { return nroDoc; }
+    public Integer getPrefijoCuitCuil() { return prefijoCuitCuil; }
+    public Integer getDigitoVerificador() { return digitoVerificador; }
     public String getApellido() { return apellido; }
     public String getNombres() { return nombres; }
     public String getRazonSocial() { return razonSocial; }
     public String getNombreMostrar() { return nombreMostrar; }
     public String getEmailPrincipal() { return emailPrincipal; }
     public String getTelefonoPrincipal() { return telefonoPrincipal; }
-    public Long getIdSuj() { return idSuj; }
-    public Long getIdBie() { return idBie; }
+    public Integer getIdSuj() { return idSuj; }
+    public Integer getIdBie() { return idBie; }
     public SujBieEstado getSujBieEstado() { return sujBieEstado; }
     public LocalDateTime getFhSujBieCreacion() { return fhSujBieCreacion; }
     public LocalDateTime getFhAlta() { return fhAlta; }
@@ -90,6 +109,8 @@ public class FalPersona {
 
     public void setTipoDoc(TipoDocumentoPersona tipoDoc) { this.tipoDoc = tipoDoc; }
     public void setNroDoc(String nroDoc) { this.nroDoc = nroDoc; }
+    public void setPrefijoCuitCuil(Integer prefijoCuitCuil) { this.prefijoCuitCuil = prefijoCuitCuil; }
+    public void setDigitoVerificador(Integer digitoVerificador) { this.digitoVerificador = digitoVerificador; }
     public void setApellido(String apellido) { this.apellido = apellido; }
     public void setNombres(String nombres) { this.nombres = nombres; }
     public void setRazonSocial(String razonSocial) { this.razonSocial = razonSocial; }
@@ -100,8 +121,22 @@ public class FalPersona {
     public void setIdUserUltMod(String idUserUltMod) { this.idUserUltMod = idUserUltMod; }
 
     public void setSujBieEstado(SujBieEstado sujBieEstado) { this.sujBieEstado = sujBieEstado; }
-    public void setIdSuj(Long idSuj) { this.idSuj = idSuj; }
-    public void setIdBie(Long idBie) { this.idBie = idBie; }
+    public void setIdSuj(Integer idSuj) {
+        if (idSuj != null && (idSuj < 1 || idSuj > 255))
+            throw new IllegalArgumentException(
+                    "idSuj debe estar entre 1 y 255, o ser null; valor: " + idSuj);
+        this.idSuj = idSuj;
+    }
+
+    public void setIdBie(Integer idBie) {
+        if (idBie != null && (idBie < 1 || idBie > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBie debe estar entre 1 y 9.999.999, o ser null; valor: " + idBie);
+        if (idBie != null && this.idSuj == null)
+            throw new IllegalArgumentException(
+                    "idBie no puede informarse sin idSuj");
+        this.idBie = idBie;
+    }
     public void setFhSujBieCreacion(LocalDateTime fhSujBieCreacion) { this.fhSujBieCreacion = fhSujBieCreacion; }
 
     // --- Metodos de dominio ---
@@ -135,6 +170,8 @@ public class FalPersona {
         FalPersona c = new FalPersona(id, tipoPersona, fhAlta, idUserAlta);
         c.tipoDoc = this.tipoDoc;
         c.nroDoc = this.nroDoc;
+        c.prefijoCuitCuil = this.prefijoCuitCuil;
+        c.digitoVerificador = this.digitoVerificador;
         c.apellido = this.apellido;
         c.nombres = this.nombres;
         c.razonSocial = this.razonSocial;

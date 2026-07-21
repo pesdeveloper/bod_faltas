@@ -35,6 +35,8 @@ public class FalActaPagoMovimiento {
     private final Long idCierre;
     private final Long idOpe;
     private final Long movimientoOrigenId;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Idempotencia via movimientoOrigenId. Las notas van a fal_observacion. */
+    @Deprecated
     private final String motivoAplicacionPagoAnterior;
     private final MotivoAnulacionPago motivoAnulacionPago;
     private final LocalDateTime fhPagoProcesado;
@@ -100,14 +102,10 @@ public class FalActaPagoMovimiento {
     public Long getIdOpe() { return idOpe; }
     public Long getMovimientoOrigenId() { return movimientoOrigenId; }
     /**
-     * Motivo estructurado de la resolucion administrativa de un pago aplicado a
-     * obligacion anterior (ver ResolverPagoObligacionAnteriorCommand en
-     * backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md).
-     * Nulo en movimientos normales; en el movimiento de aplicacion creado por
-     * PAGRES es siempre no nulo (cadena vacia si el actor no informo motivo).
-     * Fuente autoritativa de idempotencia de motivo: nunca se deriva parseando
-     * FalActaEvento.descripcionLegible.
+     * @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Idempotencia via movimientoOrigenId.
+     * NO PERSISTIR en MariaDB. Las notas libres van a fal_observacion.
      */
+    @Deprecated
     public String getMotivoAplicacionPagoAnterior() { return motivoAplicacionPagoAnterior; }
     public MotivoAnulacionPago getMotivoAnulacionPago() { return motivoAnulacionPago; }
     public LocalDateTime getFhPagoProcesado() { return fhPagoProcesado; }
@@ -282,7 +280,9 @@ public class FalActaPagoMovimiento {
         public Builder idCierre(Long v) { this.idCierre = v; return this; }
         public Builder idOpe(Long v) { this.idOpe = v; return this; }
         public Builder movimientoOrigenId(Long v) { this.movimientoOrigenId = v; return this; }
-        public Builder motivoAplicacionPagoAnterior(String v) {
+       /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). NO PERSISTIR. */
+       @Deprecated
+       public Builder motivoAplicacionPagoAnterior(String v) {
             if (v != null) {
                 v = v.trim();
                 if (v.length() > 500)

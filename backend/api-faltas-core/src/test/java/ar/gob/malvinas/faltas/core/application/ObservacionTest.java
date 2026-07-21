@@ -92,18 +92,18 @@ class ObservacionTest {
         }
 
         @Test
-        @DisplayName("texto de 1000 caracteres aceptado")
+        @DisplayName("texto de 512 caracteres aceptado")
         void texto_limite_1000() {
-            String texto = "A".repeat(1000);
+            String texto = "A".repeat(512);
             FalObservacion obs = new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
                     null, texto, null, FaltasClockTestSupport.FIXED.now(), "U");
-            assertThat(obs.getObservacion()).hasSize(1000);
+            assertThat(obs.getObservacion()).hasSize(512);
         }
 
         @Test
-        @DisplayName("texto de 1001 caracteres rechazado")
+        @DisplayName("texto de 513 caracteres rechazado")
         void texto_supera_1000_rechazado() {
-            String texto = "A".repeat(1001);
+            String texto = "A".repeat(513);
             assertThatThrownBy(() -> new FalObservacion(1L, EntidadTipoObservada.ACTA, 1L,
                     null, texto, null, FaltasClockTestSupport.FIXED.now(), "U"))
                     .isInstanceOf(IllegalArgumentException.class);

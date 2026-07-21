@@ -13,7 +13,6 @@ import java.time.LocalDate;
 public record CrearDocumentoPlantillaRequest(
         @NotBlank String codigo,
         @NotBlank String nombre,
-        String descripcion,
         @NotNull TipoDocu tipoDocu,
         @NotNull AccionDocumental accionDocumental,
         TipoActa tipoActa,

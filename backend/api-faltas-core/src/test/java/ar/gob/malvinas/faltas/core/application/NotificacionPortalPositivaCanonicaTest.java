@@ -917,7 +917,7 @@ class NotificacionPortalPositivaCanonicaTest {
         actaService.enriquecer(new EnriquecerActaCommand(idActa, "enriquecido"));
 
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION, "Acta principal"))
+                new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "Inspector", "DIGITAL", null));
         String idNotif = notifService.enviarNotificacion(new EnviarNotificacionCommand(
@@ -940,7 +940,7 @@ class NotificacionPortalPositivaCanonicaTest {
         actaService.completarCaptura(new CompletarCapturaCommand(idActa, null));
         actaService.enriquecer(new EnriquecerActaCommand(idActa, "enriquecido"));
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION, "Acta principal"))
+                new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "Inspector", "DIGITAL", null));
         String idNotif = notifService.enviarNotificacion(new EnviarNotificacionCommand(

@@ -141,8 +141,8 @@ public class PersonaService {
     public FalPersona actualizarVinculoIngresos(
             Long id,
             SujBieEstado nuevoEstado,
-            Long idSuj,
-            Long idBie,
+            Integer idSuj,
+            Integer idBie,
             LocalDateTime fhSujBieCreacion,
             String idUserMod) {
 
@@ -158,7 +158,7 @@ public class PersonaService {
                         throw new IllegalArgumentException("SIN_CUENTA no admite idSuj, idBie ni fhSujBieCreacion");
                     break;
                 case ACTIVA:
-                    if (!Long.valueOf(20).equals(idSuj))
+                    if (!Integer.valueOf(20).equals(idSuj))
                         throw new IllegalArgumentException("ACTIVA requiere idSuj=20");
                     if (idBie == null)
                         throw new IllegalArgumentException("ACTIVA requiere idBie");
@@ -176,7 +176,7 @@ public class PersonaService {
 
         if (idBie != null && idSuj == null)
             throw new IllegalArgumentException("idBie no puede existir sin idSuj");
-        if (idSuj != null && !Long.valueOf(20).equals(idSuj))
+        if (idSuj != null && !Integer.valueOf(20).equals(idSuj))
             throw new IllegalArgumentException("Para Faltas, idSuj debe ser 20");
 
         persona.setSujBieEstado(nuevoEstado);

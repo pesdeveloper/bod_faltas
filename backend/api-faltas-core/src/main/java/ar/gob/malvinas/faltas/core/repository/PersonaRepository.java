@@ -22,5 +22,5 @@ public interface PersonaRepository {
 
     List<FalPersona> buscarPorTipoDocYNroDoc(TipoDocumentoPersona tipoDoc, String nroDoc);
 
-    List<FalPersona> buscarPorIdSujBie(Long idSuj, Long idBie);
+    List<FalPersona> buscarPorIdSujBie(Integer idSuj, Integer idBie);
 }

@@ -574,7 +574,8 @@ class DocumentoAdjuntoTest {
             // Create doc without storageKey via constructor (not adjunto factory)
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -589,7 +590,8 @@ class DocumentoAdjuntoTest {
             FalActa acta = crearActaConDep();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             doc.setStorageKey("storage/x.pdf");
             // hashDocu is null
             docRepo.guardar(doc);
@@ -606,7 +608,8 @@ class DocumentoAdjuntoTest {
             FalActa acta = crearActaConDep();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -918,7 +921,8 @@ class DocumentoAdjuntoTest {
         void marcarFirmadoDesdeAdjuntoSoloAceptaAdjunto() {
             Long id = docRepo.nextId();
             FalDocumento docBorrador = new FalDocumento(id, 1L, TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             assertThatThrownBy(docBorrador::marcarFirmadoDesdeAdjunto)
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("ADJUNTO");

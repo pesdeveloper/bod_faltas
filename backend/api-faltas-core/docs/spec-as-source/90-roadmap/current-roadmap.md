@@ -8,11 +8,14 @@
 > La evolucion historica se conserva en Git y no forma parte de la spec-as-source
 > activa.
 
-**Fecha de actualización:** 2026-07-18
+**Fecha de actualización:** 2026-07-21
 **Estado:** spec-as-source auditada transversalmente; puerta `READY_FOR_DDL` evaluada en
 [`../00-governance/ready-for-ddl-gate.md`](../00-governance/ready-for-ddl-gate.md);
 todas las `DECISION_DDL-*` cerradas (ver
-[`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md)).
+[`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md));
+script DDL canónico completo (64 tablas) aprobado para ejecución manual controlada
+(trabajo DDL-MARIADB-MANUAL-001-FULL-R1; ver `database/ddl/create-bod-faltas-domain.sql`);
+esquema en MariaDB aún no creado.
 
 ## 1. Baseline vigente
 
@@ -35,7 +38,11 @@ Estado verificado:
 - infraestructura JDBC base incorporada: dependencia Spring JDBC, driver MariaDB, perfil `jdbc`,
   configuración de `DataSource` y prueba condicionada de infraestructura (ver
   [`../50-persistence/jdbc-infrastructure.md`](../50-persistence/jdbc-infrastructure.md));
-- sin repositorios JDBC de dominio ni JPA/Hibernate todavía; sin Flyway/Liquibase por DECISION_DDL-EXEC-01 (no se incorporarán); sin Testcontainers ni DDL productivo todavía.
+- script DDL canónico aprobado para ejecución manual controlada: `database/ddl/create-bod-faltas-domain.sql`,
+  64 tablas TO_CREATE + adopción de `fal_rubro_version`; guardrails estáticos en 3 clases de test
+  (`DdlInventoryContractTest`, `DdlScriptContractTest`, `DdlDiagnosticsSafetyTest`); verdes en CI;
+  esquema en MariaDB aún no creado;
+- sin repositorios JDBC de dominio ni JPA/Hibernate todavía; sin Flyway/Liquibase por DECISION_DDL-EXEC-01 (no se incorporarán); sin Testcontainers ni DDL ejecutado todavía.
 
 Las definiciones activas de paridad y estrategia de persistencia se encuentran en:
 
@@ -46,38 +53,20 @@ Las definiciones activas de paridad y estrategia de persistencia se encuentran e
 
 ## 2. Siguiente secuencia de trabajo
 
-### 2.1 Cerrar y auditar el slice vigente
+### 2.1 Slice DDL cerrado y auditado — COMPLETADO
 
-Prerequisito: slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001-R3` cerrado y
-auditado externamente.
+Slice `DDL-MARIADB-MANUAL-001-FULL-R1` cerrado y auditado externamente.
+Reauditoría externa independiente declaró: `DDL APTO PARA EJECUCIÓN MANUAL CONTROLADA`.
+Script aprobado con release gate formal; historia de auditoría preservada en Git.
 
-### 2.2 Construir/revisar script DDL manual
+### 2.2 Ejecutar script DDL manualmente
 
-Objetivo: construir el script canónico completo de recreación del dominio BOD
-Faltas (64 tablas nuevas + adopción de `fal_rubro_version`) consistente con
-las 24 decisiones `DECISION_DDL-*` cerradas (ver `ddl-decisions.md`), sin
-alterar el comportamiento funcional ya validado por la implementación InMemory.
+**[APROBADO — pendiente ejecución]**
 
-El script DDL:
-- vive en Git fuera del runtime/classpath (bajo `database/`);
-- se ejecuta manualmente por Pablo desde HeidiSQL (`DECISION_DDL-EXEC-01`);
-- sin Flyway, sin Liquibase, sin ejecución automática al arrancar Spring.
-
-Guardrails:
-
-- InMemory continúa siendo el oráculo de paridad.
-- No cambiar reglas de dominio para adaptarlas a la persistencia.
-- No cambiar estados, eventos, transiciones, bandejas ni contratos HTTP.
-- No introducir JPA si la estrategia vigente define JDBC explícito.
-- Toda decisión física deriva del modelo canónico
-  (`inmemory-mariadb-deltas.md`, `mariadb-logical-model.md`).
-- Las restricciones de base deben reforzar, no redefinir, las invariantes de
-  dominio.
-
-### 2.3 Ejecutar DDL manualmente
-
-Ejecutar el script canónico desde HeidiSQL contra MariaDB 12.3.2.
-Verificar el baseline con el contrato del seeder.
+Script canónico `database/ddl/create-bod-faltas-domain.sql` (64 tablas) aprobado para ejecución.
+Ejecutar desde HeidiSQL contra MariaDB 12.3.2.
+Verificar post-ejecución con `database/diagnostics/verify-domain-schema.sql` y
+`database/diagnostics/verify-protected-baseline.sql`.
 
 ### 2.4 Implementar seeder
 

@@ -211,9 +211,9 @@ class ActaResultadoFirmaInfractorTest {
         }
 
         @Test
-        @DisplayName("13. TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR tiene codigo 6")
-        void firma_olografa_tiene_codigo_6() {
-            assertThat(TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR.codigo()).isEqualTo((short) 6);
+        @DisplayName("13. TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR tiene codigo 48 (FULL-R1.2-CORRECCION-10)")
+        void firma_olografa_tiene_codigo_48() {
+            assertThat(TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR.codigo()).isEqualTo((short) 48);
         }
 
         @Test

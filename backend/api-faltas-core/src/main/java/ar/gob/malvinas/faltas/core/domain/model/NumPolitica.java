@@ -15,9 +15,18 @@ import java.time.LocalDateTime;
  */
 public class NumPolitica {
 
+    public static final int MAX_PREFIJO_LENGTH = 10;       // prefijo VARCHAR(10) (HUMAN_DECISION_CLOSED CORRECCION-07)
+    public static final int MAX_FORMATO_VISIBLE_LENGTH = 60; // formato_visible VARCHAR(60) (HUMAN_DECISION_CLOSED CORRECCION-07)
+
     private final Long id;
     private final String codigo;
     private final String descripcion;
+    /**
+     * Nombre corto operativo de la politica (apodo VARCHAR(20) NOT NULL en DDL).
+     * Mutable para compatibilidad con constructores existentes.
+     * HUMAN_DECISION_CLOSED — SPEC-MODEL-DDL-CLOSURE-001.
+     */
+    private String apodo;
     private final ClaseNumeracion claseNumeracion;
     private final boolean siReinicioAnual;
     private final boolean siIncluyePrefijo;
@@ -51,6 +60,10 @@ public class NumPolitica {
             LocalDate fhVigHasta,
             LocalDateTime fhAlta,
             String idUserAlta) {
+        if (prefijo != null && prefijo.length() > MAX_PREFIJO_LENGTH)
+            throw new IllegalArgumentException("prefijo excede el maximo permitido de " + MAX_PREFIJO_LENGTH + " caracteres (HUMAN_DECISION_CLOSED CORRECCION-07)");
+        if (formatoVisible != null && formatoVisible.length() > MAX_FORMATO_VISIBLE_LENGTH)
+            throw new IllegalArgumentException("formatoVisible excede el maximo permitido de " + MAX_FORMATO_VISIBLE_LENGTH + " caracteres (HUMAN_DECISION_CLOSED CORRECCION-07)");
         this.id = id;
         this.codigo = codigo;
         this.descripcion = descripcion;
@@ -73,6 +86,8 @@ public class NumPolitica {
     public Long getId() { return id; }
     public String getCodigo() { return codigo; }
     public String getDescripcion() { return descripcion; }
+    public String getApodo() { return apodo; }
+    public void setApodo(String apodo) { this.apodo = apodo; }
     public ClaseNumeracion getClaseNumeracion() { return claseNumeracion; }
     public boolean isSiReinicioAnual() { return siReinicioAnual; }
     public boolean isSiIncluyePrefijo() { return siIncluyePrefijo; }
