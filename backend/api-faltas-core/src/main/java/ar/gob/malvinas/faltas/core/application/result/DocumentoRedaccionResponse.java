@@ -18,5 +18,6 @@ public record DocumentoRedaccionResponse(
         Set<String> variablesUsadas,
         Set<String> variablesFaltantes,
         Set<String> variablesDesconocidas,
-        boolean completo
+        boolean completo,
+        int versionRow
 ) {}

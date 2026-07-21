@@ -21,6 +21,8 @@ public class NumTalonarioMovimiento {
     private final int nroTalonario;
     private final EstadoNumeroTalonario estadoNumero;
     private final MotivoAnulacionTalonario motivoAnulacion;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated
     private final String observacion;
     private final Long actaId;
     private final Long documentoId;
@@ -58,6 +60,8 @@ public class NumTalonarioMovimiento {
     public int getNroTalonario() { return nroTalonario; }
     public EstadoNumeroTalonario getEstadoNumero() { return estadoNumero; }
     public MotivoAnulacionTalonario getMotivoAnulacion() { return motivoAnulacion; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated
     public String getObservacion() { return observacion; }
     public Long getActaId() { return actaId; }
     public Long getDocumentoId() { return documentoId; }

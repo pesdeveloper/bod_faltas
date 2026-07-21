@@ -20,6 +20,7 @@ class DocumentoRedaccionConfirmacionTest {
     private static FalDocumentoRedaccion borrador(String contenido) {
         return new FalDocumentoRedaccion(
                 1L, 100L, 200L,
+                (short) 1, null,
                 EstadoRedaccionDocumento.BORRADOR,
                 contenido,
                 null, null, null,

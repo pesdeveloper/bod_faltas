@@ -54,7 +54,7 @@ class ActaDocumentoServiceTest {
     }
 
     private FalDocumento crearDoc(Long id, Long actaId, TipoDocu tipo) {
-        FalDocumento doc = new FalDocumento(id, actaId, tipo, AHORA, "desc-" + id);
+        FalDocumento doc = new FalDocumento(id, actaId, tipo, AHORA);
         docRepo.guardar(doc);
         return doc;
     }

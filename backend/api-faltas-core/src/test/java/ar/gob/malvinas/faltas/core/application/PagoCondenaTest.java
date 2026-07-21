@@ -8,6 +8,7 @@ import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCo
 import ar.gob.malvinas.faltas.core.application.command.DeclararCondenaFirmePorApelacionRechazadaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnviarNotificacionCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.InformarPagoCondenaCommand;
@@ -29,6 +30,7 @@ import ar.gob.malvinas.faltas.core.application.service.PagoCondenaService;
 import ar.gob.malvinas.faltas.core.domain.enums.AccionPendiente;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoCondena;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
@@ -36,6 +38,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
+import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.domain.model.FalPagoCondena;
@@ -46,7 +49,6 @@ import ar.gob.malvinas.faltas.core.repository.ApelacionActaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoVoluntarioRepository;
@@ -57,13 +59,15 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryApelacionActaReposi
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEvidenciaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -96,12 +100,12 @@ class PagoCondenaTest {
     private PagoVoluntarioRepository pagoVolRepo;
     private FalloActaRepository falloRepo;
     private ApelacionActaRepository apelacionRepo;
-    private FirmezaCondenaRepository firmezaRepo;
     private PagoCondenaRepository pagoCondenaRepo;
 
     private ActaService actaService;
     private DocumentoService docService;
     private NotificacionService notifService;
+    private final ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository intentoRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository();
     private FalloActaService falloService;
     private ApelacionActaService apelacionService;
     private FirmezaCondenaService firmezaService;
@@ -109,6 +113,7 @@ class PagoCondenaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -118,11 +123,10 @@ class PagoCondenaTest {
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
@@ -134,27 +138,32 @@ class PagoCondenaTest {
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
         apelacionService = new ApelacionActaService(
                 actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
         pagoCondenaService = new PagoCondenaService(
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
 
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
+
     // =========================================================================
     // Helpers: construir acta con condena firme
     // =========================================================================
 
-    private Long crearActaConCondenaFirme(String doc) {
+    private Long crearActaConFalloCondenatorioNotificado(String doc) {
         LabrarActaCommand cmd = new LabrarActaCommand(
                 "TRANSITO", "DEP-001", "INS-001",
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
@@ -164,30 +173,37 @@ class PagoCondenaTest {
         actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, null))
+                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "firmante1", "DIGITAL", null));
         String idNotif = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), "CORREO", null))
+                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotif), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotif)), null, "test-actor"));
 
         falloService.dictarCondenatorio(new DictarFalloCondenatorioCommand(
                 actaId, new BigDecimal("3000.00"), "Fundamentos condenatorios", null));
         Long idDocFallo = falloRepo.buscarActivo(actaId).orElseThrow().getDocumentoId();
         docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
         String idNotifFallo = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, idDocFallo, "CORREO", null))
+                new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotifFallo, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotifFallo), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotifFallo)), null, "test-actor"));
+        return actaId;
+    }
 
-        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+    private Long crearActaConCondenaFirme(String doc) {
+        Long actaId = crearActaConFalloCondenatorioNotificado(doc);
+        var falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(LocalDate.of(2026, 7, 8));
+        falloRepo.guardar(falloVto);
+        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
         return actaId;
     }
 
     private Long informarPago(Long actaId) {
         pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                actaId, new BigDecimal("3000.00"), "REF-001", null));
+                actaId, new BigDecimal("3000.00"), "REF-001", null, "test-user"));
         return actaId;
     }
 
@@ -233,8 +249,15 @@ class PagoCondenaTest {
         @DisplayName("Test 3: Informar pago condena registra PCOINF")
         void informar_registra_pcoinf() {
             Long actaId = crearActaConCondenaFirme("50000001");
+
+            FalActaFallo falloFirme = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(falloFirme.getEstadoFallo()).isEqualTo(EstadoFalloActa.FIRME);
+            assertThat(falloFirme.isSiFirme()).isTrue();
+            assertThat(falloFirme.getFhFirmeza()).isNotNull();
+            assertThat(falloFirme.getOrigenFirmeza()).isNotNull();
+
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-ABC-001", "Pago via banco"));
+                    actaId, new BigDecimal("3000.00"), "REF-ABC-001", "Pago via banco", "test-user"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -246,7 +269,7 @@ class PagoCondenaTest {
         void informar_no_cierra() {
             Long actaId = crearActaConCondenaFirme("50000002");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-001", null));
+                    actaId, new BigDecimal("3000.00"), "REF-001", null, "test-user"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getSituacionAdministrativa()).isNotEqualTo(SituacionAdministrativaActa.CERRADA);
@@ -307,7 +330,7 @@ class PagoCondenaTest {
 
             PagoCondenaService servicioConBloqueantes = new PagoCondenaService(
                     actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     actaId2 -> true, FaltasClockTestSupport.FIXED);
 
             servicioConBloqueantes.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
@@ -397,7 +420,7 @@ class PagoCondenaTest {
             Long actaId = actaService.labrar(cmd).idActa();
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("1000"), "REF-001", null)))
+                    actaId, new BigDecimal("1000"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("CONDENA_FIRME");
         }
@@ -417,9 +440,33 @@ class PagoCondenaTest {
             actaRepo.guardar(acta);
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("1000"), "REF-001", null)))
+                    actaId, new BigDecimal("1000"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("fallo");
+        }
+
+        @Test
+        @DisplayName("Test 11b: resultadoFinal=CONDENA_FIRME no suple firmeza: fallo NOTIFICADO rechaza pago")
+        void resultadoFinal_no_suple_firmeza() {
+            Long actaId = crearActaConFalloCondenatorioNotificado("50000091");
+            FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
+            acta.setResultadoFinal(ResultadoFinalActa.CONDENA_FIRME);
+            actaRepo.guardar(acta);
+
+            assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
+                            actaId, new BigDecimal("3000.00"), "REF-001", null, "test-user")))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("FIRME");
+
+            FalActaFallo fallo = falloRepo.buscarActivo(actaId).orElseThrow();
+            assertThat(fallo.getEstadoFallo()).isEqualTo(EstadoFalloActa.NOTIFICADO);
+            assertThat(fallo.isSiFirme()).isFalse();
+            assertThat(fallo.getFhFirmeza()).isNull();
+            assertThat(pagoCondenaRepo.buscarPorActa(actaId)).isEmpty();
+
+            List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
+                    .stream().map(FalActaEvento::tipoEvt).toList();
+            assertThat(tipos).doesNotContain(TipoEventoActa.PCOINF);
         }
 
         @Test
@@ -428,12 +475,12 @@ class PagoCondenaTest {
             Long actaId = crearActaConCondenaFirme("50000010");
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, BigDecimal.ZERO, "REF-001", null)))
+                    actaId, BigDecimal.ZERO, "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("monto");
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("-100"), "REF-001", null)))
+                    actaId, new BigDecimal("-100"), "REF-001", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("monto");
         }
@@ -447,7 +494,7 @@ class PagoCondenaTest {
 
             // Acta ya cerrada: no se puede operar
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000"), "REF-002", null)))
+                    actaId, new BigDecimal("3000"), "REF-002", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -556,8 +603,3 @@ class PagoCondenaTest {
         }
     }
 }
-
-
-
-
-

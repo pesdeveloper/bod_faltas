@@ -13,8 +13,12 @@ import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -58,12 +62,14 @@ class ActaFlujoDocumentalFuncionalTest {
     private ActaService actaService;
     private DocumentoService docService;
     private NotificacionService notifService;
+    private final ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository intentoRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository();
     private FalloActaService falloService;
     private DocumentoRedaccionService redaccionService;
     private DocumentoGeneracionMockService mockGenService;
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -81,7 +87,7 @@ class ActaFlujoDocumentalFuncionalTest {
         ApelacionActaRepository apelRepo = new InMemoryApelacionActaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
@@ -93,11 +99,13 @@ class ActaFlujoDocumentalFuncionalTest {
                         new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new InMemoryDependenciaRepository(),
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
 
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
@@ -118,6 +126,9 @@ class ActaFlujoDocumentalFuncionalTest {
         PlantillasMockSeeder.seedar(plantillaRepo, contenidoRepo, defaultRepo);
     }
 
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
+
     private Long labrarCapturarEnriquecer() {
         Long id = actaService.labrar(new LabrarActaCommand(
                 "TRANSITO", "DEP-01", "INS-001",
@@ -134,12 +145,12 @@ class ActaFlujoDocumentalFuncionalTest {
     private Long labrarYLlegarAAnalis() {
         Long id = labrarCapturarEnriquecer();
         Long docId = Long.parseLong(docService.generarDocumento(
-                new GenerarDocumentoCommand(id, TipoDocu.ACTA_INFRACCION, null))
+                new GenerarDocumentoCommand(id, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada());
         docService.firmarDocumento(new FirmarDocumentoCommand(docId, "Inspector", "DIGITAL", null));
         String notifId = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(id, docId, "CORREO", null)).idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(notifId, null));
+                new EnviarNotificacionCommand(id, docId, CanalNotificacion.PRESENCIAL, null, null, null, "test-user")).idEntidadAfectada();
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(notifId)), null, "test-actor"));
         return id;
     }
 
@@ -182,7 +193,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void redaccion_borrador_storage_null() {
             Long actaId = labrarYLlegarAAnalis();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO))
                     .idEntidadAfectada());
 
             DocumentoRedaccionResponse resp = redaccionService.crearRedaccionConContextoActa(
@@ -203,7 +214,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void redaccion_borrador_variables_combinadas() {
             Long actaId = labrarYLlegarAAnalis();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO))
                     .idEntidadAfectada());
 
             DocumentoRedaccionResponse resp = redaccionService.crearRedaccionConContextoActa(
@@ -227,7 +238,7 @@ class ActaFlujoDocumentalFuncionalTest {
         void pdf_mock_generado_storage_mock() {
             Long actaId = labrarYLlegarAAnalis();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTO_ADMINISTRATIVO))
                     .idEntidadAfectada());
 
             DocumentoRedaccionResponse redaccion = redaccionService.crearRedaccionConContextoActa(
@@ -274,12 +285,12 @@ class ActaFlujoDocumentalFuncionalTest {
         void notificar_sin_firma_lanza_precondicion() {
             Long actaId = labrarCapturarEnriquecer();
             Long docId = Long.parseLong(docService.generarDocumento(
-                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, null))
+                    new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
                     .idEntidadAfectada());
 
             assertThatThrownBy(() ->
                     notifService.enviarNotificacion(
-                            new EnviarNotificacionCommand(actaId, docId, "CORREO", null)))
+                            new EnviarNotificacionCommand(actaId, docId, CanalNotificacion.PRESENCIAL, null, null, null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 

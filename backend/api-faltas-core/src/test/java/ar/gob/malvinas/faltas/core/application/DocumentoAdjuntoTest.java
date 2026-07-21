@@ -10,6 +10,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -72,7 +73,7 @@ class DocumentoAdjuntoTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
         talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
         depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
@@ -81,7 +82,8 @@ class DocumentoAdjuntoTest {
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
-                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo, FaltasClockTestSupport.FIXED);
+                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo,
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // -------------------------------------------------------------------------
@@ -572,7 +574,8 @@ class DocumentoAdjuntoTest {
             // Create doc without storageKey via constructor (not adjunto factory)
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -587,7 +590,8 @@ class DocumentoAdjuntoTest {
             FalActa acta = crearActaConDep();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             doc.setStorageKey("storage/x.pdf");
             // hashDocu is null
             docRepo.guardar(doc);
@@ -604,7 +608,8 @@ class DocumentoAdjuntoTest {
             FalActa acta = crearActaConDep();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.PENDIENTE_FIRMA, TipoFirmaReq.FIRMA_INTERNA, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.convalidarFirmaEscaneada(
@@ -916,7 +921,8 @@ class DocumentoAdjuntoTest {
         void marcarFirmadoDesdeAdjuntoSoloAceptaAdjunto() {
             Long id = docRepo.nextId();
             FalDocumento docBorrador = new FalDocumento(id, 1L, TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), null, EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
+                    FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
             assertThatThrownBy(docBorrador::marcarFirmadoDesdeAdjunto)
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("ADJUNTO");

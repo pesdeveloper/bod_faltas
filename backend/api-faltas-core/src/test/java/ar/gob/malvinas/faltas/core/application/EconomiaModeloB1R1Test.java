@@ -57,9 +57,13 @@ class EconomiaModeloB1R1Test {
     @AfterEach
     void tearDown() { ActorContextHolder.clear(); }
 
+    /** Contador deterministico para sintetizar cmtePG/prefPG/nroPG unico por llamada (R2-02: recibo obligatorio). */
+    private int reciboSeq = 0;
+
     private NotificarMovimientoPagoCommand cmdConfirmado(BigDecimal importe, String ref, OrigenConfirmacion oc) {
+        reciboSeq++;
         return new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.INGRESOS, oc, null, ClasificacionPago.NORMAL,
-                null, importe, null, importe, null, null, null, null, null, null, null, null, null, null, ref, T0, "USR");
+                null, importe, null, importe, null, null, null, "R1", (short) 1, reciboSeq, null, null, null, null, ref, T0, "USR");
     }
 
     @Test

@@ -13,7 +13,7 @@ import java.util.Objects;
 /**
  * Evento de dominio del expediente. Inmutable y append-only.
  *
- * Paridad campo-a-campo con fal_acta_evento (MariaDB) - 8F-11L.
+ * Paridad campo-a-campo con fal_acta_evento (MariaDB) - SPEC-MODEL-DDL-CLOSURE-001.
  *
  * Reglas:
  * - Append-only: nunca se modifica ni elimina despues de persistir.
@@ -23,9 +23,12 @@ import java.util.Objects;
  * - tipoEvt es CHAR(6), hecho real de dominio, nunca evento de proyeccion/demo.
  * - Los codigos de estProcAnt/Nvo y sitAdmAnt/Nva son CHAR(4) estables
  *   (mismo esquema que fal_acta.est_proc_act y sit_adm_act), no ordinales.
- * - descripcionLegible es texto para timeline/API/QA; no sustituye campos estructurados.
- * - correlacionId permite idempotencia en comandos externos.
+ * - correlacionId permite idempotencia en comandos externos; tipo CHAR(36) (UUID).
  * - El orden del timeline es fhEvt + id; no se usa campo ordenLogico.
+ *
+ * Campos NO persistidos en MariaDB (eliminados del DDL - HUMAN_DECISION_CLOSED):
+ * - actorRef: identidad estructurada via actorTipo + actorId. Marcado @Deprecated.
+ * - descripcionLegible: reconstruible desde tipoEvt + actor + timestamp. Marcado @Deprecated.
  *
  * Construccion via Builder: FalActaEvento.builder().actaId(...).tipoEvt(...).build()
  */
@@ -43,7 +46,9 @@ public final class FalActaEvento {
     private final SituacionAdministrativaActa sitAdmNva; // sit_adm_nva CHAR(4) NULL
     private final ActorTipoEvento actorTipo;            // actor_tipo SMALLINT NULL
     private final String actorId;                       // actor_id CHAR(36) NULL
-    private final String actorRef;                      // actor_ref VARCHAR(80) NULL
+    /** @deprecated No persistido en MariaDB (HUMAN_DECISION_CLOSED). Identidad estructurada via actorTipo + actorId. */
+    @Deprecated
+    private final String actorRef;                      // NO PERSISTIR - actor_ref eliminado del DDL
     private final Long idDocuRel;                       // id_docu_rel BIGINT NULL FK
     private final Long idNotifRel;                      // id_notif_rel BIGINT NULL FK
     private final Long idPresRel;                       // id_pres_rel BIGINT NULL
@@ -51,8 +56,10 @@ public final class FalActaEvento {
     private final boolean siEvtCierre;                  // si_evt_cierre BOOLEAN NOT NULL
     private final boolean siEvtExt;                     // si_evt_ext BOOLEAN NOT NULL
     private final boolean siPermiteReing;               // si_permite_reing BOOLEAN NOT NULL
-    private final String descripcionLegible;            // descripcion_legible VARCHAR(255) NULL
-    private final String correlacionId;                 // correlacion_id VARCHAR(60) NULL
+    /** @deprecated No persistido en MariaDB (HUMAN_DECISION_CLOSED). Reconstruible desde tipoEvt + actor + timestamp. */
+    @Deprecated
+    private final String descripcionLegible;            // NO PERSISTIR - descripcion_legible eliminado del DDL
+    private final String correlacionId;                 // correlacion_id CHAR(36) NULL
 
     private FalActaEvento(Builder b) {
         this.id = b.id;
@@ -127,6 +134,8 @@ public final class FalActaEvento {
     public SituacionAdministrativaActa sitAdmNva() { return sitAdmNva; }
     public ActorTipoEvento actorTipo() { return actorTipo; }
     public String actorId() { return actorId; }
+    /** @deprecated No persistido en MariaDB. Usar actorTipo() + actorId(). */
+    @Deprecated
     public String actorRef() { return actorRef; }
     public Long idDocuRel() { return idDocuRel; }
     public Long idNotifRel() { return idNotifRel; }
@@ -135,6 +144,8 @@ public final class FalActaEvento {
     public boolean siEvtCierre() { return siEvtCierre; }
     public boolean siEvtExt() { return siEvtExt; }
     public boolean siPermiteReing() { return siPermiteReing; }
+    /** @deprecated No persistido en MariaDB. Reconstruir desde tipoEvt + actor + timestamp. */
+    @Deprecated
     public String descripcionLegible() { return descripcionLegible; }
     public String correlacionId() { return correlacionId; }
 
@@ -180,6 +191,8 @@ public final class FalActaEvento {
         public Builder sitAdmNva(SituacionAdministrativaActa sitAdmNva) { this.sitAdmNva = sitAdmNva; return this; }
         public Builder actorTipo(ActorTipoEvento actorTipo) { this.actorTipo = actorTipo; return this; }
         public Builder actorId(String actorId) { this.actorId = actorId; return this; }
+        /** @deprecated actorRef no se persiste en MariaDB. Usar actorTipo + actorId. */
+        @Deprecated
         public Builder actorRef(String actorRef) { this.actorRef = actorRef; return this; }
         public Builder idDocuRel(Long idDocuRel) { this.idDocuRel = idDocuRel; return this; }
         public Builder idNotifRel(Long idNotifRel) { this.idNotifRel = idNotifRel; return this; }
@@ -188,6 +201,8 @@ public final class FalActaEvento {
         public Builder siEvtCierre(boolean siEvtCierre) { this.siEvtCierre = siEvtCierre; return this; }
         public Builder siEvtExt(boolean siEvtExt) { this.siEvtExt = siEvtExt; return this; }
         public Builder siPermiteReing(boolean siPermiteReing) { this.siPermiteReing = siPermiteReing; return this; }
+        /** @deprecated descripcionLegible no se persiste en MariaDB. */
+        @Deprecated
         public Builder descripcionLegible(String descripcionLegible) { this.descripcionLegible = descripcionLegible; return this; }
         public Builder correlacionId(String correlacionId) { this.correlacionId = correlacionId; return this; }
 

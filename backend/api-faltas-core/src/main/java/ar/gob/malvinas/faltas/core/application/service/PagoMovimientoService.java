@@ -6,6 +6,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.MovimientoRegistroResult;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenConfirmacion;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoMovimientoPago;
+import ar.gob.malvinas.faltas.core.domain.exception.MovimientoPagoDuplicadoException;
 import ar.gob.malvinas.faltas.core.domain.exception.ObligacionPagoNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaPagoMovimiento;
@@ -68,6 +69,22 @@ public class PagoMovimientoService {
         if (nroCuota != null && planPagoRefId == null)
             throw new PrecondicionVioladaException("nroCuota requiere planPagoRefId");
 
+        // Terna de recibo (cmtePG/prefPG/nroPG): debe ser completa o totalmente
+        // nula para cualquier tipo de movimiento. Para PAGO_CONFIRMADO original
+        // (este metodo nunca recibe movimientoOrigenId: el movimiento de
+        // aplicacion de ResolverPagoObligacionAnteriorService se construye
+        // directo, sin pasar por registrar()) la terna es obligatoria: es el
+        // unico dato que identifica el recibo real recibido.
+        boolean ternaCompleta = cmtePG != null && prefPG != null && nroPG != null;
+        boolean ternaParcial = !ternaCompleta && (cmtePG != null || prefPG != null || nroPG != null);
+        if (ternaParcial) {
+            throw new PrecondicionVioladaException("cmtePG/prefPG/nroPG debe ser completo o totalmente nulo");
+        }
+        if (tipoMovimiento == TipoMovimientoPago.PAGO_CONFIRMADO && !ternaCompleta) {
+            throw new PrecondicionVioladaException(
+                    "cmtePG/prefPG/nroPG es obligatorio para un movimiento PAGO_CONFIRMADO original (recibo de pago)");
+        }
+
         String actor = ActorContextHolder.subOr(idUser);
 
         // Idempotencia temprana: verificar existente ANTES de consumir nextId()
@@ -103,6 +120,19 @@ public class PagoMovimientoService {
                 return new RegistroMovimientoOutcome(MovimientoRegistroResult.ALREADY_EXISTS, prev);
             }
             return new RegistroMovimientoOutcome(MovimientoRegistroResult.CONFLICT, prev);
+        }
+
+        // Deduplicacion de recibo real: origenMovimiento+cmtePG+prefPG+nroPG
+        // identifica univocamente un recibo fisico recibido (independiente de la
+        // referenciaExterna tecnica que le asigne el emisor). Un mismo recibo con
+        // otra referenciaExterna es un intento de doble registro.
+        if (cmtePG != null && prefPG != null && nroPG != null) {
+            boolean otroReciboIgual = movimientoRepo.findByReferenciaPG(cmtePG, prefPG, nroPG).stream()
+                    .anyMatch(m -> m.getOrigenMovimiento() == origenMovimiento
+                            && !Objects.equals(m.getReferenciaExterna(), referenciaExterna));
+            if (otroReciboIgual) {
+                throw new MovimientoPagoDuplicadoException("cmtePG/prefPG/nroPG", cmtePG + "-" + prefPG + "-" + nroPG);
+            }
         }
 
         // Solo consumir nextId cuando es realmente nuevo

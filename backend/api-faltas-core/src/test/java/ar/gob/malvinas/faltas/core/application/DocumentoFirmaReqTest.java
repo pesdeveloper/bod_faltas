@@ -92,14 +92,15 @@ class DocumentoFirmaReqTest {
         NotificacionRepository notifRepo = new InMemoryNotificacionRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo, plantillaRepo,
                 new ar.gob.malvinas.faltas.core.application.service.TalonarioService(new ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(), new ar.gob.malvinas.faltas.core.repository.memory.InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED),
                 new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                 firmaReqRepo,
-                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
         firmaReqService = new DocumentoFirmaReqService(docRepo, plantillaRepo, firmaReqRepo, FaltasClockTestSupport.FIXED);
     }
@@ -122,7 +123,7 @@ class DocumentoFirmaReqTest {
 
     private FalDocumentoPlantilla crearPlantillaFirmaAutoridad(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                 TipoFirmaReq.FIRMA_AUTORIDAD,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -136,7 +137,7 @@ class DocumentoFirmaReqTest {
 
     private FalDocumentoPlantilla crearPlantillaFirmaMultiple(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                 TipoFirmaReq.FIRMA_MULTIPLE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -152,7 +153,7 @@ class DocumentoFirmaReqTest {
 
     private FalDocumentoPlantilla crearPlantillaNoRequiere(String codigo) {
         CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -360,7 +361,7 @@ class DocumentoFirmaReqTest {
         void test14_fallaDocumentoSinPlantillaId() {
             FalDocumento docSinPlantilla = new FalDocumento(
                     docRepo.nextId(), 1L,
-                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(), "Sin plantilla");
+                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(docSinPlantilla);
 
             assertThatThrownBy(() -> firmaReqService.materializarDesdePlantilla(
@@ -374,7 +375,7 @@ class DocumentoFirmaReqTest {
         void test15_fallaPlantillaNoExiste() {
             FalDocumento docConPlantillaInexistente = new FalDocumento(
                     docRepo.nextId(), 1L,
-                    TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Doc test",
+                    TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(),
                     EstadoDocu.BORRADOR, TipoFirmaReq.FIRMA_AUTORIDAD, 9999L, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(docConPlantillaInexistente);
 
@@ -425,7 +426,7 @@ class DocumentoFirmaReqTest {
         void test19_fallaFirmaAutoridadSinObligatorios() {
             FalActa acta = crearActa();
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "P-SINSATISF-01", "Sin satisfactores", null,
+                    "P-SINSATISF-01", "Sin satisfactores",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_AUTORIDAD,
                     false, MomentoNumeracionDocu.NO_APLICA,
@@ -452,7 +453,7 @@ class DocumentoFirmaReqTest {
         void test20_fallaFirmaMultipleUnSoloObligatorio() {
             FalActa acta = crearActa();
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "P-MULT-UNO-01", "Multiple con uno", null,
+                    "P-MULT-UNO-01", "Multiple con uno",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_MULTIPLE,
                     false, MomentoNumeracionDocu.NO_APLICA,
@@ -617,5 +618,3 @@ class DocumentoFirmaReqTest {
         }
     }
 }
-
-

@@ -9,7 +9,10 @@ import ar.gob.malvinas.faltas.core.domain.exception.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.application.result.RegistrarFirmaDocumentalResultado;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -18,6 +21,11 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,6 +48,10 @@ class DocumentoFirmaRealTest {
     private TalonarioRepository talonarioRepo;
     private DependenciaRepository depRepo;
 
+    private InMemoryNotificacionRepository notifRepo;
+    private InMemoryFalloActaRepository falloRepo;
+    private ActaEventoRepository eventoRepo;
+
     private DocumentoService docService;
     private DocumentoPlantillaService plantillaService;
     private FirmanteService firmanteService;
@@ -57,18 +69,19 @@ class DocumentoFirmaRealTest {
         talonarioRepo = new InMemoryTalonarioRepository();
         depRepo = new InMemoryDependenciaRepository();
 
-        InMemoryActaEventoRepository eventoRepo = new InMemoryActaEventoRepository();
+        eventoRepo = new InMemoryActaEventoRepository();
         InMemoryActaSnapshotRepository snapshotRepo = new InMemoryActaSnapshotRepository();
-        InMemoryFalloActaRepository falloRepo = new InMemoryFalloActaRepository();
+        falloRepo = new InMemoryFalloActaRepository();
         InMemoryInspectorRepository inspectorRepo = new InMemoryInspectorRepository();
+        notifRepo = new InMemoryNotificacionRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo,
-                new InMemoryNotificacionRepository(),
+                notifRepo,
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
         talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
         depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
@@ -77,7 +90,8 @@ class DocumentoFirmaRealTest {
 
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
-                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo, FaltasClockTestSupport.FIXED);
+                plantillaRepo, talonarioService, depRepo, firmaReqRepo, firmanteRepo,
+                notifRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa() {
@@ -118,7 +132,7 @@ class DocumentoFirmaRealTest {
     private FalDocumentoPlantilla crearPlantillaConReq(String codigo, MomentoNumeracionDocu momento, short rolFirmaReq) {
         boolean requiereNum = (momento != MomentoNumeracionDocu.NO_APLICA);
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                 TipoFirmaReq.FIRMA_INTERNA,
                 requiereNum, momento,
@@ -131,7 +145,7 @@ class DocumentoFirmaRealTest {
 
     private FalDocumentoPlantilla crearPlantillaConDosReqs(String codigo) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla dos reqs " + codigo, null,
+                codigo, "Plantilla dos reqs " + codigo,
                 TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                 TipoFirmaReq.FIRMA_MULTIPLE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -193,7 +207,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
 
             assertThat(firma).isNotNull();
             assertThat(firma.getId()).isInstanceOf(Long.class).isPositive();
@@ -208,7 +222,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
 
             assertThat(firma.getIdDocumento()).isEqualTo(doc.getId());
             assertThat(firma.getSeqFirmaReq()).isEqualTo((short) 1);
@@ -225,7 +239,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
 
             assertThat(firma.getTipoFirma()).isEqualTo(TipoFirma.ELECTRONICA);
             assertThat(firma.getEstadoFirma()).isEqualTo(EstadoFirma.FIRMADA);
@@ -240,7 +254,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
 
             FalDocumentoFirmaReq req = firmaReqRepo.buscarPorDocumentoYSeq(doc.getId(), (short) 1).orElseThrow();
             assertThat(req.getEstadoFirmaReq()).isEqualTo(EstadoFirmaReq.FIRMADO);
@@ -443,7 +457,7 @@ class DocumentoFirmaRealTest {
         void test23_falla_mecanismoIncompatible() {
             FalActa acta = crearActa();
             FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                    "PL-M01", "Plantilla mecanismo 5", null,
+                    "PL-M01", "Plantilla mecanismo 5",
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
                     false, false, true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
@@ -465,7 +479,7 @@ class DocumentoFirmaRealTest {
         void test24_firmaOK_mecanismoCompatible() {
             FalActa acta = crearActa();
             FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                    "PL-M02", "Plantilla mecanismo OK", null,
+                    "PL-M02", "Plantilla mecanismo OK",
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
                     false, false, true, FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
@@ -477,7 +491,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
             assertThat(firma.getId()).isPositive();
         }
     }
@@ -518,7 +532,7 @@ class DocumentoFirmaRealTest {
             docService.registrarFirmaDocumental(cmdFirmaElectronica(doc.getId(), (short) 1, f1.getIdFirmante()));
 
             FalDocumentoFirma firma2 = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 2, f2.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 2, f2.getIdFirmante())).firma();
             assertThat(firma2.getId()).isPositive();
         }
 
@@ -531,7 +545,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaElectronica(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
             assertThat(firma.getId()).isPositive();
         }
     }
@@ -624,7 +638,7 @@ class DocumentoFirmaRealTest {
             FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
 
             FalDocumentoFirma firma = docService.registrarFirmaDocumental(
-                    cmdFirmaDigital(doc.getId(), (short) 1, firmante.getIdFirmante()));
+                    cmdFirmaDigital(doc.getId(), (short) 1, firmante.getIdFirmante())).firma();
 
             assertThat(firma.getTipoFirma()).isEqualTo(TipoFirma.DIGITAL);
             assertThat(firma.getHashDocumento()).isEqualTo("hash-abc123");
@@ -679,8 +693,170 @@ class DocumentoFirmaRealTest {
         @Test
         @DisplayName("41. TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR es independiente de firma documental")
         void test41_firmaInfractor_esIndependiente() {
-            assertThat(TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR.codigo()).isEqualTo((short) 6);
+            assertThat(TipoEvidenciaActa.FIRMA_OLOGRAFA_INFRACTOR.codigo()).isEqualTo((short) 48);
             for (TipoFirma t : TipoFirma.values()) assertThat(t.name()).doesNotContain("INFRACTOR");
         }
     }
+    // =========================================================================
+    // Idempotencia real de firma (FIX-FALLO-NOTI-01-R1, seccion 7)
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Idempotencia real de firma")
+    class Idempotencia {
+
+        @Test
+        @DisplayName("51. Reintento identico: segunda llamada devuelve yaExistia=true sin registros nuevos")
+        void test51_reintentoIdentico_yaExistia() {
+            FalActa acta = crearActa();
+            FalFirmante firmante = crearFirmanteConHabilitacion(TipoDocu.NOTIFICACION_ACTA.codigo(), (short) 1, null);
+            // Plantilla notificable (siNotificable=true) para verificar creacion de FalNotificacion
+            FalDocumentoPlantilla plantillaBase = plantillaService.crear(new CrearDocumentoPlantillaCommand(
+                    "PL-IDP01", "Plantilla IDP01",
+                    TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
+                    TipoFirmaReq.FIRMA_INTERNA, false, MomentoNumeracionDocu.NO_APLICA,
+                    true, false, true,
+                    FaltasClockTestSupport.FIXED.now().toLocalDate().minusDays(1), null, USER));
+            plantillaService.agregarFirmaReq(new AgregarFirmaReqPlantillaCommand(
+                    plantillaBase.getId(), (short) 1, (short) 1, null, true, true, USER));
+            FalDocumentoPlantilla plantilla = plantillaService.activar(plantillaBase.getId());
+            FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
+
+            // Fallo activo apuntando al documento
+            Long falloId = falloRepo.nextId();
+            FalActaFallo fallo = new FalActaFallo(falloId, acta.getId(), TipoFalloActa.CONDENATORIO,
+                    FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), USER);
+            fallo.setDocumentoId(doc.getId());
+            falloRepo.guardar(fallo);
+
+            RegistrarFirmaDocumentalCommand cmd = new RegistrarFirmaDocumentalCommand(
+                    doc.getId(), (short) 1, firmante.getIdFirmante(),
+                    TipoFirma.DIGITAL, USER, "hash-idp-001", "ref-idp-001", null);
+
+            // Primera llamada
+            RegistrarFirmaDocumentalResultado r1 = docService.registrarFirmaDocumental(cmd);
+            assertThat(r1.yaExistia()).isFalse();
+
+            // Segunda llamada identica
+            RegistrarFirmaDocumentalResultado r2 = docService.registrarFirmaDocumental(cmd);
+            assertThat(r2.yaExistia()).isTrue();
+            assertThat(r2.firma().getId()).isEqualTo(r1.firma().getId());
+
+            // Una sola FalDocumentoFirma para el documento
+            List<FalDocumentoFirma> firmas = firmaRepo.buscarPorDocumento(doc.getId());
+            assertThat(firmas).hasSize(1);
+            assertThat(firmas.get(0).getFhFirma()).isNotNull();
+
+            // Documento FIRMADO
+            assertThat(docRepo.buscarPorId(doc.getId()).orElseThrow().getEstadoDocu())
+                    .isEqualTo(EstadoDocu.FIRMADO);
+
+            // Fallo PENDIENTE_NOTIFICACION
+            FalActaFallo falloPost = falloRepo.buscarActivo(acta.getId()).orElseThrow();
+            assertThat(falloPost.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
+            assertThat(falloPost.getFhFirma()).isNotNull();
+
+            // Una sola FalNotificacion activa (plantilla siNotificable=true)
+            List<FalNotificacion> notifs = notifRepo.buscarPorActa(acta.getId());
+            assertThat(notifs).hasSize(1);
+            assertThat(notifs.get(0).getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
+        }
+
+        @Test
+        @DisplayName("52. Payload incompatible: misma referenciaFirmaExt con datos distintos lanza PrecondicionVioladaException")
+        void test52_payloadIncompatible_lanzaExcepcion() {
+            FalActa acta = crearActa();
+            FalFirmante firmante = crearFirmanteConHabilitacion(TipoDocu.NOTIFICACION_ACTA.codigo(), (short) 1, null);
+            FalDocumentoPlantilla plantilla = crearPlantillaConReq("PL-IDP02", MomentoNumeracionDocu.NO_APLICA, (short) 1);
+            FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
+
+            RegistrarFirmaDocumentalCommand cmdOrig = new RegistrarFirmaDocumentalCommand(
+                    doc.getId(), (short) 1, firmante.getIdFirmante(),
+                    TipoFirma.DIGITAL, USER, "hash-idp-002", "ref-idp-002", null);
+
+            // Primera llamada
+            docService.registrarFirmaDocumental(cmdOrig);
+
+            // Segunda llamada con misma referenciaFirmaExt pero hash distinto
+            RegistrarFirmaDocumentalCommand cmdIncompat = new RegistrarFirmaDocumentalCommand(
+                    doc.getId(), (short) 1, firmante.getIdFirmante(),
+                    TipoFirma.DIGITAL, USER, "hash-DIFERENTE", "ref-idp-002", null);
+
+            assertThatThrownBy(() -> docService.registrarFirmaDocumental(cmdIncompat))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("incompatibles");
+
+            // Sin registros adicionales: solo 1 firma
+            assertThat(firmaRepo.buscarPorDocumento(doc.getId())).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("53. Dos llamadas concurrentes con misma referenciaFirmaExt: una crea, la otra devuelve yaExistia=true")
+        void test53_concurrente_unaGana_otraYaExistia() throws Exception {
+            FalActa acta = crearActa();
+            FalFirmante firmante = crearFirmanteConHabilitacion(TipoDocu.NOTIFICACION_ACTA.codigo(), (short) 1, null);
+            FalDocumentoPlantilla plantilla = crearPlantillaConReq("PL-IDP03", MomentoNumeracionDocu.NO_APLICA, (short) 1);
+            FalDocumento doc = crearDocPendienteFirma(acta, plantilla);
+
+            Long falloId = falloRepo.nextId();
+            FalActaFallo fallo = new FalActaFallo(falloId, acta.getId(), TipoFalloActa.ABSOLUTORIO,
+                    FaltasClockTestSupport.FIXED.now(), FaltasClockTestSupport.FIXED.now(), USER);
+            fallo.setDocumentoId(doc.getId());
+            falloRepo.guardar(fallo);
+
+            RegistrarFirmaDocumentalCommand cmd = new RegistrarFirmaDocumentalCommand(
+                    doc.getId(), (short) 1, firmante.getIdFirmante(),
+                    TipoFirma.DIGITAL, USER, "hash-conc-001", "ref-conc-001", null);
+
+            CountDownLatch ready = new CountDownLatch(2);
+            CountDownLatch go = new CountDownLatch(1);
+            AtomicInteger nuevasCount = new AtomicInteger(0);
+            AtomicInteger existentesCount = new AtomicInteger(0);
+
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            Future<RegistrarFirmaDocumentalResultado> f1 = pool.submit(() -> {
+                ready.countDown();
+                go.await();
+                return docService.registrarFirmaDocumental(cmd);
+            });
+            Future<RegistrarFirmaDocumentalResultado> f2 = pool.submit(() -> {
+                ready.countDown();
+                go.await();
+                return docService.registrarFirmaDocumental(cmd);
+            });
+
+            ready.await();
+            go.countDown();
+
+            RegistrarFirmaDocumentalResultado r1 = f1.get();
+            RegistrarFirmaDocumentalResultado r2 = f2.get();
+            pool.shutdown();
+
+            if (!r1.yaExistia()) nuevasCount.incrementAndGet(); else existentesCount.incrementAndGet();
+            if (!r2.yaExistia()) nuevasCount.incrementAndGet(); else existentesCount.incrementAndGet();
+
+            // Exactamente una nueva y una existente
+            assertThat(nuevasCount.get()).isEqualTo(1);
+            assertThat(existentesCount.get()).isEqualTo(1);
+
+            // Ambas devuelven la misma firma
+            assertThat(r1.firma().getId()).isEqualTo(r2.firma().getId());
+
+            // Una sola FalDocumentoFirma para el documento
+            assertThat(firmaRepo.buscarPorDocumento(doc.getId())).hasSize(1);
+
+            // Un solo evento DOCFIR
+            long docfirCount = eventoRepo.buscarPorActa(acta.getId()).stream()
+                    .filter(e -> e.tipoEvt() == TipoEventoActa.DOCFIR)
+                    .count();
+            assertThat(docfirCount).isEqualTo(1);
+
+            // Una sola notificacion (plantilla no-notificable en este caso, sin FalNotificacion)
+            // El fallo debe estar en PENDIENTE_NOTIFICACION
+            FalActaFallo falloPost = falloRepo.buscarActivo(acta.getId()).orElseThrow();
+            assertThat(falloPost.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
+            assertThat(falloPost.getFhFirma()).isNotNull();
+        }
+    }
+
 }

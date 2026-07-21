@@ -1,7 +1,9 @@
 package ar.gob.malvinas.faltas.core.application;
 
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
+import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 
+import ar.gob.malvinas.faltas.core.application.service.NoOpBloqueantesMaterialesChecker;
 import ar.gob.malvinas.faltas.core.application.service.QrActaService;
 import ar.gob.malvinas.faltas.core.application.service.NotificacionIntentoService;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
@@ -51,7 +53,7 @@ class QrActaServiceTest {
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, new InMemoryNotificacionRepository(),
-                pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         service = new QrActaService(actaRepo, eventoRepo, snapshotRepo, qrAccesoRepo, recalc, tokenProtector, FaltasClockTestSupport.FIXED);
     }
@@ -616,6 +618,193 @@ class QrActaServiceTest {
         void listarActaInexistente() {
             assertThatThrownBy(() -> service.listarAccesosPorActa(999L))
                     .isInstanceOf(ActaNoEncontradaException.class);
+        }
+    }
+
+    // ----------------------------------------------------------------
+    @Nested @DisplayName("Integracion portal: registrarAccesoConNotificacion")
+    class IntegracionPortal {
+
+        private InMemoryNotificacionRepository notifRepo;
+        private InMemoryNotificacionIntentoRepository intentoRepo;
+        private NotificacionIntentoService notifSvc;
+
+        @BeforeEach
+        void setUpPortal() {
+            notifRepo = new InMemoryNotificacionRepository();
+            intentoRepo = new InMemoryNotificacionIntentoRepository();
+            var docRepo = new InMemoryDocumentoRepository();
+            var falloRepo = new InMemoryFalloActaRepository();
+
+            SnapshotRecalculador recalc = new SnapshotRecalculador(
+                    eventoRepo, docRepo, notifRepo, new InMemoryPagoVoluntarioRepository(),
+                    falloRepo, new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(),
+                    FaltasClockTestSupport.FIXED, snapshotRepo);
+
+            notifSvc = new NotificacionIntentoService(
+                    intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc,
+                    new InMemoryLoteCorreoRepository(), FaltasClockTestSupport.FIXED,
+                    falloRepo, docRepo,
+                    new NoOpBloqueantesMaterialesChecker(),
+                    PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
+        }
+
+        /** Siembra una notificacion directamente en el repo para el acta indicada. */
+        private FalNotificacion sembraNotificacion(Long actaId) {
+            LocalDateTime ahora = AHORA;
+            Long idNotif = notifRepo.nextId();
+            FalNotificacion notif = new FalNotificacion(
+                    idNotif, actaId, 1L, TipoDocu.ACTA_INFRACCION, "EMAIL", ahora, ahora, "seed");
+            notifRepo.guardar(notif);
+            return notifRepo.buscarPorId(idNotif).orElseThrow();
+        }
+
+        @Test @DisplayName("delega exactamente una vez a registrarPortalPositivo cuando notificacionId no es nulo")
+        void delega_exactamente_una_vez() {
+            crearActa(1L);
+            String token = service.generarQr(1L, "USR");
+            FalNotificacion notif = sembraNotificacion(1L);
+
+            service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr",
+                    notif.getId(), "CUIT-20123456780", "CUIT-20123456780", notifSvc);
+
+            // intento portal creado exactamente una vez
+            List<FalNotificacionIntento> intentos = intentoRepo.buscarPorNotificacion(notif.getId());
+            assertThat(intentos).hasSize(1);
+            assertThat(intentos.get(0).getCanalNotif()).isEqualTo(CanalNotificacion.PORTAL_INFRACTOR);
+            assertThat(intentos.get(0).getResultadoIntento()).isEqualTo(ResultadoNotificacion.POSITIVO);
+
+            // acceso QR registrado independientemente
+            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+        }
+
+        @Test @DisplayName("notificacionId null: acceso QR registrado; portal no invocado")
+        void sin_notificacion_no_invoca_portal() {
+            crearActa(1L);
+            String token = service.generarQr(1L, "USR");
+
+            service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr",
+                    null, "CUIT-20123456780", "USR", notifSvc);
+
+            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+            // no se sembro ninguna notificacion, por lo tanto ningun intento fue creado
+            assertThat(intentoRepo.size()).isZero();
+        }
+
+        @Test @DisplayName("notificacionId informado + notifService null: IllegalArgumentException; cero acceso QR; cero intento portal")
+        void notificacionId_informado_notifService_null_falla() {
+            crearActa(1L);
+            String token = service.generarQr(1L, "USR");
+            FalNotificacion notif = sembraNotificacion(1L);
+
+            assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr",
+                    notif.getId(), "CUIT-20123456780", "USR", null))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            // cero acceso QR (la excepcion ocurre antes de registrarAcceso)
+            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            // cero intento portal
+            assertThat(intentoRepo.buscarPorNotificacion(notif.getId())).isEmpty();
+        }
+
+        @Test @DisplayName("QR acta A + notificacion acta A: delegacion exitosa; un acceso QR; un intento PORTAL_INFRACTOR")
+        void qr_acta_a_notificacion_acta_a_match() {
+            crearActa(1L);
+            String token = service.generarQr(1L, "USR");
+            FalNotificacion notif = sembraNotificacion(1L); // notif.actaId = 1L
+
+            service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr",
+                    notif.getId(), "CUIT-20123456780", "CUIT-20123456780", notifSvc);
+
+            // un acceso QR registrado
+            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+
+            // exactamente un intento PORTAL_INFRACTOR para la notificacion
+            List<FalNotificacionIntento> intentos = intentoRepo.buscarPorNotificacion(notif.getId());
+            assertThat(intentos).hasSize(1);
+            assertThat(intentos.get(0).getCanalNotif()).isEqualTo(CanalNotificacion.PORTAL_INFRACTOR);
+            assertThat(intentos.get(0).getResultadoIntento()).isEqualTo(ResultadoNotificacion.POSITIVO);
+        }
+
+        @Test @DisplayName("QR acta A + notificacion acta B: acceso QR de A registrado; mismatch rechazado; notificacion B intacta; cero intento portal en B")
+        void qr_acta_a_notificacion_acta_b_mismatch() {
+            crearActa(1L); // acta A
+            crearActa(2L); // acta B (necesita existir para que la notificacion sea valida)
+            String token = service.generarQr(1L, "USR"); // QR resuelve acta A
+            FalNotificacion notifB = sembraNotificacion(2L); // notif pertenece a acta B
+
+            assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr",
+                    notifB.getId(), "CUIT-20123456780", "USR", notifSvc))
+                    .isInstanceOf(ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException.class);
+
+            // acceso QR de acta A queda registrado (append-only, independiente del resultado notificatorio)
+            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+
+            // notificacion B permanece intacta: cero intento portal
+            assertThat(intentoRepo.buscarPorNotificacion(notifB.getId()).stream()
+                    .filter(i -> i.getCanalNotif() == CanalNotificacion.PORTAL_INFRACTOR).count())
+                    .isZero();
+        }
+
+        @Test @DisplayName("token invalido: falla en acceso QR; portal no invocado; ningun acceso persiste")
+        void token_invalido_no_invoca_portal() {
+            crearActa(1L);
+            FalNotificacion notif = sembraNotificacion(1L);
+
+            assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
+                    "token-invalido", CanalAccesoQr.PORTAL, null, null, "corr",
+                    notif.getId(), "CUIT-20123456780", "USR", notifSvc))
+                    .isInstanceOf(QrTokenInvalidoException.class);
+
+            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(intentoRepo.buscarPorNotificacion(notif.getId())).isEmpty();
+        }
+
+        @Test @DisplayName("repeticion: segunda invocacion rechazada por portal; primer acceso QR persiste")
+        void repeticion_no_duplica_portal() {
+            crearActa(1L);
+            String token = service.generarQr(1L, "USR");
+            FalNotificacion notif = sembraNotificacion(1L);
+
+            service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr-1",
+                    notif.getId(), "CUIT-20123456780", "USR", notifSvc);
+
+            assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.PORTAL, null, null, "corr-2",
+                    notif.getId(), "CUIT-20123456780", "USR", notifSvc))
+                    .isInstanceOf(PrecondicionVioladaException.class);
+
+            // solo un intento portal
+            long portalCount = intentoRepo.buscarPorNotificacion(notif.getId()).stream()
+                    .filter(i -> i.getCanalNotif() == CanalNotificacion.PORTAL_INFRACTOR)
+                    .count();
+            assertThat(portalCount).isEqualTo(1);
+        }
+
+        @Test @DisplayName("la respuesta devuelta por registrarAccesoConNotificacion corresponde al acceso QR, no al intento portal")
+        void respuesta_corresponde_a_acceso_qr() {
+            crearActa(1L);
+            String token = service.generarQr(1L, "USR");
+            FalNotificacion notif = sembraNotificacion(1L);
+
+            QrActaService.AccesoQrResultado resultado = service.registrarAccesoConNotificacion(
+                    token, CanalAccesoQr.APP, null, null, "corr",
+                    notif.getId(), "CUIT-20123456780", "USR", notifSvc);
+
+            assertThat(resultado.actaId()).isEqualTo(1L);
+            assertThat(resultado.canal()).isEqualTo(CanalAccesoQr.APP);
+            assertThat(resultado.resultado()).isEqualTo(ResultadoAccesoQr.VALIDO);
+            assertThat(resultado.idAcceso()).isNotNull();
+
+            // el intento portal fue creado ademas
+            assertThat(intentoRepo.buscarPorNotificacion(notif.getId()))
+                    .anyMatch(i -> i.getCanalNotif() == CanalNotificacion.PORTAL_INFRACTOR);
         }
     }
 }

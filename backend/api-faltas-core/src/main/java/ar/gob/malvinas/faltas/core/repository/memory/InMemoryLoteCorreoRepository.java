@@ -17,6 +17,8 @@ public class InMemoryLoteCorreoRepository
         implements LoteCorreoRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalLoteCorreo> store = new ConcurrentHashMap<>();
+    /** Indice secundario atomico por loteCodigo. Garantia concurrente para guardarSiAusentePorCodigo. */
+    private final Map<String, FalLoteCorreo> byCode = new ConcurrentHashMap<>();
     private final AtomicLong idCounter = new AtomicLong(1);
 
     @Override
@@ -28,7 +30,30 @@ public class InMemoryLoteCorreoRepository
     public FalLoteCorreo guardar(FalLoteCorreo lote) {
         FalLoteCorreo copia = lote.copia();
         store.put(copia.getId(), copia);
+        byCode.put(copia.getLoteCodigo(), copia);
         return copia;
+    }
+
+    /**
+     * Persiste el candidato solo si no existe un lote con el mismo loteCodigo.
+     * Usa ConcurrentHashMap.compute para garantizar atomicidad sin check-then-act vulnerable.
+     *
+     * Devuelve el candidato si fue el ganador, o el lote existente si ya habia uno.
+     */
+    @Override
+    public FalLoteCorreo guardarSiAusentePorCodigo(FalLoteCorreo candidato) {
+        FalLoteCorreo copia = candidato.copia();
+        FalLoteCorreo[] resultado = new FalLoteCorreo[1];
+        byCode.compute(copia.getLoteCodigo(), (k, existing) -> {
+            if (existing != null) {
+                resultado[0] = existing;
+                return existing;
+            }
+            store.put(copia.getId(), copia);
+            resultado[0] = copia;
+            return copia;
+        });
+        return resultado[0].copia();
     }
 
     @Override
@@ -39,10 +64,7 @@ public class InMemoryLoteCorreoRepository
     @Override
     public Optional<FalLoteCorreo> buscarPorCodigo(String loteCodigo) {
         if (loteCodigo == null) return Optional.empty();
-        return store.values().stream()
-                .filter(l -> loteCodigo.equals(l.getLoteCodigo()))
-                .map(FalLoteCorreo::copia)
-                .findFirst();
+        return Optional.ofNullable(byCode.get(loteCodigo)).map(FalLoteCorreo::copia);
     }
 
     @Override
@@ -73,13 +95,16 @@ public class InMemoryLoteCorreoRepository
 
     @Override
     public boolean existeCodigo(String loteCodigo) {
-        return store.values().stream().anyMatch(l -> l.getLoteCodigo().equals(loteCodigo));
+        if (loteCodigo == null) return false;
+        return byCode.containsKey(loteCodigo);
     }
 
     public void cargarSeed(List<FalLoteCorreo> lista) {
         long maxId = 0;
         for (FalLoteCorreo l : lista) {
-            store.put(l.getId(), l.copia());
+            FalLoteCorreo copia = l.copia();
+            store.put(copia.getId(), copia);
+            byCode.put(copia.getLoteCodigo(), copia);
             if (l.getId() > maxId) maxId = l.getId();
         }
         idCounter.set(maxId + 1);
@@ -88,6 +113,7 @@ public class InMemoryLoteCorreoRepository
     @Override
     public void reset() {
         store.clear();
+        byCode.clear();
         idCounter.set(1);
     }
 

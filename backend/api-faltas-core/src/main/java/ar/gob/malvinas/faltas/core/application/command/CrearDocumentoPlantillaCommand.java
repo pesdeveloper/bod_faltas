@@ -11,7 +11,6 @@ import java.time.LocalDate;
 public record CrearDocumentoPlantillaCommand(
         String codigo,
         String nombre,
-        String descripcion,
         TipoDocu tipoDocu,
         AccionDocumental accionDocumental,
         TipoActa tipoActa,

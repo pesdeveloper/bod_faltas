@@ -3,18 +3,12 @@ package ar.gob.malvinas.faltas.core.domain.model;
 import ar.gob.malvinas.faltas.core.domain.enums.AccionPendiente;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoFormaPago;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoObligacionPago;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoPlanPago;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoProcesalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoValorizacion;
-import ar.gob.malvinas.faltas.core.domain.enums.MotivoAptitudIntimacion;
 import ar.gob.malvinas.faltas.core.domain.enums.MotivoParalizacion;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
-import ar.gob.malvinas.faltas.core.domain.enums.TipoFormaPago;
-import ar.gob.malvinas.faltas.core.domain.enums.TipoObligacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoValorizacionActa;
 
 import java.math.BigDecimal;
@@ -25,10 +19,19 @@ import java.time.LocalDateTime;
  * Derivado y regenerable. No es fuente de verdad.
  * Se recalcula en cada transicion de dominio.
  * Alimenta bandejas, filtros, badges y habilitacion de acciones.
+ *
+ * Este snapshot NO transporta economia de pagos (DECISION_DDL-SNAP-02).
+ * Las lecturas economicas salen de FalActaEconomiaProyeccion.
+ * SnapshotRecalculador.proyectarPagos es no-op.
+ * monto_operativo_vigente permanece como valorizacion UX del acta,
+ * no como dato economico de pagos.
+ *
+ * versionRow controla concurrencia optimista (DECISION_DDL-SNAP-01).
  */
 public class FalActaSnapshot {
 
     private final Long idActa;
+    private int versionRow;
     private BloqueActual bloqueActual;
     private EstadoProcesalActa estadoProcesal;
     private SituacionAdministrativaActa situacionAdministrativa;
@@ -59,38 +62,22 @@ public class FalActaSnapshot {
     private String licenciaProvinciaTxt;
     private String licenciaUnidadTxt;
     private String nomenclaturaResumen;
-    private Long idBieI;
-    private Long idBieC;
+    private Integer idBieI;
+    private Integer idBieC;
 
     // Campos de paralizacion y archivo - 8F-11G
     private MotivoParalizacion motivoParalizacionAct;
 
-    // Campos de pagos - 8F-11H
-    private TipoObligacionPago tipoObligacionPago;
-    private EstadoObligacionPago estadoObligacionPago;
-    private BigDecimal montoObligacionPago;
-    private TipoFormaPago tipoFormaPagoVigente;
-    private EstadoFormaPago estadoFormaPagoVigente;
-    private boolean siPlanPago;
-    private EstadoPlanPago estadoPlanPago;
-    private Short cantCuotasPlan;
-    private BigDecimal valorCuotaPlan;
-    private Short cantCuotasPagadas;
-    private Short cantCuotasMora;
-    private Short cantCuotasMoraConsec;
-    private Short cantDiasMora;
-    private boolean siAptaIntimacion;
-    private MotivoAptitudIntimacion motivoAptaIntimacion;
-    private boolean siPagoProcesado;
-    private boolean siPagoConfirmado;
-    private LocalDateTime fhUltSyncIngresos;
-
     public FalActaSnapshot(Long idActa) {
         this.idActa = idActa;
+        this.versionRow = 0;
         this.ultimaActualizacion = null;
     }
 
     public Long getIdActa() { return idActa; }
+
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int versionRow) { this.versionRow = versionRow; }
 
     public BloqueActual getBloqueActual() { return bloqueActual; }
     public void setBloqueActual(BloqueActual bloqueActual) { this.bloqueActual = bloqueActual; }
@@ -173,51 +160,56 @@ public class FalActaSnapshot {
     public String getNomenclaturaResumen() { return nomenclaturaResumen; }
     public void setNomenclaturaResumen(String nomenclaturaResumen) { this.nomenclaturaResumen = nomenclaturaResumen; }
 
-    public Long getIdBieI() { return idBieI; }
-    public void setIdBieI(Long idBieI) { this.idBieI = idBieI; }
+    public Integer getIdBieI() { return idBieI; }
+    public void setIdBieI(Integer idBieI) {
+        if (idBieI != null && (idBieI < 1 || idBieI > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBieI debe estar entre 1 y 9.999.999; valor: " + idBieI);
+        this.idBieI = idBieI;
+    }
 
-    public Long getIdBieC() { return idBieC; }
-    public void setIdBieC(Long idBieC) { this.idBieC = idBieC; }
+    public Integer getIdBieC() { return idBieC; }
+    public void setIdBieC(Integer idBieC) {
+        if (idBieC != null && (idBieC < 1 || idBieC > 9_999_999))
+            throw new IllegalArgumentException(
+                    "idBieC debe estar entre 1 y 9.999.999; valor: " + idBieC);
+        this.idBieC = idBieC;
+    }
 
     public MotivoParalizacion getMotivoParalizacionAct() { return motivoParalizacionAct; }
     public void setMotivoParalizacionAct(MotivoParalizacion motivoParalizacionAct) { this.motivoParalizacionAct = motivoParalizacionAct; }
 
-    // --- Payment getters/setters - 8F-11H ---
-
-    public TipoObligacionPago getTipoObligacionPago() { return tipoObligacionPago; }
-    public void setTipoObligacionPago(TipoObligacionPago v) { this.tipoObligacionPago = v; }
-    public EstadoObligacionPago getEstadoObligacionPago() { return estadoObligacionPago; }
-    public void setEstadoObligacionPago(EstadoObligacionPago v) { this.estadoObligacionPago = v; }
-    public BigDecimal getMontoObligacionPago() { return montoObligacionPago; }
-    public void setMontoObligacionPago(BigDecimal v) { this.montoObligacionPago = v; }
-    public TipoFormaPago getTipoFormaPagoVigente() { return tipoFormaPagoVigente; }
-    public void setTipoFormaPagoVigente(TipoFormaPago v) { this.tipoFormaPagoVigente = v; }
-    public EstadoFormaPago getEstadoFormaPagoVigente() { return estadoFormaPagoVigente; }
-    public void setEstadoFormaPagoVigente(EstadoFormaPago v) { this.estadoFormaPagoVigente = v; }
-    public boolean isSiPlanPago() { return siPlanPago; }
-    public void setSiPlanPago(boolean v) { this.siPlanPago = v; }
-    public EstadoPlanPago getEstadoPlanPago() { return estadoPlanPago; }
-    public void setEstadoPlanPago(EstadoPlanPago v) { this.estadoPlanPago = v; }
-    public Short getCantCuotasPlan() { return cantCuotasPlan; }
-    public void setCantCuotasPlan(Short v) { this.cantCuotasPlan = v; }
-    public BigDecimal getValorCuotaPlan() { return valorCuotaPlan; }
-    public void setValorCuotaPlan(BigDecimal v) { this.valorCuotaPlan = v; }
-    public Short getCantCuotasPagadas() { return cantCuotasPagadas; }
-    public void setCantCuotasPagadas(Short v) { this.cantCuotasPagadas = v; }
-    public Short getCantCuotasMora() { return cantCuotasMora; }
-    public void setCantCuotasMora(Short v) { this.cantCuotasMora = v; }
-    public Short getCantCuotasMoraConsec() { return cantCuotasMoraConsec; }
-    public void setCantCuotasMoraConsec(Short v) { this.cantCuotasMoraConsec = v; }
-    public Short getCantDiasMora() { return cantDiasMora; }
-    public void setCantDiasMora(Short v) { this.cantDiasMora = v; }
-    public boolean isSiAptaIntimacion() { return siAptaIntimacion; }
-    public void setSiAptaIntimacion(boolean v) { this.siAptaIntimacion = v; }
-    public MotivoAptitudIntimacion getMotivoAptaIntimacion() { return motivoAptaIntimacion; }
-    public void setMotivoAptaIntimacion(MotivoAptitudIntimacion v) { this.motivoAptaIntimacion = v; }
-    public boolean isSiPagoProcesado() { return siPagoProcesado; }
-    public void setSiPagoProcesado(boolean v) { this.siPagoProcesado = v; }
-    public boolean isSiPagoConfirmado() { return siPagoConfirmado; }
-    public void setSiPagoConfirmado(boolean v) { this.siPagoConfirmado = v; }
-    public LocalDateTime getFhUltSyncIngresos() { return fhUltSyncIngresos; }
-    public void setFhUltSyncIngresos(LocalDateTime v) { this.fhUltSyncIngresos = v; }
+    public FalActaSnapshot copia() {
+        FalActaSnapshot c = new FalActaSnapshot(idActa);
+        c.versionRow = this.versionRow;
+        c.bloqueActual = this.bloqueActual;
+        c.estadoProcesal = this.estadoProcesal;
+        c.situacionAdministrativa = this.situacionAdministrativa;
+        c.resultadoFinal = this.resultadoFinal;
+        c.codBandeja = this.codBandeja;
+        c.subBandeja = this.subBandeja;
+        c.accionPendiente = this.accionPendiente;
+        c.tieneDocumentos = this.tieneDocumentos;
+        c.tieneDocsPendientesFirma = this.tieneDocsPendientesFirma;
+        c.tieneDocsListosParaNotificar = this.tieneDocsListosParaNotificar;
+        c.tieneNotificaciones = this.tieneNotificaciones;
+        c.notificacionEnCurso = this.notificacionEnCurso;
+        c.bloqueadoCierre = this.bloqueadoCierre;
+        c.idDocuUlt = this.idDocuUlt;
+        c.bloqueadoNotificacion = this.bloqueadoNotificacion;
+        c.valorizacionOperativaId = this.valorizacionOperativaId;
+        c.estadoValorizacionOperativa = this.estadoValorizacionOperativa;
+        c.tipoValorizacionOperativa = this.tipoValorizacionOperativa;
+        c.montoOperativoVigente = this.montoOperativoVigente;
+        c.siMontoConfirmado = this.siMontoConfirmado;
+        c.ultimoEventoTipo = this.ultimoEventoTipo;
+        c.ultimaActualizacion = this.ultimaActualizacion;
+        c.licenciaProvinciaTxt = this.licenciaProvinciaTxt;
+        c.licenciaUnidadTxt = this.licenciaUnidadTxt;
+        c.nomenclaturaResumen = this.nomenclaturaResumen;
+        c.idBieI = this.idBieI;
+        c.idBieC = this.idBieC;
+        c.motivoParalizacionAct = this.motivoParalizacionAct;
+        return c;
+    }
 }

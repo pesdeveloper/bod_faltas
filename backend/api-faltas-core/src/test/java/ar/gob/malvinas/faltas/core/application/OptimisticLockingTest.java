@@ -169,7 +169,7 @@ class OptimisticLockingTest {
         void update_v1() {
             FalActaFallo guardado = crearFallo();
             FalActaFallo leido = repo.buscarActivo(actaIdFijo).orElseThrow();
-            leido.setEstadoFallo(EstadoFalloActa.FIRMADO);
+            leido.setEstadoFallo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
             FalActaFallo actualizado = repo.guardar(leido);
             assertThat(actualizado.getVersionRow()).isEqualTo(1);
         }
@@ -181,7 +181,7 @@ class OptimisticLockingTest {
             FalActaFallo a = repo.buscarActivo(actaIdFijo).orElseThrow();
             FalActaFallo b = repo.buscarActivo(actaIdFijo).orElseThrow();
 
-            a.setEstadoFallo(EstadoFalloActa.FIRMADO);
+            a.setEstadoFallo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
             repo.guardar(a);
 
             b.setEstadoFallo(EstadoFalloActa.NOTIFICADO);
@@ -194,7 +194,7 @@ class OptimisticLockingTest {
         void mutacion_sin_save_no_altera() {
             crearFallo();
             FalActaFallo leido = repo.buscarActivo(actaIdFijo).orElseThrow();
-            leido.setEstadoFallo(EstadoFalloActa.FIRMADO);
+            leido.setEstadoFallo(EstadoFalloActa.PENDIENTE_NOTIFICACION);
 
             FalActaFallo enStore = repo.buscarActivo(actaIdFijo).orElseThrow();
             assertThat(enStore.getEstadoFallo()).isEqualTo(EstadoFalloActa.PENDIENTE_FIRMA);

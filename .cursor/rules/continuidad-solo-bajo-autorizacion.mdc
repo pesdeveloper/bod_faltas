@@ -1,81 +1,62 @@
 ---
-description: La continuidad del proyecto solo puede leerse o editarse bajo autorización explícita del slice
+description: Lectura y edición controlada de artefactos de continuidad
 alwaysApply: true
 ---
 
-# Continuidad solo bajo autorización
+# Continuidad bajo autorización
 
-## Objetivo
+## 1. Qué se considera continuidad
 
-Evitar consumo innecesario de contexto y cambios laterales sobre artefactos de continuidad durante slices funcionales.
+Son artefactos de continuidad:
 
-## Archivos protegidos de continuidad
+- prompts de reanudación;
+- cierres de slices;
+- handoffs;
+- checklists operativos;
+- resultados de validación;
+- informes de avance;
+- archivos bajo `docs-trabajo/`;
+- reglas bajo `.cursor/rules/`.
 
-Los siguientes archivos se consideran continuidad controlada manualmente:
+No existe una lista fija de archivos de continuidad que deba leerse siempre.
 
-- `docs-trabajo/prompt-de-reanudacion-chat.md`
-- `docs-trabajo/estado-actual-y-proximo-paso.md`
-- `.cursor/rules/*.mdc`
+## 2. Regla de lectura
 
-## Regla principal
+En un slice funcional o técnico, no cargar automáticamente continuidad histórica.
 
-En slices funcionales:
+Leer un artefacto de continuidad solamente cuando:
 
-- no leer automáticamente el contenido completo de archivos de continuidad
-- no resumirlos
-- no reescribirlos
-- no normalizarlos
-- no proponer nueva redacción
-- no tocarlos por iniciativa propia
+1. el prompt lo indique expresamente por ruta; o
+2. exista una duda operativa que no pueda resolverse con la spec, el código y los tests aplicables.
 
-Se debe asumir que están vigentes salvo indicación explícita en el prompt.
+La continuidad nunca reemplaza la spec canónica.
 
-## Cuándo sí se pueden leer
+## 3. Regla de edición
 
-Solo se pueden leer archivos de continuidad si ocurre una de estas condiciones:
+Editar continuidad o reglas `.mdc` únicamente cuando:
 
-1. el prompt del slice los pide explícitamente por nombre, o
-2. existe una duda real del slice que no puede resolverse sin consultar continuidad
+1. el slice sea explícitamente documental; y
+2. el prompt autorice por ruta cada archivo modificable.
 
-Aun en ese caso:
-- leer solo lo mínimo necesario
-- no reescribir nada automáticamente
+No normalizar, resumir, mover, eliminar ni reescribir continuidad por iniciativa propia.
 
-## Cuándo sí se pueden editar
+## 4. Drift
 
-Solo se pueden editar archivos de continuidad si ocurre una de estas condiciones:
+Si se detecta drift:
 
-1. el objetivo del slice es explícitamente documental, o
-2. el prompt autoriza expresamente corregir continuidad por drift real detectado
+- no corregirlo fuera de alcance;
+- reportar archivo, afirmación y evidencia contradictoria;
+- proponer un micro-slice documental;
+- no elegir una versión por fecha o apariencia.
 
-Sin esa autorización, no deben editarse.
+## 5. Protección de la spec
 
-## Regla de economía de contexto
+Los artefactos de continuidad no pueden:
 
-En slices funcionales, priorizar contexto en este orden:
+- crear reglas de dominio;
+- alterar contratos HTTP;
+- redefinir eventos o estados;
+- cambiar decisiones de persistencia;
+- declarar baselines canónicos por sí solos.
 
-1. archivos del módulo afectado
-2. subconjunto mínimo de spec aplicable
-3. mocks, DTOs, enums, controller, store y helpers involucrados
-
-La continuidad no debe consumir contexto salvo necesidad estricta.
-
-## Si se detecta drift
-
-Si se detecta una desalineación entre continuidad y comportamiento real:
-
-- no corregirla automáticamente
-- no reescribir archivos de continuidad
-- reportarla de forma breve
-- indicar qué archivo puntual quedaría para un micro-slice documental posterior
-
-## Salida esperada
-
-Si Cursor considera necesario leer o tocar continuidad, debe explicitar antes:
-
-1. por qué es necesario
-2. qué archivo puntual necesita
-3. qué parte mínima necesita leer
-4. si el prompt autoriza o no editarlo
-
-Sin eso, no debe tocar continuidad.
+Toda decisión vigente debe terminar incorporada en la spec canónica.

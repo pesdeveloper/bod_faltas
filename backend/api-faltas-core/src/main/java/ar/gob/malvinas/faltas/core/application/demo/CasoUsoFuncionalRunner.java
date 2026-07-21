@@ -6,8 +6,11 @@ import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.*;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.repository.*;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
+import ar.gob.malvinas.faltas.core.infrastructure.config.PlazosAdministrativosProperties;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 
@@ -34,12 +37,12 @@ public class CasoUsoFuncionalRunner {
     private final DocumentoRepository docRepo;
     private final DocumentoFirmaRepository firmaRepo;
     private final NotificacionRepository notifRepo;
+    private final NotificacionIntentoRepository notifIntentoRepo;
     private final PagoVoluntarioRepository pagoVolRepo;
     private final PagoCondenaRepository pagoCondRepo;
     private final FalloActaRepository falloRepo;
     private final ApelacionActaRepository apelacionRepo;
     private final ApelacionDocumentoRepository apelacionDocRepo;
-    private final FirmezaCondenaRepository firmezaRepo;
     private final GestionExternaRepository gestionExtRepo;
     private final BloqueanteMaterialRepository bloqueanteMaterialRepo;
 
@@ -55,24 +58,25 @@ public class CasoUsoFuncionalRunner {
     private final GestionExternaService gestionExtServiceConBloqueantes;
     private final BloqueanteMaterialService bloqueanteMaterialService;
     private final ActaParalizacionService paralizacionService;
+    private final FaltasClock faltasClock;
 
     public CasoUsoFuncionalRunner() {
         // Composition root manual: authorized exception to new FaltasClock() rule.
         // This class is NOT a Spring bean. It creates one canonical clock instance
         // and injects it into all services it wires. Not for production Spring context.
-        FaltasClock faltasClock = new FaltasClock();
+        faltasClock = new FaltasClock();
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
         docRepo = new InMemoryDocumentoRepository();
         firmaRepo = new InMemoryDocumentoFirmaRepository();
         notifRepo = new InMemoryNotificacionRepository();
+        notifIntentoRepo = new InMemoryNotificacionIntentoRepository();
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         pagoCondRepo = new InMemoryPagoCondenaRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
         apelacionDocRepo = new InMemoryApelacionDocumentoRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         gestionExtRepo = new InMemoryGestionExternaRepository();
         bloqueanteMaterialRepo = new InMemoryBloqueanteMaterialRepository();
 
@@ -80,7 +84,7 @@ public class CasoUsoFuncionalRunner {
                 new RepositoryBloqueantesMaterialesChecker(bloqueanteMaterialRepo);
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, faltasClock);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondRepo, faltasClock, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), faltasClock);
@@ -92,11 +96,20 @@ public class CasoUsoFuncionalRunner {
                         new InMemoryDependenciaRepository(), new InMemoryInspectorRepository(), faltasClock),
                 new InMemoryDependenciaRepository(),
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), faltasClock);
+                new InMemoryFirmanteRepository(),
+                notifRepo, faltasClock);
+
+        CalendarioAdministrativoService calendarioService =
+                new CalendarioAdministrativoService(new InMemoryDiaNoComputableRepository(), faltasClock);
+        PlazosAdministrativosService plazosService = new PlazosAdministrativosService(
+                new PlazosAdministrativosProperties(),
+                new CalculadorPlazosAdministrativos(calendarioService));
 
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, bloqueantesChecker, faltasClock);
+                falloRepo, bloqueantesChecker, faltasClock,
+                notifIntentoRepo, new InMemoryPersonaDomicilioRepository(),
+                plazosService);
 
         pagoVolService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoVolRepo, recalc,
@@ -110,7 +123,7 @@ public class CasoUsoFuncionalRunner {
                 new NoOpBloqueantesMaterialesChecker(), faltasClock);
 
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, faltasClock);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, faltasClock);
 
         gestionExtService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondRepo, gestionExtRepo, recalc,
@@ -140,17 +153,28 @@ public class CasoUsoFuncionalRunner {
     /**
      * Ejecuta el flujo funcional para el codigo de acta dado.
      * Crea el acta desde cero y la lleva al estado esperado ejecutando servicios reales.
+     *
+     * El actor "runner-funcional" es tecnico del runner de pruebas, no un actor humano
+     * ni un fallback productivo. Si existe un contexto previo, lo restaura al terminar.
      */
     public CasoUsoFuncionalEjecucionResultado ejecutar(String codigoActaMock) {
-        ActaMockFuncionalDefinicion def = DatasetFuncionalDominioCatalog.buscarPorCodigo(codigoActaMock);
         List<String> pasos = new ArrayList<>();
         List<String> advertencias = new ArrayList<>();
+        ActorContext anterior = ActorContextHolder.get();
+        ActorContextHolder.set(new ActorContext("runner-funcional"));
+        ActaMockFuncionalDefinicion def = null;
         try {
+            def = DatasetFuncionalDominioCatalog.buscarPorCodigo(codigoActaMock);
             return ejecutarDefinicion(def, pasos, advertencias);
         } catch (Exception e) {
             advertencias.add("ERROR_EJECUCION: " + e.getMessage());
             return CasoUsoFuncionalEjecucionResultado.parcial(
-                    codigoActaMock, def.casoUsoPrincipal(), null, pasos, advertencias);
+                    codigoActaMock,
+                    def != null ? def.casoUsoPrincipal() : "DESCONOCIDO",
+                    null, pasos, advertencias);
+        } finally {
+            if (anterior != null) ActorContextHolder.set(anterior);
+            else ActorContextHolder.clear();
         }
     }
 
@@ -277,7 +301,7 @@ public class CasoUsoFuncionalRunner {
 
     private Long generarDocumento(Long actaId, TipoDocu tipo) {
         return Long.parseLong(
-                docService.generarDocumento(new GenerarDocumentoCommand(actaId, tipo, null))
+                docService.generarDocumento(new GenerarDocumentoCommand(actaId, tipo))
                         .idEntidadAfectada());
     }
 
@@ -287,12 +311,23 @@ public class CasoUsoFuncionalRunner {
 
     private String enviarNotificacion(Long actaId, Long docId) {
         return notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, docId, "CORREO", null))
+                new EnviarNotificacionCommand(actaId, docId, CanalNotificacion.PRESENCIAL, null, null, null, "demo-user"))
                 .idEntidadAfectada();
     }
 
     private void registrarPositiva(String notifId) {
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(notifId), null));
+        Long idNotif = Long.parseLong(notifId);
+        List<Long> activos = notifIntentoRepo.buscarPorNotificacion(idNotif).stream()
+                .filter(i -> i.getEstadoIntento() == EstadoNotificacion.EN_PROCESO
+                        && i.getResultadoIntento() == null)
+                .map(FalNotificacionIntento::getId)
+                .toList();
+        if (activos.size() != 1)
+            throw new IllegalStateException(
+                    "Se esperaba exactamente un intento EN_PROCESO sin resultado para la notificacion "
+                            + idNotif + ", encontrados: " + activos.size() + ".");
+        notifService.registrarPositiva(
+                new RegistrarNotificacionPositivaCommand(idNotif, activos.get(0), null, "demo-user"));
     }
 
     private Long llegarAAnalisis(List<String> pasos) {
@@ -407,7 +442,11 @@ public class CasoUsoFuncionalRunner {
         pasos.add("enviarNotificacionFallo");
         registrarPositiva(notifFalloId);
         pasos.add("registrarPositivaFallo");
-        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+        // Retrotraer fhVtoApelacion para que la validacion temporal del slice CMD-FALLO-005 pase en demo
+        FalActaFallo falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(faltasClock.now().toLocalDate().minusDays(1));
+        falloRepo.guardar(falloVto);
+        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "demo-user"));
         pasos.add("vencerPlazoApelacion -> CONDENA_FIRME");
         return actaId;
     }
@@ -597,7 +636,7 @@ public class CasoUsoFuncionalRunner {
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
-                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null));
+                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null, "demo-user"));
         pasos.add("informarPagoCondena -> PCOINF/PENDIENTE_CONFIRMACION_PAGO_CONDENA");
         return buildResultado(def, id, pasos);
     }
@@ -606,7 +645,7 @@ public class CasoUsoFuncionalRunner {
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
-                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null));
+                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null, "demo-user"));
         pasos.add("informarPagoCondena");
         pagoCondService.confirmar(new ConfirmarPagoCondenaCommand(id, null));
         pasos.add("confirmarPagoCondena -> PCOCNF+CIERRA/CERRADAS");
@@ -763,7 +802,7 @@ public class CasoUsoFuncionalRunner {
             ActaMockFuncionalDefinicion def, List<String> pasos) {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
-                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null));
+                new InformarPagoCondenaCommand(id, new BigDecimal("5000.00"), "BANCO-001", null, "demo-user"));
         pasos.add("informarPagoCondena");
         pagoCondService.observar(new ObservarPagoCondenaCommand(id, "Comprobante invalido", null));
         pasos.add("observarPagoCondena -> PCOOBS/PENDIENTE_PAGO_CONDENA");
@@ -778,7 +817,7 @@ public class CasoUsoFuncionalRunner {
         Long id = llegarACondenaFirme(pasos);
         pagoCondService.informar(
                 new InformarPagoCondenaCommand(id, new BigDecimal("4000.00"),
-                        "BANCO-DESCUENTO", "Pago con descuento administrativo aplicado"));
+                        "BANCO-DESCUENTO", "Pago con descuento administrativo aplicado", "demo-user"));
         pasos.add("informarPagoCondena (monto con descuento)");
         pagoCondService.confirmar(new ConfirmarPagoCondenaCommand(id,
                 "Descuento administrativo aplicado"));

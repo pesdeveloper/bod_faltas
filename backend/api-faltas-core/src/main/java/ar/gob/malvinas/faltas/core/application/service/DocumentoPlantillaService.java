@@ -80,7 +80,6 @@ public class DocumentoPlantillaService {
                 id,
                 cmd.codigo(),
                 cmd.nombre(),
-                cmd.descripcion(),
                 cmd.tipoDocu(),
                 cmd.accionDocumental(),
                 cmd.tipoActa(),

@@ -109,7 +109,7 @@ class DocumentoEmisionFormalTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
         talonarioService = new TalonarioService(talonarioRepo, depRepo, new InMemoryInspectorRepository(), FaltasClockTestSupport.FIXED);
         depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
@@ -120,7 +120,8 @@ class DocumentoEmisionFormalTest {
                 eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo, talonarioService, depRepo,
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -177,7 +178,7 @@ class DocumentoEmisionFormalTest {
                                                           boolean siNumeracion,
                                                           MomentoNumeracionDocu momento) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 siNumeracion, momento,
@@ -192,7 +193,7 @@ class DocumentoEmisionFormalTest {
      */
     private FalDocumentoPlantilla crearPlantillaConFirma(String codigo, boolean siGeneraPdf) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla firma " + codigo, null,
+                codigo, "Plantilla firma " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -212,7 +213,7 @@ class DocumentoEmisionFormalTest {
         Long docId = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 docId, acta.getId(), plantilla.getTipoDocu(),
-                FaltasClockTestSupport.FIXED.now(), null,
+                FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.FIRMADO, TipoFirmaReq.FIRMA_INTERNA,
                 plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
@@ -225,7 +226,7 @@ class DocumentoEmisionFormalTest {
         Long docId = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 docId, acta.getId(), plantilla.getTipoDocu(),
-                FaltasClockTestSupport.FIXED.now(), null,
+                FaltasClockTestSupport.FIXED.now(),
                 estado, TipoFirmaReq.FIRMA_INTERNA,
                 plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
@@ -238,7 +239,7 @@ class DocumentoEmisionFormalTest {
         Long docId = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
                 docId, acta.getId(), plantilla.getTipoDocu(),
-                FaltasClockTestSupport.FIXED.now(), null,
+                FaltasClockTestSupport.FIXED.now(),
                 estado, plantilla.getTipoFirmaReq(),
                 plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
@@ -641,7 +642,7 @@ class DocumentoEmisionFormalTest {
             Long docId = docRepo.nextId();
             FalDocumento docSinPlantilla = new FalDocumento(
                     docId, acta.getId(), TipoDocu.CONSTANCIA,
-                    FaltasClockTestSupport.FIXED.now(), "sin plantilla");
+                    FaltasClockTestSupport.FIXED.now());
             docSinPlantilla.setEstadoDocu(EstadoDocu.BORRADOR);
             docRepo.guardar(docSinPlantilla);
 
@@ -784,7 +785,7 @@ class DocumentoEmisionFormalTest {
         void noNotifica() {
             // Crear plantilla con siNotificable=true para verificar que emitir no dispara notificacion
             FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                    "PL-GRD-03", "Plantilla notif", null,
+                    "PL-GRD-03", "Plantilla notif",
                     TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,

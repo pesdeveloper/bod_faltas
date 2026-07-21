@@ -10,7 +10,10 @@ import java.time.LocalDateTime;
  * que puede labrar. El tipoActa no vive en esta clase: se deriva desde
  * FalDependenciaVersion.tipoActa consultando idDep + verDep de la version vigente.
  *
- * legajoInsp es INT en MariaDB (fal_inspector.legajo_insp INT).
+ * legajoInsp es INT en MariaDB (fal_inspector.legajo_insp INT NOT NULL, > 0).
+ * idUser es CHAR(36) NOT NULL UNIQUE en MariaDB (UUID del usuario IDP).
+ * nomInsp es VARCHAR(120) NOT NULL en MariaDB.
+ * No existen campos 'apellido' ni 'nombre' en esta tabla (corrección FULL-R1).
  *
  * Slice 8A-2: implementacion in-memory. Slice 9: reemplazar por JDBC.
  */

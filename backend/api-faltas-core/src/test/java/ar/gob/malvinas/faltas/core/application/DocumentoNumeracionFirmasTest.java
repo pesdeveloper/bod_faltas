@@ -118,7 +118,7 @@ class DocumentoNumeracionFirmasTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
         talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
         depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
         plantillaService = new DocumentoPlantillaService(plantillaRepo, FaltasClockTestSupport.FIXED);
@@ -126,7 +126,8 @@ class DocumentoNumeracionFirmasTest {
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo, talonarioService, depRepo,
                 new InMemoryDocumentoFirmaReqRepository(),
-                new InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -176,7 +177,7 @@ class DocumentoNumeracionFirmasTest {
 
     private FalDocumentoPlantilla crearPlantilla(String codigo, MomentoNumeracionDocu momento) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 true, momento,
@@ -187,7 +188,7 @@ class DocumentoNumeracionFirmasTest {
 
     private FalDocumentoPlantilla crearPlantillaSinFirma(String codigo, MomentoNumeracionDocu momento) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 true, momento,
@@ -455,7 +456,7 @@ class DocumentoNumeracionFirmasTest {
             FalActa acta = crearActa();
             FalDocumentoPlantilla p = plantillaService.activar(
                     plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                            "PLNT-NA-INC", "Sin numeracion", null,
+                            "PLNT-NA-INC", "Sin numeracion",
                             TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                             TipoFirmaReq.NO_REQUIERE, false, MomentoNumeracionDocu.NO_APLICA,
                             false, false, true,
@@ -478,7 +479,7 @@ class DocumentoNumeracionFirmasTest {
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
                     idDoc, acta.getId(), TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(),
-                    null, EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, p.getId(), FaltasClockTestSupport.FIXED.now());
+                    EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, p.getId(), FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.numerarDocumentoParaFirmas(
@@ -503,7 +504,7 @@ class DocumentoNumeracionFirmasTest {
         @DisplayName("T8D. Rechaza documento no numerable (sin plantilla)")
         void rechaza_documento_sin_plantilla() {
             Long idDoc = docRepo.nextId();
-            FalDocumento doc = new FalDocumento(idDoc, 1L, TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(), "sin plantilla");
+            FalDocumento doc = new FalDocumento(idDoc, 1L, TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.numerarDocumentoParaFirmas(

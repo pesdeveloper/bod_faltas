@@ -28,6 +28,8 @@ public class FalActaApelacion {
     private String idUserResolucion;
     private Long documentoResolucionId;
     private String fundamentosResolucion;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated
     private String observacionesResolucion;
     private final LocalDateTime fhAlta;
     private final String idUserAlta;
@@ -140,8 +142,10 @@ public class FalActaApelacion {
     @Deprecated public void setFechaResolucion(LocalDateTime f) { this.fhResolucion = f; }
     public String getFundamentosResolucion() { return fundamentosResolucion; }
     public void setFundamentosResolucion(String f) { this.fundamentosResolucion = f; }
-    public String getObservacionesResolucion() { return observacionesResolucion; }
-    public void setObservacionesResolucion(String o) { this.observacionesResolucion = o; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated public String getObservacionesResolucion() { return observacionesResolucion; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated public void setObservacionesResolucion(String o) { this.observacionesResolucion = o; }
     /**
      * @deprecated Usar EstadoApelacionActa.RESUELTA + getResultadoResolucion()
      * Esta propiedad se mantiene para compatibilidad con SnapshotRecalculador y tests del Slice 3.

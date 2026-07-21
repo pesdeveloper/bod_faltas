@@ -49,6 +49,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEvidenciaReposi
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -82,6 +85,7 @@ class PagoVoluntarioTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -93,12 +97,15 @@ class PagoVoluntarioTest {
 
 
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
-        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         pagoService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // -------------------------------------------------------------------------
     // Casos felices
@@ -338,7 +345,7 @@ class PagoVoluntarioTest {
             Long idActa = labrarSolicitarEInformar();
 
             PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
-        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+        SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
             BloqueantesMaterialesChecker siempreBloqueado = actaId -> true;
             PagoVoluntarioService srvConBloqueantes = new PagoVoluntarioService(
                     actaRepo, eventoRepo, snapshotRepo, pagoRepo, recalc, siempreBloqueado, FaltasClockTestSupport.FIXED);

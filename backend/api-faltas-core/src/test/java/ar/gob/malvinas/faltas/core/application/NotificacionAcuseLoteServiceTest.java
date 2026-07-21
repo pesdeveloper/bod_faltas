@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.application.command.GenerarLoteCorreoCommand;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.*;
@@ -28,6 +29,7 @@ class NotificacionAcuseLoteServiceTest {
     private InMemoryNotificacionAcuseRepository acuseRepo;
     private InMemoryLoteCorreoRepository loteRepo;
     private NotificacionAcuseService acuseService;
+    private InMemoryPersonaDomicilioRepository domicilioRepo;
     private LoteCorreoService loteService;
 
     @BeforeEach
@@ -39,6 +41,7 @@ class NotificacionAcuseLoteServiceTest {
         intentoRepo = new InMemoryNotificacionIntentoRepository();
         acuseRepo = new InMemoryNotificacionAcuseRepository();
         loteRepo = new InMemoryLoteCorreoRepository();
+        domicilioRepo = new InMemoryPersonaDomicilioRepository();
 
         var docRepo = new InMemoryDocumentoRepository();
         var pagoVolRepo = new InMemoryPagoVoluntarioRepository();
@@ -47,25 +50,41 @@ class NotificacionAcuseLoteServiceTest {
         var pagoCondenaRepo = new InMemoryPagoCondenaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         acuseService = new NotificacionAcuseService(
                 acuseRepo, intentoRepo, notifRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
 
         loteService = new LoteCorreoService(
-                loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
+                loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, domicilioRepo, FaltasClockTestSupport.FIXED);
     }
 
     private FalActa crearActa(Long id) {
+        Long domId = domicilioRepo.nextId();
+        domicilioRepo.guardar(new FalPersonaDomicilio(
+                domId, 1L, null,
+                TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                true, true, true,
+                null, null, null, null, null,
+                null, null, null, null,
+                "Av. Libertad 100", 100, false,
+                null, null, "Av. Libertad 100, Malvinas",
+                false, null, null, null,
+                AHORA, "SYS"));
         FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
                 java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
                 null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
         a.setBloqueActual(BloqueActual.NOTI);
+        a.setIdDomicilioNotifAct(domId);
         return actaRepo.guardar(a);
     }
 
     private FalNotificacion crearNotificacion(Long id, Long actaId) {
-        return notifRepo.guardar(new FalNotificacion(id, actaId, 1L, TipoDocu.NOTIFICACION_ACTA, "CORREO", AHORA, AHORA, "SYS"));
+        return notifRepo.guardar(new FalNotificacion(id, actaId, id, TipoDocu.NOTIFICACION_ACTA, "CORREO", AHORA, AHORA, "SYS"));
+    }
+
+    private FalNotificacion crearNotificacionPendiente(Long id, Long actaId) {
+        return notifRepo.guardar(FalNotificacion.preparar(id, actaId, id, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
     }
 
     private FalNotificacionIntento crearIntento(Long id, Long notifId, short nro, CanalNotificacion canal) {
@@ -358,14 +377,14 @@ class NotificacionAcuseLoteServiceTest {
             assertThat(conError.getEstadoLote()).isEqualTo(EstadoLote.CON_ERROR);
         }
 
-        @Test @DisplayName("generar lote con intentos - crea intento CORREO_POSTAL por notificacion")
-        void generarLoteConIntentos() {
+        @Test @DisplayName("generarLoteDesdePendientes - crea intento CORREO_POSTAL por notificacion")
+        void generarLoteDesdePendientes_creaIntento() {
             crearActa(1L);
-            FalNotificacion n1 = crearNotificacion(10L, 1L);
-            FalNotificacion n2 = crearNotificacion(20L, 1L);
+            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(20L, 1L);
 
-            FalLoteCorreo lote = loteService.generarLoteConIntentos(
-                    "LOT-001", java.util.List.of(10L, 20L), null, null, "USR");
+            FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-001", null, null, "USR"));
 
             assertThat(lote.getEstadoLote()).isEqualTo(EstadoLote.GENERADO);
             assertThat(intentoRepo.buscarPorNotificacion(10L)).hasSize(1);
@@ -373,21 +392,25 @@ class NotificacionAcuseLoteServiceTest {
             assertThat(intentoRepo.buscarPorNotificacion(10L).get(0).getCanalNotif()).isEqualTo(CanalNotificacion.CORREO_POSTAL);
         }
 
-        @Test @DisplayName("generar lote sin notificaciones lanza excepcion")
+        @Test @DisplayName("sin notificaciones PENDIENTE_ENVIO lanza excepcion")
         void generarLoteVacio() {
-            assertThatThrownBy(() -> loteService.generarLoteConIntentos("LOT-001", java.util.List.of(), null, null, "USR"))
-                    .isInstanceOf(PrecondicionVioladaException.class);
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-001", null, null, "USR")))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("PENDIENTE_ENVIO");
         }
 
-        @Test @DisplayName("notificacion ya positiva no se incluye en lote")
+        @Test @DisplayName("notificacion ya positiva rechazada al incluir en lote")
         void notifPositivaNoSeIncluye() {
             crearActa(1L);
-            FalNotificacion notif = crearNotificacion(10L, 1L);
+            FalNotificacion notif = FalNotificacion.preparar(10L, 1L, 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
             notif.setResultado(ResultadoNotificacion.POSITIVO);
             notifRepo.guardar(notif);
 
-            loteService.generarLoteConIntentos("LOT-001", java.util.List.of(10L), null, null, "USR");
-            assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-001", null, null, "SYS")))
+                    .isInstanceOf(PrecondicionVioladaException.class)
+                    .hasMessageContaining("ya tiene resultado");
         }
 
         @Test @DisplayName("buscarPorEstado")
@@ -410,6 +433,180 @@ class NotificacionAcuseLoteServiceTest {
         void loteInexistente() {
             assertThatThrownBy(() -> loteService.emitirLote(999L, "USR"))
                     .isInstanceOf(LoteCorreoNoEncontradoException.class);
+        }
+
+        @Test @DisplayName("command null lanza PrecondicionVioladaException sin efectos")
+        void generarLote_idInexistente() {
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(null))
+                    .isInstanceOf(PrecondicionVioladaException.class);
+            assertThat(loteRepo.buscarPorEstado(EstadoLote.GENERADO)).isEmpty();
+        }
+
+        @Test @DisplayName("guidLoteExt en mayusculas se persiste canonicamente en minusculas")
+        void generarLote_idsDuplicados() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-DUP", null,
+                            "550E8400-E29B-41D4-A716-446655440000", "SYS"));
+            assertThat(lote.getGuidLoteExt()).isEqualTo("550e8400-e29b-41d4-a716-446655440000");
+        }
+
+        @Test @DisplayName("notificacion EN_PROCESO rechazada al incluir en lote")
+        void generarLote_notifEnProceso_rechazada() {
+            crearActa(1L);
+            FalNotificacion n = notifRepo.guardar(FalNotificacion.preparar(10L, 1L, 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
+            n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
+            notifRepo.guardar(n);
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-ENP", null, null, "SYS")))
+                    .isInstanceOf(PrecondicionVioladaException.class);
+        }
+
+        @Test @DisplayName("validacion global previa: segunda notif invalida -> primera permanece PENDIENTE_ENVIO")
+        void generarLote_sinMutaciones_cuando_falla() {
+            Long domId = domicilioRepo.nextId();
+            domicilioRepo.guardar(new FalPersonaDomicilio(
+                    domId, 1L, null,
+                    TipoDomicilio.CONSTITUIDO, OrigenDomicilio.LABRADO, ModoDomicilio.EXTERNO,
+                    true, true, true,
+                    null, null, null, null, null,
+                    null, null, null, null,
+                    "Av. Libertad 100", 100, false,
+                    null, null, "Av. Libertad 100, Malvinas",
+                    false, null, null, null,
+                    AHORA, "SYS"));
+            FalActa actaValida = new FalActa(1L, "UUID-1", TipoActa.TRANSITO, 1L, 1L,
+                    java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
+                    null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+            actaValida.setBloqueActual(BloqueActual.ANAL);
+            actaValida.setIdDomicilioNotifAct(domId);
+            actaRepo.guardar(actaValida);
+            crearNotificacionPendiente(10L, 1L);
+            notifRepo.guardar(FalNotificacion.preparar(20L, 999L, 20L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
+
+            assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
+                    new GenerarLoteCorreoCommand("LOT-FAIL", null, null, "SYS")))
+                    .isInstanceOf(PrecondicionVioladaException.class);
+
+            assertThatThrownBy(() -> loteService.buscarPorCodigo("LOT-FAIL")).isInstanceOf(Exception.class);
+            assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
+            assertThat(notifRepo.buscarPorId(10L).orElseThrow().getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
+            assertThat(eventoRepo.buscarPorActa(1L)).isEmpty();
+            assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
+        }
+
+        @Test @DisplayName("canal final es CORREO_POSTAL al generar lote")
+        void generarLote_canal_correoPostal() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-CANAL", null, null, "SYS"));
+            assertThat(notifRepo.buscarPorId(10L).orElseThrow().getCanal()).isEqualTo("CORREO_POSTAL");
+        }
+
+        @Test @DisplayName("fechaEnvio no es nula al generar lote")
+        void generarLote_fechaEnvio_noNula() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-FECHA", null, null, "SYS"));
+            assertThat(notifRepo.buscarPorId(10L).orElseThrow().getFechaEnvio()).isNotNull();
+        }
+
+        @Test @DisplayName("intentos == 1 despues de generar lote")
+        void generarLote_intentos_uno() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-INT", null, null, "SYS"));
+            assertThat(notifRepo.buscarPorId(10L).orElseThrow().getIntentos()).isEqualTo(1);
+        }
+
+        @Test @DisplayName("exactamente un intento en intentoRepo por notificacion")
+        void generarLote_exactamente_un_intento() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-UNO", null, null, "SYS"));
+            assertThat(intentoRepo.buscarPorNotificacion(10L)).hasSize(1);
+        }
+
+        @Test @DisplayName("evento LOTGEN emitido al generar lote")
+        void generarLote_evento_LOTGEN() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-EVT", null, null, "SYS"));
+            assertThat(eventoRepo.buscarPorActa(1L)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.LOTGEN);
+        }
+
+        @Test @DisplayName("snapshot recalculado al generar lote")
+        void generarLote_snapshot_recalculado() {
+            crearActa(1L);
+            crearNotificacionPendiente(10L, 1L);
+            loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-SNAP", null, null, "SYS"));
+            assertThat(snapshotRepo.buscarPorActa(1L)).isPresent();
+        }
+    }
+    @Nested @DisplayName("FalNotificacion.iniciarEnvio")
+    class IniciarEnvioTests {
+
+        @Test @DisplayName("PENDIENTE_ENVIO -> EN_PROCESO")
+        void iniciarEnvio_transicion_ok() {
+            FalNotificacion n = FalNotificacion.preparar(1L, 1L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            assertThat(n.getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
+            n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
+            assertThat(n.getEstado()).isEqualTo(EstadoNotificacion.EN_PROCESO);
+        }
+
+        @Test @DisplayName("canal obligatorio")
+        void iniciarEnvio_canal_obligatorio() {
+            FalNotificacion n = FalNotificacion.preparar(1L, 1L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            assertThatThrownBy(() -> n.iniciarEnvio(null, AHORA, AHORA, "SYS"))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> n.iniciarEnvio("", AHORA, AHORA, "SYS"))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(n.getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
+        }
+
+        @Test @DisplayName("fecha obligatoria")
+        void iniciarEnvio_fecha_obligatoria() {
+            FalNotificacion n = FalNotificacion.preparar(1L, 1L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            assertThatThrownBy(() -> n.iniciarEnvio("CORREO_POSTAL", null, AHORA, "SYS"))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(n.getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
+        }
+
+        @Test @DisplayName("intentos incrementa de 0 a 1")
+        void iniciarEnvio_intentos_incrementa() {
+            FalNotificacion n = FalNotificacion.preparar(1L, 1L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            assertThat(n.getIntentos()).isEqualTo(0);
+            n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
+            assertThat(n.getIntentos()).isEqualTo(1);
+        }
+
+        @Test @DisplayName("segunda llamada desde EN_PROCESO lanza excepcion")
+        void iniciarEnvio_segunda_vez_rechaza() {
+            FalNotificacion n = FalNotificacion.preparar(1L, 1L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
+            assertThat(n.getEstado()).isEqualTo(EstadoNotificacion.EN_PROCESO);
+            assertThat(n.getIntentos()).isEqualTo(1);
+
+            assertThatThrownBy(() -> n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS"))
+                    .isInstanceOf(PrecondicionVioladaException.class);
+
+            // Contador permanece en 1, estado no muto
+            assertThat(n.getIntentos()).isEqualTo(1);
+            assertThat(n.getEstado()).isEqualTo(EstadoNotificacion.EN_PROCESO);
+        }
+
+        @Test @DisplayName("estado y datos no mutan ante rechazo")
+        void iniciarEnvio_no_muta_ante_rechazo() {
+            FalNotificacion n = FalNotificacion.preparar(1L, 1L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
+            String canalAntes = n.getCanal();
+            int intentosAntes = n.getIntentos();
+
+            try { n.iniciarEnvio("OTRO_CANAL", AHORA, AHORA, "SYS"); } catch (Exception ignored) {}
+
+            assertThat(n.getCanal()).isEqualTo(canalAntes);
+            assertThat(n.getIntentos()).isEqualTo(intentosAntes);
         }
     }
 }

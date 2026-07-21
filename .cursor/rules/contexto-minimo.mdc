@@ -1,176 +1,95 @@
 ---
-description: Regla operativa estricta de limpieza y selección de contexto para Cursor
+description: Selección mínima y segura de contexto para Cursor
 alwaysApply: true
 ---
 
-# Limpieza de contexto para Cursor — regla operativa estricta
+# Contexto mínimo para Cursor
 
-## Objetivo
+## 1. Punto de entrada obligatorio
 
-Reducir al mínimo el contexto activo para evitar ruido, consumo innecesario y razonamiento sobre archivos no relevantes.
+Para cualquier trabajo sobre `backend/api-faltas-core`:
 
-Cursor no debe cargar "todo el repo". Debe cargar solo el contexto mínimo necesario para el slice actual.
+1. leer `backend/api-faltas-core/docs/spec-as-source/README.md`;
+2. identificar allí los documentos canónicos aplicables;
+3. leer el prompt exacto del slice;
+4. abrir solamente el código y los tests necesarios para verificar o implementar ese alcance.
 
----
+No existe un archivo fijo de continuidad que deba cargarse siempre.
 
-## Regla principal
+## 2. Autoridad
 
-Antes de trabajar cualquier slice:
+La única fuente normativa del backend productivo de Faltas es:
 
-1. cargar continuidad mínima
-2. cargar solo el módulo afectado
-3. cargar solo el subconjunto exacto de spec necesario
-4. excluir todo lo demás
+`backend/api-faltas-core/docs/spec-as-source/`
 
-Si para resolver el slice hace falta abrir demasiados archivos, el slice está mal recortado o la selección de contexto está mal hecha.
+Son fuentes de evidencia o auditoría, no autoridades equivalentes:
 
----
+- código Java;
+- tests;
+- handoffs;
+- prototipo;
+- frontend;
+- historia Git.
 
-## Cargar siempre primero
+Para auditar proceso, modelo MariaDB o decisiones históricas, la referencia vigente dentro de la spec es `backend/api-faltas-core/docs/spec-as-source/00-governance/document-registry.md`, `backend/api-faltas-core/docs/spec-as-source/50-persistence/mariadb-logical-model.md` y `backend/api-faltas-core/docs/spec-as-source/50-persistence/ddl-decisions.md`.
 
-### Continuidad mínima obligatoria
+Si una fuente contradice la spec, no elegir una versión por inferencia. Reportar el gap y detener la decisión afectada.
 
-- `docs-trabajo/prompt-de-reanudacion-chat.md`
-- `docs-trabajo/estado-actual-y-proximo-paso.md`
+## 3. Selección de contexto
 
-Estos dos archivos son el marco base de continuidad. No reemplazan la spec, pero sí definen el contexto operativo vigente.
+Antes de abrir archivos, identificar:
 
----
+1. comportamiento o documento puntual afectado;
+2. módulo exacto;
+3. documentos canónicos aplicables;
+4. artefactos Java y tests directamente relacionados;
+5. validaciones requeridas.
 
-## Cargar del código solo lo estrictamente afectado
+Abrir solo ese subconjunto.
 
-Para slices del prototipo backend, cargar únicamente:
+No explorar horizontalmente todo el repo salvo que el slice sea explícitamente una auditoría o inventario.
 
-- `backend/api-faltas-prototipo/src/main/java/.../PrototipoApiController.java`
-- `backend/api-faltas-prototipo/src/main/java/.../PrototipoStore.java`
-- `backend/api-faltas-prototipo/src/main/java/.../MockDataFactory.java`
+## 4. Contexto excluido por defecto
 
-Y además solo si el slice lo necesita:
+Excluir salvo autorización o necesidad demostrable:
 
-- DTOs/records mínimos afectados
-- enums mínimos afectados
-- helpers mínimos afectados
+- `.git/`;
+- `target/`;
+- `node_modules/`;
+- `.idea/`;
+- `.vscode/`;
+- ZIP y binarios;
+- logs;
+- handoffs;
+- documentación histórica;
+- frontend o mobile no relacionados;
+- prototipo cuando el alcance sea backend productivo;
+- SQL o infraestructura cuando el alcance no los involucre;
+- módulos ajenos al slice.
 
-No cargar por defecto otros módulos Java del repo.
+## 5. Disciplina del slice
 
----
+No mezclar en un mismo slice:
 
-## Cargar de spec solo el subconjunto exacto del slice
+- cambio funcional;
+- refactor amplio;
+- saneamiento documental general;
+- migración de persistencia;
+- renombres masivos;
+- limpieza de artefactos;
+- rediseño conceptual.
 
-No abrir `spec/` completa.
+Toda ampliación de alcance debe estar autorizada explícitamente.
 
-Abrir únicamente:
+## 6. Salida esperada
 
-- el bloque de dominio mínimo necesario
-- la bandeja exacta involucrada
-- la regla transversal exacta involucrada
-- el bloque backend exacto si aporta algo al slice
+Toda intervención debe informar:
 
-### Ejemplos
+1. diagnóstico breve;
+2. archivos modificados;
+3. motivo de cada cambio;
+4. validaciones ejecutadas;
+5. desviaciones o gaps;
+6. confirmación de que no hubo staging ni commit, salvo autorización expresa.
 
-Si el slice trata firma:
-
-- regla de firma
-- bandeja de pendientes de firma
-- parte mínima de dominio/documento si hace falta
-
-Si el slice trata notificación:
-
-- bandeja/s de notificación
-- regla transversal de notificación si existe
-- parte mínima de dominio/notificación
-
-Si el slice trata análisis:
-
-- bandeja/s de análisis
-- parte mínima de dominio/acto/documento si aplica
-
----
-
-## No cargar por defecto
-
-Excluir del contexto, salvo necesidad explícita y justificada:
-
-- `target/`
-- `.git/`
-- `.idea/`
-- `.vscode/`
-- archivos zip
-- scripts viejos u obsoletos
-- frontend
-- mobile
-- `infra/`
-- `sql/`
-- `simulador/`
-- notas históricas
-- artefactos de trabajo viejos
-- documentación no relacionada
-- módulos productivos no vinculados al slice actual
-
----
-
-## Regla de lectura del repo
-
-No explorar el repo de forma horizontal y masiva.
-
-Primero identificar:
-
-1. qué comportamiento puntual se va a tocar
-2. qué archivos son la fuente real de ese comportamiento
-3. qué archivos solo agregan ruido
-
-Solo después abrir archivos.
-
----
-
-## Regla de trabajo durante el slice
-
-Antes de modificar algo, validar:
-
-1. cuál es la única verdad vigente del circuito
-2. si existe algún resto de circuito viejo
-3. qué archivo es fuente real
-4. qué archivo solo refleja o consume el estado
-
-No mezclar:
-
-- refactor grande
-- ampliación funcional
-- limpieza general
-- renombres amplios
-- rediseño conceptual
-
-Hacer solo el cambio mínimo para cerrar el comportamiento puntual.
-
----
-
-## Regla de salida esperada
-
-Toda intervención debe devolver:
-
-1. diagnóstico breve
-2. archivos realmente tocados
-3. por qué esos y no más
-4. cambio concreto realizado
-5. validación observable
-6. riesgos o pendientes si quedaron
-
----
-
-## Regla de disciplina
-
-Si el cambio puede resolverse tocando 1 a 3 archivos, no abrir 15.
-Si el slice es puntual, el contexto también debe ser puntual.
-Menos contexto irrelevante = mejor precisión.
-
----
-
-## Instrucción final
-
-Actuar como implementador disciplinado sobre contexto mínimo.
-
-- No abrir todo el repo.
-- No usar "por las dudas".
-- No mezclar modelos.
-- No reintroducir circuitos viejos.
-- Priorizar precisión quirúrgica y consistencia conceptual.
+No imprimir diffs completos en consola si existe un paquete de revisión.

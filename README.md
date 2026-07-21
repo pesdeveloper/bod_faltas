@@ -1,104 +1,95 @@
-﻿# repo-faltas
+# Bod-Faltas
 
-## Qué es
+## 1. Qué es
 
-Repositorio canónico del ecosistema del sistema de faltas municipal.
+Repositorio canónico del ecosistema municipal de Faltas.
 
-El sistema se entiende como un **gestor documental orientado al expediente**:
-- la unidad principal de gestión es el expediente / acta
-- los documentos, firmas, notificaciones, acuses y efectos materiales modifican su estado operativo
-- las bandejas muestran la situación actual del expediente
+El sistema se modela como un gestor documental orientado al expediente:
 
----
+- el acta es la unidad principal de gestión;
+- los documentos, firmas, notificaciones, pagos y actuaciones producen efectos de dominio;
+- las bandejas y acciones son proyecciones operativas del estado vigente;
+- la persistencia debe reproducir el comportamiento validado sin redefinir reglas funcionales.
 
-## Qué incluye
+## 2. Organización general
 
-- `backend/api-faltas-core/docs/spec-as-source/` → spec viva operativa (estados, eventos, comandos, bandejas, API, tests)
-- `docs/faltas/` → modelo MariaDB final, matriz de proceso y delta
-- `apps/` → aplicaciones por superficie operativa
-- `backend/` → backend y procesos compartidos
-- `shared/` → contratos y recursos compartidos
-- `infra/` → infraestructura y scripts
-- `docs/` → documentación complementaria
+- `backend/api-faltas-core/` — backend productivo y dominio principal;
+- `backend/api-faltas-core/docs/spec-as-source/` — única spec-as-source canónica del backend productivo;
+- `backend/api-faltas-prototipo/` — prototipo y soporte de demostración, no fuente normativa;
+- `apps/` — aplicaciones consumidoras;
+- `shared/` — contratos y recursos compartidos;
+- `infra/` — infraestructura y scripts.
 
----
+## 3. Autoridad normativa
 
-## Superficies previstas
+La única spec-as-source canónica del backend productivo de Faltas está en:
 
-- web interna para Dirección de Faltas
-- app móvil de inspectores
-- app móvil de notificador municipal
-- app móvil de liberaciones / entregas materiales
+`backend/api-faltas-core/docs/spec-as-source/`
 
----
+Su punto de entrada obligatorio es:
 
-## Decisión arquitectónica base
+`backend/api-faltas-core/docs/spec-as-source/README.md`
 
-Este repositorio se organiza como **repo multiproyecto** con:
-- núcleo común de dominio y reglas
-- varias aplicaciones consumidoras
-- backend compartido
-- spec viva fragmentada en archivos chicos bajo `backend/api-faltas-core/docs/spec-as-source/`
+El código Java, los tests, el prototipo, Angular y la historia Git son fuentes de evidencia, auditoría o conformidad. No pueden redefinir silenciosamente la spec canónica.
 
-No se modela como un conjunto de soluciones inconexas.
+Ante una contradicción:
 
----
+1. no elegir una versión por fecha, nombre de archivo, cantidad de tests o cercanía con el código;
+2. registrar el gap;
+3. obtener una resolución explícita cuando afecte dominio, contratos o arquitectura;
+4. actualizar primero la spec canónica;
+5. alinear después código, tests, persistencia y documentos de referencia.
 
-## Motor de firma
+## 4. Cómo empezar a leer
 
-El motor de firma se considera un **sistema externo** con repositorio propio.
+Para cualquier trabajo sobre `backend/api-faltas-core`:
 
-En este repositorio solo se modela:
-- la integración con el motor de firma
-- los estados y efectos esperados
-- un modo sandbox / testing para emular firma durante las primeras etapas
+1. leer [AGENTS.md](AGENTS.md);
+2. leer el [README de la spec canónica](backend/api-faltas-core/docs/spec-as-source/README.md);
+3. identificar allí los documentos aplicables al alcance;
+4. consultar código y tests como evidencia de conformidad.
 
----
+No comenzar por documentos históricos, handoffs, logs ni conteos antiguos de tests.
 
-## Regla de precedencia
+## 5. Arquitectura base
 
-Las fuentes de verdad vigentes del proyecto son:
+Este repositorio se organiza como repo multiproyecto con:
 
-- `backend/api-faltas-core/docs/spec-as-source/` → spec viva: estados, bloques, eventos, comandos, bandejas, API, tests
-- `docs/faltas/MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md` → modelo de datos MariaDB final
-- `docs/faltas/MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md` → matriz de proceso completa
-- `docs/faltas/DELTA_MODELO_MARIADB_DESDE_IMPLEMENTACION_IN_MEMORY.md` → delta in-memory → MariaDB
-- `AGENTS.md` → instrucciones para agentes
-- `.cursor/rules/` → reglas de dominio y arquitectura
+- núcleo común de dominio y reglas;
+- backend productivo;
+- prototipo y superficies demo separadas;
+- aplicaciones consumidoras;
+- persistencia desacoplada mediante ports y adapters;
+- spec canónica temática y trazable.
 
-Todo desarrollo, tasklist o generación asistida debe tomar estas fuentes como base principal.
+El motor de firma es un sistema externo con repositorio propio. En este repositorio se modelan su integración, los estados y efectos esperados y los mecanismos de prueba necesarios.
 
----
+## 6. Continuidad y trabajo operativo
 
-## Archivos relacionados
+No existe un directorio fijo de continuidad en este repositorio ni un archivo que
+deba leerse siempre antes de cada slice. Los artefactos de continuidad (prompts
+de reanudación, cierres de slice, handoffs, checklists, informes) son
+transitorios y su lectura, creación o eliminación requiere autorización
+humana explícita en cada caso (ver `.cursor/rules/continuidad-solo-humana.mdc`
+y `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc`).
 
-- `ruta-relativa.md`
-- `../otra-carpeta/archivo.md`
+La continuidad válida de un trabajo debe venir indicada expresamente por:
 
----
-## Cómo empezar a leer
+- el prompt del slice actual;
+- el commit o rama de entrada;
+- el README canónico;
+- los documentos canónicos aplicables.
 
-1. [AGENTS.md](AGENTS.md)
-2. [Spec viva — estados, bloques, eventos](backend/api-faltas-core/docs/spec-as-source/02-estados-bloques-eventos.md)
-3. [Spec viva — comandos, precondiciones, efectos](backend/api-faltas-core/docs/spec-as-source/03-comandos-precondiciones-efectos.md)
-4. [Spec viva — snapshot, bandejas, acciones](backend/api-faltas-core/docs/spec-as-source/04-snapshot-bandejas-acciones.md)
-5. [Modelo MariaDB final](docs/faltas/MODELO_MARIADB_FALTAS_FINAL_PRODUCTIVO_COMPLETO_2026-06-23_CORREGIDO.md)
-6. [Matriz de proceso completa](docs/faltas/MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md)
+Los archivos de continuidad no reemplazan la spec.
 
-## Continuidad rápida
+## 7. Regla de trabajo asistido
 
-Para recuperar rápidamente el estado actual del trabajo:
+Todo agente debe:
 
-- [Slices pendientes](backend/api-faltas-core/docs/spec-as-source/99-pendientes-siguientes-slices.md)
-- [Índice de documentación de trabajo](docs-trabajo/README.md)
-
-### Direccion de Faltas - demo funcional completa lista 2026-06-01
-
-Dataset: 42 actas. Incluye Slice 17A (reactivacion de PARALIZADAS), Slice 19A/19B (ACTA-0029 condena firme + pago condena).
-
-- [Índice de documentación de trabajo](docs-trabajo/README.md)
-- [Prompt de continuidad (2026-06-01)](docs-trabajo/prompt-continuidad-faltas-2026-06-01.md)
-- [Cierre de restauración funcional](docs-trabajo/cierre-restauracion-funcional-faltas-2026-06-01.md)
-- [Checklist guiado de validacion integral](docs-trabajo/checklist-guiado-validacion-integral-faltas-2026-06-01.md)
-
-
+- trabajar con alcance explícito;
+- leer el contexto mínimo necesario;
+- no inventar reglas;
+- no confundir estados de dominio, subestados, bandejas, acciones o proyecciones;
+- no modificar documentación histórica fuera del alcance;
+- no hacer commits ni staging salvo autorización expresa;
+- reportar contradicciones en lugar de resolverlas por inferencia.

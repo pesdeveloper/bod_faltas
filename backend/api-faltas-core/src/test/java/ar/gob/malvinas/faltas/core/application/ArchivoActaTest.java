@@ -50,7 +50,7 @@ class ArchivoActaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo,
                 new InMemoryDocumentoRepository(), new InMemoryNotificacionRepository(),
                 new InMemoryPagoVoluntarioRepository(), new InMemoryFalloActaRepository(),
-                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
         service = new ArchivoActaService(actaRepo, eventoRepo, snapshotRepo, archivoRepo,
                 paralizacionRepo, motivoRepo, obsRepo, recalc, FaltasClockTestSupport.FIXED);
         paralizacionService = new ParalizacionActaService(actaRepo, eventoRepo, snapshotRepo,

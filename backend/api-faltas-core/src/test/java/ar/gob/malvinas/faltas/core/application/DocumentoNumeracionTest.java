@@ -117,7 +117,7 @@ class DocumentoNumeracionTest {
                 new InMemoryPagoVoluntarioRepository(),
                 falloRepo,
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
         talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
         depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
@@ -127,7 +127,8 @@ class DocumentoNumeracionTest {
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 plantillaRepo, talonarioService, depRepo,
                 new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -204,7 +205,7 @@ class DocumentoNumeracionTest {
     private FalDocumentoPlantilla crearPlantillaConNumeracion(String codigo, TipoDocu tipoDocu,
             MomentoNumeracionDocu momento) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 tipoDocu, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 true, momento,
@@ -215,7 +216,7 @@ class DocumentoNumeracionTest {
 
     private FalDocumentoPlantilla crearPlantillaSinNumeracion(String codigo) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla sin numeracion " + codigo, null,
+                codigo, "Plantilla sin numeracion " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -505,7 +506,7 @@ class DocumentoNumeracionTest {
         void falla_si_sin_plantilla() {
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(id, 1L,
-                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(), "sin plantilla");
+                    TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() ->

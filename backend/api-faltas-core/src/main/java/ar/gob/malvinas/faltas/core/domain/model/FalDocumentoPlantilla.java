@@ -13,7 +13,11 @@ import java.time.LocalDateTime;
  * Plantilla documental del sistema.
  *
  * Alineado con fal_documento_plantilla MariaDB.
+ * {@code codigo} persiste como VARCHAR(12) y {@code nombre} como VARCHAR(64).
+ * No existe un campo {@code descripcion}: el nombre comunica el uso y la intencion.
  * La plantilla NO define idTalonario, politicaNumeracionId ni claseTalonario.
+ *
+ * FULL-R1.2-CORRECCION-04.
  *
  * Invariante:
  * - Si siRequiereNumeracion=false => momentoNumeracionDocu = NO_APLICA.
@@ -25,7 +29,6 @@ public class FalDocumentoPlantilla {
     private final Long id;
     private final String codigo;
     private String nombre;
-    private String descripcion;
     private final TipoDocu tipoDocu;
     private final AccionDocumental accionDocumental;
     private final TipoActa tipoActa;
@@ -45,7 +48,6 @@ public class FalDocumentoPlantilla {
             Long id,
             String codigo,
             String nombre,
-            String descripcion,
             TipoDocu tipoDocu,
             AccionDocumental accionDocumental,
             TipoActa tipoActa,
@@ -63,7 +65,6 @@ public class FalDocumentoPlantilla {
         this.id = id;
         this.codigo = codigo;
         this.nombre = nombre;
-        this.descripcion = descripcion;
         this.tipoDocu = tipoDocu;
         this.accionDocumental = accionDocumental;
         this.tipoActa = tipoActa;
@@ -84,8 +85,6 @@ public class FalDocumentoPlantilla {
     public String getCodigo() { return codigo; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public TipoDocu getTipoDocu() { return tipoDocu; }
     public AccionDocumental getAccionDocumental() { return accionDocumental; }
     public TipoActa getTipoActa() { return tipoActa; }

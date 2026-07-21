@@ -8,6 +8,8 @@ import ar.gob.malvinas.faltas.core.application.service.PagoCondenaService;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalPagoCondena;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.ConfirmarPagoCondenaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.InformarPagoCondenaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.ObservarPagoCondenaRequest;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import java.util.Optional;
 
 @RestController
@@ -35,9 +38,13 @@ public class PagoCondenaController {
     @PostMapping("/{id}/pago-condena/informar")
     public ResponseEntity<ComandoResultado> informar(
             @PathVariable Long id,
-            @RequestBody InformarPagoCondenaRequest req) {
+            @Valid @RequestBody InformarPagoCondenaRequest req) {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         InformarPagoCondenaCommand cmd = new InformarPagoCondenaCommand(
-                id, req.monto(), req.referenciaPago(), req.observaciones());
+                id, req.monto(), req.referenciaPago(), req.observaciones(), ctx.sub());
         return ResponseEntity.ok(pagoCondenaService.informar(cmd));
     }
 
@@ -67,4 +74,3 @@ public class PagoCondenaController {
     }
 
 }
-

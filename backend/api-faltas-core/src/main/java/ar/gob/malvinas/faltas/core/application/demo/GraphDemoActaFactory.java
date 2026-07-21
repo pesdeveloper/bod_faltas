@@ -120,7 +120,6 @@ public final class GraphDemoActaFactory {
         return new FalDocumento(
                 id, actaId, tipoDocu,
                 ahora,
-                tipoDocu.name() + " - Demo",
                 EstadoDocu.BORRADOR,
                 TipoFirmaReq.NO_REQUIERE,
                 null,

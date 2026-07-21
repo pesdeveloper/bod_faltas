@@ -17,6 +17,7 @@ import ar.gob.malvinas.faltas.core.repository.PagoMovimientoRepository;
 import ar.gob.malvinas.faltas.core.repository.PlanPagoRefRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,11 +72,26 @@ public class PagoIntegracionService {
         return outcome;
     }
 
+    /**
+     * Recalcula capturando su propio instante de {@link FaltasClock} y su propio
+     * actor (o "SISTEMA"). Conveniencia para comandos que no necesitan compartir
+     * el instante con otras mutaciones.
+     */
     public void recalcularEstados(Long obligacionPagoId, Long formaPagoId, Long planPagoRefId) {
+        recalcularEstados(obligacionPagoId, formaPagoId, planPagoRefId, clock.now(), ActorContextHolder.subOr("SISTEMA"));
+    }
+
+    /**
+     * Recalcula usando el instante canonico y el actor suministrados por el
+     * llamador (no consulta {@link FaltasClock} ni {@link ActorContextHolder}).
+     * Requerido por comandos que deben compartir un unico instante real entre
+     * varias mutaciones (ver `CMD-ORDER-002` y `ResolverPagoObligacionAnteriorCommand`
+     * en backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md).
+     */
+    public void recalcularEstados(Long obligacionPagoId, Long formaPagoId, Long planPagoRefId, LocalDateTime instanteCanonico, String actor) {
         Optional<FalActaObligacionPago> obligOpt = obligacionRepo.findById(obligacionPagoId);
         if (obligOpt.isEmpty()) return;
         FalActaObligacionPago obligacion = obligOpt.get();
-        String actor = ActorContextHolder.subOr("SISTEMA");
 
         List<FalActaPagoMovimiento> todosMovimientos = movimientoRepo.findByObligacionPagoId(obligacionPagoId);
         EstadoObligacionPago nuevoEstadoOblig = reducer.proyectarEstadoObligacion(obligacion, todosMovimientos);
@@ -83,7 +99,7 @@ public class PagoIntegracionService {
         if (obligacion.getEstadoObligacion() != nuevoEstadoOblig) {
             obligacion.setEstadoObligacion(nuevoEstadoOblig);
             if (nuevoEstadoOblig == EstadoObligacionPago.CANCELADA_POR_PAGO) {
-                obligacion.setFhCancelacion(clock.now());
+                obligacion.setFhCancelacion(instanteCanonico);
             } else {
                 obligacion.setFhCancelacion(null);
             }
@@ -97,7 +113,7 @@ public class PagoIntegracionService {
                 if (forma.getEstadoFormaPago() != nuevoEstadoForma) {
                     forma.setEstadoFormaPago(nuevoEstadoForma);
                     if (nuevoEstadoForma == EstadoFormaPago.PAGADA && forma.getFhPagoConfirmado() == null) {
-                        forma.setFhPagoConfirmado(clock.now());
+                        forma.setFhPagoConfirmado(instanteCanonico);
                     } else if (nuevoEstadoForma != EstadoFormaPago.PAGADA) {
                         forma.setFhPagoConfirmado(null);
                     }
@@ -114,14 +130,14 @@ public class PagoIntegracionService {
                     plan.setEstadoPlan(nuevoEstadoPlan);
                     if (nuevoEstadoPlan == EstadoPlanPago.FINALIZADO_POR_PAGO) {
                         plan.setSiVigente(false);
-                        plan.setFhFinalizacionPago(clock.now());
+                        plan.setFhFinalizacionPago(instanteCanonico);
                     }
                     planRepo.save(plan);
                 }
             });
         }
 
-        recalculador.recalcular(obligacion.getActaId(), OrigenUltimaActualizacion.TIEMPO_REAL, actor);
+        recalculador.recalcular(obligacion.getActaId(), OrigenUltimaActualizacion.TIEMPO_REAL, actor, instanteCanonico);
     }
 
     public boolean pagoConfirmadoPorTesoreria(Long obligacionPagoId) {

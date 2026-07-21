@@ -24,4 +24,10 @@ public interface ApelacionActaRepository {
     Optional<FalActaApelacion> buscarUltima(Long actaId);
 
     Optional<FalActaApelacion> findById(Long id);
+
+    /**
+     * Devuelve la apelacion asociada exclusivamente al fallo indicado.
+     * Una apelacion historica de otro fallo no satisface esta consulta.
+     */
+    Optional<FalActaApelacion> buscarPorFallo(Long falloId);
 }

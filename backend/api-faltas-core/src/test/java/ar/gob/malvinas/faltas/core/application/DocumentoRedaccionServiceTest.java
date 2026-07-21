@@ -68,7 +68,7 @@ class DocumentoRedaccionServiceTest {
     private FalDocumento crearDocumento() {
         Long id = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
-                id, 1L, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Fallo",
+                id, 1L, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(),
                 ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.BORRADOR,
                 ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
         return docRepo.guardar(doc);

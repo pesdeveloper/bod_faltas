@@ -12,6 +12,7 @@ import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnviarNotificacionCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
@@ -52,7 +53,6 @@ import ar.gob.malvinas.faltas.core.repository.ApelacionActaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.GestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
@@ -64,7 +64,6 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryApelacionActaReposi
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryGestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository;
@@ -72,6 +71,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepos
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEvidenciaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -104,13 +106,13 @@ class GestionExternaTest {
     private PagoVoluntarioRepository pagoVolRepo;
     private FalloActaRepository falloRepo;
     private ApelacionActaRepository apelacionRepo;
-    private FirmezaCondenaRepository firmezaRepo;
     private PagoCondenaRepository pagoCondenaRepo;
     private GestionExternaRepository gestionExternaRepo;
 
     private ActaService actaService;
     private DocumentoService docService;
     private NotificacionService notifService;
+    private final ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository intentoRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository();
     private FalloActaService falloService;
     private FirmezaCondenaService firmezaService;
     private GestionExternaService gestionExternaService;
@@ -118,6 +120,7 @@ class GestionExternaTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -127,12 +130,11 @@ class GestionExternaTest {
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         gestionExternaRepo = new InMemoryGestionExternaRepository();
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
@@ -144,14 +146,16 @@ class GestionExternaTest {
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
         gestionExternaService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
@@ -159,6 +163,9 @@ class GestionExternaTest {
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // Helpers
@@ -175,24 +182,26 @@ class GestionExternaTest {
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
 
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, null))
+                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "firmante1", "DIGITAL", null));
         String idNotif = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), "CORREO", null))
+                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotif), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotif)), null, "test-actor"));
 
         falloService.dictarCondenatorio(new DictarFalloCondenatorioCommand(
                 actaId, new BigDecimal("5000.00"), "Fundamentos condenatorios", null));
         Long idDocFallo = falloRepo.buscarActivo(actaId).orElseThrow().getDocumentoId();
         docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
         String idNotifFallo = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, idDocFallo, "CORREO", null))
+                new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotifFallo, null));
-
-        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotifFallo), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotifFallo)), null, "test-actor"));
+        var falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(LocalDate.of(2026, 7, 8));
+        falloRepo.guardar(falloVto);
+        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
         return actaId;
     }
 
@@ -1130,7 +1139,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService servicioConBloqueantes = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             servicioConBloqueantes.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId).stream()
@@ -1264,7 +1273,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService svc = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             svc.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
@@ -1279,7 +1288,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService svc = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             svc.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
@@ -1304,7 +1313,7 @@ class GestionExternaTest {
             derivar(actaId);
             GestionExternaService svc = new GestionExternaService(
                     actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             svc.registrarPagoExternoGestion(cmdPagoExterno(actaId, null));
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(actaId).orElseThrow();
@@ -1381,7 +1390,7 @@ class GestionExternaTest {
             // informar requiere CONDENA_FIRME, por lo que falla primero en informar
             assertThatThrownBy(() ->
                     pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                            actaId, new BigDecimal("5000.00"), "REF-TEST", null)))
+                            actaId, new BigDecimal("5000.00"), "REF-TEST", null, "test-user")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -1888,7 +1897,7 @@ class GestionExternaTest {
             assertThat(acta.getResultadoFinal()).isEqualTo(ResultadoFinalActa.CONDENA_FIRME);
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("5000.00"), "REF-6D1-07", null));
+                    actaId, new java.math.BigDecimal("5000.00"), "REF-6D1-07", null, "test-user"));
 
             FalActa actaDespues = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(actaDespues.getResultadoFinal()).isEqualTo(ResultadoFinalActa.CONDENA_FIRME);
@@ -2324,6 +2333,3 @@ class GestionExternaTest {
                     .hasMessageContaining("REINGRESO_CON_PAGO");
         }
     }}
-
-
-

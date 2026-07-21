@@ -301,7 +301,7 @@ public final class DatasetFuncionalDominioCatalog {
             "Acta con fallo absolutorio dictado, pendiente de firma",
             "Fallo absolutorio dictado. Documento de fallo en estado PENDIENTE_FIRMA.",
             "Slice 3A - DictarFalloAbsolutorio",
-            List.of("Slice 3A - DictarFalloAbsolutorio", "EstadoFalloActa.DICTADO",
+            List.of("Slice 3A - DictarFalloAbsolutorio", "EstadoFalloActa.PENDIENTE_FIRMA",
                     "Bandeja PENDIENTE_FIRMA", "TipoFalloActa.ABSOLUTORIO"),
             BloqueActual.ANAL,
             SituacionAdministrativaActa.ACTIVA,
@@ -320,7 +320,7 @@ public final class DatasetFuncionalDominioCatalog {
             ),
             List.of(TipoEventoActa.FALABS, TipoEventoActa.DOCGEN),
             List.of("POST /api/faltas/actas/{id}/fallo/absolutorio", "FalloActaService.dictarAbsolutorio()"),
-            List.of("Bandeja PENDIENTE_FIRMA. EstadoFallo: DICTADO.")
+            List.of("Bandeja PENDIENTE_FIRMA. EstadoFallo: PENDIENTE_FIRMA.")
         ),
 
         // =====================================================================
@@ -363,7 +363,7 @@ public final class DatasetFuncionalDominioCatalog {
             "Acta con fallo condenatorio dictado, pendiente de firma",
             "Fallo condenatorio dictado con monto de condena. Documento de fallo pendiente de firma.",
             "Slice 3A - DictarFalloCondenatorio",
-            List.of("Slice 3A - DictarFalloCondenatorio", "EstadoFalloActa.DICTADO",
+            List.of("Slice 3A - DictarFalloCondenatorio", "EstadoFalloActa.PENDIENTE_FIRMA",
                     "TipoFalloActa.CONDENATORIO", "Bandeja PENDIENTE_FIRMA"),
             BloqueActual.ANAL,
             SituacionAdministrativaActa.ACTIVA,
@@ -386,7 +386,7 @@ public final class DatasetFuncionalDominioCatalog {
             ),
             List.of(TipoEventoActa.FALCON, TipoEventoActa.DOCGEN),
             List.of("POST /api/faltas/actas/{id}/fallo/condenatorio", "FalloActaService.dictarCondenatorio()"),
-            List.of("Bandeja PENDIENTE_FIRMA. EstadoFallo: DICTADO. MontoCondena seteado.")
+            List.of("Bandeja PENDIENTE_FIRMA. EstadoFallo: PENDIENTE_FIRMA. MontoCondena seteado.")
         ),
 
         // =====================================================================

@@ -115,7 +115,7 @@ class DocumentoEnvioFirmaTest {
                 new InMemoryPagoVoluntarioRepository(),
                 new InMemoryFalloActaRepository(),
                 new InMemoryApelacionActaRepository(),
-                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
         talonarioService = new TalonarioService(talonarioRepo, depRepo, inspectorRepo, FaltasClockTestSupport.FIXED);
         depService = new DependenciaService(depRepo, FaltasClockTestSupport.FIXED);
@@ -125,7 +125,8 @@ class DocumentoEnvioFirmaTest {
                 actaRepo, docRepo, new InMemoryDocumentoFirmaRepository(),
                 eventoRepo, snapshotRepo, recalc, new InMemoryFalloActaRepository(),
                 plantillaRepo, talonarioService, depRepo, firmaReqRepo,
-                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
     }
 
     // =========================================================================
@@ -181,7 +182,7 @@ class DocumentoEnvioFirmaTest {
             @SuppressWarnings("unused") boolean siNumeracionIgnorado) {
         boolean siNumeracion = momento != MomentoNumeracionDocu.NO_APLICA;
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla " + codigo, null,
+                codigo, "Plantilla " + codigo,
                 TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                 TipoFirmaReq.FIRMA_AUTORIDAD,
                 siNumeracion, momento,
@@ -197,7 +198,7 @@ class DocumentoEnvioFirmaTest {
      */
     private FalDocumentoPlantilla crearPlantillaNoRequiereFirma(String codigo) {
         FalDocumentoPlantilla p = plantillaService.crear(new CrearDocumentoPlantillaCommand(
-                codigo, "Plantilla sin firma " + codigo, null,
+                codigo, "Plantilla sin firma " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -212,7 +213,7 @@ class DocumentoEnvioFirmaTest {
     private FalDocumento crearDocumentoBorrador(FalActa acta, FalDocumentoPlantilla plantilla) {
         Long id = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
-                id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(), null,
+                id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.BORRADOR, plantilla.getTipoFirmaReq(), plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         docRepo.guardar(doc);
         return doc;
@@ -225,7 +226,7 @@ class DocumentoEnvioFirmaTest {
             String nroDocu) {
         Long id = docRepo.nextId();
         FalDocumento doc = new FalDocumento(
-                id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(), null,
+                id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.BORRADOR, plantilla.getTipoFirmaReq(), plantilla.getId(), FaltasClockTestSupport.FIXED.now());
         doc.setNroDocu(nroDocu);
         docRepo.guardar(doc);
@@ -433,8 +434,8 @@ class DocumentoEnvioFirmaTest {
                     "PL-ERR-1", MomentoNumeracionDocu.AL_FIRMAR, false);
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
-                    id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(), null,
-                    EstadoDocu.PENDIENTE_FIRMA, plantilla.getTipoFirmaReq(), plantilla.getId(), FaltasClockTestSupport.FIXED.now());
+                    id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.PENDIENTE_FIRMA, plantilla.getTipoFirmaReq(), plantilla.getId(), FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.enviarAFirma(new EnviarAFirmaCommand(id, USER)))
@@ -450,8 +451,8 @@ class DocumentoEnvioFirmaTest {
                     "PL-ERR-2", MomentoNumeracionDocu.AL_FIRMAR, false);
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
-                    id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(), null,
-                    EstadoDocu.FIRMADO, plantilla.getTipoFirmaReq(), plantilla.getId(), FaltasClockTestSupport.FIXED.now());
+                    id, acta.getId(), plantilla.getTipoDocu(), FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.FIRMADO, plantilla.getTipoFirmaReq(), plantilla.getId(), FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.enviarAFirma(new EnviarAFirmaCommand(id, USER)))
@@ -465,8 +466,8 @@ class DocumentoEnvioFirmaTest {
             FalActa acta = crearActa();
             Long id = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
-                    id, acta.getId(), TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(), null,
-                    EstadoDocu.BORRADOR, TipoFirmaReq.FIRMA_AUTORIDAD, null, FaltasClockTestSupport.FIXED.now());
+                    id, acta.getId(), TipoDocu.CONSTANCIA, FaltasClockTestSupport.FIXED.now(),
+                EstadoDocu.BORRADOR, TipoFirmaReq.FIRMA_AUTORIDAD, null, FaltasClockTestSupport.FIXED.now());
             docRepo.guardar(doc);
 
             assertThatThrownBy(() -> docService.enviarAFirma(new EnviarAFirmaCommand(id, USER)))

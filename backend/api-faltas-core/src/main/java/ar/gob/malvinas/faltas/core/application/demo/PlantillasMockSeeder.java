@@ -162,7 +162,6 @@ public class PlantillasMockSeeder {
 
         FalDocumentoPlantilla plantilla = new FalDocumentoPlantilla(
                 plantillaId, codigo, nombre,
-                "Plantilla mock demo - " + accion.name(),
                 tipoDocu, accion, null,
                 TipoFirmaReq.FIRMA_AUTORIDAD,
                 true, MomentoNumeracionDocu.AL_EMITIR,

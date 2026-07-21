@@ -138,9 +138,9 @@ public class ObservacionService {
         if (texto == null || texto.trim().isEmpty()) {
             throw new PrecondicionVioladaException("El texto de observacion no puede ser vacio");
         }
-        if (texto.trim().length() > 1000) {
+        if (texto.trim().length() > 512) {
             throw new PrecondicionVioladaException(
-                    "El texto de observacion supera 1000 caracteres: " + texto.trim().length());
+                    "El texto de observacion supera 512 caracteres: " + texto.trim().length());
         }
     }
 

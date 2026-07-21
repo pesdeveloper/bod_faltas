@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCom
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnviarNotificacionCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
@@ -59,6 +60,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEvidenciaReposi
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -95,11 +99,13 @@ class ApelacionActaTest {
     private ActaService actaService;
     private DocumentoService docService;
     private NotificacionService notifService;
+    private final ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository intentoRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository();
     private FalloActaService falloService;
     private ApelacionActaService apelacionService;
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -112,7 +118,7 @@ class ApelacionActaTest {
 
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
@@ -124,10 +130,12 @@ class ApelacionActaTest {
 
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
-                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(), FaltasClockTestSupport.FIXED);
+                        new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(), FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo,
                 falloRepo, pagoRepo, recalc, FaltasClockTestSupport.FIXED);
@@ -135,6 +143,9 @@ class ApelacionActaTest {
                 actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // Helpers
@@ -153,13 +164,13 @@ class ApelacionActaTest {
         actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, null))
+                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "firmante1", "DIGITAL", null));
         String idNotif = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), "CORREO", null))
+                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotif), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotif)), null, "test-actor"));
         return actaId;
     }
 
@@ -170,9 +181,9 @@ class ApelacionActaTest {
         Long idDocFallo = falloRepo.buscarActivo(actaId).orElseThrow().getDocumentoId();
         docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
         String idNotifFallo = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, idDocFallo, "CORREO", null))
+                new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotifFallo, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotifFallo), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotifFallo)), null, "test-actor"));
         return actaId;
     }
 
@@ -416,7 +427,7 @@ class ApelacionActaTest {
             Long actaId = crearActaConFalloCondenatorioNotificado();
             ApelacionActaService serviceConBloqueantes = new ApelacionActaService(
                     actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo,
-                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED),
+                    new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo),
                     id -> true, FaltasClockTestSupport.FIXED);
             serviceConBloqueantes.registrarApelacion(
                     new RegistrarApelacionCommand(actaId, "Infractor", "Fundamentos", null));
@@ -619,9 +630,9 @@ class ApelacionActaTest {
             Long idDocFallo = falloRepo.buscarActivo(actaId).orElseThrow().getDocumentoId();
             docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
             String idNotif = notifService.enviarNotificacion(
-                    new EnviarNotificacionCommand(actaId, idDocFallo, "POSTAL", null))
+                    new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                     .idEntidadAfectada();
-            notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
+            notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotif), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotif)), null, "test-actor"));
 
             assertThatThrownBy(() -> apelacionService.registrarApelacion(
                     new RegistrarApelacionCommand(actaId, null, null, null)))
@@ -656,10 +667,3 @@ class ApelacionActaTest {
         }
     }
 }
-
-
-
-
-
-
-

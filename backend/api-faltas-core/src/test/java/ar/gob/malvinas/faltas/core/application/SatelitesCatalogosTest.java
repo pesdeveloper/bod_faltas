@@ -40,6 +40,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoMarca;
 import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoModelo;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaArticuloInfringidoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaContravencionRepository;
+import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaMedidaPreventivaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSustanciasAlimenticiasRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaTransitoAlcoholemiaRepository;
@@ -857,10 +858,10 @@ class SatelitesCatalogosTest {
         void registro_valido_controlado() {
             FalActaContravencion ctv = new FalActaContravencion(
                     1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
-            ctv.setSujetoInmueble(1L, 100L);
+            ctv.setSujetoInmueble(1, 100);
             FalActaContravencion guardado = servicio.registrar(1L, ctv);
             assertThat(guardado.getActaId()).isEqualTo(1L);
-            assertThat(guardado.getIdBieI()).isEqualTo(100L);
+            assertThat(guardado.getIdBieI()).isEqualTo(100);
         }
 
         @Test @DisplayName("manual excepcional sin idBieI: si_nomenclatura_manual=true")
@@ -883,7 +884,7 @@ class SatelitesCatalogosTest {
         void pares_suj_bie_c_juntos() {
             FalActaContravencion ctv = new FalActaContravencion(
                     1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
-            assertThatThrownBy(() -> ctv.setSujetoComercio(2L, null))
+            assertThatThrownBy(() -> ctv.setSujetoComercio(2, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -954,7 +955,7 @@ class SatelitesCatalogosTest {
         void nomenclatura_resumen_con_datos() {
             FalActaContravencion ctv = new FalActaContravencion(
                     1L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
-            ctv.setSujetoInmueble(1L, 100L);
+            ctv.setSujetoInmueble(1, 100);
             ctv.setCirc((short) 1);
             ctv.setSecc("01");
             assertThat(ctv.generarNomenclaturaResumen()).isNotBlank();
@@ -1158,6 +1159,7 @@ class SatelitesCatalogosTest {
         private SnapshotRecalculador recalculador;
         private InMemoryActaTransitoRepository transitoRepo;
         private InMemoryActaContravencionRepository contravencionRepo;
+        private InMemoryActaSnapshotRepository snapshotRepo;
 
         private FalActa crearActa(Long id, TipoActa tipo) {
             return new FalActa(id, "uuid-" + id, tipo, 1L, 1L,
@@ -1167,6 +1169,7 @@ class SatelitesCatalogosTest {
         }
 
         @BeforeEach void setUp() throws Exception {
+            snapshotRepo = new InMemoryActaSnapshotRepository();
             transitoRepo = new InMemoryActaTransitoRepository();
             contravencionRepo = new InMemoryActaContravencionRepository();
 
@@ -1177,7 +1180,7 @@ class SatelitesCatalogosTest {
                     new InMemoryPagoVoluntarioRepository(),
                     new InMemoryFalloActaRepository(),
                     new InMemoryApelacionActaRepository(),
-                    new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                    new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
 
             // Inyectar repos satelite via reflexion (son @Autowired required=false)
             Field fTransito = SnapshotRecalculador.class.getDeclaredField("actaTransitoRepository");
@@ -1212,13 +1215,13 @@ class SatelitesCatalogosTest {
             FalActa acta = crearActa(3L, TipoActa.CONTRAVENCION);
             FalActaContravencion ctv = new FalActaContravencion(
                     3L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
-            ctv.setSujetoInmueble(1L, 500L);
-            ctv.setSujetoComercio(2L, 600L);
+            ctv.setSujetoInmueble(1, 500);
+            ctv.setSujetoComercio(2, 600);
             contravencionRepo.guardar(ctv);
 
             FalActaSnapshot snap = recalculador.recalcular(acta);
-            assertThat(snap.getIdBieI()).isEqualTo(500L);
-            assertThat(snap.getIdBieC()).isEqualTo(600L);
+            assertThat(snap.getIdBieI()).isEqualTo(500);
+            assertThat(snap.getIdBieC()).isEqualTo(600);
         }
 
         @Test @DisplayName("snapshot de acta contravencion con nomenclatura proyecta nomenclaturaResumen")
@@ -1226,7 +1229,7 @@ class SatelitesCatalogosTest {
             FalActa acta = crearActa(4L, TipoActa.CONTRAVENCION);
             FalActaContravencion ctv = new FalActaContravencion(
                     4L, OrigenNomenclatura.CATASTRO, false, FaltasClockTestSupport.FIXED.now(), "u1");
-            ctv.setSujetoInmueble(1L, 700L);
+            ctv.setSujetoInmueble(1, 700);
             ctv.setCirc((short) 1);
             ctv.setSecc("02");
             contravencionRepo.guardar(ctv);

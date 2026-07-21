@@ -1,3 +1,4 @@
+> **Advertencia (histórico / no normativo):** este documento es un mecanismo histórico de validación visual de la demo UX, no la fuente de verdad de dominio, API o persistencia (esa fuente vive en `backend/api-faltas-core/docs/spec-as-source/`). Su revisión integral -incluida la referencia rota a `spec/` mas abajo- queda diferida a un futuro slice UX y no se corrige en este slice. El carryover funcional reutilizable extraido de este documento vive en `.work/handoff-current/UX-VALIDATION-CARRYOVER.md` (ledger de trabajo, no spec).
 # UX Demo — Overview
 
 ## Propósito
@@ -42,12 +43,10 @@ No es spec final. Lo validado en demo debe reconciliarse luego con `spec/`.
 | Recurso | Uso |
 |---|---|
 | `backend/api-faltas-prototipo` | Backend mock que alimenta esta UX |
-| `docs-trabajo/estado-actual-y-proximo-paso.md` | Inventario vivo del backend prototipo |
-| `docs-trabajo/prompt-de-reanudacion-chat.md` | Marco metodológico del prototipo |
 | `.cursor/rules/contexto-minimo.mdc` | Regla de carga mínima |
 | `.cursor/rules/continuidad-solo-bajo-autorizacion.mdc` | Protección de continuidad |
 
-Si `docs-trabajo/` está protegido para Cursor, no usarlo como insumo directo salvo autorización explícita.
+El inventario vivo y el marco metodológico previos del backend prototipo vivian en una carpeta de trabajo transitoria que ya fue eliminada del repositorio. La fuente vigente para el backend mock del prototipo es el código de `backend/api-faltas-prototipo`; para el backend productivo de Faltas, `backend/api-faltas-core/docs/spec-as-source/`.
 
 ---
 

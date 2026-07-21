@@ -25,6 +25,8 @@ import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import org.springframework.stereotype.Service;
 
@@ -73,6 +75,7 @@ public class ActaService {
     }
 
     public ComandoResultado labrar(LabrarActaCommand cmd) {
+        String actor = exigirActor();
         if (cmd.resultadoFirmaInfractor() == null) {
             throw new PrecondicionVioladaException("resultadoFirmaInfractor es obligatorio.");
         }
@@ -114,36 +117,38 @@ public class ActaService {
         if (cmd.idPersonaInfractor() == null && cmd.infractorNombre() != null
                 && personaRepository != null) {
             FalPersona personaMinimal = crearPersonaMinimal(
-                    cmd.infractorDocumento(), cmd.infractorNombre());
+                    cmd.infractorDocumento(), cmd.infractorNombre(), actor, ahora);
             acta.setIdPersonaInfractor(personaMinimal.getId());
         }
         actaRepository.guardar(acta);
 
         if (cmd.evidenciasActa() != null) {
-            LocalDateTime ahoraEv = ahora;
             for (EvidenciaActaItem item : cmd.evidenciasActa()) {
                 FalActaEvidencia evidencia = new FalActaEvidencia(
                         evidenciaRepository.nextId(),
                         acta.getId(),
                         item.tipoEvid(),
                         item.storageKey(),
-                        ahoraEv
+                        ahora,
+                        ahora,
+                        actor,
+                        null
                 );
                 evidenciaRepository.guardar(evidencia);
             }
         }
 
         registrarEvento(acta.getId(), TipoEventoActa.ACTLAB, null, null,
-                String.valueOf(cmd.idInspector()), "Acta labrada - tipo: " + cmd.tipoActa().name());
+                actor, ahora, "Acta labrada - tipo: " + cmd.tipoActa().name());
 
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(acta, ahora);
 
         return ComandoResultado.de(id, id.toString(), TipoEventoActa.ACTLAB.codigo(),
                 "Acta labrada correctamente. Bloque: CAPT");
     }
 
     public ComandoResultado completarCaptura(CompletarCapturaCommand cmd) {
+        String actor = exigirActor();
         FalActa acta = actaRepository.buscarPorId(cmd.idActa())
                 .orElseThrow(() -> new ActaNoEncontradaException(cmd.idActa()));
 
@@ -156,14 +161,14 @@ public class ActaService {
                             + acta.getBloqueActual().codigo());
         }
 
+        LocalDateTime ahora = faltasClock.now();
         acta.setBloqueActual(BloqueActual.ENRI);
         actaRepository.guardar(acta);
 
         registrarEvento(acta.getId(), TipoEventoActa.ACTCAP, null, null,
-                null, cmd.observaciones());
+                actor, ahora, cmd.observaciones());
 
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(acta, ahora);
 
         return ComandoResultado.de(acta.getId(), acta.getId().toString(),
                 TipoEventoActa.ACTCAP.codigo(),
@@ -171,6 +176,7 @@ public class ActaService {
     }
 
     public ComandoResultado enriquecer(EnriquecerActaCommand cmd) {
+        String actor = exigirActor();
         FalActa acta = actaRepository.buscarPorId(cmd.idActa())
                 .orElseThrow(() -> new ActaNoEncontradaException(cmd.idActa()));
 
@@ -183,11 +189,11 @@ public class ActaService {
                             + acta.getBloqueActual().codigo());
         }
 
+        LocalDateTime ahora = faltasClock.now();
         registrarEvento(acta.getId(), TipoEventoActa.ACTENR, null, null,
-                null, cmd.observaciones());
+                actor, ahora, cmd.observaciones());
 
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(acta, ahora);
 
         return ComandoResultado.de(acta.getId(), acta.getId().toString(),
                 TipoEventoActa.ACTENR.codigo(),
@@ -208,9 +214,10 @@ public class ActaService {
         return evidenciaRepository.listarPorActa(idActa);
     }
 
-    private FalPersona crearPersonaMinimal(String nroDoc, String nombreMostrar) {
+    private FalPersona crearPersonaMinimal(String nroDoc, String nombreMostrar,
+                                           String actor, LocalDateTime ahora) {
         Long id = personaRepository.nextId();
-        FalPersona persona = new FalPersona(id, TipoPersona.FISICA, faltasClock.now(), "SYS");
+        FalPersona persona = new FalPersona(id, TipoPersona.FISICA, ahora, actor);
         if (nroDoc != null && !nroDoc.isBlank()) {
             String nroDocNorm = nroDoc.strip().replaceAll("[^0-9a-zA-Z\\\\-]", "");
             if (nroDocNorm.length() > 20) nroDocNorm = nroDocNorm.substring(0, 20);
@@ -225,12 +232,13 @@ public class ActaService {
 
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
                                   Long idDocuRel, Long idNotifRel,
-                                  String idUserEvt, String descripcionLegible) {
+                                  String idUserEvt, LocalDateTime fhEvt,
+                                  String descripcionLegible) {
         FalActaEvento evento = FalActaEvento.builder()
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(faltasClock.now())
+                .fhEvt(fhEvt)
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)
@@ -238,5 +246,13 @@ public class ActaService {
                 .descripcionLegible(descripcionLegible)
                 .build();
         eventoRepository.registrar(evento);
+    }
+
+    private String exigirActor() {
+        ActorContext ctx = ActorContextHolder.get();
+        if (ctx == null) {
+            throw new PrecondicionVioladaException("Operacion humana requiere actor autenticado (JWT sub).");
+        }
+        return ctx.sub();
     }
 }

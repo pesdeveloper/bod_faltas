@@ -1,16 +1,21 @@
 package ar.gob.malvinas.faltas.core.web;
 
 import ar.gob.malvinas.faltas.core.application.command.NotificarMovimientoPagoCommand;
+import ar.gob.malvinas.faltas.core.application.command.ResolverPagoObligacionAnteriorCommand;
 import ar.gob.malvinas.faltas.core.application.service.PagoEconomicoService;
+import ar.gob.malvinas.faltas.core.application.service.ResolverPagoObligacionAnteriorResultado;
+import ar.gob.malvinas.faltas.core.application.service.ResolverPagoObligacionAnteriorService;
 import ar.gob.malvinas.faltas.core.domain.exception.ConciliacionIncompatibleException;
 import ar.gob.malvinas.faltas.core.domain.exception.MovimientoPagoDuplicadoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaPagoMovimiento;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.NotificarMovimientoPagoRequest;
+import ar.gob.malvinas.faltas.core.web.dto.ResolverPagoObligacionAnteriorRequest;
 import ar.gob.malvinas.faltas.core.web.dto.RevertirMovimientoPagoRequest;
 import ar.gob.malvinas.faltas.core.domain.enums.MotivoAnulacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenMovimiento;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,9 +29,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class PagoIntegracionController {
 
     private final PagoEconomicoService pagoEconomicoService;
+    private final ResolverPagoObligacionAnteriorService resolverPagoObligacionAnteriorService;
 
-    public PagoIntegracionController(PagoEconomicoService pagoEconomicoService) {
+    public PagoIntegracionController(
+            PagoEconomicoService pagoEconomicoService,
+            ResolverPagoObligacionAnteriorService resolverPagoObligacionAnteriorService) {
         this.pagoEconomicoService = pagoEconomicoService;
+        this.resolverPagoObligacionAnteriorService = resolverPagoObligacionAnteriorService;
     }
 
     @PostMapping("/notificar-movimiento")
@@ -53,6 +62,18 @@ public class PagoIntegracionController {
         }
         return ResponseEntity.ok(pagoEconomicoService.revertirMovimiento(
                 req.movimientoOriginalId(), req.motivo(), req.referenciaExterna(), req.origenMovimiento(), actor));
+    }
+
+    @PostMapping("/resolver-pago-anterior")
+    public ResponseEntity<ResolverPagoObligacionAnteriorResultado> resolverPagoAnterior(
+            @Valid @RequestBody ResolverPagoObligacionAnteriorRequest req) {
+        String actor = ActorContextHolder.subOr(null);
+        if (actor == null) {
+            throw new PrecondicionVioladaException("Actor autenticado requerido");
+        }
+        ResolverPagoObligacionAnteriorCommand cmd = new ResolverPagoObligacionAnteriorCommand(
+                req.actaId(), req.movimientoPagoId(), req.motivo(), actor);
+        return ResponseEntity.ok(resolverPagoObligacionAnteriorService.resolver(cmd));
     }
 
 }

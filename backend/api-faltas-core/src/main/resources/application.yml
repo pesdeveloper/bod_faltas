@@ -12,3 +12,12 @@ app:
 
 # Endpoints demo/dev. Por defecto deshabilitados (faltas.demo.enabled=false).
 # Activar explicitamente en ambiente demo/dev con faltas.demo.enabled=true.
+
+faltas:
+  plazos:
+    apelacion-dias-computables: 30
+  security:
+    jwt:
+      issuer: https://tokenserver.dev.local
+      audience: api-faltas-core
+      dev-secret: ${FALTAS_JWT_DEV_SECRET:faltas-dev-test-secret-not-for-prod-use}

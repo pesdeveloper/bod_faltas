@@ -46,7 +46,7 @@ class DocumentoPlantillaTest {
 
     private CrearDocumentoPlantillaCommand cmdNumerada(String codigo) {
         return new CrearDocumentoPlantillaCommand(
-                codigo, "Nombre " + codigo, "Descripcion",
+                codigo, "Nombre " + codigo,
                 TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                 TipoFirmaReq.FIRMA_AUTORIDAD,
                 true, MomentoNumeracionDocu.AL_ENVIAR_A_FIRMA,
@@ -56,7 +56,7 @@ class DocumentoPlantillaTest {
 
     private CrearDocumentoPlantillaCommand cmdNoNumerada(String codigo) {
         return new CrearDocumentoPlantillaCommand(
-                codigo, "Nombre " + codigo, null,
+                codigo, "Nombre " + codigo,
                 TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                 TipoFirmaReq.NO_REQUIERE,
                 false, MomentoNumeracionDocu.NO_APLICA,
@@ -112,7 +112,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Permite tipoActa no nulo")
         void permite_tipo_acta_no_null() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-TACTA", "Con tipo acta", null,
+                    "PLNT-TACTA", "Con tipo acta",
                     TipoDocu.ACTA_INFRACCION, AccionDocumental.GENERAR_ACTA_INFRACCION,
                     TipoActa.TRANSITO,
                     TipoFirmaReq.FIRMA_INSPECTOR,
@@ -127,7 +127,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Guarda correctamente flags: siNotificable, siGeneraPdf, siSeleccionable")
         void guarda_flags() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-FLAGS", "Con flags", null,
+                    "PLNT-FLAGS", "Con flags",
                     TipoDocu.NOTIFICACION_ACTA, AccionDocumental.EMITIR_NOTIFICACION_ACTA, null,
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,
@@ -149,7 +149,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Falla si siRequiereNumeracion=false y momentoNumeracionDocu != NO_APLICA")
         void falla_no_numerada_con_momento_distinto_no_aplica() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-BAD1", "Bad", null,
+                    "PLNT-BAD1", "Bad",
                     TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.AL_CREAR,
@@ -164,7 +164,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Falla si siRequiereNumeracion=true y momentoNumeracionDocu=NO_APLICA")
         void falla_numerada_con_momento_no_aplica() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-BAD2", "Bad", null,
+                    "PLNT-BAD2", "Bad",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_AUTORIDAD,
                     true, MomentoNumeracionDocu.NO_APLICA,
@@ -316,7 +316,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Falla activar plantilla FIRMA_MULTIPLE con un solo requisito obligatorio activo")
         void falla_activar_firma_multiple_con_un_req() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-FMUL01", "Firma multiple 1", null,
+                    "PLNT-FMUL01", "Firma multiple 1",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_MULTIPLE,
                     true, MomentoNumeracionDocu.AL_FIRMAR,
@@ -333,7 +333,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Activa plantilla FIRMA_MULTIPLE con dos requisitos obligatorios activos")
         void activa_firma_multiple_con_dos_req() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-FMUL02", "Firma multiple 2", null,
+                    "PLNT-FMUL02", "Firma multiple 2",
                     TipoDocu.ACTO_ADMINISTRATIVO, AccionDocumental.EMITIR_FALLO, null,
                     TipoFirmaReq.FIRMA_MULTIPLE,
                     true, MomentoNumeracionDocu.AL_FIRMAR,
@@ -350,7 +350,7 @@ class DocumentoPlantillaTest {
         @DisplayName("Falla activar plantilla vencida (fhVigHasta anterior a hoy)")
         void falla_activar_plantilla_vencida() {
             CrearDocumentoPlantillaCommand cmd = new CrearDocumentoPlantillaCommand(
-                    "PLNT-VENC01", "Vencida", null,
+                    "PLNT-VENC01", "Vencida",
                     TipoDocu.CONSTANCIA, AccionDocumental.EMITIR_CONSTANCIA, null,
                     TipoFirmaReq.NO_REQUIERE,
                     false, MomentoNumeracionDocu.NO_APLICA,

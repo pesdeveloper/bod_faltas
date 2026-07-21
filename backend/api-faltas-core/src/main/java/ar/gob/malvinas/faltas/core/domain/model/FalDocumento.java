@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
  * - tipoDocu: SMALLINT (catalogo tipo_docu) via TipoDocu
  * - estadoDocu: SMALLINT (catalogo estado_docu) via EstadoDocu
  * - nroDocu: VARCHAR(30) nullable
+ * - storageKey: VARCHAR(196) nullable (clave tecnica interna; max 196 chars)
  * - idTalonario: BIGINT nullable
  * - nroTalonarioUsado: INT nullable
  * - tipoFirmaReq: SMALLINT (catalogo tipo_firma_req) via TipoFirmaReq
@@ -30,19 +31,26 @@ import java.time.LocalDateTime;
  *   - fhGeneracion mapea a fh_generacion (fecha de emision formal del documento).
  *   - hashDocu mapea a hash_docu (hash del artefacto PDF emitido).
  * Slice 8C-6D-1: agrega crearAdjunto(), marcarFirmadoDesdeAdjunto(), estaAdjunto().
+ * FULL-R1.2-CORRECCION-03: descripcion eliminado (HUMAN_DECISION_CLOSED).
  */
 public class FalDocumento {
 
     private final Long id;
+    private int versionRow;
     private final Long idActa;
     private final TipoDocu tipoDocu;
     private final LocalDateTime fechaGeneracion;
+    /**
+     * Clave técnica interna generada por backend.
+     * Formato: {@code faltas/actas/<uuid-acta>/documentos/<uuid-documento>.pdf}
+     * No es URL pública ni contiene el binario.
+     * Nullable hasta que el artefacto sea emitido. Máximo 196 caracteres.
+     */
     private String storageKey;
     private String hashDocu;
     private LocalDateTime fhGeneracion;
     private EstadoDocu estadoDocu;
     private String nroDocu;
-    private String descripcion;
     private TipoFirmaReq tipoFirmaReq;
     private Long plantillaId;
     private String idUserAlta;
@@ -53,15 +61,14 @@ public class FalDocumento {
             Long id,
             Long idActa,
             TipoDocu tipoDocu,
-            LocalDateTime fechaGeneracion,
-            String descripcion) {
+            LocalDateTime fechaGeneracion) {
         this.id = id;
         this.idActa = idActa;
         this.tipoDocu = tipoDocu;
         this.fechaGeneracion = fechaGeneracion;
-        this.descripcion = descripcion;
         this.estadoDocu = EstadoDocu.PENDIENTE_FIRMA;
         this.tipoFirmaReq = TipoFirmaReq.NO_REQUIERE;
+        this.versionRow = 0;
     }
 
     public FalDocumento(
@@ -69,7 +76,6 @@ public class FalDocumento {
             Long idActa,
             TipoDocu tipoDocu,
             LocalDateTime fechaGeneracion,
-            String descripcion,
             EstadoDocu estadoDocu,
             TipoFirmaReq tipoFirmaReq,
             Long plantillaId,
@@ -78,10 +84,10 @@ public class FalDocumento {
         this.idActa = idActa;
         this.tipoDocu = tipoDocu;
         this.fechaGeneracion = fechaGeneracion;
-        this.descripcion = descripcion;
         this.estadoDocu = estadoDocu;
         this.tipoFirmaReq = tipoFirmaReq;
         this.plantillaId = plantillaId;
+        this.versionRow = 0;
     }
 
     public FalDocumento(
@@ -89,12 +95,11 @@ public class FalDocumento {
             Long idActa,
             TipoDocu tipoDocu,
             LocalDateTime fechaGeneracion,
-            String descripcion,
             EstadoDocu estadoDocu,
             TipoFirmaReq tipoFirmaReq,
             Long plantillaId,
             String idUserAlta) {
-        this(id, idActa, tipoDocu, fechaGeneracion, descripcion, estadoDocu, tipoFirmaReq, plantillaId, fechaGeneracion);
+        this(id, idActa, tipoDocu, fechaGeneracion, estadoDocu, tipoFirmaReq, plantillaId, fechaGeneracion);
         this.idUserAlta = idUserAlta;
     }
 
@@ -128,7 +133,7 @@ public class FalDocumento {
             throw new IllegalArgumentException("fhGeneracion requerido para documento adjunto");
 
         FalDocumento doc = new FalDocumento(
-                id, idActa, tipoDocu, fhAlta, null,
+                id, idActa, tipoDocu, fhAlta,
                 EstadoDocu.ADJUNTO, TipoFirmaReq.NO_REQUIERE, plantillaId, fhAlta);
         doc.storageKey = storageKey;
         doc.hashDocu = hashDocu;
@@ -181,6 +186,8 @@ public class FalDocumento {
     }
 
     public Long getId() { return id; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int versionRow) { this.versionRow = versionRow; }
     public Long getIdActa() { return idActa; }
     public TipoDocu getTipoDocu() { return tipoDocu; }
     public LocalDateTime getFechaGeneracion() { return fechaGeneracion; }
@@ -193,9 +200,6 @@ public class FalDocumento {
 
     public String getNroDocu() { return nroDocu; }
     public void setNroDocu(String nroDocu) { this.nroDocu = nroDocu; }
-
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
     public TipoFirmaReq getTipoFirmaReq() { return tipoFirmaReq; }
     public void setTipoFirmaReq(TipoFirmaReq tipoFirmaReq) { this.tipoFirmaReq = tipoFirmaReq; }
@@ -223,4 +227,18 @@ public class FalDocumento {
     public boolean estaFirmado() { return estadoDocu == EstadoDocu.FIRMADO; }
     public boolean pendienteFirma() { return estadoDocu == EstadoDocu.PENDIENTE_FIRMA; }
     public boolean estaAdjunto() { return estadoDocu == EstadoDocu.ADJUNTO; }
+
+    public FalDocumento copia() {
+        FalDocumento c = new FalDocumento(id, idActa, tipoDocu, fechaGeneracion,
+                estadoDocu, tipoFirmaReq, plantillaId, fechaGeneracion);
+        c.versionRow = this.versionRow;
+        c.storageKey = this.storageKey;
+        c.hashDocu = this.hashDocu;
+        c.fhGeneracion = this.fhGeneracion;
+        c.nroDocu = this.nroDocu;
+        c.idUserAlta = this.idUserAlta;
+        c.idTalonario = this.idTalonario;
+        c.nroTalonarioUsado = this.nroTalonarioUsado;
+        return c;
+    }
 }

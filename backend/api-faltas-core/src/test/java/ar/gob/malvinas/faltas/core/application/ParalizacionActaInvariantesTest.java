@@ -46,7 +46,7 @@ class ParalizacionActaInvariantesTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo,
                 new InMemoryDocumentoRepository(), new InMemoryNotificacionRepository(),
                 new InMemoryPagoVoluntarioRepository(), new InMemoryFalloActaRepository(),
-                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED);
+                new InMemoryApelacionActaRepository(), new InMemoryPagoCondenaRepository(), FaltasClockTestSupport.FIXED, snapshotRepo);
         service = new ParalizacionActaService(actaRepo, eventoRepo, snapshotRepo,
                 paralizacionRepo, obsRepo, recalc, FaltasClockTestSupport.FIXED);
     }

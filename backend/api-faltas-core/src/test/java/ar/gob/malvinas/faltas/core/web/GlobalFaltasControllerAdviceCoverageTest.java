@@ -37,6 +37,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.NotificacionAcuseNoEncontrad
 import ar.gob.malvinas.faltas.core.domain.exception.NotificacionIntentoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.NotificacionNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.ObligacionPagoNoEncontradaException;
+import ar.gob.malvinas.faltas.core.domain.exception.PagoMovimientoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PersonaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PlanPagoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.PlantillaContenidoAmbiguaException;
@@ -45,6 +46,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PlantillaDefaultAmbiguaExcep
 import ar.gob.malvinas.faltas.core.domain.exception.PlantillaDefaultNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.exception.QrTokenInvalidoException;
+import ar.gob.malvinas.faltas.core.domain.exception.ResolucionPagoAnteriorConflictoException;
 import ar.gob.malvinas.faltas.core.domain.exception.RubroVersionNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.TarifarioNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.ValorizacionNoEncontradaException;
@@ -62,9 +64,9 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifica que las 50 excepciones de dominio tengan mapping en GlobalFaltasControllerAdvice.
+ * Verifica que las 52 excepciones de dominio tengan mapping en GlobalFaltasControllerAdvice.
  */
-@DisplayName("GlobalFaltasControllerAdvice — cobertura de las 50 excepciones de dominio")
+@DisplayName("GlobalFaltasControllerAdvice — cobertura de las 52 excepciones de dominio")
 class GlobalFaltasControllerAdviceCoverageTest {
 
     private final GlobalFaltasControllerAdvice advice = new GlobalFaltasControllerAdvice();
@@ -106,6 +108,7 @@ class GlobalFaltasControllerAdviceCoverageTest {
             // 404 — PAGO
             m(new FormaPagoNoEncontradaException(1L),                         "PAGO_NO_ENCONTRADO", 404),
             m(new ObligacionPagoNoEncontradaException(1L),                    "PAGO_NO_ENCONTRADO", 404),
+            m(new PagoMovimientoNoEncontradoException(1L),                    "PAGO_NO_ENCONTRADO", 404),
             m(new PlanPagoNoEncontradoException(1L),                          "PAGO_NO_ENCONTRADO", 404),
             m(new ValorizacionNoEncontradaException(1L),                      "PAGO_NO_ENCONTRADO", 404),
             // 404 — RECURSO
@@ -127,6 +130,7 @@ class GlobalFaltasControllerAdviceCoverageTest {
             m(new ConcurrenciaConflictoException("Acta", 1L, 1, 2),          "CONFLICTO_CONCURRENCIA",    409),
             m(new MovimientoPagoDuplicadoException("ref-1"),                  "MOVIMIENTO_PAGO_DUPLICADO", 409),
             m(new ConciliacionIncompatibleException("incompatible"),          "CONCILIACION_INCOMPATIBLE", 409),
+            m(new ResolucionPagoAnteriorConflictoException("conflicto"),      "RESOLUCION_PAGO_ANTERIOR_CONFLICTO", 409),
             m(new AcuseDuplicadoException(1L, 2L, "POSTAL"),                  "CONFLICTO_DUPLICADO",       409),
             m(new ActaDocumentoYaExisteException(1L, 2L),                     "CONFLICTO_DUPLICADO",       409),
             m(new DocumentoFirmaReqYaMaterializadaException(1L),              "CONFLICTO_DUPLICADO",       409),
@@ -138,10 +142,10 @@ class GlobalFaltasControllerAdviceCoverageTest {
     }
 
     @Test
-    @DisplayName("Las 50 excepciones de dominio producen codigoError valido y status HTTP correcto")
+    @DisplayName("Las 52 excepciones de dominio producen codigoError valido y status HTTP correcto")
     void todas_las_excepciones_producen_codigo_y_status_valido() {
         List<ExceptionMapping> lista = catalogo();
-        assertThat(lista).as("Catalogo debe tener exactamente 50 entradas").hasSize(50);
+        assertThat(lista).as("Catalogo debe tener exactamente 52 entradas").hasSize(52);
 
         for (ExceptionMapping mapping : lista) {
             ResponseEntity<ErrorResponse> resp = invocarAdvice(mapping.ex());
@@ -159,10 +163,10 @@ class GlobalFaltasControllerAdviceCoverageTest {
     }
 
     @Test
-    @DisplayName("NOT_FOUND_CODES cubre las 37 excepciones de recurso no encontrado")
-    void notFoundCodes_cubre_37_excepciones() {
+    @DisplayName("NOT_FOUND_CODES cubre las 38 excepciones de recurso no encontrado")
+    void notFoundCodes_cubre_38_excepciones() {
         Map<Class<?>, String> codes = GlobalFaltasControllerAdvice.NOT_FOUND_CODES;
-        assertThat(codes).hasSize(37);
+        assertThat(codes).hasSize(38);
         codes.forEach((clazz, codigo) ->
             assertThat(codigo).as("Codigo para " + clazz.getSimpleName())
                     .isNotBlank()
@@ -195,6 +199,7 @@ class GlobalFaltasControllerAdviceCoverageTest {
         if (ex instanceof ConcurrenciaConflictoException c) return advice.handleOcc(c);
         if (ex instanceof MovimientoPagoDuplicadoException mv) return advice.handleMovimientoDuplicado(mv);
         if (ex instanceof ConciliacionIncompatibleException ci) return advice.handleConciliacion(ci);
+        if (ex instanceof ResolucionPagoAnteriorConflictoException rc) return advice.handleResolucionPagoAnteriorConflicto(rc);
         if (ex instanceof AcuseDuplicadoException
                 || ex instanceof ActaDocumentoYaExisteException
                 || ex instanceof DocumentoFirmaReqYaMaterializadaException

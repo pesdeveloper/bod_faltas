@@ -16,6 +16,9 @@ import ar.gob.malvinas.faltas.core.repository.memory.*;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import ar.gob.malvinas.faltas.core.support.CountingClock;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -45,6 +48,7 @@ class InstanteUnicoOperacionTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo    = new InMemoryActaRepository();
         eventoRepo  = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -58,8 +62,11 @@ class InstanteUnicoOperacionTest {
                 pagoVolRepo, falloRepo,
                 new InMemoryApelacionActaRepository(),
                 new InMemoryPagoCondenaRepository(),
-                clock);
+                clock, snapshotRepo);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // -------------------------------------------------------------------------
     // ActaService.labrar
@@ -85,6 +92,34 @@ class InstanteUnicoOperacionTest {
         assertThat(acta.getFechaLabrado())
                 .as("fechaLabrado debe ser el mismo instante que fhAlta (mismo hecho)")
                 .isEqualTo(acta.getFhAlta());
+    }
+
+    @Test
+    @DisplayName("ActaService.labrar snapshot.ultimaActualizacion usa mismo instante que fhAlta; sin llamada extra al reloj")
+    void labrar_snapshot_usa_mismo_instante_sin_llamada_extra() {
+        ActaService svc = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+                new InMemoryActaEvidenciaRepository(), clock);
+
+        clock.reset();
+        ComandoResultado res = svc.labrar(new LabrarActaCommand(
+                TipoActa.TRANSITO, null, null, null, null, null, null,
+                null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
+
+        LocalDateTime esperado = clock.nthInstant(0);
+
+        FalActa acta = actaRepo.buscarPorId(res.idActa()).orElseThrow();
+        ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot snap =
+                snapshotRepo.buscarPorActa(res.idActa()).orElseThrow();
+
+        assertThat(acta.getFhAlta())
+                .as("acta.fhAlta debe ser el instante 0")
+                .isEqualTo(esperado);
+        assertThat(snap.getUltimaActualizacion())
+                .as("snapshot.ultimaActualizacion debe usar el mismo instante que acta.fhAlta")
+                .isEqualTo(esperado);
+        assertThat(clock.invocationCount())
+                .as("CountingClock debe ser llamado exactamente 1 vez por labrar (sin llamada extra para snapshot)")
+                .isEqualTo(1);
     }
 
     // -------------------------------------------------------------------------

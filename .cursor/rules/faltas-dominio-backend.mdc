@@ -3,9 +3,6 @@ description: Reglas backend y dominio para Faltas / Dirección de Faltas
 globs:
   - "backend/api-faltas-core/**/*.java"
   - "backend/api-faltas-prototipo/**/*.java"
-  - "docs/MATRIZ_REGLAS_ACTA.md"
-  - "docs/VALIDACION_FUNCIONAL.md"
-  - "docs/guia_qa/**/*.md"
 alwaysApply: false
 ---
 
@@ -15,16 +12,25 @@ Estas reglas aplican a cambios Java/backend del prototipo de Faltas y a cualquie
 
 ## 1. Contrato funcional
 
-La fuente formal de reglas es:
+La única fuente normativa del backend productivo de Faltas es:
 
-- `docs/MATRIZ_REGLAS_ACTA.md`
+- `backend/api-faltas-core/docs/spec-as-source/README.md`;
+- los documentos que ese README clasifique como canónicos para el alcance.
 
-La evidencia de validación funcional es:
+Son fuentes de evidencia funcional o QA, pero no pueden prevalecer sobre la spec canónica:
 
-- `docs/VALIDACION_FUNCIONAL.md`
-- `docs/guia_qa/`
+- el código Java;
+- los tests ejecutables;
+- el prototipo y Angular;
+- historia Git, únicamente cuando se trate de evidencia histórica.
 
-No cambiar reglas de dominio contradiciendo la matriz. Si una regla funcional debe cambiar, primero actualizar o indicar explícitamente el impacto sobre la matriz.
+Si una fuente de evidencia contradice la spec:
+
+- no elegir una versión por inferencia;
+- no corregir automáticamente la spec ni el código;
+- reportar el gap;
+- exigir una resolución explícita;
+- actualizar primero la spec canónica cuando corresponda.
 
 ## 2. Strings internos vs strings externos
 
@@ -357,7 +363,7 @@ Revisar patrones:
 - `Â`
 - `ï»¿`
 - `â`
-- `�`
+- `U+FFFD` (carácter de reemplazo Unicode; no insertar el glifo literal en este documento)
 - `&#65533;`
 
 Existe un carácter `║` preexistente en `MatrizSanidadActasDemoIT.java`; no tocarlo salvo que se modifique ese archivo por necesidad real.

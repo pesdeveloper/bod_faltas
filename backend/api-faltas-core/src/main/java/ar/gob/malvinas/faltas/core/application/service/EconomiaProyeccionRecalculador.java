@@ -68,8 +68,22 @@ public class EconomiaProyeccionRecalculador {
         this.tesoreriaInput = tesoreriaInput;
     }
 
+    /**
+     * Recalcula capturando su propio instante de {@link FaltasClock}. Conveniencia
+     * para comandos que no necesitan compartir el instante con otras mutaciones.
+     */
     public FalActaEconomiaProyeccion recalcular(Long actaId, OrigenUltimaActualizacion origen, String actorId) {
-        LocalDateTime corte = clock.now();
+        return recalcular(actaId, origen, actorId, clock.now());
+    }
+
+    /**
+     * Recalcula usando el instante canonico suministrado por el llamador (no
+     * consulta {@link FaltasClock}). Requerido por comandos que deben compartir
+     * un unico instante real entre varias mutaciones (ver `CMD-ORDER-002` y
+     * `ResolverPagoObligacionAnteriorCommand` en
+     * backend/api-faltas-core/docs/spec-as-source/20-application/command-contracts.md).
+     */
+    public FalActaEconomiaProyeccion recalcular(Long actaId, OrigenUltimaActualizacion origen, String actorId, LocalDateTime corte) {
         Optional<FalActaObligacionPago> oblOpt = obligacionRepo.findVigenteByActaId(actaId);
         if (oblOpt.isEmpty()) {
             proyeccionRepo.deleteByActaId(actaId);
@@ -163,8 +177,13 @@ public class EconomiaProyeccionRecalculador {
         boolean hayConfirmado = hayPagoConfirmadoActivo(movimientos);
         BigDecimal monto = obligacion.getMontoOriginal() != null ? obligacion.getMontoOriginal() : ZERO;
         BigDecimal aplicadoNeto = totalConfirmado.subtract(revertido).max(ZERO);
-        BigDecimal aplicado = aplicadoNeto.min(monto);
-        BigDecimal saldo = monto.subtract(aplicado).max(ZERO);
+        // Saldo derivado sin recorte contra monto: puede quedar negativo cuando el
+        // total aplicado (via movimientos, incluyendo resoluciones de pago anterior)
+        // supera el monto original. Ese excedente es informativo, no genera una
+        // nueva obligacion ni una devolucion (ver 02/03-*.md, PAGRES).
+        BigDecimal saldoCrudo = monto.subtract(aplicadoNeto);
+        BigDecimal saldo = saldoCrudo.max(ZERO);
+        BigDecimal excedente = saldoCrudo.negate().max(ZERO);
 
         tesoreria = tesoreria.max(ZERO);
         evidenciaPend = evidenciaPend.max(ZERO);
@@ -174,8 +193,10 @@ public class EconomiaProyeccionRecalculador {
         p.setImporteConfirmadoTesoreria(tesoreria);
         p.setImporteObservadoTesoreria(observado);
         p.setImporteRevertido(revertido);
-        p.setImporteAplicadoTotal(aplicado);
+        p.setImporteAplicadoTotal(aplicadoNeto);
         p.setSaldoPendiente(saldo);
+        p.setImporteExcedente(excedente);
+        p.setSiParcialmentePagada(aplicadoNeto.compareTo(ZERO) > 0 && saldo.compareTo(ZERO) > 0);
         p.setSiPagoProcesado(hayProcesado);
         p.setSiPagoConfirmado(hayConfirmado);
         p.setUltimoMovimientoIdProyectado(ultimoMovId);

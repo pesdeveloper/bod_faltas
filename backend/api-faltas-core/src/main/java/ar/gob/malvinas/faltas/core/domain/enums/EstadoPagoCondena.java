@@ -12,16 +12,31 @@ package ar.gob.malvinas.faltas.core.domain.enums;
  *   INFORMADO  -> infractor informo pago (via PCOINF)
  *   CONFIRMADO -> pago confirmado (via PCOCNF) -> cierre del acta
  *   OBSERVADO  -> pago informado fue observado/rechazado (via PCOOBS) -> corregir
+ *
+ * Codigo numerico persistible (DECISION_DDL-ENUM-01): SMALLINT, prohibido ordinal().
  */
 public enum EstadoPagoCondena {
 
-    NO_APLICA,
+    NO_APLICA((short) 1),
 
-    PENDIENTE,
+    PENDIENTE((short) 2),
 
-    INFORMADO,
+    INFORMADO((short) 3),
 
-    CONFIRMADO,
+    CONFIRMADO((short) 4),
 
-    OBSERVADO
+    OBSERVADO((short) 5);
+
+    private final short codigo;
+
+    EstadoPagoCondena(short codigo) { this.codigo = codigo; }
+
+    public short codigo() { return codigo; }
+
+    public static EstadoPagoCondena desdeCodigo(short codigo) {
+        for (EstadoPagoCondena v : values()) {
+            if (v.codigo == codigo) return v;
+        }
+        throw new IllegalArgumentException("EstadoPagoCondena sin codigo: " + codigo);
+    }
 }

@@ -24,7 +24,10 @@ simulador/**
 sql/**
 
 # módulos backend no relevantes para este slice de demo
-backend/api-faltas-core/**
 backend/api-faltas-operaciones/**
 backend/worker-notificaciones/**
 backend/worker-snapshots/**
+
+# handoff transitorio de slice (DOC-DEC-05): se reemplaza en cada cierre,
+# no acumula historia
+.work/handoff-current/**

@@ -80,7 +80,6 @@ public class PersonaDomicilioService {
             String unidadFuncional,
             String codigoPostal,
             String domicilioTxt,
-            String validacionDomicilio,
             boolean siNormalizadoParcial,
             BigDecimal lat,
             BigDecimal lon,
@@ -105,7 +104,7 @@ public class PersonaDomicilioService {
                 idProvincia, unidadTerritorialTipo, idUnidadTerritorial, idLocalidad, idCalle,
                 idLocMalvinas, localidadMalvinasVersionId, idTcaMalvinas, calleMalvinasVersionId,
                 calleTxt, altura, siSinAltura, unidadFuncional, codigoPostal, domicilioTxt,
-                validacionDomicilio, siNormalizadoParcial, lat, lon, origenUbicacion, ahora, idUserAlta);
+                siNormalizadoParcial, lat, lon, origenUbicacion, ahora, idUserAlta);
 
         FalPersonaDomicilio guardado = domicilioRepository.guardar(domicilio);
 
@@ -138,7 +137,7 @@ public class PersonaDomicilioService {
                     dom.getIdTcaMalvinas(), dom.getCalleMalvinasVersionId(),
                     dom.getCalleTxt(), dom.getAltura(), dom.isSiSinAltura(),
                     dom.getUnidadFuncional(), dom.getCodigoPostal(), domicilioTxtNuevo,
-                    dom.getValidacionDomicilio(), dom.isSiNormalizadoParcial(),
+                    dom.isSiNormalizadoParcial(),
                     dom.getLat(), dom.getLon(), dom.getOrigenUbicacion(), ahora, idUserMod);
             return domicilioRepository.guardar(nueva);
         }

@@ -172,6 +172,7 @@ public class DocumentoRedaccionService {
         Long id = redaccionRepository.nextId();
         FalDocumentoRedaccion redaccion = new FalDocumentoRedaccion(
                 id, cmd.idDocumento(), contenido.getId(),
+                (short) 1, null,
                 EstadoRedaccionDocumento.BORRADOR,
                 resultado.contenidoCombinado(),
                 snapshotJson, null, diagnosticoJson,
@@ -186,7 +187,8 @@ public class DocumentoRedaccionService {
                 redaccion.getPlantillaContenidoId(), redaccion.getEstadoRedaccion(),
                 redaccion.getContenidoEditable(),
                 resultado.variablesUsadas(), resultado.variablesFaltantes(),
-                resultado.variablesDesconocidas(), resultado.completo());
+                resultado.variablesDesconocidas(), resultado.completo(),
+                redaccion.getVersionRow());
     }
 
     /**

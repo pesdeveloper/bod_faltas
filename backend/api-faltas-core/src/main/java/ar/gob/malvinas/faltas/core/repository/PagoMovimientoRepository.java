@@ -12,6 +12,7 @@ public interface PagoMovimientoRepository {
     RegistroMovimientoOutcome append(FalActaPagoMovimiento movimiento);
     Optional<FalActaPagoMovimiento> findById(Long id);
     List<FalActaPagoMovimiento> findByObligacionPagoId(Long obligacionPagoId);
+    List<FalActaPagoMovimiento> findByMovimientoOrigenId(Long movimientoOrigenId);
     List<FalActaPagoMovimiento> findByFormaPagoId(Long formaPagoId);
     List<FalActaPagoMovimiento> findByPlanPagoRefId(Long planPagoRefId);
     Optional<FalActaPagoMovimiento> findByReferenciaExterna(String referenciaExterna);

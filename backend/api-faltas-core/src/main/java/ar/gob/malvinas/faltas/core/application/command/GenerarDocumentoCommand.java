@@ -5,6 +5,5 @@ import jakarta.validation.constraints.NotNull;
 
 public record GenerarDocumentoCommand(
         @NotNull Long idActa,
-        @NotNull TipoDocu tipoDocumento,
-        String descripcion
+        @NotNull TipoDocu tipoDocumento
 ) {}

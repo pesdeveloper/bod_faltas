@@ -41,6 +41,8 @@ public class FalActaEconomiaProyeccion {
     private BigDecimal importeAplicadoTotal;
     private BigDecimal importeRevertido;
     private BigDecimal saldoPendiente;
+    private BigDecimal importeExcedente;
+    private boolean siParcialmentePagada;
     private BigDecimal importeVencidoPlan;
     private EstadoConciliacionActual estadoConciliacionActual;
     private boolean siConciliacionPendiente;
@@ -67,6 +69,7 @@ public class FalActaEconomiaProyeccion {
         this.actaId = actaId;
         this.versionRow = 0;
         this.importeAplicadoTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        this.importeExcedente = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.estadoConciliacionActual = EstadoConciliacionActual.NO_APLICA;
         this.origenUltimaActualizacion = OrigenUltimaActualizacion.TIEMPO_REAL;
     }
@@ -120,6 +123,12 @@ public class FalActaEconomiaProyeccion {
     public void setImporteRevertido(BigDecimal v) { this.importeRevertido = scale(v); }
     public BigDecimal getSaldoPendiente() { return saldoPendiente; }
     public void setSaldoPendiente(BigDecimal v) { this.saldoPendiente = scale(v); }
+    public BigDecimal getImporteExcedente() { return importeExcedente; }
+    public void setImporteExcedente(BigDecimal v) { this.importeExcedente = scale(v); }
+    public boolean isSiParcialmentePagada() { return siParcialmentePagada; }
+    public void setSiParcialmentePagada(boolean v) { this.siParcialmentePagada = v; }
+    /** Derivado de estadoObligacion; no es un dato de entrada independiente. */
+    public boolean isSiCancelada() { return estadoObligacion == EstadoObligacionPago.CANCELADA_POR_PAGO; }
     public BigDecimal getImporteVencidoPlan() { return importeVencidoPlan; }
     public void setImporteVencidoPlan(BigDecimal v) { this.importeVencidoPlan = scale(v); }
     public EstadoConciliacionActual getEstadoConciliacionActual() { return estadoConciliacionActual; }
@@ -187,6 +196,8 @@ public class FalActaEconomiaProyeccion {
         c.importeAplicadoTotal = importeAplicadoTotal;
         c.importeRevertido = importeRevertido;
         c.saldoPendiente = saldoPendiente;
+        c.importeExcedente = importeExcedente;
+        c.siParcialmentePagada = siParcialmentePagada;
         c.importeVencidoPlan = importeVencidoPlan;
         c.estadoConciliacionActual = estadoConciliacionActual;
         c.siConciliacionPendiente = siConciliacionPendiente;

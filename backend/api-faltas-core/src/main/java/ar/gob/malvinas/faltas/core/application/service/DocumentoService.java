@@ -12,7 +12,6 @@ import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.result.NumeroDocumentoEmitidoResponse;
 import ar.gob.malvinas.faltas.core.application.result.NumerarDocumentoParaFirmasResponse;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFirma;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoFirmaReq;
 import ar.gob.malvinas.faltas.core.domain.enums.MomentoNumeracionDocu;
@@ -51,6 +50,7 @@ import ar.gob.malvinas.faltas.core.repository.DocumentoPlantillaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
 import ar.gob.malvinas.faltas.core.repository.FirmanteRepository;
+import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
@@ -58,10 +58,14 @@ import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import ar.gob.malvinas.faltas.core.application.command.ConvalidarFirmaEscaneadaCommand;
 import ar.gob.malvinas.faltas.core.application.command.IncorporarDocumentoEscaneadoCommand;
 import ar.gob.malvinas.faltas.core.application.result.ConvalidacionEscaneadaResultado;
+import ar.gob.malvinas.faltas.core.application.result.RegistrarFirmaDocumentalResultado;
+import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaSaveResult;
+import ar.gob.malvinas.faltas.core.domain.model.FalNotificacion;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Motor de proceso del circuito documental del expediente.
@@ -69,6 +73,7 @@ import java.util.UUID;
  * Slice 8C-5A: numeracion documental reusable.
  * Slice 8C-6B-1: firma documental real con validacion de firmante/habilitacion/orden.
  * Slice 8C-6D-1: incorporacion de documento escaneado/adjunto y convalidacion de firma olografa.
+ * FIX-FALLO-NOTI-01: idempotencia de firma, preparacion notificatoria, actor desde JWT.
  */
 @Service
 public class DocumentoService {
@@ -85,8 +90,10 @@ public class DocumentoService {
     private final DependenciaRepository dependenciaRepository;
     private final DocumentoFirmaReqRepository documentoFirmaReqRepository;
     private final FirmanteRepository firmanteRepository;
+    private final NotificacionRepository notificacionRepository;
     private final FaltasClock faltasClock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public DocumentoService(
             ActaRepository actaRepository,
             DocumentoRepository documentoRepository,
@@ -100,6 +107,7 @@ public class DocumentoService {
             DependenciaRepository dependenciaRepository,
             DocumentoFirmaReqRepository documentoFirmaReqRepository,
             FirmanteRepository firmanteRepository,
+            NotificacionRepository notificacionRepository,
             FaltasClock faltasClock) {
         this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
@@ -114,7 +122,10 @@ public class DocumentoService {
         this.dependenciaRepository = dependenciaRepository;
         this.documentoFirmaReqRepository = documentoFirmaReqRepository;
         this.firmanteRepository = firmanteRepository;
+        this.notificacionRepository = notificacionRepository;
     }
+
+
 
     // -------------------------------------------------------------------------
     // GenerarDocumento (flujo legacy)
@@ -133,8 +144,7 @@ public class DocumentoService {
                 idDoc,
                 acta.getId(),
                 cmd.tipoDocumento(),
-                faltasClock.now(),
-                cmd.descripcion()
+                faltasClock.now()
         );
         documentoRepository.guardar(doc);
 
@@ -191,7 +201,6 @@ public class DocumentoService {
                 cmd.idActa(),
                 plantilla.getTipoDocu(),
                 faltasClock.now(),
-                null,
                 EstadoDocu.BORRADOR,
                 plantilla.getTipoFirmaReq(),
                 plantilla.getId(),
@@ -477,9 +486,6 @@ public class DocumentoService {
                             + doc.getEstadoDocu());
         }
 
-        doc.setEstadoDocu(EstadoDocu.FIRMADO);
-        documentoRepository.guardar(doc);
-
         TipoFirma tipoFirmaEnum;
         if (cmd.tipoFirma() != null) {
             try {
@@ -493,6 +499,7 @@ public class DocumentoService {
 
         Long firmaId = firmaRepository.nextId();
         String firmante = cmd.firmante() != null ? cmd.firmante() : "SISTEMA";
+        LocalDateTime ahora = faltasClock.now();
         FalDocumentoFirma firma = new FalDocumentoFirma(
                 firmaId,
                 doc.getId(),
@@ -508,25 +515,20 @@ public class DocumentoService {
                 null,
                 null,
                 null,
-                faltasClock.now(),
-                faltasClock.now(),
+                ahora,
+                ahora,
                 firmante
         );
         firmaRepository.guardar(firma);
 
-        Long docId = doc.getId();
-        falloActaRepository.buscarActivo(acta.getId()).ifPresent(fallo -> {
-            if (docId.equals(fallo.getDocumentoId())) {
-                fallo.setEstadoFallo(EstadoFalloActa.FIRMADO);
-                falloActaRepository.guardar(fallo);
-            }
-        });
+        doc.setEstadoDocu(EstadoDocu.FIRMADO);
 
-        registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, doc.getId(), null,
-                firmante, "Documento firmado por: " + firmante);
+        FalDocumentoPlantilla plantilla = null;
+        if (doc.getPlantillaId() != null) {
+            plantilla = documentoPlantillaRepository.buscarPorId(doc.getPlantillaId()).orElse(null);
+        }
 
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-        snapshotRepository.guardar(snap);
+        completarFirmaDocumento(doc, acta, plantilla, ahora, firmante);
 
         return ComandoResultado.de(acta.getId(), String.valueOf(doc.getId()),
                 TipoEventoActa.DOCFIR.codigo(),
@@ -534,10 +536,11 @@ public class DocumentoService {
     }
 
     // -------------------------------------------------------------------------
-    // RegistrarFirmaDocumental (8C-6B-1) - firma real con validacion completa
+    // RegistrarFirmaDocumental (8C-6B-1 + FIX-FALLO-NOTI-01)
+    // Firma real con validacion completa e idempotencia por referenciaFirmaExt.
     // -------------------------------------------------------------------------
 
-    public FalDocumentoFirma registrarFirmaDocumental(RegistrarFirmaDocumentalCommand cmd) {
+    public RegistrarFirmaDocumentalResultado registrarFirmaDocumental(RegistrarFirmaDocumentalCommand cmd) {
         if (cmd.documentoId() == null) {
             throw new PrecondicionVioladaException("documentoId es obligatorio.");
         }
@@ -560,6 +563,26 @@ public class DocumentoService {
             }
             if (cmd.referenciaFirmaExt() == null || cmd.referenciaFirmaExt().isBlank()) {
                 throw new PrecondicionVioladaException("referenciaFirmaExt es obligatorio para firma DIGITAL.");
+            }
+        }
+
+        // Early idempotent return: si ya existe firma con la misma referenciaFirmaExt,
+        // devolver la existente sin ejecutar precondiciones de estado del documento.
+        if (cmd.referenciaFirmaExt() != null && !cmd.referenciaFirmaExt().isBlank()) {
+            Optional<FalDocumentoFirma> existente = firmaRepository.buscarPorReferenciaFirmaExt(cmd.referenciaFirmaExt());
+            if (existente.isPresent()) {
+                FalDocumentoFirma fx = existente.get();
+                if (!fx.getIdDocumento().equals(cmd.documentoId())
+                        || fx.getSeqFirmaReq() != cmd.seqFirmaReq()
+                        || !Objects.equals(fx.getIdFirmante(), cmd.idFirmante())
+                        || !Objects.equals(fx.getTipoFirma(), cmd.tipoFirma())
+                        || !Objects.equals(fx.getHashDocumento(), cmd.hashDocumento())
+                        || !Objects.equals(fx.getStorageKey(), cmd.storageKey())) {
+                    throw new PrecondicionVioladaException(
+                            "Firma con referenciaFirmaExt=" + cmd.referenciaFirmaExt()
+                            + " ya existe con datos incompatibles.");
+                }
+                return new RegistrarFirmaDocumentalResultado(fx, true);
             }
         }
 
@@ -637,7 +660,26 @@ public class DocumentoService {
                 ahora,
                 cmd.idUserFirma()
         );
-        firmaRepository.guardar(firma);
+        // Guardar atomicamente por referencia para idempotencia concurrente
+        if (cmd.referenciaFirmaExt() != null && !cmd.referenciaFirmaExt().isBlank()) {
+            DocumentoFirmaSaveResult saveResult = firmaRepository.guardarSiAusentePorReferencia(firma);
+            if (saveResult.yaExistia()) {
+                FalDocumentoFirma fx = saveResult.firmaPersistida();
+                if (!fx.getIdDocumento().equals(cmd.documentoId())
+                        || fx.getSeqFirmaReq() != cmd.seqFirmaReq()
+                        || !Objects.equals(fx.getIdFirmante(), cmd.idFirmante())
+                        || !Objects.equals(fx.getTipoFirma(), cmd.tipoFirma())
+                        || !Objects.equals(fx.getHashDocumento(), cmd.hashDocumento())
+                        || !Objects.equals(fx.getStorageKey(), cmd.storageKey())) {
+                    throw new PrecondicionVioladaException(
+                            "Firma con referenciaFirmaExt=" + cmd.referenciaFirmaExt()
+                            + " ya existe con datos incompatibles.");
+                }
+                return new RegistrarFirmaDocumentalResultado(fx, true);
+            }
+        } else {
+            firmaRepository.guardar(firma);
+        }
 
         req.marcarFirmado(firmaId, ahora, cmd.idFirmante(), (short) versionVigente.getVerFirmante());
         documentoFirmaReqRepository.guardar(req);
@@ -649,27 +691,13 @@ public class DocumentoService {
 
         if (todosFirmados) {
             doc.marcarFirmado();
-            documentoRepository.guardar(doc);
-
             FalActa acta = actaRepository.buscarPorId(doc.getIdActa()).orElse(null);
             if (acta != null) {
-                Long docId = doc.getId();
-                falloActaRepository.buscarActivo(acta.getId()).ifPresent(fallo -> {
-                    if (docId.equals(fallo.getDocumentoId())) {
-                        fallo.setEstadoFallo(EstadoFalloActa.FIRMADO);
-                        falloActaRepository.guardar(fallo);
-                    }
-                });
-
-                registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, doc.getId(), null,
-                        cmd.idUserFirma(), "Documento firmado por: " + firmante.getNomFirmante());
-
-                FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-                snapshotRepository.guardar(snap);
+                completarFirmaDocumento(doc, acta, plantilla, ahora, cmd.idUserFirma());
             }
         }
 
-        return firma;
+        return new RegistrarFirmaDocumentalResultado(firma, false);
     }
 
     // -------------------------------------------------------------------------
@@ -934,7 +962,15 @@ public class DocumentoService {
 
         if (todosFirmados) {
             doc.marcarFirmadoDesdeAdjunto();
-            documentoRepository.guardar(doc);
+            FalDocumentoPlantilla plantilla = null;
+            if (doc.getPlantillaId() != null) {
+                plantilla = documentoPlantillaRepository.buscarPorId(doc.getPlantillaId()).orElse(null);
+            }
+            FalActa actaFirmada = actaRepository.buscarPorId(doc.getIdActa()).orElse(null);
+            if (actaFirmada != null) {
+                completarFirmaDocumento(doc, actaFirmada, plantilla, ahora, cmd.idUserFirma());
+                return new ConvalidacionEscaneadaResultado(doc, firma);
+            }
         }
 
         registrarEvento(doc.getIdActa(), TipoEventoActa.DOCFIR, doc.getId(),
@@ -958,6 +994,52 @@ public class DocumentoService {
         actaRepository.buscarPorId(idActa)
                 .orElseThrow(() -> new ActaNoEncontradaException(idActa));
         return documentoRepository.buscarPorActa(idActa);
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper privado compartido: efectos de completar la ultima firma obligatoria
+    // -------------------------------------------------------------------------
+
+    /**
+     * Consolida los efectos de completar todas las firmas obligatorias de un documento:
+     * 1. Persiste el documento (el caller ya debe haber marcado el estado FIRMADO).
+     * 2. Si el documento corresponde al fallo activo del acta: registra fhFirma y avanza a PENDIENTE_NOTIFICACION.
+     * 3. Si la plantilla es notificable y no existe notificacion activa: crea FalNotificacion PENDIENTE_ENVIO.
+     * 4. Registra el evento DOCFIR.
+     * 5. Recalcula y persiste el snapshot.
+     */
+    private void completarFirmaDocumento(
+            FalDocumento doc,
+            FalActa acta,
+            FalDocumentoPlantilla plantilla,
+            LocalDateTime ahora,
+            String actor) {
+
+        documentoRepository.guardar(doc);
+
+        Long docId = doc.getId();
+        falloActaRepository.buscarActivo(acta.getId()).ifPresent(fallo -> {
+            if (docId.equals(fallo.getDocumentoId())) {
+                fallo.marcarPendienteNotificacion(ahora);
+                falloActaRepository.guardar(fallo);
+            }
+        });
+
+        if (plantilla != null && plantilla.isSiNotificable()) {
+            Optional<FalNotificacion> activa = notificacionRepository.buscarActivaPorDocumento(docId);
+            if (activa.isEmpty()) {
+                Long idNotif = notificacionRepository.nextId();
+                FalNotificacion notif = FalNotificacion.preparar(
+                        idNotif, acta.getId(), docId, doc.getTipoDocu(), ahora, actor);
+                notificacionRepository.guardar(notif);
+            }
+        }
+
+        registrarEvento(acta.getId(), TipoEventoActa.DOCFIR, docId, null,
+                actor, "Documento firmado. Todas las firmas obligatorias completadas.", ahora);
+
+        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
+        snapshotRepository.guardar(snap);
     }
 
     // -------------------------------------------------------------------------
@@ -1021,11 +1103,19 @@ public class DocumentoService {
     private void registrarEvento(Long idActa, TipoEventoActa tipo,
                                   Long idDocuRel, Long idNotifRel,
                                   String idUserEvt, String descripcionLegible) {
+        registrarEvento(idActa, tipo, idDocuRel, idNotifRel, idUserEvt, descripcionLegible,
+                faltasClock.now());
+    }
+
+    private void registrarEvento(Long idActa, TipoEventoActa tipo,
+                                  Long idDocuRel, Long idNotifRel,
+                                  String idUserEvt, String descripcionLegible,
+                                  LocalDateTime fhEvt) {
         FalActaEvento evento = FalActaEvento.builder()
                 .actaId(idActa)
                 .tipoEvt(tipo)
                 .origenEvt(idUserEvt != null ? OrigenEvento.USUARIO_WEB : OrigenEvento.PROCESO_AUTOMATICO)
-                .fhEvt(faltasClock.now())
+                .fhEvt(fhEvt)
                 .idDocuRel(idDocuRel)
                 .idNotifRel(idNotifRel)
                 .idUserEvt(idUserEvt)

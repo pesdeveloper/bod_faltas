@@ -10,19 +10,34 @@ import java.time.LocalDateTime;
  * Una plantilla funcional puede tener multiples versiones de contenido.
  * Solo una version activa y vigente debe resolver para una fecha dada.
  * El cuerpoTemplate contiene variables en la forma {{namespace.campo}}.
+ * El titulo persiste como VARCHAR(64).
  *
- * Slice 8F-1.
+ * {@code variablesDeclaradasJson} representa metadatos declarativos, no valores
+ * resueltos. Es un arreglo JSON (usar {@code []} cuando no hay variables) y
+ * cada elemento debe declarar las propiedades obligatorias {@code namespace},
+ * {@code campo}, {@code tipoDato}, {@code requerida} y {@code etiqueta}.
+ * {@code tipoDato} tipa la variable, {@code requerida} explicita su obligatoriedad
+ * y {@code etiqueta} aporta el nombre legible para UI y diagnosticos.
+ *
+ * Slice 8F-1. FULL-R1.2-CORRECCION-04.
  */
 public class FalDocumentoPlantillaContenido {
+
+    public static final int MAX_TITULO_LENGTH = 64;
 
     private final Long id;
     private final Long plantillaId;
     private final short versionContenido;
     private final FormatoPlantillaContenido formato;
+    /** Titulo operativo del contenido; maximo 64 caracteres en MariaDB. */
     private final String titulo;
     private final String cuerpoTemplate;
     private final String encabezadoTemplate;
     private final String pieTemplate;
+    /**
+     * Arreglo JSON de metadatos declarados. Cada item requiere namespace, campo,
+     * tipoDato, requerida y etiqueta; usar [] cuando no hay variables.
+     */
     private final String variablesDeclaradasJson;
     private boolean siActivo;
     private final LocalDateTime fhVigDesde;
@@ -40,6 +55,8 @@ public class FalDocumentoPlantillaContenido {
         if (plantillaId == null) throw new IllegalArgumentException("plantillaId requerido");
         if (formato == null) throw new IllegalArgumentException("formato requerido");
         if (titulo == null || titulo.isBlank()) throw new IllegalArgumentException("titulo requerido");
+        if (titulo.length() > MAX_TITULO_LENGTH)
+            throw new IllegalArgumentException("titulo no puede superar " + MAX_TITULO_LENGTH + " caracteres");
         if (cuerpoTemplate == null || cuerpoTemplate.isBlank())
             throw new IllegalArgumentException("cuerpoTemplate no puede ser blank");
         if (fhVigDesde == null) throw new IllegalArgumentException("fhVigDesde requerido");

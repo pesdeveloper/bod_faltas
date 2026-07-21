@@ -6,6 +6,7 @@ import ar.gob.malvinas.faltas.core.application.command.DerivarGestionExternaComm
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnviarNotificacionCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.CanalNotificacion;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.InformarPagoCondenaCommand;
@@ -45,7 +46,6 @@ import ar.gob.malvinas.faltas.core.repository.BloqueanteMaterialRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.DocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.FalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.FirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.GestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.NotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoCondenaRepository;
@@ -58,7 +58,6 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryBloqueanteMaterialR
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFalloActaRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmezaCondenaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryGestionExternaRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoCondenaRepository;
@@ -73,6 +72,9 @@ import ar.gob.malvinas.faltas.core.application.service.CierreActaHelper;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
+import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -108,7 +110,6 @@ class BloqueantesMaterialesTest {
     private PagoVoluntarioRepository pagoVolRepo;
     private FalloActaRepository falloRepo;
     private ApelacionActaRepository apelacionRepo;
-    private FirmezaCondenaRepository firmezaRepo;
     private PagoCondenaRepository pagoCondenaRepo;
     private GestionExternaRepository gestionExternaRepo;
     private BloqueanteMaterialRepository bloqueanteMaterialRepo;
@@ -118,6 +119,7 @@ class BloqueantesMaterialesTest {
     private ActaService actaService;
     private DocumentoService docService;
     private NotificacionService notifService;
+    private final ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository intentoRepo = new ar.gob.malvinas.faltas.core.repository.memory.InMemoryNotificacionIntentoRepository();
     private FalloActaService falloService;
     private FirmezaCondenaService firmezaService;
     private GestionExternaService gestionExternaService;
@@ -126,6 +128,7 @@ class BloqueantesMaterialesTest {
 
     @BeforeEach
     void setUp() {
+        ActorContextHolder.set(new ActorContext("test-actor"));
         actaRepo = new InMemoryActaRepository();
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
@@ -135,7 +138,6 @@ class BloqueantesMaterialesTest {
         pagoVolRepo = new InMemoryPagoVoluntarioRepository();
         falloRepo = new InMemoryFalloActaRepository();
         apelacionRepo = new InMemoryApelacionActaRepository();
-        firmezaRepo = new InMemoryFirmezaCondenaRepository();
         pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         gestionExternaRepo = new InMemoryGestionExternaRepository();
         bloqueanteMaterialRepo = new InMemoryBloqueanteMaterialRepository();
@@ -143,7 +145,7 @@ class BloqueantesMaterialesTest {
         bloqueantesChecker = new RepositoryBloqueantesMaterialesChecker(bloqueanteMaterialRepo);
 
         SnapshotRecalculador recalc = new SnapshotRecalculador(
-                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED);
+                eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
         actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
@@ -156,14 +158,16 @@ class BloqueantesMaterialesTest {
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDependenciaRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryDocumentoFirmaReqRepository(),
                         new ar.gob.malvinas.faltas.core.repository.memory.InMemoryFirmanteRepository(),
+                new InMemoryNotificacionRepository(),
                         FaltasClockTestSupport.FIXED);
         notifService = new NotificacionService(
                 actaRepo, docRepo, notifRepo, eventoRepo, snapshotRepo, recalc,
-                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
+                falloRepo, new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED, intentoRepo, new ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository(),
+                ar.gob.malvinas.faltas.core.support.PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
         falloService = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, FaltasClockTestSupport.FIXED);
         firmezaService = new FirmezaCondenaService(
-                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, firmezaRepo, recalc, FaltasClockTestSupport.FIXED);
+                actaRepo, falloRepo, apelacionRepo, eventoRepo, snapshotRepo, recalc, FaltasClockTestSupport.FIXED);
         gestionExternaService = new GestionExternaService(
                 actaRepo, eventoRepo, snapshotRepo, pagoCondenaRepo, gestionExternaRepo, recalc,
                 bloqueantesChecker, FaltasClockTestSupport.FIXED);
@@ -173,6 +177,9 @@ class BloqueantesMaterialesTest {
                 actaRepo, eventoRepo, snapshotRepo, falloRepo, pagoCondenaRepo, recalc,
                 bloqueantesChecker, FaltasClockTestSupport.FIXED);
     }
+
+    @AfterEach
+    void tearDown() { ActorContextHolder.clear(); }
 
     // =========================================================================
     // Helpers
@@ -187,23 +194,26 @@ class BloqueantesMaterialesTest {
         actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
-                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION, null))
+                new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
                 .idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(idDoc), "firmante1", "DIGITAL", null));
         String idNotif = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), "CORREO", null))
+                new EnviarNotificacionCommand(actaId, Long.parseLong(idDoc), CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotif, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotif), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotif)), null, "test-actor"));
 
         falloService.dictarCondenatorio(new DictarFalloCondenatorioCommand(
                 actaId, new BigDecimal("3000.00"), "Fundamentos condenatorios", null));
         Long idDocFallo = falloRepo.buscarActivo(actaId).orElseThrow().getDocumentoId();
         docService.firmarDocumento(new FirmarDocumentoCommand(idDocFallo, "Juez", "DIGITAL", null));
         String idNotifFallo = notifService.enviarNotificacion(
-                new EnviarNotificacionCommand(actaId, idDocFallo, "CORREO", null))
+                new EnviarNotificacionCommand(actaId, idDocFallo, CanalNotificacion.PRESENCIAL, null, null, null, "test-user"))
                 .idEntidadAfectada();
-        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(idNotifFallo, null));
-        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null));
+        notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotifFallo), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotifFallo)), null, "test-actor"));
+        var falloVto = falloRepo.buscarActivo(actaId).orElseThrow();
+        falloVto.setFhVtoApelacion(LocalDate.of(2026, 7, 8));
+        falloRepo.guardar(falloVto);
+        firmezaService.vencerPlazoApelacion(new VencerPlazoApelacionCommand(actaId, null, "test-user"));
         return actaId;
     }
 
@@ -243,7 +253,7 @@ class BloqueantesMaterialesTest {
         void pago_condena_sin_bloqueantes_cierra() {
             Long actaId = crearActaConCondenaFirme("7A00001");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7A-001", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7A-001", null, "test-user"));
 
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -270,7 +280,7 @@ class BloqueantesMaterialesTest {
             registrarBloqueante(actaId);
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7A-002", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7A-002", null, "test-user"));
 
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -296,7 +306,7 @@ class BloqueantesMaterialesTest {
             registrarBloqueanteCumplido(actaId);
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7A-005", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7A-005", null, "test-user"));
 
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
@@ -374,7 +384,7 @@ class BloqueantesMaterialesTest {
             Long actaIdPcocnf = crearActaConCondenaFirme("7A00006a");
             registrarBloqueante(actaIdPcocnf);
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaIdPcocnf, new BigDecimal("3000.00"), "REF-7A-006", null));
+                    actaIdPcocnf, new BigDecimal("3000.00"), "REF-7A-006", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaIdPcocnf, null));
 
             Long actaIdPagapr = crearActaEnGestionExternaConCondenaFirme("7A00006b");
@@ -550,7 +560,7 @@ class BloqueantesMaterialesTest {
             bloqueanteMaterialService.cumplir(new CumplirBloqueanteMaterialCommand(b.getId()));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-010", null));
+                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-010", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
@@ -594,7 +604,7 @@ class BloqueantesMaterialesTest {
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.MEDIDA_PREVENTIVA));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-012", null));
+                    actaId, new java.math.BigDecimal("2000.00"), "REF-7B-012", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
@@ -626,7 +636,7 @@ class BloqueantesMaterialesTest {
             bloqueanteMaterialService.anular(new AnularBloqueanteMaterialCommand(b2.getId()));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new java.math.BigDecimal("1500.00"), "REF-7B-013", null));
+                    actaId, new java.math.BigDecimal("1500.00"), "REF-7B-013", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             List<String> codigos = eventoRepo.buscarPorActa(actaId)
@@ -661,7 +671,7 @@ class BloqueantesMaterialesTest {
             FalBloqueanteMaterial b = bloqueanteMaterialService.registrar(
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.RODADO));
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7C-" + docNum, null));
+                    actaId, new BigDecimal("3000.00"), "REF-7C-" + docNum, null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
             return new Object[]{actaId, b.getId()};
         }
@@ -726,7 +736,7 @@ class BloqueantesMaterialesTest {
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.MEDIDA_PREVENTIVA));
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7C-003", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7C-003", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             // Cumplir solo b1; b2 sigue activo
@@ -767,7 +777,7 @@ class BloqueantesMaterialesTest {
             // Crear acta y cerrarla limpiamente (sin bloqueantes activos al confirmar pago)
             Long actaId = crearActaConCondenaFirme("7C00005");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
-                    actaId, new BigDecimal("3000.00"), "REF-7C-005", null));
+                    actaId, new BigDecimal("3000.00"), "REF-7C-005", null, "test-user"));
             pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
 
             // Verificar que ya esta cerrada con CIERRA
@@ -851,5 +861,3 @@ class BloqueantesMaterialesTest {
         }
     }
 }
-
-

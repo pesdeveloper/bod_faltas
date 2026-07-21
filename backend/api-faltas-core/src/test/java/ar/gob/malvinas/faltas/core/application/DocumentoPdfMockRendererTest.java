@@ -36,13 +36,14 @@ class DocumentoPdfMockRendererTest {
 
     private FalDocumento docDemo(Long id, Long actaId) {
         return new FalDocumento(
-                id, actaId, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Fallo Admin",
+                id, actaId, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
     }
 
     private FalDocumentoRedaccion redaccionConfirmada(Long id, Long docId, String contenido) {
         FalDocumentoRedaccion r = new FalDocumentoRedaccion(
                 id, docId, 1L,
+                (short) 1, null,
                 EstadoRedaccionDocumento.BORRADOR,
                 contenido,
                 null, null, null,
@@ -56,6 +57,7 @@ class DocumentoPdfMockRendererTest {
     private FalDocumentoRedaccion redaccionBorrador(Long id, Long docId) {
         return new FalDocumentoRedaccion(
                 id, docId, 1L,
+                (short) 1, null,
                 EstadoRedaccionDocumento.BORRADOR,
                 "contenido sin confirmar",
                 null, null, null,

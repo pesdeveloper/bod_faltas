@@ -12,24 +12,34 @@ import java.time.LocalDateTime;
  * Toda notificacion recae sobre un documento del expediente.
  * Puede tener multiples intentos. El estado refleja el resultado acumulado.
  * El resultado operativo modifica la bandeja y el snapshot del acta.
+ *
+ * Ciclo de cola notificatoria:
+ *   preparar() -> PENDIENTE_ENVIO -> iniciarEnvio() -> EN_PROCESO -> resultado
  */
 public class FalNotificacion {
 
     private final Long id;
+    private int versionRow;
     private final Long idActa;
     private final Long idDocumento;
     private final TipoDocu tipoDocumentoNotificado;
-    private final String canal;
-    private final LocalDateTime fechaEnvio;
+    private String canal;
+    private LocalDateTime fechaEnvio;
     private EstadoNotificacion estado;
     private ResultadoNotificacion resultado;
     private LocalDateTime fechaResultado;
     private int intentos;
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). Las notas van a fal_observacion. */
+    @Deprecated
     private String observaciones;
     private LocalDateTime fhUltMod;
     private String idUserUltMod;
     private LocalDateTime fhAlta;
     private String idUserAlta;
+
+    // -------------------------------------------------------------------------
+    // Constructores de envio directo (mantener compatibilidad)
+    // -------------------------------------------------------------------------
 
     public FalNotificacion(
             Long id,
@@ -46,6 +56,7 @@ public class FalNotificacion {
         this.fechaEnvio = fechaEnvio;
         this.estado = EstadoNotificacion.EN_PROCESO;
         this.intentos = 1;
+        this.versionRow = 0;
     }
 
     public FalNotificacion(
@@ -62,7 +73,66 @@ public class FalNotificacion {
         this.idUserAlta = idUserAlta;
     }
 
+    // -------------------------------------------------------------------------
+    // Factory para cola notificatoria (PENDIENTE_ENVIO)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Prepara una notificacion en estado PENDIENTE_ENVIO lista para ser procesada
+     * por un lote de correo o por envio directo.
+     *
+     * Estado inicial: PENDIENTE_ENVIO, resultado null, intentos 0, canal null, fechaEnvio null.
+     * No emite NOTENV. No es un envio real.
+     */
+    public static FalNotificacion preparar(
+            Long id,
+            Long idActa,
+            Long idDocumento,
+            TipoDocu tipoDocumentoNotificado,
+            LocalDateTime fhAlta,
+            String idUserAlta) {
+        if (id == null) throw new IllegalArgumentException("id requerido");
+        if (idActa == null) throw new IllegalArgumentException("idActa requerido");
+        if (idDocumento == null) throw new IllegalArgumentException("idDocumento requerido");
+        if (tipoDocumentoNotificado == null) throw new IllegalArgumentException("tipoDocumentoNotificado requerido");
+        FalNotificacion n = new FalNotificacion(id, idActa, idDocumento, tipoDocumentoNotificado, null, null);
+        n.estado = EstadoNotificacion.PENDIENTE_ENVIO;
+        n.intentos = 0;
+        n.fhAlta = fhAlta;
+        n.idUserAlta = idUserAlta;
+        return n;
+    }
+
+    // -------------------------------------------------------------------------
+    // Operaciones de dominio
+    // -------------------------------------------------------------------------
+
+    /**
+     * Inicia el envio real de una notificacion preparada (PENDIENTE_ENVIO -> EN_PROCESO).
+     * Completa canal, fecha de envio, incrementa intentos y registra la modificacion.
+     */
+    public void iniciarEnvio(String canal, LocalDateTime fechaEnvio, LocalDateTime fhUltMod, String actor) {
+        if (canal == null || canal.isBlank()) throw new IllegalArgumentException("canal requerido");
+        if (fechaEnvio == null) throw new IllegalArgumentException("fechaEnvio requerida");
+        if (this.estado != EstadoNotificacion.PENDIENTE_ENVIO) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException(
+                    "iniciarEnvio requiere estado PENDIENTE_ENVIO. Estado actual: " + this.estado);
+        }
+        this.canal = canal;
+        this.fechaEnvio = fechaEnvio;
+        this.estado = EstadoNotificacion.EN_PROCESO;
+        this.intentos++;
+        this.fhUltMod = fhUltMod;
+        this.idUserUltMod = actor;
+    }
+
+    // -------------------------------------------------------------------------
+    // Getters
+    // -------------------------------------------------------------------------
+
     public Long getId() { return id; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int versionRow) { this.versionRow = versionRow; }
     public Long getIdActa() { return idActa; }
     public Long getIdDocumento() { return idDocumento; }
     public TipoDocu getTipoDocumentoNotificado() { return tipoDocumentoNotificado; }
@@ -81,7 +151,11 @@ public class FalNotificacion {
     public int getIntentos() { return intentos; }
     public void incrementarIntento() { this.intentos++; }
 
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). NO PERSISTIR. */
+    @Deprecated
     public String getObservaciones() { return observaciones; }
+    /** @deprecated Campo eliminado del DDL (HUMAN_DECISION_CLOSED). NO PERSISTIR. */
+    @Deprecated
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
 
     public LocalDateTime getFhUltMod() { return fhUltMod; }
@@ -99,5 +173,23 @@ public class FalNotificacion {
     public boolean estaEnProceso() {
         return estado == EstadoNotificacion.EN_PROCESO
                 || estado == EstadoNotificacion.PENDIENTE_ENVIO;
+    }
+
+    public boolean estaActiva() {
+        return estado != EstadoNotificacion.SIN_EFECTO;
+    }
+
+    public FalNotificacion copia() {
+        FalNotificacion c = new FalNotificacion(id, idActa, idDocumento, tipoDocumentoNotificado,
+                canal, fechaEnvio, fhAlta, idUserAlta);
+        c.versionRow = this.versionRow;
+        c.estado = this.estado;
+        c.resultado = this.resultado;
+        c.fechaResultado = this.fechaResultado;
+        c.intentos = this.intentos;
+        c.observaciones = this.observaciones;
+        c.fhUltMod = this.fhUltMod;
+        c.idUserUltMod = this.idUserUltMod;
+        return c;
     }
 }

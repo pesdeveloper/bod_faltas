@@ -13,7 +13,6 @@ import ar.gob.malvinas.faltas.core.domain.exception.QrTokenInvalidoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaQrAcceso;
-import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
@@ -24,7 +23,6 @@ import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Servicio de generacion y resolucion de accesos via QR.
@@ -132,11 +130,10 @@ public class QrActaService {
             }
         }
 
-        registrarEvento(acta.getId(), TipoEventoActa.QRGEN, null, idUser, "QR de acceso generado");
+        registrarEvento(acta.getId(), TipoEventoActa.QRGEN, null, idUser, ahora, "QR de acceso generado");
 
         FalActa actaFinal = actaRepository.buscarPorId(acta.getId()).orElseThrow();
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(actaFinal);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(actaFinal, ahora);
 
         return nuevoToken;
     }
@@ -179,10 +176,9 @@ public class QrActaService {
         qrAccesoRepository.registrar(acceso);
 
         registrarEvento(acta.getId(), TipoEventoActa.QRACC, null,
-                "PORTAL", "Acceso QR registrado [correl=" + (idCorrel != null ? idCorrel : "?") + "]");
+                "PORTAL", ahora, "Acceso QR registrado [correl=" + (idCorrel != null ? idCorrel : "?") + "]");
 
-        FalActaSnapshot snap = snapshotRecalculador.recalcular(acta);
-        snapshotRepository.guardar(snap);
+        snapshotRecalculador.recalcularYGuardar(acta, ahora);
 
         return new AccesoQrResultado(accId, acta.getId(), ahora, canal, ResultadoAccesoQr.VALIDO);
     }
@@ -192,7 +188,11 @@ public class QrActaService {
      *
      * Si el usuario visualiza una pieza notificable y se cumplen reglas de portal,
      * delega en NotificacionIntentoService para registrar notificacion positiva.
-     * El acceso QR se registra independientemente del resultado de la notificacion.
+     * El acceso QR es append-only e independiente del resultado notificatorio:
+     * queda registrado aunque la notificacion falle por mismatch u otro error.
+     *
+     * La unica autoridad para actaIdQrEsperada es el resultado de resolver el token
+     * protegido; nunca proviene del caller como parametro externo independiente.
      *
      * @param token              token QR
      * @param canal              canal de acceso
@@ -202,8 +202,10 @@ public class QrActaService {
      * @param notificacionId     id de la notificacion a cerrar como positiva (nullable)
      * @param destinoPortal      identificador del usuario en el portal (para el intento)
      * @param idUser             operador del sistema que ejecuta la operacion
-     * @param notifService       servicio de notificacion (nullable si notificacionId es null)
-     * @return resultado del acceso
+     * @param notifService       servicio de notificacion; obligatorio cuando notificacionId
+     *                           es no null; null solo si notificacionId es null
+     * @return resultado del acceso QR
+     * @throws IllegalArgumentException si notificacionId es no null y notifService es null
      */
     public AccesoQrResultado registrarAccesoConNotificacion(
             String token,
@@ -216,10 +218,16 @@ public class QrActaService {
             String idUser,
             NotificacionIntentoService notifService) {
 
+        if (notificacionId != null && notifService == null) {
+            throw new IllegalArgumentException(
+                    "notifService es obligatorio cuando notificacionId esta informado");
+        }
+
         AccesoQrResultado resultado = registrarAcceso(token, canal, ipOrigen, userAgent, idCorrel);
 
-        if (notificacionId != null && notifService != null) {
-            notifService.registrarPortalPositivo(notificacionId, destinoPortal, idUser);
+        if (notificacionId != null) {
+            notifService.registrarPortalPositivo(
+                    notificacionId, resultado.actaId(), destinoPortal, idUser);
         }
 
         return resultado;
@@ -243,12 +251,12 @@ public class QrActaService {
         }
     }
 
-    private void registrarEvento(Long actaId, TipoEventoActa tipo, Long idDocuRel, String idUser, String descripcionLegible) {
+    private void registrarEvento(Long actaId, TipoEventoActa tipo, Long idDocuRel, String idUser, LocalDateTime ahora, String descripcionLegible) {
         FalActaEvento evento = FalActaEvento.builder()
                 .actaId(actaId)
                 .tipoEvt(tipo)
                 .origenEvt(OrigenEvento.SISTEMA_QR)
-                .fhEvt(faltasClock.now())
+                .fhEvt(ahora)
                 .idDocuRel(idDocuRel)
                 .idUserEvt(idUser)
                 .actorTipo(idUser != null && !"SYS".equals(idUser) ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)

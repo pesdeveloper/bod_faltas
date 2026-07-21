@@ -46,6 +46,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalActaFormaPago;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaPlanPagoRef;
 import ar.gob.malvinas.faltas.core.application.service.PagoMovimientoReducer;
 import ar.gob.malvinas.faltas.core.repository.EconomiaProyeccionRepository;
+import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEconomiaProyeccion;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -53,6 +54,7 @@ import org.springframework.stereotype.Component;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -75,6 +77,8 @@ import java.util.Optional;
  */
 @Component
 public class SnapshotRecalculador {
+
+    private static final int MAX_REINTENTOS_OCC = 50;
 
     private final ActaEventoRepository eventoRepository;
     private final DocumentoRepository documentoRepository;
@@ -114,13 +118,34 @@ public class SnapshotRecalculador {
     @Autowired(required = false)
     private EconomiaProyeccionRepository economiaProyeccionRepository;
 
+    private ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository actaSnapshotRepository;
+
     /**
-     * Constructor usado por Spring (inyecta ValorizacionService).
-     * El @Autowired en este constructor garantiza que Spring lo use cuando el bean
-     * ValorizacionService esta disponible (contexto completo).
+     * Constructor usado por Spring. Recibe ActaSnapshotRepository como dependencia
+     * obligatoria: recalcularYGuardar requiere un repositorio real.
      */
     @Autowired
     public SnapshotRecalculador(
+            ActaEventoRepository eventoRepository,
+            DocumentoRepository documentoRepository,
+            NotificacionRepository notificacionRepository,
+            PagoVoluntarioRepository pagoVoluntarioRepository,
+            FalloActaRepository falloActaRepository,
+            ApelacionActaRepository apelacionActaRepository,
+            PagoCondenaRepository pagoCondenaRepository,
+            ValorizacionService valorizacionService,
+            FaltasClock faltasClock,
+            ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository actaSnapshotRepository) {
+        this(eventoRepository, documentoRepository, notificacionRepository,
+                pagoVoluntarioRepository, falloActaRepository, apelacionActaRepository,
+                pagoCondenaRepository, valorizacionService, faltasClock);
+        this.actaSnapshotRepository = actaSnapshotRepository;
+    }
+
+    /**
+     * Constructor base interno (no Spring). Usado por los constructores de compatibilidad de tests.
+     */
+    private SnapshotRecalculador(
             ActaEventoRepository eventoRepository,
             DocumentoRepository documentoRepository,
             NotificacionRepository notificacionRepository,
@@ -144,6 +169,29 @@ public class SnapshotRecalculador {
     /**
      * Constructor de compatibilidad hacia atras para tests que no prueban valorizacion en snapshot.
      * Cuando valorizacionService=null, los cinco campos de valorizacion quedan en null/false.
+     * actaSnapshotRepository debe pasarse explicitamente para garantizar OCC correcto en tests
+     * con multiples operaciones sobre el mismo acta.
+     */
+    public SnapshotRecalculador(
+            ActaEventoRepository eventoRepository,
+            DocumentoRepository documentoRepository,
+            NotificacionRepository notificacionRepository,
+            PagoVoluntarioRepository pagoVoluntarioRepository,
+            FalloActaRepository falloActaRepository,
+            ApelacionActaRepository apelacionActaRepository,
+            PagoCondenaRepository pagoCondenaRepository,
+            FaltasClock faltasClock,
+            ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository actaSnapshotRepository) {
+        this(eventoRepository, documentoRepository, notificacionRepository,
+                pagoVoluntarioRepository, falloActaRepository, apelacionActaRepository,
+                pagoCondenaRepository, null, faltasClock);
+        this.actaSnapshotRepository = actaSnapshotRepository;
+    }
+
+    /**
+     * Constructor de compatibilidad minima para tests que solo ejecutan una unica operacion
+     * sobre cada acta (sin multiples escrituras al snapshot). Si se realizan multiples
+     * operaciones, usar el constructor de 9 parametros con actaSnapshotRepository explicito.
      */
     public SnapshotRecalculador(
             ActaEventoRepository eventoRepository,
@@ -160,12 +208,54 @@ public class SnapshotRecalculador {
     }
 
     public FalActaSnapshot recalcular(FalActa acta) {
-        FalActaSnapshot snap = new FalActaSnapshot(acta.getId());
+        return recalcular(acta, faltasClock.now());
+    }
+
+    /**
+     * Recalcula y guarda el snapshot con retry ante conflictos OCC.
+     * Necesario para operaciones concurrentes donde multiples hilos actualizan
+     * el snapshot del mismo acta simultaneamente.
+     */
+    public FalActaSnapshot recalcularYGuardar(FalActa acta) {
+        return recalcularYGuardar(acta, faltasClock.now());
+    }
+
+    public FalActaSnapshot recalcularYGuardar(FalActa acta, LocalDateTime ahora) {
+        if (actaSnapshotRepository == null) {
+            throw new IllegalStateException(
+                    "recalcularYGuardar requiere ActaSnapshotRepository");
+        }
+        ConcurrenciaConflictoException ultima = new ConcurrenciaConflictoException(
+                "FalActaSnapshot", 0L, -1, -1);
+        for (int retry = 0; retry < MAX_REINTENTOS_OCC; retry++) {
+            try {
+                FalActaSnapshot snap = recalcular(acta, ahora);
+                actaSnapshotRepository.guardar(snap);
+                return snap;
+            } catch (ConcurrenciaConflictoException e) {
+                ultima = e;
+            }
+        }
+        throw ultima;
+    }
+
+    /**
+     * Overload que acepta el instante canonico externamente.
+     * Usa exactamente la misma logica de routing que {@link #recalcular(FalActa)}.
+     * snap.ultimaActualizacion = ahora (no consulta el reloj internamente).
+     */
+    public FalActaSnapshot recalcular(FalActa acta, LocalDateTime ahora) {
+        Objects.requireNonNull(ahora, "ahora no puede ser null");
+        // Preserve versionRow from the existing snapshot so OCC works correctly
+        // (same pattern as EconomiaProyeccionRecalculador.recalcular())
+        FalActaSnapshot snap = (actaSnapshotRepository != null)
+                ? actaSnapshotRepository.buscarPorActa(acta.getId()).orElse(new FalActaSnapshot(acta.getId()))
+                : new FalActaSnapshot(acta.getId());
         snap.setBloqueActual(acta.getBloqueActual());
         snap.setEstadoProcesal(acta.getEstadoProcesal());
         snap.setSituacionAdministrativa(acta.getSituacionAdministrativa());
         snap.setResultadoFinal(acta.getResultadoFinal());
-        snap.setUltimaActualizacion(faltasClock.now());
+        snap.setUltimaActualizacion(ahora);
 
         List<FalDocumento> docs = documentoRepository.buscarPorActa(acta.getId());
         List<FalNotificacion> notifs = notificacionRepository.buscarPorActa(acta.getId());
@@ -404,14 +494,12 @@ public class SnapshotRecalculador {
 
             if (falloOpt.isPresent()) {
                 EstadoFalloActa estadoFallo = falloOpt.get().getEstadoFallo();
-                if (estadoFallo == EstadoFalloActa.DICTADO
-                        || estadoFallo == EstadoFalloActa.PENDIENTE_FIRMA) {
+                if (estadoFallo == EstadoFalloActa.PENDIENTE_FIRMA) {
                     snap.setCodBandeja(CodigoBandeja.PENDIENTE_FIRMA);
                     snap.setAccionPendiente(AccionPendiente.FIRMAR_DOCUMENTO);
                     return;
                 }
-                if (estadoFallo == EstadoFalloActa.FIRMADO
-                        || estadoFallo == EstadoFalloActa.PENDIENTE_NOTIFICACION) {
+                if (estadoFallo == EstadoFalloActa.PENDIENTE_NOTIFICACION) {
                     snap.setCodBandeja(CodigoBandeja.PENDIENTE_NOTIFICACION);
                     snap.setAccionPendiente(AccionPendiente.ENVIAR_NOTIFICACION);
                     return;

@@ -69,9 +69,20 @@ class EconomiaModeloB1Test {
     @AfterEach
     void tearDown() { ActorContextHolder.clear(); }
 
+    /** Contador deterministico para sintetizar cmtePG/prefPG/nroPG unico por llamada (R2-02: recibo obligatorio). */
+    private int reciboSeq = 0;
+
     private NotificarMovimientoPagoCommand cmd(TipoMovimientoPago tipo, BigDecimal importe, String ref, OrigenMovimiento origen) {
+        String cmtePG = null;
+        Short prefPG = null;
+        Integer nroPG = null;
+        if (tipo == TipoMovimientoPago.PAGO_CONFIRMADO) {
+            cmtePG = "RS";
+            prefPG = (short) 1;
+            nroPG = ++reciboSeq;
+        }
         return new NotificarMovimientoPagoCommand(1L, null, null, tipo, origen, null, null, ClasificacionPago.NORMAL,
-                null, importe, null, importe, null, null, null, null, null, null, null, null, null, null, ref, T0, "USR");
+                null, importe, null, importe, null, null, null, cmtePG, prefPG, nroPG, null, null, null, null, ref, T0, "USR");
     }
 
     @Test @DisplayName("01 - proyeccion inicial con obligacion determinada")
@@ -116,11 +127,14 @@ class EconomiaModeloB1Test {
         assertThat(p.getSaldoPendiente()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
-    @Test @DisplayName("06 - aplicado capped at monto_obligacion_vigente")
-    void caso06_aplicadoCap() {
+    @Test @DisplayName("06 - aplicado no se recorta a monto; sobrepago genera excedente informativo")
+    void caso06_aplicadoSinRecorte_generaExcedente() {
         economicoService.notificarMovimiento(cmd(TipoMovimientoPago.PAGO_CONFIRMADO, new BigDecimal("1500"), "CNF-EXC", OrigenMovimiento.INGRESOS));
         var p = proyeccionRepo.findByActaId(100L).orElseThrow();
-        assertThat(p.getImporteAplicadoTotal()).isEqualByComparingTo(MONTO);
+        assertThat(p.getImporteAplicadoTotal()).isEqualByComparingTo("1500.00");
+        assertThat(p.getSaldoPendiente()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(p.getImporteExcedente()).isEqualByComparingTo("500.00");
+        assertThat(p.getEstadoObligacion()).isEqualTo(EstadoObligacionPago.CANCELADA_POR_PAGO);
     }
 
     @Test @DisplayName("07 - reverso reduce aplicado")
@@ -190,7 +204,7 @@ class EconomiaModeloB1Test {
 
     @Test @DisplayName("15 - tesoreria origen conciliado directo")
     void caso15_tesoreriaConciliado() {
-        economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.TESORERIA, OrigenConfirmacion.TESORERIA, null, ClasificacionPago.NORMAL, null, new BigDecimal("200"), null, new BigDecimal("200"), null, null, null, null, null, null, null, null, null, null, "TES-1", T0, "USR"));
+        economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.TESORERIA, OrigenConfirmacion.TESORERIA, null, ClasificacionPago.NORMAL, null, new BigDecimal("200"), null, new BigDecimal("200"), null, null, null, "TS", (short) 1, 1, null, null, null, null, "TES-1", T0, "USR"));
         var p = proyeccionRepo.findByActaId(100L).orElseThrow();
         assertThat(p.getImporteConfirmadoTesoreria()).isEqualByComparingTo("200.00");
     }
@@ -212,7 +226,7 @@ class EconomiaModeloB1Test {
     void caso18_fueraDeOrden() {
         economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, null, null,
                 TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL, null,
-                new BigDecimal("500"), null, new BigDecimal("500"), null, null, null, null, null, null, null, null, null, null, "OO-1",
+                new BigDecimal("500"), null, new BigDecimal("500"), null, null, null, "OO", (short) 1, 1, null, null, null, null, "OO-1",
                 T0.plusHours(2), "USR"));
         economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, null, null,
                 TipoMovimientoPago.PAGO_PROCESADO, OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.NORMAL, null,
@@ -266,7 +280,7 @@ class EconomiaModeloB1Test {
     void caso23_clasificacionDuplicado() {
         var c = new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO,
                 OrigenMovimiento.INGRESOS, null, null, ClasificacionPago.DUPLICADO_REAL, null,
-                new BigDecimal("100"), null, new BigDecimal("100"), null, null, null, null, null, null, null, null, null, null, "DUP-1", T0, "USR");
+                new BigDecimal("100"), null, new BigDecimal("100"), null, null, null, "DU", (short) 1, 1, null, null, null, null, "DUP-1", T0, "USR");
         economicoService.notificarMovimiento(c);
         assertThat(movimientoRepo.findByOrigenAndReferenciaExterna(OrigenMovimiento.INGRESOS, "DUP-1")).isPresent();
     }
@@ -294,7 +308,7 @@ class EconomiaModeloB1Test {
 
     @Test @DisplayName("27 - obligacion cancelada por pago total")
     void caso27_canceladaPorPago() {
-        economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.TESORERIA, OrigenConfirmacion.TESORERIA, null, ClasificacionPago.NORMAL, null, MONTO, null, MONTO, null, null, null, null, null, null, null, null, null, null, "CAN-1", T0, "USR"));
+        economicoService.notificarMovimiento(new NotificarMovimientoPagoCommand(1L, null, null, TipoMovimientoPago.PAGO_CONFIRMADO, OrigenMovimiento.TESORERIA, OrigenConfirmacion.TESORERIA, null, ClasificacionPago.NORMAL, null, MONTO, null, MONTO, null, null, null, "CN", (short) 1, 1, null, null, null, null, "CAN-1", T0, "USR"));
         assertThat(obligacionRepo.findById(1L).orElseThrow().getEstadoObligacion()).isEqualTo(EstadoObligacionPago.CANCELADA_POR_PAGO);
     }
 

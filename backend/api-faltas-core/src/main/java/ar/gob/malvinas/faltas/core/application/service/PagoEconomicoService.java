@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application.service;
 
 import ar.gob.malvinas.faltas.core.application.command.NotificarMovimientoPagoCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.ClasificacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.MotivoAnulacionPago;
 import ar.gob.malvinas.faltas.core.domain.enums.MovimientoRegistroResult;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
@@ -24,6 +25,7 @@ import ar.gob.malvinas.faltas.core.repository.ObligacionPagoRepository;
 import ar.gob.malvinas.faltas.core.repository.PagoMovimientoRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -68,12 +70,62 @@ public class PagoEconomicoService {
             throw new PrecondicionVioladaException(
                     "PAGO_REVERTIDO no puede notificarse por el endpoint generico. Usar la operacion especifica de reverso.");
         }
+        if (cmd.tipoMovimiento() == TipoMovimientoPago.PAGO_CONFIRMADO) {
+            FalActaObligacionPago destino = obligacionRepo.findById(cmd.obligacionPagoId())
+                    .orElseThrow(() -> new PrecondicionVioladaException(
+                            "Obligacion no encontrada: " + cmd.obligacionPagoId()));
+            if (!destino.isSiVigente()) {
+                return notificarPagoObligacionAnterior(cmd, destino);
+            }
+            // OBLIGACION_ANTERIOR es una clasificacion derivada del estado objetivo
+            // de la obligacion (no vigente), no una eleccion del actor: contra una
+            // obligacion vigente no puede declararse, aunque el actor la envie.
+            if (cmd.clasificacionPago() == ClasificacionPago.OBLIGACION_ANTERIOR) {
+                throw new PrecondicionVioladaException(
+                        "clasificacionPago OBLIGACION_ANTERIOR no es valida contra una obligacion vigente: "
+                                + cmd.obligacionPagoId());
+            }
+        }
         RegistroMovimientoOutcome outcome = integracionService.notificarMovimiento(cmd);
         if (outcome.resultado() == MovimientoRegistroResult.CONFLICT) {
             throw new MovimientoPagoDuplicadoException(cmd.referenciaExterna() != null ? cmd.referenciaExterna() : "conflicto");
         }
         if (outcome.resultado() == MovimientoRegistroResult.CREATED) {
             emitirEventoMovimiento(cmd);
+        }
+        return outcome.movimiento();
+    }
+
+    /**
+     * Un PAGO_CONFIRMADO recibido contra una obligacion que ya no es vigente
+     * (reemplazada, cancelada o dejada sin efecto) no se rechaza ni se pierde:
+     * se registra tal cual, clasificado siempre como OBLIGACION_ANTERIOR
+     * (deriva del estado objetivo de la obligacion, no de una eleccion del
+     * actor), y emite PAGANT en lugar de PAGCNF/PCOCNF como constancia de que
+     * todavia requiere resolucion administrativa (ver
+     * ResolverPagoObligacionAnteriorCommand). No dispara recalculo de estados
+     * ni de la proyeccion economica: la obligacion destino ya no es la vigente
+     * del acta y su estado historico no debe mutar por este movimiento.
+     */
+    private FalActaPagoMovimiento notificarPagoObligacionAnterior(
+            NotificarMovimientoPagoCommand cmd, FalActaObligacionPago obligacionAnterior) {
+        if (cmd.importeTotal() == null || cmd.importeTotal().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new PrecondicionVioladaException(
+                    "El importe de un pago aplicado a obligacion anterior debe ser mayor a cero");
+        }
+        RegistroMovimientoOutcome outcome = movimientoService.registrar(
+                cmd.obligacionPagoId(), cmd.formaPagoId(), cmd.planPagoRefId(),
+                cmd.tipoMovimiento(), cmd.origenMovimiento(), cmd.origenConfirmacion(), cmd.evidenciaDocumentoId(),
+                ClasificacionPago.OBLIGACION_ANTERIOR, cmd.nroCuota(),
+                cmd.importeCapital(), cmd.importeRima(), cmd.importeTotal(),
+                cmd.cmteEM(), cmd.prefEM(), cmd.nroEM(), cmd.cmtePG(), cmd.prefPG(), cmd.nroPG(),
+                cmd.idCierre(), cmd.idOpe(), cmd.fhPagoProcesado(), cmd.fhPagoConfirmado(),
+                cmd.referenciaExterna(), cmd.fhMovimiento(), cmd.idUser());
+        if (outcome.resultado() == MovimientoRegistroResult.CONFLICT) {
+            throw new MovimientoPagoDuplicadoException(cmd.referenciaExterna() != null ? cmd.referenciaExterna() : "conflicto");
+        }
+        if (outcome.resultado() == MovimientoRegistroResult.CREATED) {
+            emitirEventoPagant(obligacionAnterior.getActaId(), outcome.movimiento());
         }
         return outcome.movimiento();
     }
@@ -183,6 +235,20 @@ public class PagoEconomicoService {
                 .idUserEvt(actor)
                 .descripcionLegible("Reverso de movimiento de pago ref=" + correlacionId)
                 .correlacionId(correlacionId)
+                .build();
+        eventoRepo.registrar(evento);
+    }
+
+    private void emitirEventoPagant(Long actaId, FalActaPagoMovimiento movimiento) {
+        String actor = ActorContextHolder.subOr(movimiento.getIdUserAlta());
+        FalActaEvento evento = FalActaEvento.builder()
+                .actaId(actaId)
+                .tipoEvt(TipoEventoActa.PAGANT)
+                .origenEvt(OrigenEvento.INTEGRACION)
+                .fhEvt(clock.now())
+                .idUserEvt(actor)
+                .descripcionLegible("Pago aplicado a obligacion anterior ref=" + movimiento.getReferenciaExterna())
+                .correlacionId(movimiento.getReferenciaExterna())
                 .build();
         eventoRepo.registrar(evento);
     }

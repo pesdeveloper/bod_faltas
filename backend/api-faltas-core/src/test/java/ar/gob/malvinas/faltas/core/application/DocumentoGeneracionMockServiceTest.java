@@ -46,7 +46,7 @@ class DocumentoGeneracionMockServiceTest {
 
     private FalDocumento guardarDoc(Long id) {
         FalDocumento doc = new FalDocumento(
-                id, 10L, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(), "Fallo Test",
+                id, 10L, TipoDocu.ACTO_ADMINISTRATIVO, FaltasClockTestSupport.FIXED.now(),
                 EstadoDocu.BORRADOR, TipoFirmaReq.NO_REQUIERE, null, FaltasClockTestSupport.FIXED.now());
         return docRepo.guardar(doc);
     }
@@ -54,6 +54,7 @@ class DocumentoGeneracionMockServiceTest {
     private FalDocumentoRedaccion guardarRedaccionBorrador(Long id, Long docId, String contenido) {
         FalDocumentoRedaccion r = new FalDocumentoRedaccion(
                 id, docId, 1L,
+                (short) 1, null,
                 EstadoRedaccionDocumento.BORRADOR,
                 contenido,
                 null, null, null,
