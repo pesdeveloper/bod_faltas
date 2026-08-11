@@ -1,9 +1,14 @@
 package ar.gob.malvinas.faltas.core.application.service;
 
+import ar.gob.malvinas.faltas.core.application.query.CampoOrdenPersona;
+import ar.gob.malvinas.faltas.core.application.query.FiltroPersona;
+import ar.gob.malvinas.faltas.core.application.query.PaginaResultado;
+import ar.gob.malvinas.faltas.core.application.query.PaginaSolicitada;
 import ar.gob.malvinas.faltas.core.domain.enums.SujBieEstado;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocumentoPersona;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoPersona;
 import ar.gob.malvinas.faltas.core.domain.exception.PersonaNoEncontradaException;
+import ar.gob.malvinas.faltas.core.domain.model.DocumentoPersona;
 import ar.gob.malvinas.faltas.core.domain.model.FalPersona;
 import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
 import org.springframework.stereotype.Service;
@@ -20,7 +25,7 @@ import java.util.Optional;
  * - FISICA: razonSocial debe ser null.
  * - JURIDICA: apellido y nombres deben ser null.
  * - tipoDoc y nroDoc se informan juntos o ambos null.
- * - nroDoc no puede ser vacio ni mayor a 20 caracteres.
+ * - el documento se normaliza y valida en DocumentoPersona, unica autoridad del dominio.
  * - nombreMostrar max 64 caracteres.
  * - emailPrincipal max 160 caracteres.
  * - telefonoPrincipal max 20 caracteres.
@@ -58,9 +63,8 @@ public class PersonaService {
             String idUserAlta) {
 
         LocalDateTime ahora = faltasClock.now();
-        Long id = personaRepository.nextId();
 
-        FalPersona persona = new FalPersona(id, tipoPersona, ahora, idUserAlta);
+        FalPersona persona = new FalPersona(null, tipoPersona, ahora, idUserAlta);
 
         aplicarDocumento(persona, tipoDoc, nroDoc);
         aplicarDatosTipo(persona, tipoPersona, apellido, nombres, razonSocial);
@@ -73,23 +77,33 @@ public class PersonaService {
     }
 
     /**
-     * Crea una persona minima a partir de un numero de documento (sin tipo) y nombre opcional.
-     * Para compatibilidad con flujos legacy que aun no informan idPersonaInfractor.
+     * Crea una persona minima cuando el llamador no conoce el tipo documental.
+     *
+     * <p>El texto documental recibido **no** se estructura como documento de
+     * `fal_persona`: inferir `DNI` porque el valor parece numerico seria inventar
+     * identificacion, y `DECISION_DDL-PERS-01` lo prohibe. El documento queda ausente y
+     * el texto original permanece en el agregado que lo recibio.
+     *
+     * <p>Solo se crea la persona si existe otra forma real de identificacion. Sin ninguna,
+     * no hay persona: la ausencia de sujeto identificado se expresa con
+     * `id_persona_infractor` NULL, nunca con una fila vacia.
+     *
+     * @param textoDocumentoSinTipo documento tal como lo aporto el llamador, sin tipo
+     *        documental. Deliberadamente no se persiste en Persona: sin tipo no hay
+     *        documento canonizable. Quien lo aporta es responsable de conservarlo.
+     * @return la persona persistida, u {@code Optional.empty()} si no hay datos suficientes
      */
-    public FalPersona crearMinimal(String nroDoc, String nombreMostrar, String idUserAlta) {
+    public Optional<FalPersona> crearMinimal(String textoDocumentoSinTipo, String nombreMostrar,
+            String idUserAlta) {
         LocalDateTime ahora = faltasClock.now();
-        Long id = personaRepository.nextId();
-        FalPersona persona = new FalPersona(id, TipoPersona.FISICA, ahora, idUserAlta);
-        if (nroDoc != null && !nroDoc.isBlank()) {
-            String nroDocNorm = nroDoc.strip().replaceAll("[^0-9a-zA-Z\\-]", "");
-            if (nroDocNorm.length() > 20) nroDocNorm = nroDocNorm.substring(0, 20);
-            persona.setNroDoc(nroDocNorm.isBlank() ? null : nroDocNorm);
-        }
+        FalPersona persona = new FalPersona(null, TipoPersona.FISICA, ahora, idUserAlta);
         if (nombreMostrar != null && !nombreMostrar.isBlank()) {
-            String nm = nombreMostrar.strip();
-            persona.setNombreMostrar(nm.length() > 64 ? nm.substring(0, 64) : nm);
+            persona.setNombreMostrar(recortarNombreMostrar(nombreMostrar.strip()));
         }
-        return personaRepository.guardar(persona);
+        if (!persona.tieneIdentificacionMinima()) {
+            return Optional.empty();
+        }
+        return Optional.of(personaRepository.guardar(persona));
     }
 
     public FalPersona obtener(Long id) {
@@ -101,8 +115,49 @@ public class PersonaService {
         return personaRepository.buscarPorId(id);
     }
 
+    /**
+     * Busca por documento normalizando la entrada con la misma funcion canonica que se usa
+     * para persistir: no se guarda de una forma y se busca de otra.
+     *
+     * <p>Un valor que no es canonizable para el tipo indicado no puede coincidir con
+     * ninguna fila, porque toda fila persistida guarda la forma canonica. La busqueda
+     * devuelve lista vacia en lugar de fallar: es una lectura total, no una validacion de
+     * alta. La misma entrada si es rechazada por `crear` y `modificar`.
+     */
     public List<FalPersona> buscarPorDocumento(TipoDocumentoPersona tipoDoc, String nroDoc) {
-        return personaRepository.buscarPorTipoDocYNroDoc(tipoDoc, nroDoc);
+        DocumentoPersona documento;
+        try {
+            documento = DocumentoPersona.normalizar(tipoDoc, nroDoc);
+        } catch (IllegalArgumentException noCanonizable) {
+            return List.of();
+        }
+        return personaRepository.buscarPorTipoDocYNroDoc(documento.tipoDoc(), documento.nroDoc());
+    }
+
+    /**
+     * Caso de uso de consulta paginada de personas ({@code DECISION-LIST-PAGE-SORT-01}).
+     *
+     * <p>Es la unica lectura de coleccion de personas que la aplicacion ofrece. No existe una
+     * variante ilimitada: {@code PersonaRepository.listarTodas} es una operacion interna del
+     * puerto y este servicio no la expone.
+     *
+     * <p>Argumentos nulos significan "sin filtro" y "primera pagina con los valores por
+     * defecto": {@code page = 0}, {@code size = 50} y el orden predeterminado de Persona.
+     *
+     * <p>A diferencia de {@link #buscarPorDocumento}, el filtro <b>no</b> normaliza el numero de
+     * documento: recibe la forma canonica que ya se persiste. Normalizar aca duplicaria la
+     * autoridad de {@code DocumentoPersona} dentro de un contrato de consulta, y un filtro que
+     * corrige silenciosamente su entrada devolveria una pagina distinta de la pedida sin que el
+     * llamador pueda notarlo.
+     *
+     * @throws ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
+     *         si la pagina o el orden solicitados violan el contrato
+     */
+    public PaginaResultado<FalPersona> listarPersonas(
+            FiltroPersona filtro, PaginaSolicitada<CampoOrdenPersona> pagina) {
+        return personaRepository.listarPagina(
+                filtro == null ? FiltroPersona.ninguno() : filtro,
+                pagina == null ? PaginaSolicitada.primeraPagina() : pagina);
     }
 
     /**
@@ -191,19 +246,14 @@ public class PersonaService {
 
     // --- Helpers privados ---
 
+    /**
+     * Unica via de aplicacion del documento. Delega en {@link DocumentoPersona}, que es la
+     * autoridad de normalizacion del dominio: no hay regex de documento en este servicio.
+     * Cambiar el documento reemplaza los cuatro componentes, de modo que pasar de CUIT a
+     * otro tipo, o quitar el documento, no deja prefijo ni digito residuales.
+     */
     private void aplicarDocumento(FalPersona persona, TipoDocumentoPersona tipoDoc, String nroDoc) {
-        if (tipoDoc == null && nroDoc == null) {
-            persona.setTipoDoc(null);
-            persona.setNroDoc(null);
-            return;
-        }
-        if (tipoDoc == null || nroDoc == null)
-            throw new IllegalArgumentException("tipoDoc y nroDoc deben informarse juntos o ambos null");
-        String docNorm = nroDoc.strip().replaceAll("\\s+", "");
-        if (docNorm.isBlank()) throw new IllegalArgumentException("nroDoc no puede ser vacio");
-        if (docNorm.length() > 20) throw new IllegalArgumentException("nroDoc supera 20 caracteres");
-        persona.setTipoDoc(tipoDoc);
-        persona.setNroDoc(docNorm);
+        persona.setDocumento(DocumentoPersona.normalizar(tipoDoc, nroDoc));
     }
 
     private void aplicarDatosTipo(FalPersona persona, TipoPersona tipo, String apellido, String nombres, String razonSocial) {
@@ -227,14 +277,17 @@ public class PersonaService {
         String nm = (calculado != null) ? calculado : nombreMostrar;
         if (nm != null) {
             nm = nm.strip();
-            if (nm.length() > 64) nm = nm.substring(0, 64);
-            persona.setNombreMostrar(nm.isBlank() ? null : nm);
+            persona.setNombreMostrar(nm.isBlank() ? null : recortarNombreMostrar(nm));
         } else {
             if (nombreMostrar != null && !nombreMostrar.isBlank()) {
-                String raw = nombreMostrar.strip();
-                persona.setNombreMostrar(raw.length() > 64 ? raw.substring(0, 64) : raw);
+                persona.setNombreMostrar(recortarNombreMostrar(nombreMostrar.strip()));
             }
         }
+    }
+
+    /** `nombre_mostrar` es VARCHAR(64) y es un texto de presentacion, no una identidad. */
+    private static String recortarNombreMostrar(String nombreMostrar) {
+        return nombreMostrar.length() > 64 ? nombreMostrar.substring(0, 64) : nombreMostrar;
     }
 
     private void aplicarContacto(FalPersona persona, String email, String telefono) {
@@ -251,13 +304,7 @@ public class PersonaService {
     }
 
     private void validarIdentificacion(FalPersona persona) {
-        boolean tieneId = persona.getNombreMostrar() != null
-                || persona.getApellido() != null
-                || persona.getNombres() != null
-                || persona.getRazonSocial() != null
-                || persona.getNroDoc() != null
-                || persona.getIdSuj() != null;
-        if (!tieneId)
+        if (!persona.tieneIdentificacionMinima())
             throw new IllegalArgumentException("La persona debe tener al menos una forma de identificacion");
     }
 }

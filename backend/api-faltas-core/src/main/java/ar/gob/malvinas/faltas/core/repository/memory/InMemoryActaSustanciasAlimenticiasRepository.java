@@ -2,11 +2,13 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSustanciasAlimenticias;
 import ar.gob.malvinas.faltas.core.repository.ActaSustanciasAlimenticiasRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryActaSustanciasAlimenticiasRepository
         implements ActaSustanciasAlimenticiasRepository, ResettableInMemoryRepository {
     private final java.util.List<FalActaSustanciasAlimenticias> store = new CopyOnWriteArrayList<>();

@@ -77,7 +77,7 @@ class DocumentoRedaccionGraphDemoTest {
                 docRepo, defaultSvc, contenidoRepo, redaccionRepo, combinacion,
                 actaRepo, falloRepo, pagoRepo, FaltasClockTestSupport.FIXED);
 
-        actaDemo = actaRepo.guardar(GraphDemoActaFactory.crearActaDemo(actaRepo.nextId()));
+        actaDemo = actaRepo.guardar(GraphDemoActaFactory.crearActaDemo());
         falloDemo = falloRepo.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(actaDemo.getId()));
         pagoDemo = pagoRepo.guardar(GraphDemoActaFactory.crearPagoVoluntarioDemo(actaDemo.getId()));
     }

@@ -4,7 +4,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.AccionPendiente;
 import ar.gob.malvinas.faltas.core.domain.enums.BloqueActual;
 import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoProcesalActa;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoValorizacion;
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoValorizacionActa;
 import ar.gob.malvinas.faltas.core.domain.enums.MotivoParalizacion;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
@@ -50,7 +50,7 @@ public class FalActaSnapshot {
     private boolean bloqueadoNotificacion;
 
     private Long valorizacionOperativaId;
-    private EstadoValorizacion estadoValorizacionOperativa;
+    private EstadoValorizacionActa estadoValorizacionOperativa;
     private TipoValorizacionActa tipoValorizacionOperativa;
     private BigDecimal montoOperativoVigente;
     private boolean siMontoConfirmado;
@@ -139,8 +139,8 @@ public class FalActaSnapshot {
     public Long getValorizacionOperativaId() { return valorizacionOperativaId; }
     public void setValorizacionOperativaId(Long valorizacionOperativaId) { this.valorizacionOperativaId = valorizacionOperativaId; }
 
-    public EstadoValorizacion getEstadoValorizacionOperativa() { return estadoValorizacionOperativa; }
-    public void setEstadoValorizacionOperativa(EstadoValorizacion estadoValorizacionOperativa) { this.estadoValorizacionOperativa = estadoValorizacionOperativa; }
+    public EstadoValorizacionActa getEstadoValorizacionOperativa() { return estadoValorizacionOperativa; }
+    public void setEstadoValorizacionOperativa(EstadoValorizacionActa estadoValorizacionOperativa) { this.estadoValorizacionOperativa = estadoValorizacionOperativa; }
 
     public TipoValorizacionActa getTipoValorizacionOperativa() { return tipoValorizacionOperativa; }
     public void setTipoValorizacionOperativa(TipoValorizacionActa tipoValorizacionOperativa) { this.tipoValorizacionOperativa = tipoValorizacionOperativa; }

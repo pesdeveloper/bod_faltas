@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
@@ -39,13 +41,12 @@ class SnapshotRecalculadorOccTest {
 
     private FalActa crearActaEnMemoria() {
         InMemoryActaRepository actaRepo = new InMemoryActaRepository();
-        Long id = actaRepo.nextId();
         FalActa acta = new FalActa(
-                id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
+                null, "uuid-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(),
                 FaltasClockTestSupport.FIXED.now(),
                 "Calle Test", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null,
+                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), "TEST");
         return actaRepo.guardar(acta);
     }

@@ -83,7 +83,7 @@ class DocumentoGeneracionMockGraphDemoTest {
         generacionService = new DocumentoGeneracionMockService(
                 redaccionRepo, docRepo, new DocumentoPdfMockRenderer(FaltasClockTestSupport.FIXED), FaltasClockTestSupport.FIXED);
 
-        actaDemo = actaRepo.guardar(GraphDemoActaFactory.crearActaDemo(actaRepo.nextId()));
+        actaDemo = actaRepo.guardar(GraphDemoActaFactory.crearActaDemo());
         falloRepo.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(actaDemo.getId()));
         pagoRepo.guardar(GraphDemoActaFactory.crearPagoVoluntarioDemo(actaDemo.getId()));
     }

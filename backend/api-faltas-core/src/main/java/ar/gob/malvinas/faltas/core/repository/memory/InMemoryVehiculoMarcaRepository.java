@@ -2,6 +2,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 
 import ar.gob.malvinas.faltas.core.domain.model.FalVehiculoMarca;
 import ar.gob.malvinas.faltas.core.repository.VehiculoMarcaRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryVehiculoMarcaRepository implements VehiculoMarcaRepository, ResettableInMemoryRepository {
 
     private final List<FalVehiculoMarca> store = new CopyOnWriteArrayList<>();

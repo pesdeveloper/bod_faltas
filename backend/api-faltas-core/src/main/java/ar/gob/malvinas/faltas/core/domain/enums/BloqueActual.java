@@ -6,11 +6,12 @@ package ar.gob.malvinas.faltas.core.domain.enums;
  * Código de 4 caracteres persistible como CHAR(4) en MariaDB.
  * D3_DOCUMENTAL no es un bloque: se representa mediante bandeja documental,
  * fal_documento y estados de firma.
+ * CAPT no es un bloque: el alta es integral y el acta nace directamente en
+ * ENRI (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01).
  */
 public enum BloqueActual {
 
-    CAPT("CAPT", "Captura/labrado inicial"),
-    ENRI("ENRI", "Enriquecimiento/completitud del acta"),
+    ENRI("ENRI", "Enriquecimiento/completitud del acta; bloque de nacimiento del acta"),
     NOTI("NOTI", "Notificación del acta, fallo u otra pieza"),
     ANAL("ANAL", "Análisis, resolución, fallo, pagos y apelación"),
     GEXT("GEXT", "Gestión externa: apremio / juzgado de paz"),

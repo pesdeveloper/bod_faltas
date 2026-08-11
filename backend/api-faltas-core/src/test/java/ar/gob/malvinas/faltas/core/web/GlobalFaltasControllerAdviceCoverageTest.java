@@ -23,9 +23,11 @@ import ar.gob.malvinas.faltas.core.domain.exception.DocumentoPlantillaInvalidaEx
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoPlantillaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoRedaccionNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DomicilioPersonaNoEncontradoException;
+import ar.gob.malvinas.faltas.core.domain.exception.EvidenciaArchivoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.FirmanteNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.FormaPagoNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.GestionExternaNoEncontradaException;
+import ar.gob.malvinas.faltas.core.domain.exception.ImagenEvidenciaInvalidaException;
 import ar.gob.malvinas.faltas.core.domain.exception.InspectorNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.LoteCodigoDuplicadoException;
 import ar.gob.malvinas.faltas.core.domain.exception.LoteCorreoNoEncontradoException;
@@ -64,9 +66,11 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifica que las 52 excepciones de dominio tengan mapping en GlobalFaltasControllerAdvice.
+ * Verifica que las 54 excepciones de dominio tengan mapping en GlobalFaltasControllerAdvice.
+ * Wave 4 Parte 3D agrega dos: EvidenciaArchivoNoEncontradoException (404) e
+ * ImagenEvidenciaInvalidaException (422).
  */
-@DisplayName("GlobalFaltasControllerAdvice — cobertura de las 52 excepciones de dominio")
+@DisplayName("GlobalFaltasControllerAdvice — cobertura de las 54 excepciones de dominio")
 class GlobalFaltasControllerAdviceCoverageTest {
 
     private final GlobalFaltasControllerAdvice advice = new GlobalFaltasControllerAdvice();
@@ -121,8 +125,11 @@ class GlobalFaltasControllerAdviceCoverageTest {
             m(new TarifarioNoEncontradoException(1L),                         "RECURSO_NO_ENCONTRADO", 404),
             m(new VehiculoMarcaNoEncontradaException("vm-1"),                 "RECURSO_NO_ENCONTRADO", 404),
             m(new VehiculoModeloNoEncontradoException("vmo-1"),               "RECURSO_NO_ENCONTRADO", 404),
+            // 404 — EVIDENCIA (Wave 4 Parte 3D)
+            m(new EvidenciaArchivoNoEncontradoException("no encontrada"),     "EVIDENCIA_ARCHIVO_NO_ENCONTRADO", 404),
             // 422 — PRECONDICION
             m(new PrecondicionVioladaException("estado invalido"),            "PRECONDICION_VIOLADA",  422),
+            m(new ImagenEvidenciaInvalidaException("invalida"),               "IMAGEN_EVIDENCIA_INVALIDA", 422),
             m(new DocumentoPlantillaInvalidaException("fallo"),               "PLANTILLA_INVALIDA",    422),
             m(new PlantillaContenidoAmbiguaException(1L, 3),                  "PLANTILLA_INVALIDA",    422),
             m(new PlantillaDefaultAmbiguaException("ambigua"),                "PLANTILLA_INVALIDA",    422),
@@ -142,10 +149,10 @@ class GlobalFaltasControllerAdviceCoverageTest {
     }
 
     @Test
-    @DisplayName("Las 52 excepciones de dominio producen codigoError valido y status HTTP correcto")
+    @DisplayName("Las 54 excepciones de dominio producen codigoError valido y status HTTP correcto")
     void todas_las_excepciones_producen_codigo_y_status_valido() {
         List<ExceptionMapping> lista = catalogo();
-        assertThat(lista).as("Catalogo debe tener exactamente 52 entradas").hasSize(52);
+        assertThat(lista).as("Catalogo debe tener exactamente 54 entradas").hasSize(54);
 
         for (ExceptionMapping mapping : lista) {
             ResponseEntity<ErrorResponse> resp = invocarAdvice(mapping.ex());
@@ -164,9 +171,9 @@ class GlobalFaltasControllerAdviceCoverageTest {
 
     @Test
     @DisplayName("NOT_FOUND_CODES cubre las 38 excepciones de recurso no encontrado")
-    void notFoundCodes_cubre_38_excepciones() {
+    void notFoundCodes_cubre_39_excepciones() {
         Map<Class<?>, String> codes = GlobalFaltasControllerAdvice.NOT_FOUND_CODES;
-        assertThat(codes).hasSize(38);
+        assertThat(codes).hasSize(39);
         codes.forEach((clazz, codigo) ->
             assertThat(codigo).as("Codigo para " + clazz.getSimpleName())
                     .isNotBlank()
@@ -191,6 +198,7 @@ class GlobalFaltasControllerAdviceCoverageTest {
             return advice.handleNotFound(ex);
         }
         if (ex instanceof PrecondicionVioladaException p) return advice.handlePrecondicion(p);
+        if (ex instanceof ImagenEvidenciaInvalidaException img) return advice.handleImagenInvalida(img);
         if (ex instanceof DocumentoPlantillaInvalidaException
                 || ex instanceof PlantillaContenidoAmbiguaException
                 || ex instanceof PlantillaDefaultAmbiguaException) {

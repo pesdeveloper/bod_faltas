@@ -339,7 +339,8 @@ class JwtActorFilterTest {
     }
 
     // -----------------------------------------------------------------------
-    // Rutas nuevas: labrar, completar-captura, enriquecer
+    // Rutas nuevas: labrar, enriquecer (completar-captura eliminado,
+    // DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)
     // -----------------------------------------------------------------------
 
     @Test
@@ -391,41 +392,6 @@ class JwtActorFilterTest {
 
         assertThat(res.getStatus()).isEqualTo(401);
         verify(chain, never()).doFilter(any(), any());
-    }
-
-    @Test
-    @DisplayName("POST /api/faltas/actas/{id}/completar-captura sin Bearer -> 401")
-    void completar_captura_sin_token_responde_401() throws Exception {
-        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/5/completar-captura");
-        req.setRequestURI("/api/faltas/actas/5/completar-captura");
-        req.setMethod("POST");
-        MockHttpServletResponse res = new MockHttpServletResponse();
-        FilterChain chain = mock(FilterChain.class);
-
-        filter.doFilter(req, res, chain);
-
-        assertThat(res.getStatus()).isEqualTo(401);
-        verify(chain, never()).doFilter(any(), any());
-    }
-
-    @Test
-    @DisplayName("POST /api/faltas/actas/{id}/completar-captura con Bearer valido: pasa; sub exacto")
-    void completar_captura_con_token_valido_pasa() throws Exception {
-        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/faltas/actas/5/completar-captura");
-        req.setRequestURI("/api/faltas/actas/5/completar-captura");
-        req.setMethod("POST");
-        req.addHeader("Authorization", "Bearer " + JwtTestSupport.token("inspector-02"));
-        MockHttpServletResponse res = new MockHttpServletResponse();
-        FilterChain chain = mock(FilterChain.class);
-        doAnswer(inv -> {
-            assertThat(ActorContextHolder.subOr("x")).isEqualTo("inspector-02");
-            return null;
-        }).when(chain).doFilter(req, res);
-
-        filter.doFilter(req, res, chain);
-
-        assertThat(res.getStatus()).isEqualTo(200);
-        verify(chain).doFilter(req, res);
     }
 
     @Test

@@ -5,6 +5,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.OrigenDiaNoComputable;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDiaNoComputable;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalDiaNoComputable;
+import ar.gob.malvinas.faltas.core.repository.DiaNoComputableSaveResult;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryDiaNoComputableRepository;
 import ar.gob.malvinas.faltas.core.support.CountingClock;
 import org.junit.jupiter.api.BeforeEach;
@@ -127,7 +128,7 @@ class CalendarioAdministrativoServiceTest {
                 OrigenDiaNoComputable.MANUAL, null, "a".repeat(37)))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.registrarDiaNoComputable(
-                fecha, TipoDiaNoComputable.OTRO, "d".repeat(161),
+                fecha, TipoDiaNoComputable.OTRO, "d".repeat(65),
                 OrigenDiaNoComputable.MANUAL, null, "usuario1"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.registrarDiaNoComputable(
@@ -283,5 +284,154 @@ class CalendarioAdministrativoServiceTest {
         } finally {
             exec.shutdownNow();
         }
+    }
+
+    @Test
+    @DisplayName("14. El id lo asigna la persistencia: el servicio no preasigna identificadores")
+    void id_asignado_por_la_persistencia() {
+        FalDiaNoComputable creado = service.registrarDiaNoComputable(
+                LocalDate.of(2026, 8, 4), TipoDiaNoComputable.FERIADO,
+                "Alta", OrigenDiaNoComputable.MANUAL, null, "op1");
+
+        assertThat(creado.getId())
+                .as("la entidad devuelta trae el id que asigno la persistencia")
+                .isNotNull();
+        assertThat(repository.buscarPorId(creado.getId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("15. guardarActivoSiAusentePorFecha informa yaExistia=false al insertar")
+    void resultado_informa_creacion() {
+        FalDiaNoComputable candidato = new FalDiaNoComputable(
+                null, LocalDate.of(2026, 8, 4), TipoDiaNoComputable.FERIADO,
+                "Alta", OrigenDiaNoComputable.MANUAL, null, clock.now(), "op1");
+
+        DiaNoComputableSaveResult r = repository.guardarActivoSiAusentePorFecha(candidato);
+
+        assertThat(r.yaExistia()).isFalse();
+        assertThat(r.diaPersistido().getId()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("16. Fecha ya activa: yaExistia=true y devuelve la entidad canonica existente")
+    void resultado_informa_existente() {
+        LocalDate fecha = LocalDate.of(2026, 8, 4);
+        DiaNoComputableSaveResult primero = repository.guardarActivoSiAusentePorFecha(
+                new FalDiaNoComputable(null, fecha, TipoDiaNoComputable.FERIADO,
+                        "Primero", OrigenDiaNoComputable.MANUAL, null, clock.now(), "op1"));
+
+        DiaNoComputableSaveResult segundo = repository.guardarActivoSiAusentePorFecha(
+                new FalDiaNoComputable(null, fecha, TipoDiaNoComputable.OTRO,
+                        "Segundo", OrigenDiaNoComputable.MANUAL, null, clock.now(), "op2"));
+
+        assertThat(segundo.yaExistia()).isTrue();
+        assertThat(segundo.diaPersistido().getId()).isEqualTo(primero.diaPersistido().getId());
+        assertThat(segundo.diaPersistido().getDescripcion())
+                .as("devuelve el registro existente, no el candidato rechazado")
+                .isEqualTo("Primero");
+        assertThat(repository.size()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("17. Altas concurrentes: exactamente un yaExistia=false y ids unicos")
+    void concurrencia_exactamente_un_creado() throws Exception {
+        LocalDate fecha = LocalDate.of(2026, 9, 2);
+        int threads = 10;
+        CountDownLatch latch = new CountDownLatch(1);
+        ExecutorService exec = Executors.newFixedThreadPool(threads);
+        try {
+            List<Future<DiaNoComputableSaveResult>> futures = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                int idx = i;
+                futures.add(exec.submit(() -> {
+                    latch.await();
+                    return repository.guardarActivoSiAusentePorFecha(new FalDiaNoComputable(
+                            null, fecha, TipoDiaNoComputable.FERIADO,
+                            "Concurrente " + idx, OrigenDiaNoComputable.MANUAL, null,
+                            clock.now(), "op" + idx));
+                }));
+            }
+            latch.countDown();
+
+            int creados = 0;
+            for (Future<DiaNoComputableSaveResult> f : futures) {
+                DiaNoComputableSaveResult r = f.get();
+                assertThat(r.diaPersistido().getId()).isNotNull();
+                if (!r.yaExistia()) creados++;
+            }
+
+            assertThat(creados).isEqualTo(1);
+            assertThat(repository.size())
+                    .as("un candidato que pierde la carrera no persiste ni consume fila")
+                    .isEqualTo(1);
+        } finally {
+            exec.shutdownNow();
+        }
+    }
+
+    // =====================================================================
+    // WAVE 1A1-CLOSE: paridad con el adaptador JDBC
+    // =====================================================================
+
+    @Test
+    @DisplayName("18. guardar con id existente actualiza la fila y conserva el id")
+    void guardar_con_id_existente_actualiza() {
+        LocalDate fecha = LocalDate.of(2026, 8, 6);
+        FalDiaNoComputable alta = repository.guardarActivoSiAusentePorFecha(
+                new FalDiaNoComputable(null, fecha, TipoDiaNoComputable.FERIADO,
+                        "Alta", OrigenDiaNoComputable.MANUAL, null, clock.now(), "op1")).diaPersistido();
+
+        alta.desactivar(clock.now(), "op2");
+        FalDiaNoComputable baja = repository.guardar(alta);
+
+        assertThat(baja.getId()).isEqualTo(alta.getId());
+        assertThat(repository.size()).isEqualTo(1);
+        assertThat(repository.buscarPorId(alta.getId()).orElseThrow().isSiActivo()).isFalse();
+        assertThat(repository.buscarActivoPorFecha(fecha)).isEmpty();
+    }
+
+    /**
+     * D-1A1-01: insertar con una PK elegida por el llamador contradice
+     * DECISION_ID-01 y el adaptador JDBC no puede hacerlo. Ambos adaptadores
+     * rechazan con la misma excepcion y el mismo mensaje.
+     */
+    @Test
+    @DisplayName("19. guardar con id inexistente lanza la excepcion funcional y no crea fila")
+    void guardar_con_id_inexistente_rechaza() {
+        FalDiaNoComputable fantasma = new FalDiaNoComputable(
+                null, LocalDate.of(2026, 8, 7), TipoDiaNoComputable.FERIADO,
+                "Fantasma", OrigenDiaNoComputable.MANUAL, null, clock.now(), "op1").conId(777L);
+
+        assertThatThrownBy(() -> repository.guardar(fantasma))
+                .isInstanceOf(PrecondicionVioladaException.class)
+                .hasMessage("Dia no computable no encontrado: id=777");
+        assertThat(repository.size()).isZero();
+        assertThat(repository.buscarPorId(777L)).isEmpty();
+    }
+
+    /**
+     * D-1A1-05: la referencia externa es un identificador tecnico. Se compara
+     * exacta y sensible a mayusculas despues del trim, igual que el adaptador JDBC.
+     */
+    @Test
+    @DisplayName("20. buscarPorOrigenYReferenciaExterna es exacta y sensible a mayusculas")
+    void referencia_externa_exacta_y_case_sensitive() {
+        String referencia = "Ref-AbC-123";
+        FalDiaNoComputable guardado = repository.guardar(new FalDiaNoComputable(
+                null, LocalDate.of(2026, 8, 8), TipoDiaNoComputable.FERIADO, "Sincronizado",
+                OrigenDiaNoComputable.SINCRONIZACION_EXTERNA, referencia, clock.now(), "sync"));
+
+        var externo = OrigenDiaNoComputable.SINCRONIZACION_EXTERNA;
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(externo, referencia)
+                .orElseThrow().getId()).isEqualTo(guardado.getId());
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(externo, "  " + referencia + "  ")
+                .orElseThrow().getId()).isEqualTo(guardado.getId());
+
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(externo, "ref-abc-123")).isEmpty();
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(externo, "REF-ABC-123")).isEmpty();
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(
+                OrigenDiaNoComputable.MANUAL, referencia)).isEmpty();
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(externo, null)).isEmpty();
+        assertThat(repository.buscarPorOrigenYReferenciaExterna(externo, "   ")).isEmpty();
     }
 }

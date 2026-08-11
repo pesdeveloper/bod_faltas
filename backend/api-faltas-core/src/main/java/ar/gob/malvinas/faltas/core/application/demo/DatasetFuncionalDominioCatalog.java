@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.CodigoBandeja;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
@@ -57,43 +58,44 @@ public final class DatasetFuncionalDominioCatalog {
     private static final List<ActaMockFuncionalDefinicion> DEFINICIONES = List.of(
 
         // =====================================================================
-        // ACT-001 - Slice 1: Acta recien labrada (CAPT)
+        // ACT-001 - Alta integral: acta recien labrada, nace directamente en ENRI
+        // (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)
         // =====================================================================
         new ActaMockFuncionalDefinicion(
             "ACT-001-LABRADA",
-            "Acta recien labrada en captura",
-            "Acta de transito recien creada. Estado inicial del circuito. Inspector registra la infraccion.",
-            "Slice 1 - LabrarActa",
-            List.of("Slice 1 - LabrarActa", "Estado inicial CAPT", "Bandeja ACTAS_EN_ENRIQUECIMIENTO"),
-            BloqueActual.CAPT,
+            "Acta recien labrada (alta integral)",
+            "Acta de transito recien creada. Alta integral: nace directamente en ENRI. Inspector registra la infraccion.",
+            "Alta integral - LabrarActa",
+            List.of("Alta integral - LabrarActa", "Estado inicial ENRI", "Bandeja ACTA_NUEVA"),
+            BloqueActual.ENRI,
             SituacionAdministrativaActa.ACTIVA,
             ResultadoFinalActa.SIN_RESULTADO_FINAL,
-            CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO,
+            CodigoBandeja.ACTA_NUEVA,
             false, false, false, false, false, false, false, false, false,
             List.of(),
             List.of(TipoEventoActa.ACTLAB),
             List.of("POST /api/faltas/actas/labrar", "ActaService.labrar()"),
-            List.of("Estado inicial puro. Bloque CAPT. Ningun documento esperado todavia.")
+            List.of("Estado inicial puro. Bloque ENRI. Ningun documento esperado todavia.")
         ),
 
         // =====================================================================
-        // ACT-002 - Slice 1: Captura completada, en enriquecimiento (ENRI)
+        // ACT-002 - Acta enriquecida (evento ACTENR adicional dentro de ENRI)
         // =====================================================================
         new ActaMockFuncionalDefinicion(
             "ACT-002-EN-ENRIQUECIMIENTO",
-            "Acta con captura completada, en enriquecimiento",
-            "Captura completada por el inspector. Acta en bloque ENRI para completar datos adicionales.",
-            "Slice 1 - CompletarCaptura (CAPT->ENRI)",
-            List.of("Slice 1 - CompletarCaptura", "Transicion CAPT->ENRI", "EnriquecerActa"),
+            "Acta enriquecida",
+            "Acta que ya recibio un enriquecimiento adicional dentro del bloque ENRI.",
+            "Alta integral - EnriquecerActa",
+            List.of("Alta integral - LabrarActa", "EnriquecerActa"),
             BloqueActual.ENRI,
             SituacionAdministrativaActa.ACTIVA,
             ResultadoFinalActa.SIN_RESULTADO_FINAL,
             CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO,
             false, false, false, false, false, false, false, false, false,
             List.of(),
-            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTCAP),
-            List.of("POST /api/faltas/actas/{id}/completar-captura", "ActaService.completarCaptura()"),
-            List.of("Bloque ENRI. Accion esperada: GENERAR_DOCUMENTO o ENRIQUECER.")
+            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTENR),
+            List.of("POST /api/faltas/actas/{id}/enriquecer", "ActaService.enriquecer()"),
+            List.of("Bloque ENRI. Accion esperada: GENERAR_DOCUMENTO.")
         ),
 
         // =====================================================================
@@ -116,7 +118,7 @@ public final class DatasetFuncionalDominioCatalog {
                     false, false, true, false, false,
                     "ENRI", "Documento inicial del expediente, requiere firma antes de notificar")
             ),
-            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTCAP, TipoEventoActa.ACTENR, TipoEventoActa.DOCGEN),
+            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTENR, TipoEventoActa.DOCGEN),
             List.of("POST /api/faltas/actas/{id}/documentos/generar", "DocumentoService.generar()"),
             List.of("Bandeja PENDIENTE_FIRMA. Accion: FIRMAR_DOCUMENTO.")
         ),
@@ -141,7 +143,7 @@ public final class DatasetFuncionalDominioCatalog {
                     true, true, false, false, true,
                     "ENRI->NOTI", "Notificacion del acta al infractor")
             ),
-            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTCAP, TipoEventoActa.ACTENR,
+            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTENR,
                     TipoEventoActa.DOCGEN, TipoEventoActa.DOCFIR),
             List.of("POST /api/faltas/actas/{id}/documentos/{docId}/firmar", "DocumentoService.firmar()"),
             List.of("Accion: ENVIAR_NOTIFICACION.")
@@ -169,7 +171,7 @@ public final class DatasetFuncionalDominioCatalog {
                     true, true, false, false, true,
                     "NOTI", "Notificacion enviada, pendiente de acuse")
             ),
-            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTCAP, TipoEventoActa.ACTENR,
+            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTENR,
                     TipoEventoActa.DOCGEN, TipoEventoActa.DOCFIR, TipoEventoActa.NOTENV),
             List.of("POST /api/faltas/actas/{id}/notificaciones/enviar",
                     "POST /api/faltas/actas/{id}/notificaciones/{notifId}/positiva",
@@ -200,7 +202,7 @@ public final class DatasetFuncionalDominioCatalog {
                     true, true, true, true, false,
                     "ANAL", "Acto administrativo de fallo, obligatorio para cerrar el circuito")
             ),
-            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTCAP, TipoEventoActa.ACTENR,
+            List.of(TipoEventoActa.ACTLAB, TipoEventoActa.ACTENR,
                     TipoEventoActa.DOCGEN, TipoEventoActa.DOCFIR, TipoEventoActa.NOTENV,
                     TipoEventoActa.NOTPOS),
             List.of("POST /api/faltas/actas/{id}/fallo/absolutorio",
@@ -776,17 +778,17 @@ public final class DatasetFuncionalDominioCatalog {
             "Acta en bloque incorrecto. Prueba guardrails de PrecondicionVioladaException.",
             "Guardrail - PrecondicionVioladaException en estado incorrecto",
             List.of("Guardrail - PrecondicionVioladaException",
-                    "Bloque CAPT incompatible con DictarFallo",
+                    "Bloque ENRI incompatible con DictarFallo",
                     "Acta CERRADA incompatible con todas las operaciones"),
-            BloqueActual.CAPT,
+            BloqueActual.ENRI,
             SituacionAdministrativaActa.ACTIVA,
             ResultadoFinalActa.SIN_RESULTADO_FINAL,
-            CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO,
+            CodigoBandeja.ACTA_NUEVA,
             false, false, false, false, false, false, false, false, false,
             List.of(),
             List.of(TipoEventoActa.ACTLAB),
             List.of("PrecondicionVioladaException"),
-            List.of("Caso negativo. DictarFallo en CAPT debe fallar. Usado para guardrails funcionales.")
+            List.of("Caso negativo. DictarFallo en ENRI debe fallar. Usado para guardrails funcionales.")
         ),
 
         // =====================================================================
@@ -1184,6 +1186,9 @@ public final class DatasetFuncionalDominioCatalog {
                 -34.5678,
                 -58.1234,
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                // El dataset conserva nombre y documento como texto de compatibilidad y no
+                // constituye una fila de fal_persona: es exactamente DATOS_INSUFICIENTES.
+                SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
                 null,
                 null,
                 null);

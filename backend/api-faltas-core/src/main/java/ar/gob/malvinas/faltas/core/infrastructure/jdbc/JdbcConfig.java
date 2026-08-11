@@ -4,20 +4,32 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Configuracion del perfil JDBC.
+ * Configuracion del perfil JDBC de dominio Faltas.
  *
  * Activo con: --spring.profiles.active=jdbc
  *
- * Spring Boot auto-configura JdbcClient y JdbcTemplate cuando existe un DataSource.
- * Esta clase es el punto de extension para configuracion JDBC adicional en futuros slices.
+ * Esta clase NO declara beans a proposito. Spring Boot 3.5.3 ya auto-configura,
+ * a partir del DataSource definido en application-jdbc.yml, todos los beans que
+ * la fundacion JDBC necesita (verificado por JdbcProfileContextIT):
  *
- * Variables de entorno requeridas:
- *   FALTAS_DB_URL      - URL de conexion MariaDB
- *   FALTAS_DB_USER     - Usuario
- *   FALTAS_DB_PASSWORD - Password
+ *   DataSource                     -> DataSourceAutoConfiguration (HikariCP, pool faltas-pool)
+ *   JdbcTemplate                   -> JdbcTemplateAutoConfiguration
+ *   NamedParameterJdbcTemplate     -> JdbcTemplateAutoConfiguration
+ *   JdbcClient                     -> JdbcClientAutoConfiguration
+ *   PlatformTransactionManager     -> JdbcTransactionManagerAutoConfiguration
  *
- * En modo por defecto (sin perfil jdbc) los repositorios InMemory* siguen activos.
- * Los repositorios Jdbc* (a implementar en 9-2 en adelante) se activaran solo con este perfil.
+ * Declarar cualquiera de esos beans aqui seria duplicacion sin valor. La clase
+ * se mantiene como punto de extension unico del perfil para lo que Boot no
+ * auto-configura (por ejemplo, beans de soporte de los adaptadores Jdbc* de
+ * dominio que se introduciran en WAVE 0B).
+ *
+ * Variables de entorno obligatorias del perfil:
+ *   FALTAS_DB_URL, FALTAS_DB_USER, FALTAS_DB_PASSWORD
+ *
+ * Estado en WAVE 0A: ningun puerto de repositorio de dominio esta migrado. Los
+ * adaptadores InMemory* siguen activos incluso con el perfil jdbc habilitado
+ * (GAP-004); la seleccion de exactamente un adaptador por puerto se resuelve
+ * materialmente en WAVE 0B junto con el repositorio piloto.
  */
 @Configuration
 @Profile("jdbc")

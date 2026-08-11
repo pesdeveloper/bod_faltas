@@ -1,7 +1,7 @@
 package ar.gob.malvinas.faltas.core.application.service;
 
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoObligacionPago;
-import ar.gob.malvinas.faltas.core.domain.enums.EstadoValorizacion;
+import ar.gob.malvinas.faltas.core.domain.enums.EstadoValorizacionActa;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
 import ar.gob.malvinas.faltas.core.domain.enums.OrigenUltimaActualizacion;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
@@ -59,8 +59,10 @@ public class ObligacionPagoService {
                 .orElseThrow(() -> new PrecondicionVioladaException("Valorizacion no encontrada: " + valorizacionId));
         if (!val.getActaId().equals(actaId))
             throw new PrecondicionVioladaException("La valorizacion no pertenece al acta " + actaId);
-        if (val.getEstadoValorizacion() != EstadoValorizacion.CONFIRMADA)
+        if (val.getEstadoValorizacion() != EstadoValorizacionActa.CONFIRMADA)
             throw new PrecondicionVioladaException("La valorizacion debe estar CONFIRMADA para determinar obligacion");
+        if (val.getMontoTotalPagoVoluntario() == null)
+            throw new PrecondicionVioladaException("La valorizacion no tiene monto de pago voluntario calculado");
         if (obligacionRepo.findVigenteByActaId(actaId).isPresent())
             throw new PrecondicionVioladaException("Ya existe una obligacion vigente para actaId=" + actaId);
 
@@ -69,7 +71,7 @@ public class ObligacionPagoService {
         Long nuevoId = obligacionRepo.nextId();
         FalActaObligacionPago nueva = new FalActaObligacionPago(
                 nuevoId, actaId, personaId, TipoObligacionPago.PAGO_VOLUNTARIO,
-                val.getMontoFinal(), ahora, actor, ahora, actor);
+                val.getMontoTotalPagoVoluntario(), ahora, actor, ahora, actor);
         nueva.setValorizacionId(valorizacionId);
         FalActaObligacionPago guardada = obligacionRepo.crearVigenteAtomico(nueva, null);
         emitirEvento(actaId, TipoEventoActa.OBLDET, actor, "Obligacion de pago voluntario determinada");

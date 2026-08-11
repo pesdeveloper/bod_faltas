@@ -1,0 +1,74 @@
+@if (parcelaRef()) {
+  <div class="parcela-panel mat-elevation-z3">
+
+    @if (loading()) {
+      <div class="parcela-loading">
+        <mat-spinner [diameter]="18" />
+        <span>Cargando parcela...</span>
+      </div>
+    }
+
+    @if (errorMsg()) {
+      <div class="parcela-error">
+        <mat-icon>warning</mat-icon>
+        <span>{{ errorMsg() }}</span>
+      </div>
+    }
+
+    @if (detalle() && !loading()) {
+      <!-- Header: calle más cercana -->
+      <div class="parcela-header">
+        <mat-icon class="parcela-icon">home_work</mat-icon>
+        <div class="parcela-header-text">
+          <span class="parcela-direccion">{{ detalle()!.direccion || 'Sin dirección' }}</span>
+          <span class="parcela-nomenclatura">{{ detalle()!.nomenclatura }}</span>
+        </div>
+      </div>
+
+      <mat-divider />
+
+      <!-- Inmuebles -->
+      @if (detalle()!.inmuebles.length > 0) {
+        <div class="parcela-section">
+          <div class="parcela-section-title">
+            <mat-icon>apartment</mat-icon>
+            <span>Inmueble{{ detalle()!.inmuebles.length > 1 ? 's' : '' }}</span>
+          </div>
+          @for (inm of detalle()!.inmuebles; track inm.cuentaDisplay) {
+            <div class="cuenta-row">
+              <span class="cuenta-badge">{{ inm.cuentaDisplay }}</span>
+            </div>
+          }
+        </div>
+        <mat-divider />
+      }
+
+      <!-- Comercios -->
+      @if (detalle()!.comercios.length > 0) {
+        <div class="parcela-section">
+          <div class="parcela-section-title">
+            <mat-icon>storefront</mat-icon>
+            <span>Comercios ({{ detalle()!.comercios.length }})</span>
+          </div>
+          <div class="comercios-list">
+            @for (c of detalle()!.comercios; track c.cuentaDisplay) {
+              <div class="comercio-row">
+                <mat-icon class="comercio-icon">store</mat-icon>
+                <div class="comercio-text">
+                  <span class="comercio-nombre">{{ c.nombreFantasia }}</span>
+                  <span class="cuenta-badge">{{ c.cuentaDisplay }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      } @else if (detalle()!.inmuebles.length > 0) {
+        <div class="parcela-section parcela-empty">
+          <mat-icon>info_outline</mat-icon>
+          <span>Sin comercios registrados</span>
+        </div>
+      }
+    }
+
+  </div>
+}

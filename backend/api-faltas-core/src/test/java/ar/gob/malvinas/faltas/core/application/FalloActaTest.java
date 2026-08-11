@@ -1,8 +1,10 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
@@ -121,7 +123,7 @@ class FalloActaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
@@ -275,7 +277,6 @@ class FalloActaTest {
 
             assertThat(tipos).containsSubsequence(
                     TipoEventoActa.ACTLAB,
-                    TipoEventoActa.ACTCAP,
                     TipoEventoActa.ACTENR,
                     TipoEventoActa.DOCGEN,
                     TipoEventoActa.DOCFIR,
@@ -586,17 +587,18 @@ class FalloActaTest {
 
     private LabrarActaCommand cmdLabrar() {
         return new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Maria Lopez", "87654321",
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null
+                null, null, null, "Maria Lopez", null, "87654321", null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null
         );
     }
 
     private Long labrarYCompletarCaptura() {
-        Long idActa = actaService.labrar(cmdLabrar()).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(idActa, null));
-        return idActa;
+        // El alta es integral: el acta ya nace en ENRI (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01).
+        return actaService.labrar(cmdLabrar()).idActa();
     }
 
     /**

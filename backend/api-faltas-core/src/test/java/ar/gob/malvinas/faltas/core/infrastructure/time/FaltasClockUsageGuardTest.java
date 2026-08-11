@@ -21,10 +21,15 @@ class FaltasClockUsageGuardTest {
     /** Files allowed to contain direct clock construction: only the canonical implementation. */
     private static final String ALLOWLIST_CLOCK_IMPL = "FaltasClock.java";
 
-    /** Files allowed to contain new FaltasClock(): canonical impl + documented composition roots. */
+    /**
+     * Files allowed to contain new FaltasClock(): canonical impl + documented composition roots.
+     *
+     * <p>{@code CasoUsoFuncionalRunner} (el único otro composition root manual) se retiró de
+     * {@code src/main} en Wave 4 Parte 3E-B: ya no puede aparecer aquí, porque este guard sólo
+     * escanea {@code src/main/java}.
+     */
     private static final Set<String> ALLOWLIST_NEW_FALTAS_CLOCK = Set.of(
             "FaltasClock.java",
-            "CasoUsoFuncionalRunner.java",
             "AesGcmQrTokenProtector.java"
     );
 

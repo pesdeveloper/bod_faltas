@@ -44,8 +44,7 @@ Etapa macro del circuito. Valores exactos del enum Java vigente:
 
 | Valor | Codigo | Descripcion |
 |---|---|---|
-| `CAPT` | `CAPT` | Captura/labrado inicial |
-| `ENRI` | `ENRI` | Enriquecimiento/completitud del acta |
+| `ENRI` | `ENRI` | Enriquecimiento/completitud del acta; bloque de nacimiento del acta (alta integral, `DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`) |
 | `NOTI` | `NOTI` | Notificacion del acta, fallo u otra pieza |
 | `ANAL` | `ANAL` | Analisis, resolucion, fallo, pagos y apelacion |
 | `GEXT` | `GEXT` | Gestion externa: apremio / juzgado de paz |
@@ -54,6 +53,11 @@ Etapa macro del circuito. Valores exactos del enum Java vigente:
 
 > `D3_DOCUMENTAL` no es un bloque. Se representa mediante bandeja documental,
 > `FalDocumento` y estados de firma.
+>
+> `CAPT` no es un bloque. El alta del acta es integral, no progresiva: el acta nace
+> directamente en `ENRI` con `ACTLAB` como unico evento inicial
+> (`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`,
+> [`../20-application/command-contracts.md`](../20-application/command-contracts.md)).
 
 ### `estadoProcesal` -- `EstadoProcesalActa`
 

@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarPagoCondenaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DerivarGestionExternaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
@@ -85,6 +86,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 /**
@@ -147,7 +149,7 @@ class BloqueantesMaterialesTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
@@ -187,11 +189,12 @@ class BloqueantesMaterialesTest {
 
     private Long crearActaConCondenaFirme(String docNum) {
         Long actaId = actaService.labrar(new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 100", "San Martin 200",
-                null, null, null, "Infractor Test", docNum,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
+                null, null, null, "Infractor Test", null, docNum, null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
                 new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
@@ -255,7 +258,7 @@ class BloqueantesMaterialesTest {
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-7A-001", null, "test-user"));
 
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -282,7 +285,7 @@ class BloqueantesMaterialesTest {
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-7A-002", null, "test-user"));
 
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -308,7 +311,7 @@ class BloqueantesMaterialesTest {
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-7A-005", null, "test-user"));
 
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -385,7 +388,7 @@ class BloqueantesMaterialesTest {
             registrarBloqueante(actaIdPcocnf);
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaIdPcocnf, new BigDecimal("3000.00"), "REF-7A-006", null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaIdPcocnf, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaIdPcocnf, null, "test-actor"));
 
             Long actaIdPagapr = crearActaEnGestionExternaConCondenaFirme("7A00006b");
             registrarBloqueante(actaIdPagapr);
@@ -561,7 +564,7 @@ class BloqueantesMaterialesTest {
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new java.math.BigDecimal("2000.00"), "REF-7B-010", null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -605,7 +608,7 @@ class BloqueantesMaterialesTest {
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new java.math.BigDecimal("2000.00"), "REF-7B-012", null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -637,7 +640,7 @@ class BloqueantesMaterialesTest {
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new java.math.BigDecimal("1500.00"), "REF-7B-013", null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<String> codigos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(e -> e.tipoEvt().codigo()).toList();
@@ -672,7 +675,7 @@ class BloqueantesMaterialesTest {
                     new RegistrarBloqueanteMaterialCommand(actaId, OrigenBloqueanteMaterial.RODADO));
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-7C-" + docNum, null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
             return new Object[]{actaId, b.getId()};
         }
 
@@ -737,7 +740,7 @@ class BloqueantesMaterialesTest {
 
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-7C-003", null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             // Cumplir solo b1; b2 sigue activo
             bloqueanteMaterialService.cumplir(new CumplirBloqueanteMaterialCommand(b1.getId()));
@@ -778,7 +781,7 @@ class BloqueantesMaterialesTest {
             Long actaId = crearActaConCondenaFirme("7C00005");
             pagoCondenaService.informar(new InformarPagoCondenaCommand(
                     actaId, new BigDecimal("3000.00"), "REF-7C-005", null, "test-user"));
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             // Verificar que ya esta cerrada con CIERRA
             assertThat(actaRepo.buscarPorId(actaId).orElseThrow().getSituacionAdministrativa())
@@ -861,3 +864,4 @@ class BloqueantesMaterialesTest {
         }
     }
 }
+

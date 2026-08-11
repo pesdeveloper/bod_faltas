@@ -31,14 +31,15 @@ public class FalDiaNoComputable {
             LocalDateTime fhAlta,
             String idUserAlta) {
 
-        if (id == null) throw new IllegalArgumentException("id es obligatorio");
+        // id nulo = entidad todavia no persistida. La PK la asigna la persistencia
+        // (fal_dia_no_computable.id es BIGINT AUTO_INCREMENT). Ver conId(Long).
         if (fecha == null) throw new IllegalArgumentException("fecha es obligatoria");
         if (tipo == null) throw new IllegalArgumentException("tipo es obligatorio");
         if (descripcion == null || descripcion.isBlank())
             throw new IllegalArgumentException("descripcion es obligatoria");
         String descNorm = descripcion.trim();
-        if (descNorm.length() > 160)
-            throw new IllegalArgumentException("descripcion max 160 caracteres");
+        if (descNorm.length() > 64)
+            throw new IllegalArgumentException("descripcion max 64 caracteres");
         if (origen == null) throw new IllegalArgumentException("origen es obligatorio");
         if (fhAlta == null) throw new IllegalArgumentException("fhAlta es obligatoria");
 
@@ -86,6 +87,23 @@ public class FalDiaNoComputable {
         this.siActivo = false;
         this.fhBaja = ahora;
         this.idUserBaja = actorNorm;
+    }
+
+    /**
+     * Copia con el id asignado por la persistencia.
+     *
+     * Mismo patron que FalActaEvento.conId(Long): el adaptador inserta y devuelve la
+     * entidad con la PK que genero la base, sin preasignar identificadores.
+     */
+    public FalDiaNoComputable conId(Long idAsignado) {
+        FalDiaNoComputable c = new FalDiaNoComputable(
+                idAsignado, fecha, tipo, descripcion, origen,
+                (origen == OrigenDiaNoComputable.SINCRONIZACION_EXTERNA) ? referenciaExterna : null,
+                fhAlta, idUserAlta);
+        c.siActivo = this.siActivo;
+        c.fhBaja = this.fhBaja;
+        c.idUserBaja = this.idUserBaja;
+        return c;
     }
 
     public FalDiaNoComputable copia() {

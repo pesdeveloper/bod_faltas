@@ -50,9 +50,40 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <!--
+            Wave 4 Parte 3D — pipeline de evidencias fotograficas.
+            javax.imageio (JDK) decodifica/codifica JPEG y PNG nativamente; ninguno de
+            los dos plugins agrega soporte para esos dos formatos, solo lo completan:
+
+            imageio-webp: unico decoder WEBP disponible para javax.imageio en el JDK
+            estandar (no hay soporte nativo). BSD-3-Clause, TwelveMonkeys, mantenido
+            activamente (ultimo release: jul-2026). Se fija en 3.13.1 (no la ultima
+            3.14.0, publicada pocos dias antes de este slice) por margen de estabilidad.
+            Se registra por SPI (META-INF/services), sin codigo propio adicional.
+
+            metadata-extractor: lectura de EXIF (orientacion + fecha de captura) antes
+            de descartar toda la metadata. Apache-2.0, Drew Noakes, de facto standard
+            Java EXIF, mantenido activamente (ultimo release: jul-2026). Fijado en
+            2.20.0 por el mismo criterio de margen de estabilidad.
+        -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-webp</artifactId>
+            <version>3.13.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>2.20.0</version>
         </dependency>
     </dependencies>
     <build>
@@ -63,4 +94,28 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <!--
+            Los tests *IT.java no los ejecuta Surefire: sus includes por defecto
+            (Test*.java, *Test.java, *Tests.java, *TestCase.java) no los alcanzan.
+            Este perfil activa Failsafe, cuya version y ejecuciones
+            (integration-test + verify) ya vienen gestionadas por
+            spring-boot-starter-parent; aqui solo se declara el plugin.
+
+            Ejecucion:  mvn -P integration-tests verify
+            Los IT que requieren MariaDB siguen condicionados por sus propias
+            variables de entorno (FALTAS_DB_URL); el resto corre siempre.
+        -->
+        <profile>
+            <id>integration-tests</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

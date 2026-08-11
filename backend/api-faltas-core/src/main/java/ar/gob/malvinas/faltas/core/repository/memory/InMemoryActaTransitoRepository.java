@@ -2,12 +2,14 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 
 import ar.gob.malvinas.faltas.core.domain.model.FalActaTransito;
 import ar.gob.malvinas.faltas.core.repository.ActaTransitoRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryActaTransitoRepository implements ActaTransitoRepository, ResettableInMemoryRepository {
 
     private final java.util.List<FalActaTransito> store = new CopyOnWriteArrayList<>();

@@ -52,30 +52,54 @@ public class SatelitesCatalogosSeeder {
         seedRubros();
     }
 
+    /**
+     * Idempotente desde Wave 4 (alta integral JDBC): antes de esta wave, el seeder solo corria
+     * contra {@code InMemoryVehiculoMarcaRepository} (reiniciado por cada contexto de test), de
+     * modo que reejecutarlo nunca chocaba con una marca ya existente. Con
+     * {@code JdbcVehiculoMarcaRepository} activo bajo el perfil {@code jdbc}, la persistencia es
+     * real y sobrevive entre recargas del contexto de Spring dentro de la misma corrida de
+     * Failsafe: sin este guard, la segunda carga del contexto fallaba con
+     * "Ya existe una marca con codigo: FIAT". Se aplica {@code altaMarcaSiNoExiste}/
+     * {@code altaModeloSiNoExiste} en lugar de tocar {@code VehiculoMarcaService.altaMarca}, que
+     * debe seguir rechazando duplicados reales.
+     */
     private void seedMarcasModelos() {
         // Marcas activas
-        FalVehiculoMarca fiat = marcaService.altaMarca("FIAT", "Fiat", "SEEDER");
-        modeloService.altaModelo(fiat.getId(), "CRONOS", "Cronos", "SEEDER");
-        modeloService.altaModelo(fiat.getId(), "PALIO", "Palio", "SEEDER");
-        modeloService.altaModelo(fiat.getId(), "SIENA", "Siena", "SEEDER");
+        FalVehiculoMarca fiat = altaMarcaSiNoExiste("FIAT", "Fiat");
+        altaModeloSiNoExiste(fiat.getId(), "CRONOS", "Cronos");
+        altaModeloSiNoExiste(fiat.getId(), "PALIO", "Palio");
+        altaModeloSiNoExiste(fiat.getId(), "SIENA", "Siena");
 
-        FalVehiculoMarca ford = marcaService.altaMarca("FORD", "Ford", "SEEDER");
-        modeloService.altaModelo(ford.getId(), "FIESTA", "Fiesta", "SEEDER");
-        modeloService.altaModelo(ford.getId(), "FOCUS", "Focus", "SEEDER");
-        modeloService.altaModelo(ford.getId(), "RANGER", "Ranger", "SEEDER");
+        FalVehiculoMarca ford = altaMarcaSiNoExiste("FORD", "Ford");
+        altaModeloSiNoExiste(ford.getId(), "FIESTA", "Fiesta");
+        altaModeloSiNoExiste(ford.getId(), "FOCUS", "Focus");
+        altaModeloSiNoExiste(ford.getId(), "RANGER", "Ranger");
 
-        FalVehiculoMarca toyota = marcaService.altaMarca("TOYOTA", "Toyota", "SEEDER");
-        modeloService.altaModelo(toyota.getId(), "COROLLA", "Corolla", "SEEDER");
-        modeloService.altaModelo(toyota.getId(), "HILUX", "Hilux", "SEEDER");
+        FalVehiculoMarca toyota = altaMarcaSiNoExiste("TOYOTA", "Toyota");
+        altaModeloSiNoExiste(toyota.getId(), "COROLLA", "Corolla");
+        altaModeloSiNoExiste(toyota.getId(), "HILUX", "Hilux");
 
-        FalVehiculoMarca honda = marcaService.altaMarca("HONDA", "Honda", "SEEDER");
-        modeloService.altaModelo(honda.getId(), "CIVIC", "Civic", "SEEDER");
-        modeloService.altaModelo(honda.getId(), "CR-V", "CR-V", "SEEDER");
+        FalVehiculoMarca honda = altaMarcaSiNoExiste("HONDA", "Honda");
+        altaModeloSiNoExiste(honda.getId(), "CIVIC", "Civic");
+        altaModeloSiNoExiste(honda.getId(), "CR-V", "CR-V");
 
         // Marca inactiva (para test de referencia historica)
-        FalVehiculoMarca renault = marcaService.altaMarca("RENAULT", "Renault", "SEEDER");
-        modeloService.altaModelo(renault.getId(), "LAGUNA", "Laguna", "SEEDER");
-        marcaService.desactivar(renault.getId(), "SEEDER");
+        FalVehiculoMarca renault = altaMarcaSiNoExiste("RENAULT", "Renault");
+        altaModeloSiNoExiste(renault.getId(), "LAGUNA", "Laguna");
+        if (renault.isSiActivo()) {
+            marcaService.desactivar(renault.getId(), "SEEDER");
+        }
+    }
+
+    private FalVehiculoMarca altaMarcaSiNoExiste(String codigo, String nombre) {
+        return marcaRepository.findByCodigo(codigo)
+                .orElseGet(() -> marcaService.altaMarca(codigo, nombre, "SEEDER"));
+    }
+
+    private void altaModeloSiNoExiste(Long marcaId, String codigo, String nombre) {
+        if (modeloService.findByMarcaAndCodigo(marcaId, codigo).isEmpty()) {
+            modeloService.altaModelo(marcaId, codigo, nombre, "SEEDER");
+        }
     }
 
     private void seedRubros() {

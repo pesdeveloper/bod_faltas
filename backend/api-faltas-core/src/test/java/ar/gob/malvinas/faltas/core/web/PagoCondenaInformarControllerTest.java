@@ -50,7 +50,9 @@ class PagoCondenaInformarControllerTest {
     void setUp() {
         pagoCondenaService = mock(PagoCondenaService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(
-                new PagoCondenaController(pagoCondenaService)).build();
+                new PagoCondenaController(pagoCondenaService))
+                .setControllerAdvice(new GlobalFaltasControllerAdvice())
+                .build();
     }
 
     @AfterEach

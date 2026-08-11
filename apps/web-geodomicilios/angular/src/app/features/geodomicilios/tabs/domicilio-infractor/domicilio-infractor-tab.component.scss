@@ -1,0 +1,115 @@
+﻿.tab-content {
+  padding: 16px;
+  max-width: 900px;
+}
+
+.tab-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+
+  mat-icon { color: #1565c0; font-size: 28px; width: 28px; height: 28px; }
+  h2 { margin: 0; font-size: 18px; font-weight: 500; }
+}
+
+.modo-chip {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-weight: 600;
+
+  &--MALVINAS_LOCAL {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+  }
+  &--EXTERNO_IGN_INDEC {
+    background: #f3e5f5;
+    color: #6a1b9a;
+    border: 1px solid #ce93d8;
+  }
+}
+
+.modo-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+
+  &--local {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+  }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.domicilio-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.field-provincia { flex: 2; min-width: 200px; }
+.field-unidad { flex: 3; min-width: 220px; }
+.field-localidad { flex: 1; min-width: 200px; }
+.field-calle { flex: 3; min-width: 220px; }
+.field-altura { flex: 1; min-width: 100px; max-width: 140px; }
+.field-sin-altura { display: flex; align-items: center; padding-top: 12px; }
+.field-piso { flex: 1; min-width: 120px; max-width: 180px; }
+.field-cp { flex: 1; min-width: 120px; max-width: 180px; }
+
+.hint-pendiente {
+  color: #f57c00;
+  font-style: italic;
+}
+
+.calle-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.calle-nombre { font-weight: 500; font-size: 13px; }
+.calle-loc { font-size: 11px; color: #555; }
+.calle-anterior { font-size: 10px; color: #888; font-style: italic; }
+
+.tipo-badge {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+.domicilio-resumen {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 12px;
+
+  mat-icon { color: #388e3c; margin-top: 2px; }
+
+  .resumen-calle { font-weight: 600; font-size: 15px; }
+  .resumen-detalle { font-size: 12px; color: #555; margin-top: 2px; }
+  .resumen-ids { font-size: 11px; color: #777; margin-top: 4px; display: flex; gap: 12px; }
+  .resumen-modo { font-size: 10px; color: #888; margin-top: 2px; font-style: italic; }
+}

@@ -3,7 +3,8 @@
 > **Trabajo:** DDL-MARIADB-MANUAL-001-FULL-R1
 > **Fuente normativa:** `50-persistence/mariadb-logical-model.md`, `50-persistence/ddl-decisions.md`
 >
-> Conteo: **65 tablas canónicas** = 1 PREEXISTING_CANONICAL_ADOPTED + 64 TO_CREATE.
+> Conteo: **66 tablas canónicas** = 1 PREEXISTING_CANONICAL_ADOPTED + 65 TO_CREATE
+> (65 = 64 del cierre FULL-R1 + `fal_valor_unidad_faltas`, agregada en Wave 4 PARTE-2 S7.2).
 > Excluidas del inventario: `fal_informix_sync_error`, `fal_informix_sync_run` (no son tablas del dominio Faltas).
 > Excluidas del inventario: todas las `geo_*` (infraestructura geográfica externa).
 
@@ -83,7 +84,7 @@
 
 | # | Nombre físico | Estado | Familia | Java | Puerto | PK | FK salientes (simplificado) | Tipo | OCC | DECISION_DDL | Slice |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 31 | `fal_acta_evidencia` | TO_CREATE | Núcleo acta | `FalActaEvidencia` | `ActaEvidenciaRepository` | `id BIGINT AUTO_INCREMENT` | `id_acta → fal_acta` | append-only | N | `DECISION_DDL-EVID-01` | R2+ |
+| 31 | `fal_acta_evidencia` | TO_CREATE | Núcleo acta | `FalActaEvidencia` | `ActaEvidenciaRepository` | `id BIGINT AUTO_INCREMENT` | `id_acta → fal_acta` | append-only | N | `DECISION_DDL-EVID-01` + `DECISION_DDL-EVID-03` (Wave 4 Parte 3D: metadata de fotografías, columnas exclusivas de `tipo_evid=FOTO`) | R2+ |
 | 32 | `fal_observacion` | TO_CREATE | Núcleo acta | `FalObservacion` | `ObservacionRepository` | `id BIGINT AUTO_INCREMENT` | `id_acta → fal_acta` | mutable | N | — | R2+ |
 | 33 | `fal_acta_transito` | TO_CREATE | Satélites de acta | `FalActaTransito` | — | `acta_id BIGINT` (PK+FK 1:1) | `acta_id → fal_acta` | mutable | N | — | R2+ |
 | 34 | `fal_acta_transito_alcoholemia` | TO_CREATE | Satélites de acta | `FalActaTransitoAlcoholemia` | — | `id BIGINT AUTO_INCREMENT` | `acta_id → fal_acta` | mutable | N | — | R2+ |
@@ -118,6 +119,7 @@
 | 63 | `fal_acta_plan_pago_ref` | TO_CREATE | Economía/pagos | `FalActaPlanPagoRef` | — | `id BIGINT AUTO_INCREMENT` | `forma_pago_id → fal_acta_forma_pago`, `obligacion_pago_id → fal_acta_obligacion_pago`, `plan_refinanciado_id → fal_acta_plan_pago_ref` (self) | mutable | Y | `DECISION_DDL-PLAN-01` | R2+ |
 | 64 | `fal_acta_pago_movimiento` | TO_CREATE | Economía/pagos | `FalActaPagoMovimiento` | `PagoMovimientoRepository` | `id BIGINT AUTO_INCREMENT` | `obligacion_pago_id → fal_acta_obligacion_pago`, `forma_pago_id → fal_acta_forma_pago` (nullable), `plan_pago_ref_id → fal_acta_plan_pago_ref` (nullable), `movimiento_origen_id → fal_acta_pago_movimiento` (self) | append-only | N | `DECISION_DDL-MOV-01..04`, `DECISION_DDL-PAGO-MOV-01` | R2+ |
 | 65 | `fal_acta_economia_proyeccion` | TO_CREATE | Economía/pagos | `FalActaEconomiaProyeccion` | `EconomiaProyeccionRepository` | `acta_id BIGINT` (PK+FK 1:1) | `acta_id → fal_acta`, `obligacion_vigente_id → fal_acta_obligacion_pago` (nullable), `forma_pago_vigente_id → fal_acta_forma_pago` (nullable), `plan_pago_vigente_id → fal_acta_plan_pago_ref` (nullable), `ultimo_movimiento_id_proyectado → fal_acta_pago_movimiento` (nullable) | proyección | Y | `DECISION_DDL-ECPR-01` | R2+ |
+| 66 | `fal_valor_unidad_faltas` | TO_CREATE | Normativa | `FalValorUnidadFaltas` | `ValorUnidadFaltasRepository` | `id BIGINT AUTO_INCREMENT` | — | `fal_acta_valorizacion_item` | catálogo | N | Wave 4 PARTE-2 S7.2 | G1 (sin FK externas; agregada tras el cierre de FULL-R1 en la remediación de valorización) |
 
 ---
 
@@ -126,8 +128,8 @@
 | Categoría | Cantidad |
 |---|---|
 | PREEXISTING_CANONICAL_ADOPTED | 1 (`fal_rubro_version`) |
-| TO_CREATE | 64 |
-| **Total canónico** | **65** |
+| TO_CREATE | 65 |
+| **Total canónico** | **66** |
 | Excluidas (`fal_informix_sync_*`) | 2 (no canónicas) |
 | Excluidas (`geo_*`) | múltiples (externas) |
 

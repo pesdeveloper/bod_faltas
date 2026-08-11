@@ -6,13 +6,191 @@
 
 ## Ciclo base
 
-### LabrarActa
-- **Precondiciones**: ninguna (inicio de flujo)
-- **Efectos**: crea FalActa (CAPT), evento ACTLAB, snapshot inicial
+### LabrarActa (alta integral)
+- **Precondiciones**: actor autenticado; `resultadoFirmaInfractor` informado; `situacionIdentificacionInfractor` informada; si `resultadoFirmaInfractor = FIRMADA`, evidencia `FIRMA_OLOGRAFA_INFRACTOR` presente; cada satélite informado se valida contra su propio contrato; los satélites obligatorios según `TipoActa` deben estar presentes
+- **Efectos**: crea FalActa directamente en `ENRI` (`ACTIVA`/`EN_TRAMITE`/`SIN_RESULTADO_FINAL`, condición operativa inicial `ACTA NUEVA`), `ACTLAB` como único evento inicial, persiste en la misma transacción los satélites aplicables y disponibles, la valorización inicial calculada y el snapshot inicial completo (`DECISION-ACTA-ALTA-INTEGRAL-01`, `DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`)
 
-### CompletarCaptura
-- **Precondiciones**: acta en CAPT, no cerrada
-- **Efectos**: bloque -> ENRI, evento ACTCAP
+El alta es integral y no progresiva: el cliente envía en un único `POST` todo lo
+disponible, coherente y aplicable al `TipoActa` en el momento de labrar. Integral no
+significa que todos los satélites sean obligatorios — significa que se persiste en una
+única transacción todo lo que fue informado y es aplicable
+(`DECISION-ACTA-SATELITES-ATOMICIDAD-01`). No existe una secuencia pública de llamadas
+adicionales del cliente para completar el acta recién creada; el trabajo posterior de
+edición ocurre en `ENRI` mediante los comandos de enriquecimiento
+(`DECISION-ACTA-EDICION-ENRI-01`).
+
+#### Reglas de alta del acta
+
+Las tres reglas siguientes se validan antes de la primera mutación y ninguna admite
+un valor inventado por la persistencia.
+
+**Actor autenticado (`id_user_alta`).** `id_user_alta` es el `sub` real del inspector
+autenticado. Es `CHAR(36)`, sin FK, sin catálogo y sin lookup. El actor no viaja en el
+comando ni en el request público: se obtiene del contexto de actor autenticado que la
+aplicación ya provee, validado no nulo, no blanco y de hasta 36 caracteres. Un
+`id_user_alta` aportado por el cliente no es fuente de verdad, porque permitiría
+suplantar al inspector. La ausencia de actor autenticado es una precondición violada y
+no se sustituye por un usuario ficticio, por `SISTEMA` ni por ningún otro valor de
+relleno. El dominio y los adaptadores de persistencia no dependen del framework de
+seguridad: consumen el `sub` ya resuelto.
+
+**Situación de identificación del infractor.** El alta informa siempre
+`SituacionIdentificacionInfractor`
+([`../10-domain/states-events-catalogs.md`](../10-domain/states-events-catalogs.md)).
+No tiene valor por defecto: es una calificación jurídica del acto. Determina si existe
+persona infractora:
+
+```text
+IDENTIFICADO_COMPLETO      hay persona, con documento
+IDENTIFICADO_PARCIAL       hay persona, con los datos parciales reales
+PRESENTE_SE_NIEGA          no hay persona
+PRESENTE_NO_APORTA_DATOS   no hay persona
+AUSENTE                    no hay persona
+DATOS_INSUFICIENTES        no hay persona
+```
+
+**Creación de `fal_persona`.** Se crea una persona sólo en las dos situaciones de
+identificación, y sólo con los datos realmente aportados. Nunca se inventa documento,
+nombre ni domicilio para completar una fila. `tipo_documento` y `nro_doc` son ambos
+informados o ambos NULL (`DECISION_DDL-PERS-01`), de modo que una persona parcial es
+un estado modelado y válido. Si el infractor aporta un documento que ya identifica a
+una persona existente, el alta la reutiliza en lugar de duplicarla. Cuando los datos
+parciales no constituyen una identidad natural suficiente, no se aplica ninguna
+heurística de deduplicación: se crea la persona con lo aportado y la posible
+duplicación queda como dato real del expediente, no como una fusión inferida.
+
+**`id_tecnico` opcional (`DECISION-ACTA-ID-TECNICO-QR-01`).** `id_tecnico` es la
+identidad técnica estable del acta y la base del QR de acceso al portal. Es opcional en
+el comando/request de alta:
+
+```text
+idTecnico ausente  -> el servidor genera un UUID nuevo
+idTecnico presente -> el servidor lo valida y lo usa exactamente, sin regenerarlo
+```
+
+Este campo no es una segunda clave de idempotencia. El caso de uso web omite
+habitualmente `id_tecnico`; el caso de uso móvil offline lo genera en el dispositivo al
+crear el borrador local y lo envía en el mismo `POST` integral al sincronizar, de modo
+que la URL/QR generada en el borrador siga siendo válida después de la sincronización.
+`id_tecnico` y `codigo_qr` son inmutables una vez emitidos, igual que ya establece
+`DECISION-QR-INMUTABLE-01` para el QR.
+
+**Domicilios opcionales (`DECISION-ACTA-DOMICILIOS-OPCIONALES-01`).** Los domicilios no
+son requisito general del alta. Si el domicilio está disponible se incluye y persiste en
+el `POST` integral; si es parcial se acepta en la medida en que el modelo lo permita; si
+no está disponible, el alta continúa sin él y se completa después en `ENRI`. Las FKs de
+domicilio en `fal_acta` son nullable exactamente por esto. Solo se exige un domicilio
+cuando una regla normativa explícita lo requiere para un caso concreto (por ejemplo, un
+canal de notificación físico exige `id_domicilio_notif_act`, ver
+[`./fallo-command-contracts.md`](./fallo-command-contracts.md)); esa exigencia se valida
+en el momento en que se necesita, no como precondición general del labrado.
+
+**QR previo al alta.** `codigo_qr` se genera antes de la primera escritura del acta, a
+partir de `id_tecnico` y nunca de `id_acta`, con el formato y el algoritmo de
+`DECISION_DDL-ACTA-QR-01`
+([`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md)). El
+servicio de QR es el único que lo produce y lo valida; el repositorio del acta no lo
+genera ni lo modifica. Un `codigo_qr` recibido del llamador no es canónico.
+
+**QR emitido una sola vez e inmutable.** El QR se emite exclusivamente en el alta y, una
+vez emitido, `codigo_qr` y `qr_payload_version` no cambian
+(`DECISION-QR-INMUTABLE-01`). No existe operación de aplicación que rote, regenere,
+revoque o reemplace el QR de un acta ya emitida, y el agregado rechaza un segundo valor
+antes de cualquier persistencia. `qr_payload_version` es la versión del **formato del
+payload**, no una versión de clave ni un contador de reemisiones: hoy vale `0` y una
+versión distinta exige una decisión normativa nueva.
+
+#### Secuencia del alta integral
+
+`ActaService.labrar` es la frontera transaccional del alta completa del acta
+(`DECISION_OBS-TX-01`, [`../40-domain/observaciones.md`](../40-domain/observaciones.md);
+`DECISION-ACTA-SATELITES-ATOMICIDAD-01`). Coordina puertos, nunca adaptadores concretos.
+Cualquier satélite obligatorio para el `TipoActa` que falte es una precondición violada;
+cualquier satélite realmente opcional que falte simplemente no se persiste, sin inventar
+datos ni filas vacías.
+
+```text
+validaciones previas a toda mutacion:
+  actor autenticado presente
+  resultadoFirmaInfractor informado
+  situacionIdentificacionInfractor informada
+  evidencia de firma coherente con resultadoFirmaInfractor
+  coherencia entre situacion e identificacion aportada
+  cada satelite informado, valido segun su propio contrato
+  satelites obligatorios por TipoActa, presentes
+
+luego, en una unica transaccion:
+  1.  capturar el actor y el instante de aplicacion, una sola vez
+  2.  resolver id_tecnico (UUID nuevo si no vino informado; validar y usar
+      exactamente el informado en caso contrario)
+  3.  generar codigo_qr desde id_tecnico resuelto
+  4.  resolver o crear fal_persona si la situacion es de identificacion
+  5.  persistir domicilios informados, si los hay
+  6.  construir y guardar FalActa completa, directamente en ENRI, con
+      id_user_alta, id_tecnico y codigo_qr informados
+  7.  persistir articulos infringidos / normas aplicables
+  8.  persistir satelites aplicables informados (contravencion, vehiculo,
+      transito, alcoholemia, medidas preventivas, sustancias alimenticias,
+      ubicacion)
+  9.  ejecutar el valorizador reutilizable sobre los articulos persistidos
+  10. persistir valorizacion inicial e items
+  11. insertar la observacion inicial si hay texto no blanco
+  12. persistir evidencias y documentos iniciales aplicables
+  13. registrar evento ACTLAB (unico evento inicial)
+  14. recalcular y persistir snapshot inicial completo, incluidos los datos
+      relevantes de satelites y valorizacion
+  15. commit total
+
+cualquier fallo -> rollback total; no queda acta parcial, satelite huerfano,
+evento ni snapshot
+```
+
+El orden anterior se ajusta a las FKs físicas reales sin alterar la semántica; no es
+una secuencia pública de llamadas HTTP, sino la orquestación interna de un único `POST`.
+El instante de aplicación se captura una sola vez antes de la primera mutación y se
+reutiliza en todas las columnas de fecha de esa frontera (`CMD-ORDER-002`); no se usan
+funciones de fecha del motor. La obligación de pago no forma parte de esta secuencia
+(`DECISION-ACTA-OBLIGACION-PAGO-FUERA-ALTA-01`): valorización del acta no es deuda
+exigible, condena ni pago voluntario; esos circuitos son posteriores y ya están
+definidos en el resto de esta spec.
+
+#### Decisiones de alta integral persistidas
+
+Estas decisiones tienen prioridad sobre cualquier documento, test, fixture o código
+anterior que las contradiga. Superan explícitamente el modelo de captura progresiva que
+certificaron `00-governance/ready-for-ddl-gate.md` y
+`00-governance/ready-for-backend-clean-room-reconstruction.md` hasta 2026-07-18 (ver nota
+de superación en esos documentos).
+
+- **`DECISION-ACTA-ALTA-INTEGRAL-01`** — el alta no es progresiva; un único `POST` con el
+  agregado completo disponible y aplicable; el servidor valida todo antes de la primera
+  mutación y persiste todo en una única transacción MariaDB.
+- **`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`** — el bloque `BloqueActual.CAPT` queda eliminado;
+  el evento `TipoEventoActa.ACTCAP` queda eliminado; el comando `CompletarCaptura` queda
+  eliminado; la acción `COMPLETAR_CAPTURA` queda eliminada. El acta nace directamente en
+  `ENRI`; `ACTLAB` es el único evento inicial.
+- **`DECISION-ACTA-SATELITES-ATOMICIDAD-01`** — todos los satélites aplicables e
+  informados se persisten en la misma transacción que el acta raíz; ningún satélite
+  obligatorio por `TipoActa` puede omitirse; ningún satélite realmente opcional se
+  inventa para satisfacer una FK.
+- **`DECISION-ACTA-ID-TECNICO-QR-01`** — `id_tecnico` es opcional en el comando de alta;
+  ausente se genera, presente se valida y se conserva exactamente; el QR se deriva
+  siempre de `id_tecnico`, nunca de `id_acta`; ambos son inmutables una vez emitidos.
+- **`DECISION-ACTA-DOMICILIOS-OPCIONALES-01`** — los domicilios no son requisito general
+  del alta; sus FKs son nullable; se completan en `ENRI` cuando no estén disponibles al
+  labrar.
+- **`DECISION-ACTA-EDICION-ENRI-01`** — una vez creada en `ENRI`, el acta admite agregar
+  o corregir persona, domicilios (incluida baja lógica), artículos infringidos,
+  vehículo/tránsito/alcoholemia, ubicación, observaciones, evidencias y demás satélites,
+  y recalcular/confirmar valorización, cada operación con su propio evento y snapshot.
+- **`DECISION-ACTA-VALORIZACION-REUTILIZABLE-01`** — el cálculo de valorización
+  (detalle por artículo, cantidad e importe efectivos, subtotal, total, advertencias) es
+  un componente de dominio/aplicación reutilizable sin persistencia propia, usado por el
+  alta integral, la vista previa de UX y la edición/confirmación posterior en `ENRI`. La
+  vista previa no persiste, no muta artículos, no genera eventos ni snapshot.
+- **`DECISION-ACTA-OBLIGACION-PAGO-FUERA-ALTA-01`** — la obligación de pago, el pago
+  voluntario, la condena y su emisión no forman parte del `POST` de alta; pertenecen a
+  los circuitos posteriores ya definidos en el resto de esta spec.
 
 ### EnriquecerActa
 - **Precondiciones**: acta en ENRI, no cerrada

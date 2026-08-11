@@ -15,6 +15,10 @@ import java.time.LocalDateTime;
  * - id_dep_padre BIGINT NULL (FK autoreferencial; NULL = raiz)
  * - si_activa BOOLEAN NOT NULL
  *
+ * Regla id_dep_padre != idDep (una dependencia no puede ser su propio padre):
+ * enforcement en setIdDepPadre(), no CHECK fisico. MariaDB no admite CHECK
+ * sobre columnas AUTO_INCREMENT (ERROR 1901); correccion MARIADB-BASELINE-EXEC-001.
+ *
  * La estructura en detalle (tipo_acta, vigencias) vive en FalDependenciaVersion.
  * tipo_acta NO vive en esta tabla maestro.
  *
@@ -47,7 +51,11 @@ public class FalDependencia {
     public void setNomDep(String nomDep) { this.nomDep = nomDep; }
 
     public Long getIdDepPadre() { return idDepPadre; }
-    public void setIdDepPadre(Long idDepPadre) { this.idDepPadre = idDepPadre; }
+    public void setIdDepPadre(Long idDepPadre) {
+        if (idDepPadre != null && idDepPadre.equals(this.idDep))
+            throw new IllegalArgumentException("idDepPadre no puede ser igual al propio idDep");
+        this.idDepPadre = idDepPadre;
+    }
 
     public boolean isSiActiva() { return siActiva; }
     public void setSiActiva(boolean siActiva) { this.siActiva = siActiva; }

@@ -102,19 +102,21 @@ public class CalendarioAdministrativoService implements CalendarioAdministrativo
         }
 
         var ahora = clock.now();
-        Long id = repository.nextId();
 
+        // Sin id: lo asigna la persistencia (AUTO_INCREMENT). El resultado informa
+        // explicitamente si esta llamada inserto o si perdio la carrera, en lugar de
+        // inferirlo comparando identificadores preasignados.
         var candidato = new FalDiaNoComputable(
-                id, fecha, tipo, descripcionNorm, origen, referenciaNorm, ahora, actorNorm);
+                null, fecha, tipo, descripcionNorm, origen, referenciaNorm, ahora, actorNorm);
 
         var resultado = repository.guardarActivoSiAusentePorFecha(candidato);
 
-        if (!resultado.getId().equals(candidato.getId())) {
+        if (resultado.yaExistia()) {
             throw new PrecondicionVioladaException(
                     "Alta concurrente: ya existe un registro activo para la fecha: " + fecha);
         }
 
-        return resultado;
+        return resultado.diaPersistido();
     }
 
     /**
@@ -145,8 +147,8 @@ public class CalendarioAdministrativoService implements CalendarioAdministrativo
         if (descripcion == null || descripcion.isBlank())
             throw new IllegalArgumentException("descripcion es obligatoria");
         String norm = descripcion.trim();
-        if (norm.length() > 160)
-            throw new IllegalArgumentException("descripcion max 160 caracteres");
+        if (norm.length() > 64)
+            throw new IllegalArgumentException("descripcion max 64 caracteres");
         return norm;
     }
 

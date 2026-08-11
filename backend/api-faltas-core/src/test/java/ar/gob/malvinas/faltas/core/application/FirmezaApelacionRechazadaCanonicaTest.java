@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.application.command.DeclararCondenaFirmePorApelacionRechazadaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
@@ -74,6 +75,7 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepos
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 import ar.gob.malvinas.faltas.core.support.IntentoTestSupport;
 import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
@@ -178,7 +180,7 @@ class FirmezaApelacionRechazadaCanonicaTest {
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo,
                 pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
@@ -222,11 +224,12 @@ class FirmezaApelacionRechazadaCanonicaTest {
 
     private Long crearActaPreFallo(String docNum) {
         Long actaId = actaService.labrar(new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 100", "San Martin 200",
-                null, null, null, "Infractor Test", docNum,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
+                null, null, null, "Infractor Test", null, docNum, null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
                 new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))

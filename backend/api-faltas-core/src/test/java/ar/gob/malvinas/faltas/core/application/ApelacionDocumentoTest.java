@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.*;
@@ -67,7 +68,7 @@ class ApelacionDocumentoTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), new InMemoryPersonaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
                 new InMemoryDocumentoPlantillaRepository(),
@@ -98,8 +99,8 @@ class ApelacionDocumentoTest {
 
     private Long llegarAAnalisis(String nro) {
         Long actaId = actaService.labrar(new LabrarActaCommand(TipoActa.TRANSITO, 1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(),
-                "Dir", null, null, null, "Inf", nro, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
+                "Dir", null, null, null, null, "Inf", null, nro, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.IDENTIFICADO_PARCIAL, null,
+                null, null, null, null, ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriched"));
         String docId = docService.generarDocumento(new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION)).idEntidadAfectada();
         docService.firmarDocumento(new FirmarDocumentoCommand(Long.parseLong(docId), "Insp", "DIGITAL", null));

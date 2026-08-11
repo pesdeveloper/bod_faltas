@@ -1,23 +1,15 @@
 package ar.gob.malvinas.faltas.core.application.service;
 
+import ar.gob.malvinas.faltas.core.application.port.QrTokenEmitido;
 import ar.gob.malvinas.faltas.core.application.port.QrTokenProtector;
 import ar.gob.malvinas.faltas.core.domain.enums.CanalAccesoQr;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoAccesoQr;
-import ar.gob.malvinas.faltas.core.domain.enums.ActorTipoEvento;
-import ar.gob.malvinas.faltas.core.domain.enums.OrigenEvento;
-import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
-import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
-import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.exception.QrTokenInvalidoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
-import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaQrAcceso;
-import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
 import ar.gob.malvinas.faltas.core.repository.ActaRepository;
-import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
 import ar.gob.malvinas.faltas.core.repository.QrAccesoRepository;
-import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.springframework.stereotype.Service;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
@@ -25,15 +17,38 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Servicio de generacion y resolucion de accesos via QR.
+ * Servicio de emision y resolucion de accesos via QR.
  *
- * Genera tokens QR para actas y registra accesos validos para auditoria.
- * No almacena el token, el payload ni el hash del token en ninguna tabla.
+ * <p>Emite el token QR del acta durante el alta y registra los accesos validos para
+ * auditoria. No almacena el token, el payload ni el hash del token en ninguna tabla.
+ *
+ * <p>El token es el canonico de {@code DECISION_DDL-ACTA-QR-01}:
+ * {@code QR0.<id_tecnico>.<version>.<firma-base64url>}, firmado con HMAC-SHA-256 sobre el
+ * contenido {@code QR0.<id_tecnico>.<version>}. La propiedad que aporta es
+ * <b>autenticidad e integridad</b>, no confidencialidad: el {@code id_tecnico} es un
+ * identificador opaco y viaja en claro. El token es deterministico y su longitud no supera
+ * los 128 caracteres de {@code fal_acta.codigo_qr}.
+ *
+ * <p><b>API minima y deliberada</b> ({@code DECISION-QR-INMUTABLE-01}). El QR se emite una
+ * sola vez, durante el labrado, y despues es inmutable. Este servicio expone solamente:
+ *
+ * <pre>
+ * emitirTokenPara            emision previa al primer guardar del acta
+ * registrarAcceso            resolucion y registro de un acceso valido
+ * registrarAccesoConNotificacion
+ * listarAccesosPorActa       metadatos de auditoria, sin token
+ * </pre>
+ *
+ * No existen {@code rotarQr} ni {@code generarQr}: no hay caso de uso de rotacion,
+ * regeneracion, revocacion ni reemplazo individual del QR de un acta, porque el token viaja
+ * impreso en el ticket de infraccion y reemitirlo no tendria contraparte material. La
+ * version del token es la del <b>formato del payload</b>, no una version de clave, y la
+ * clave de firma es unica y estable.
  *
  * Flujo de resolucion de acceso:
  *  1. Validar formato y tamano del token sin reflejar detalles al cliente.
- *  2. Validar integridad y autenticidad (AES-GCM).
- *  3. Validar version y scope del payload.
+ *  2. Validar autenticidad e integridad recalculando el HMAC en tiempo constante.
+ *  3. Validar prefijo, UUID canonico y version de payload soportada.
  *  4. Resolver uuidTecnico -> acta.
  *  5. Consultar estado actual real del acta.
  *  6. Aplicar reglas de visibilidad.
@@ -46,96 +61,76 @@ import java.util.List;
  *  - El token NO se incluye en logs, excepciones, eventos ni respuestas.
  *  - La IP y el user-agent no se exponen en el resultado devuelto al portal.
  *  - Los errores de resolucion son deliberadamente indistinguibles.
+ *
+ * <h2>Frontera transaccional del acceso ({@code POST-B2-TX-CONSUMERS-01})</h2>
+ *
+ * <p>Los pasos 7 a 9 del flujo anterior (insertar {@code FalActaQrAcceso}, registrar el evento
+ * {@code QRACCA} y actualizar el snapshot) ocurren dentro de una unica transaccion real,
+ * delegada en {@link QrAccesoTransaccionalService}. Esta clase no anota {@code @Transactional}
+ * directamente sobre {@link #registrarAcceso} porque {@link #registrarAccesoConNotificacion}
+ * lo invoca desde dentro del mismo bean (self-invocation): una anotacion ahi quedaria
+ * neutralizada exactamente para ese llamador. El colaborador transaccional resuelve eso.
  */
 @Service
 public class QrActaService {
 
-    private static final int MAX_TOKEN_LENGTH = 512;
+    /** Ancho de {@code fal_acta.codigo_qr} ({@code DECISION_DDL-ACTA-QR-01}). */
+    private static final int MAX_TOKEN_LENGTH = 128;
 
     private final ActaRepository actaRepository;
-    private final ActaEventoRepository eventoRepository;
-    private final ActaSnapshotRepository snapshotRepository;
     private final QrAccesoRepository qrAccesoRepository;
-    private final SnapshotRecalculador snapshotRecalculador;
+    private final QrAccesoTransaccionalService qrAccesoTransaccionalService;
     private final QrTokenProtector tokenProtector;
     private final FaltasClock faltasClock;
 
+    /**
+     * @param qrAccesoTransaccionalService colaborador que ejecuta, dentro de una unica
+     *                                     transaccion real, la escritura del acceso QR, el
+     *                                     evento {@code QRACCA} y el snapshot
+     *                                     ({@code POST-B2-TX-CONSUMERS-01}). Se invoca siempre
+     *                                     a traves de esta referencia inyectada (un bean
+     *                                     distinto), nunca como llamada interna de este mismo
+     *                                     servicio, para que la frontera transaccional no quede
+     *                                     neutralizada por self-invocation.
+     */
     public QrActaService(
             ActaRepository actaRepository,
-            ActaEventoRepository eventoRepository,
-            ActaSnapshotRepository snapshotRepository,
             QrAccesoRepository qrAccesoRepository,
-            SnapshotRecalculador snapshotRecalculador,
+            QrAccesoTransaccionalService qrAccesoTransaccionalService,
             QrTokenProtector tokenProtector,
             FaltasClock faltasClock) {
+        if (qrAccesoTransaccionalService == null) {
+            throw new IllegalArgumentException(
+                    "qrAccesoTransaccionalService es obligatorio: es la frontera transaccional"
+                            + " real del acceso QR.");
+        }
         this.faltasClock = faltasClock;
         this.actaRepository = actaRepository;
-        this.eventoRepository = eventoRepository;
-        this.snapshotRepository = snapshotRepository;
         this.qrAccesoRepository = qrAccesoRepository;
-        this.snapshotRecalculador = snapshotRecalculador;
+        this.qrAccesoTransaccionalService = qrAccesoTransaccionalService;
         this.tokenProtector = tokenProtector;
     }
 
     /**
-     * Genera un token QR para el acta indicada.
-     * Si el acta ya tiene codigoQr asignado, no lo regenera silenciosamente:
-     * lanza PrecondicionVioladaException. La rotacion requiere operacion explicita.
+     * Emite el token QR canonico del acta identificada por {@code uuidTecnico}, sin
+     * necesitar la PK y sin escribir nada.
      *
-     * @param actaId id del acta
-     * @param idUser operador que genera el QR
-     * @return codigoQr generado (token opaco)
-     */
-    public String generarQr(Long actaId, String idUser) {
-        FalActa acta = actaRepository.buscarPorId(actaId)
-                .orElseThrow(() -> new ActaNoEncontradaException(String.valueOf(actaId)));
-
-        if (acta.getCodigoQr() != null && !acta.getCodigoQr().isBlank()) {
-            throw new PrecondicionVioladaException(
-                    "El acta " + actaId + " ya tiene un QR emitido. Use rotarQr para regenerar.");
-        }
-
-        return emitirNuevoQr(acta, idUser);
-    }
-
-    /**
-     * Rota (regenera) el QR de un acta que ya tenia uno.
-     * Requiere el QR anterior para verificar que se conoce.
-     * Registra evento QRGEN.
+     * <p>Es <b>la unica</b> operacion de emision del servicio y la usa exclusivamente
+     * {@code ActaService.labrar}: el token se deriva del {@code id_tecnico} y nunca del
+     * {@code id_acta}, que en ese momento todavia no existe
+     * ({@code DECISION_DDL-ACTA-QR-01}). Devuelve token y version de payload juntos para que
+     * {@code fal_acta.qr_payload_version} coincida con la version firmada dentro del token y
+     * no haga falta parsearlo.
      *
-     * @param actaId id del acta
-     * @param idUser operador
-     * @return nuevo codigoQr
+     * <p>No existe ninguna operacion posterior que rote, regenere, revoque o reemplace el QR
+     * de un acta ya emitida ({@code DECISION-QR-INMUTABLE-01}): el QR se emite una sola vez,
+     * durante el labrado, y el agregado rechaza cualquier cambio despues.
+     *
+     * @param uuidTecnico UUID canonico del acta
+     * @return token canonico y version de payload con la que se firmo
      */
-    public String rotarQr(Long actaId, String idUser) {
-        FalActa acta = actaRepository.buscarPorId(actaId)
-                .orElseThrow(() -> new ActaNoEncontradaException(String.valueOf(actaId)));
-        return emitirNuevoQr(acta, idUser);
-    }
-
-    private String emitirNuevoQr(FalActa acta, String idUser) {
-        String nuevoToken = tokenProtector.generar(acta.getUuidTecnico());
-        LocalDateTime ahora = faltasClock.now();
-
-        for (int retry = 0; retry < 10; retry++) {
-            try {
-                FalActa actaActual = actaRepository.buscarPorId(acta.getId()).orElseThrow();
-                actaActual.setCodigoQr(nuevoToken);
-                actaActual.setFhUltMod(ahora);
-                actaActual.setIdUserUltMod(idUser);
-                actaRepository.guardar(actaActual);
-                break;
-            } catch (ConcurrenciaConflictoException e) {
-                if (retry == 9) throw e;
-            }
-        }
-
-        registrarEvento(acta.getId(), TipoEventoActa.QRGEN, null, idUser, ahora, "QR de acceso generado");
-
-        FalActa actaFinal = actaRepository.buscarPorId(acta.getId()).orElseThrow();
-        snapshotRecalculador.recalcularYGuardar(actaFinal, ahora);
-
-        return nuevoToken;
+    public QrTokenEmitido emitirTokenPara(String uuidTecnico) {
+        return tokenProtector.emitir(uuidTecnico);
     }
 
     /**
@@ -151,6 +146,16 @@ public class QrActaService {
      * @param userAgent  user-agent sanitizado (nullable, max 255 chars)
      * @param idCorrel   identificador de correlacion para trazabilidad (sin incluir token)
      * @return resultado del acceso registrado
+     *
+     * <h2>Frontera transaccional</h2>
+     *
+     * <p>Implementa {@code POST-B2-TX-CONSUMERS-01}. Este metodo <b>no</b> lleva
+     * {@code @Transactional}: la validacion del token y la resolucion del acta son lecturas y
+     * computo en memoria que no deben abrir una transaccion de escritura. La escritura real
+     * (acceso QR + evento {@code QRACCA} + snapshot) ocurre dentro de
+     * {@link QrAccesoTransaccionalService#registrarConfirmado}, invocado aca como llamada a un
+     * bean distinto —nunca como llamada interna de este servicio— de modo que la frontera es
+     * efectiva sea quien sea el llamador, incluido {@link #registrarAccesoConNotificacion}.
      */
     public AccesoQrResultado registrarAcceso(
             String token,
@@ -169,18 +174,8 @@ public class QrActaService {
 
         LocalDateTime ahora = faltasClock.now();
 
-        Long accId = qrAccesoRepository.nextId();
-        FalActaQrAcceso acceso = new FalActaQrAcceso(
-                accId, acta.getId(), ahora, canal, ipOrigen, userAgent,
-                ResultadoAccesoQr.VALIDO, ahora);
-        qrAccesoRepository.registrar(acceso);
-
-        registrarEvento(acta.getId(), TipoEventoActa.QRACC, null,
-                "PORTAL", ahora, "Acceso QR registrado [correl=" + (idCorrel != null ? idCorrel : "?") + "]");
-
-        snapshotRecalculador.recalcularYGuardar(acta, ahora);
-
-        return new AccesoQrResultado(accId, acta.getId(), ahora, canal, ResultadoAccesoQr.VALIDO);
+        return qrAccesoTransaccionalService.registrarConfirmado(
+                acta, canal, ipOrigen, userAgent, idCorrel, ahora);
     }
 
     /**
@@ -193,6 +188,21 @@ public class QrActaService {
      *
      * La unica autoridad para actaIdQrEsperada es el resultado de resolver el token
      * protegido; nunca proviene del caller como parametro externo independiente.
+     *
+     * <h2>Semantica transaccional ({@code POST-B2-TX-CONSUMERS-01})</h2>
+     *
+     * <p>El acceso QR, el evento {@code QRACCA} y el snapshot forman <b>una unica transaccion</b>
+     * (ver {@link #registrarAcceso}), que <b>debe confirmar completamente antes</b> de que
+     * comience cualquier notificacion: la llamada a {@code registrarAcceso} retorna solo despues
+     * de que {@link QrAccesoTransaccionalService#registrarConfirmado} hizo commit o revirtio, y
+     * la colaboracion con {@code notifService} ocurre siempre <b>despues</b> de ese retorno, en
+     * una operacion de nivel superior separada.
+     *
+     * <p>La notificacion es posterior e independiente: si {@code registrarPortalPositivo} falla
+     * (por ejemplo por mismatch QR-acta-notificacion), el acceso QR ya confirmado <b>no se
+     * revierte</b>. No se usa una unica transaccion para las dos escrituras ni {@code REQUIRES_NEW}
+     * para simular independencia: son dos llamadas de nivel superior reales, cada una con su
+     * propia frontera transaccional efectiva.
      *
      * @param token              token QR
      * @param canal              canal de acceso
@@ -249,20 +259,6 @@ public class QrActaService {
         if (token.length() > MAX_TOKEN_LENGTH) {
             throw new QrTokenInvalidoException();
         }
-    }
-
-    private void registrarEvento(Long actaId, TipoEventoActa tipo, Long idDocuRel, String idUser, LocalDateTime ahora, String descripcionLegible) {
-        FalActaEvento evento = FalActaEvento.builder()
-                .actaId(actaId)
-                .tipoEvt(tipo)
-                .origenEvt(OrigenEvento.SISTEMA_QR)
-                .fhEvt(ahora)
-                .idDocuRel(idDocuRel)
-                .idUserEvt(idUser)
-                .actorTipo(idUser != null && !"SYS".equals(idUser) ? ActorTipoEvento.USUARIO_INTERNO : ActorTipoEvento.SISTEMA)
-                .descripcionLegible(descripcionLegible)
-                .build();
-        eventoRepository.registrar(evento);
     }
 
     /** Vista segura del resultado de un acceso QR. Sin token, sin payload, sin PII. */

@@ -1,8 +1,10 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarPagoCondenaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.DeclararCondenaFirmePorApelacionRechazadaCommand;
@@ -128,7 +130,7 @@ class PagoCondenaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
@@ -165,12 +167,13 @@ class PagoCondenaTest {
 
     private Long crearActaConFalloCondenatorioNotificado(String doc) {
         LabrarActaCommand cmd = new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Infractor Test", doc,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                null, null, null, "Infractor Test", null, doc,
+                null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
         Long actaId = actaService.labrar(cmd).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
                 new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
@@ -293,7 +296,7 @@ class PagoCondenaTest {
         void confirmar_registra_pcocnf_y_cierra() {
             Long actaId = crearActaConCondenaFirme("50000003");
             informarPago(actaId);
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -310,7 +313,7 @@ class PagoCondenaTest {
         void confirmar_sin_bloqueantes_cierra() {
             Long actaId = crearActaConCondenaFirme("50000004");
             informarPago(actaId);
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getSituacionAdministrativa()).isEqualTo(SituacionAdministrativaActa.CERRADA);
@@ -333,7 +336,7 @@ class PagoCondenaTest {
                     new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo),
                     actaId2 -> true, FaltasClockTestSupport.FIXED);
 
-            servicioConBloqueantes.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            servicioConBloqueantes.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             // PCOCNF fue emitido
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
@@ -377,7 +380,7 @@ class PagoCondenaTest {
             Long actaId = crearActaConCondenaFirme("50000006");
             informarPago(actaId);
             pagoCondenaService.observar(new ObservarPagoCondenaCommand(
-                    actaId, "Referencia invalida", null));
+                    actaId, "Referencia invalida", null, "test-actor"));
 
             List<TipoEventoActa> tipos = eventoRepo.buscarPorActa(actaId)
                     .stream().map(FalActaEvento::tipoEvt).toList();
@@ -390,7 +393,7 @@ class PagoCondenaTest {
             Long actaId = crearActaConCondenaFirme("50000007");
             informarPago(actaId);
             pagoCondenaService.observar(new ObservarPagoCondenaCommand(
-                    actaId, "Monto incorrecto", null));
+                    actaId, "Monto incorrecto", null, "test-actor"));
 
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             assertThat(acta.getSituacionAdministrativa()).isNotEqualTo(SituacionAdministrativaActa.CERRADA);
@@ -413,10 +416,12 @@ class PagoCondenaTest {
         @DisplayName("Test 10: No permitir pago condena si resultadoFinal != CONDENA_FIRME")
         void no_pago_condena_sin_condena_firme() {
             LabrarActaCommand cmd = new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001",
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                    null, null, null, "Infractor Test", "50000008",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                    null, null, null, "Infractor Test", null, "50000008",
+                    null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
             Long actaId = actaService.labrar(cmd).idActa();
 
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
@@ -430,10 +435,12 @@ class PagoCondenaTest {
         void no_pago_condena_sin_fallo_notificado() {
             // Simular acta con resultado CONDENA_FIRME pero sin fallo activo (caso borde)
             LabrarActaCommand cmd = new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001",
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                    null, null, null, "Infractor Test", "50000009",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                    null, null, null, "Infractor Test", null, "50000009",
+                    null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
             Long actaId = actaService.labrar(cmd).idActa();
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             acta.setResultadoFinal(ResultadoFinalActa.CONDENA_FIRME);
@@ -490,7 +497,7 @@ class PagoCondenaTest {
         void no_doble_confirmacion() {
             Long actaId = crearActaConCondenaFirme("50000011");
             informarPago(actaId);
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             // Acta ya cerrada: no se puede operar
             assertThatThrownBy(() -> pagoCondenaService.informar(new InformarPagoCondenaCommand(
@@ -504,7 +511,7 @@ class PagoCondenaTest {
             Long actaId = crearActaConCondenaFirme("50000012");
 
             assertThatThrownBy(() -> pagoCondenaService.confirmar(
-                    new ConfirmarPagoCondenaCommand(actaId, null)))
+                    new ConfirmarPagoCondenaCommand(actaId, null, "test-actor")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("registrado");
         }
@@ -514,11 +521,11 @@ class PagoCondenaTest {
         void no_observar_pago_confirmado() {
             Long actaId = crearActaConCondenaFirme("50000013");
             informarPago(actaId);
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
 
             // Acta ya cerrada: no se puede operar
             assertThatThrownBy(() -> pagoCondenaService.observar(new ObservarPagoCondenaCommand(
-                    actaId, "Motivo", null)))
+                    actaId, "Motivo", null, "test-actor")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
 
@@ -585,7 +592,7 @@ class PagoCondenaTest {
             Long actaId = crearActaConCondenaFirme("50000022");
             informarPago(actaId);
             pagoCondenaService.observar(new ObservarPagoCondenaCommand(
-                    actaId, "Referencia invalida", null));
+                    actaId, "Referencia invalida", null, "test-actor"));
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(actaId).orElseThrow();
             assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.PENDIENTE_PAGO_CONDENA);
             assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.CORREGIR_PAGO_CONDENA);
@@ -596,10 +603,11 @@ class PagoCondenaTest {
         void pago_confirmado_snap() {
             Long actaId = crearActaConCondenaFirme("50000023");
             informarPago(actaId);
-            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null));
+            pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor"));
             FalActaSnapshot snap = snapshotRepo.buscarPorActa(actaId).orElseThrow();
             assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.CERRADAS);
             assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.NINGUNA);
         }
     }
 }
+

@@ -4,6 +4,7 @@ import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException
 import ar.gob.malvinas.faltas.core.domain.model.ArticuloMedidaPreventivaId;
 import ar.gob.malvinas.faltas.core.domain.model.FalArticuloMedidaPreventiva;
 import ar.gob.malvinas.faltas.core.repository.ArticuloMedidaPreventivaRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryArticuloMedidaPreventivaRepository
         implements ArticuloMedidaPreventivaRepository, ResettableInMemoryRepository {
 

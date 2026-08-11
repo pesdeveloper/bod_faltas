@@ -34,10 +34,9 @@ class OptimisticLockingTest {
         void setUp() { repo = new InMemoryActaRepository(); }
 
         private FalActa crearActa() {
-            Long id = repo.nextId();
-            FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
+            FalActa acta = new FalActa(null, "uuid-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                    "Calle", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                    "Calle", null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                     FaltasClockTestSupport.FIXED.now(), "TEST");
             return repo.guardar(acta);
         }
@@ -113,9 +112,9 @@ class OptimisticLockingTest {
             FalActa guardada = crearActa();
             FalActa leida = repo.buscarPorId(guardada.getId()).orElseThrow();
             leida.setBloqueActual(BloqueActual.ANAL);
-            // Sin guardar: el store debe tener el bloque original (CAPT)
+            // Sin guardar: el store debe tener el bloque original (ENRI, nacimiento del acta)
             FalActa enStore = repo.buscarPorId(guardada.getId()).orElseThrow();
-            assertThat(enStore.getBloqueActual()).isEqualTo(BloqueActual.CAPT);
+            assertThat(enStore.getBloqueActual()).isEqualTo(BloqueActual.ENRI);
         }
 
         @Test

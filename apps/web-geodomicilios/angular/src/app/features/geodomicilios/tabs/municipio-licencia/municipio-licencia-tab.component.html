@@ -1,0 +1,73 @@
+﻿<div class="municipio-tab">
+  <div class="section-title">
+    <mat-icon>account_balance</mat-icon>
+    <span>Municipio emisor de la licencia</span>
+  </div>
+
+  <form [formGroup]="form" class="municipio-form">
+    <div class="row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Provincia*</mat-label>
+        @if (loadingProvincias()) { <mat-spinner matSuffix diameter="18" /> }
+        <input matInput
+               [value]="provinciaDisplayText()"
+               (input)="provinciaDisplayText.set($any($event.target).value)"
+               [matAutocomplete]="autoProv"
+               placeholder="Escribir para filtrar..."
+               autocomplete="off">
+        <mat-autocomplete #autoProv="matAutocomplete"
+                          (optionSelected)="onProvinciaSelected($event.option.value)">
+          @for (p of filteredProvincias(); track p.id) {
+            <mat-option [value]="p">{{ p.nombre }}</mat-option>
+          }
+        </mat-autocomplete>
+        @if (errorProvincias()) { <mat-error>{{ errorProvincias() }}</mat-error> }
+      </mat-form-field>
+    </div>
+
+    <div class="row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Municipio / Departamento*</mat-label>
+        @if (loadingUnidades()) { <mat-spinner matSuffix diameter="18" /> }
+        <input matInput
+               [value]="unidadDisplayText()"
+               (input)="unidadDisplayText.set($any($event.target).value)"
+               [matAutocomplete]="autoUnidad"
+               [disabled]="!canSelectUnidad()"
+               placeholder="{{ canSelectUnidad() ? 'Escribir para filtrar...' : 'Seleccione provincia primero' }}"
+               autocomplete="off">
+        <mat-autocomplete #autoUnidad="matAutocomplete"
+                          (optionSelected)="onUnidadSelected($event.option.value)">
+          @for (u of filteredUnidades(); track u.id) {
+            <mat-option [value]="u">{{ u.nombre }} <span class="tipo-badge">{{ u.tipo }}</span></mat-option>
+          }
+        </mat-autocomplete>
+        @if (errorUnidades()) { <mat-error>{{ errorUnidades() }}</mat-error> }
+      </mat-form-field>
+    </div>
+
+    @if (state().unidadTerritorialNombre) {
+      <div class="result-chip">
+        <mat-chip-set>
+          <mat-chip color="primary" highlighted>
+            <mat-icon matChipAvatar>account_balance</mat-icon>
+            {{ state().unidadTerritorialNombre }}
+          </mat-chip>
+        </mat-chip-set>
+        <div class="result-detail">
+          {{ state().provinciaNombre }}
+          @if (state().unidadTerritorialTipo) {
+            &middot; {{ state().unidadTerritorialTipo }}
+          }
+        </div>
+      </div>
+    }
+
+    @if (!provincias().length && !loadingProvincias()) {
+      <div class="info-pending">
+        <mat-icon>info_outline</mat-icon>
+        <span>El cat&#225;logo de provincias requiere backend. Disponible cuando el endpoint est&#233; activo.</span>
+      </div>
+    }
+  </form>
+</div>

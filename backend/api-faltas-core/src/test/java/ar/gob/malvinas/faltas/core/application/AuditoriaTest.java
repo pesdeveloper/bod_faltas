@@ -30,7 +30,7 @@ class AuditoriaTest {
             FalActa acta = new FalActa(1L, "uuid", TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Calle", "Av", null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null,
+                    ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                     FECHA_TEST, USUARIO_TEST);
             assertThat(acta.getFhAlta()).isEqualTo(FECHA_TEST);
             assertThat(acta.getIdUserAlta()).isEqualTo(USUARIO_TEST);
@@ -42,7 +42,7 @@ class AuditoriaTest {
             FalActa acta = new FalActa(1L, "uuid", TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                     "Calle", "Av", null, null,
-                    ResultadoFirmaInfractor.FIRMADA, null,
+                    ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                     FECHA_TEST, USUARIO_TEST);
             assertThat(acta.getFhUltMod()).isNull();
             assertThat(acta.getIdUserUltMod()).isNull();

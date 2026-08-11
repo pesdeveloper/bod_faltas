@@ -11,6 +11,19 @@
 > contradicción sobre una regla de dominio, prevalecen los documentos temáticos
 > y de contrato de comandos (ver `README.md`, sección de precedencia).
 
+> **Nota de superación parcial (2026-08-04).** Esta auditoría certificó, como estado
+> vigente al 2026-07-18, un modelo de captura progresiva del alta del acta: bloque `CAPT`
+> (eliminado) + evento `ACTLAB` → comando `CompletarCaptura` (eliminado) + evento `ACTCAP`
+> (eliminado) → `ENRI`.
+> `ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853`
+> reemplazó ese modelo por un alta integral que nace directamente en `ENRI`
+> (`DECISION-ACTA-ALTA-INTEGRAL-01`, `DECISION-ACTA-LIFECYCLE-SIN-CAPT-01` en
+> [`../20-application/command-contracts.md`](../20-application/command-contracts.md)).
+> Este documento certificó la atomicidad y consistencia del alta núcleo que existía en
+> ese momento, no la completitud funcional del agregado integral definido ahora. Los
+> hallazgos originales de esta auditoría se preservan sin editar como evidencia
+> histórica; no se reescriben para simular coincidencia con el modelo vigente.
+
 **Fecha de auditoría y cierre:** 2026-07-18. Cierre de las 24 decisiones `DECISION_DDL-*` (20 originales + 4 transversales) en el slice `SPEC-AS-SOURCE-CLEAN-ROOM-Y-DDL-CLOSURE-001`.
 **Alcance:** `backend/api-faltas-core/docs/spec-as-source/**` (fuera de continuidad externa a este árbol) y su trazabilidad contra el código vigente del módulo `backend/api-faltas-core`.
 **Naturaleza:** documental, de trazabilidad, de conformidad código/spec y de preparación para DDL. No es un slice funcional, no reabre los siete comandos canónicos (`CMD-FALLO-001..007`), no migra JDBC ni genera SQL.

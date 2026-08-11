@@ -1,21 +1,28 @@
-﻿# Perfil JDBC: persistencia real con MariaDB.
+# Perfil JDBC: persistencia real con MariaDB.
 # Activar con: --spring.profiles.active=jdbc
-# Variables de entorno requeridas:
-#   FALTAS_DB_URL      - URL de conexion MariaDB (ej: jdbc:mariadb://localhost:3306/faltas_db)
+#
+# Variables de entorno OBLIGATORIAS (sin default): si falta alguna, el contexto
+# falla al arrancar con "Could not resolve placeholder". Es deliberado: evita
+# que el perfil jdbc se conecte silenciosamente a una base no autorizada.
+#   FALTAS_DB_URL      - URL de conexion MariaDB de la base autorizada
 #   FALTAS_DB_USER     - Usuario de la base de datos
 #   FALTAS_DB_PASSWORD - Password de la base de datos
+#
+# Spring no crea, altera ni migra el esquema: spring.sql.init.mode=never y
+# sin Flyway/Liquibase. El DDL se ejecuta exclusivamente de forma manual.
 spring:
   autoconfigure:
     exclude: []
   datasource:
-    url: ${FALTAS_DB_URL:jdbc:mariadb://localhost:3306/faltas_db}
-    username: ${FALTAS_DB_USER:faltas}
-    password: ${FALTAS_DB_PASSWORD:}
+    url: ${FALTAS_DB_URL}
+    username: ${FALTAS_DB_USER}
+    password: ${FALTAS_DB_PASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver
     hikari:
       connection-timeout: 20000
       maximum-pool-size: 10
       minimum-idle: 2
+      pool-name: faltas-pool
   sql:
     init:
       mode: never

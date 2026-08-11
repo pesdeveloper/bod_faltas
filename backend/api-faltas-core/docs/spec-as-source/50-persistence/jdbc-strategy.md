@@ -19,8 +19,37 @@ ya esta incorporada; el inventario verificable de esa infraestructura vive en
 [`jdbc-infrastructure.md`](jdbc-infrastructure.md). Este documento no repite ese inventario.
 
 El script DDL canónico de 64 tablas (`database/ddl/create-bod-faltas-domain.sql`,
-trabajo DDL-MARIADB-MANUAL-001-FULL-R1) fue aprobado para ejecución manual controlada;
-el esquema aún no ha sido creado. Sin repositorios JDBC de dominio todavia.
+trabajo DDL-MARIADB-MANUAL-001-FULL-R1) fue aprobado para ejecución manual controlada y
+ya fue validado materialmente en el sandbox autorizado (ver
+[`jdbc-infrastructure.md`](jdbc-infrastructure.md) §8). Los repositorios JDBC de dominio
+ya están en curso de incorporación: 9 puertos activos bajo el perfil `jdbc`
+(`ActaRepository`, `ActaEventoRepository`, `ActaSnapshotRepository`,
+`ActaEvidenciaRepository`, `PersonaRepository`, `ObservacionRepository`,
+`QrAccesoRepository`, `DiaNoComputableRepository`, `MotivoArchivoRepository`); el resto
+de los puertos sigue en `InMemory*` (`DECISION-PERSISTENCE-JDBC-CANONICA-01`,
+`DECISION-PERSISTENCE-INMEMORY-RETIREMENT-01`,
+[`20-application/command-contracts.md`](../20-application/command-contracts.md)). JDBC
+sobre MariaDB es la única persistencia productiva canónica; InMemory es transitorio y se
+retira agregado por agregado a medida que su adapter JDBC queda certificado y sus
+consumidores migrados.
+
+### 1.1 Decisiones de persistencia canónica
+
+- **`DECISION-PERSISTENCE-JDBC-CANONICA-01`** — JDBC sobre MariaDB es la única
+  persistencia productiva canónica del backend de Faltas. Regla de cierre por agregado:
+  adapter JDBC implementado + contrato certificado + integración MariaDB verde +
+  consumidores migrados + rollback/OCC verificados → se elimina el adapter InMemory
+  correspondiente. No se mantiene paridad permanente entre dos stacks completos de
+  persistencia, y no se permite mezcla JDBC/InMemory en un mismo flujo productivo una
+  vez cerrada la migración de ese flujo.
+- **`DECISION-PERSISTENCE-INMEMORY-RETIREMENT-01`** — los adapters InMemory son
+  transitorios. El retiro se hace agregado por agregado, nunca de una sola vez: primero
+  el alta integral del acta y sus satélites directos, luego el resto del dominio
+  (fallo, apelación, notificación, documento/firma, paralización, archivo, gestión
+  externa, pagos). Los tests unitarios de dominio pueden seguir usando stubs/fakes
+  mínimos locales al test; los tests de persistencia, FKs, unicidad, OCC, SQL,
+  concurrencia, transacciones y rollback se ejecutan contra MariaDB real, no contra
+  InMemory.
 
 ## 2. Orden de trabajo para el bloque DDL
 

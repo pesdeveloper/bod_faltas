@@ -55,19 +55,19 @@ class DdlInventoryContractTest {
     class G1_ConteoYNumeracion {
 
         @Test
-        @DisplayName("inventario tiene exactamente 65 filas")
+        @DisplayName("inventario tiene exactamente 66 filas")
         void exactamente65Filas() throws IOException {
-            assertThat(filas()).hasSize(65);
+            assertThat(filas()).hasSize(66);
         }
 
         @Test
-        @DisplayName("números de fila consecutivos 1..65")
+        @DisplayName("números de fila consecutivos 1..66")
         void numerosConsecutivos() throws IOException {
             List<Integer> numeros = filas().stream()
                     .map(FilaInventario::numero)
                     .sorted()
                     .collect(Collectors.toList());
-            for (int i = 0; i < 65; i++) {
+            for (int i = 0; i < 66; i++) {
                 assertThat(numeros.get(i))
                         .as("Fila %d debe tener número %d", i + 1, i + 1)
                         .isEqualTo(i + 1);
@@ -75,7 +75,7 @@ class DdlInventoryContractTest {
         }
 
         @Test
-        @DisplayName("65 nombres únicos (sin duplicados)")
+        @DisplayName("66 nombres únicos (sin duplicados)")
         void nombresSinDuplicados() throws IOException {
             List<String> nombres = filas().stream()
                     .map(FilaInventario::nombre)
@@ -83,14 +83,14 @@ class DdlInventoryContractTest {
             Set<String> unicos = new HashSet<>(nombres);
             assertThat(unicos)
                     .as("El inventario tiene nombres duplicados: " + nombres)
-                    .hasSize(65);
+                    .hasSize(66);
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("INV-G2: 1 PREEXISTING + 64 TO_CREATE")
+    @DisplayName("INV-G2: 1 PREEXISTING + 65 TO_CREATE")
     class G2_EstadosConteo {
 
         @Test
@@ -104,12 +104,12 @@ class DdlInventoryContractTest {
         }
 
         @Test
-        @DisplayName("exactamente 64 TO_CREATE")
+        @DisplayName("exactamente 65 TO_CREATE")
         void exactamente64ToCreate() throws IOException {
             long toCreate = filas().stream()
                     .filter(f -> "TO_CREATE".equals(f.estado()))
                     .count();
-            assertThat(toCreate).isEqualTo(64);
+            assertThat(toCreate).isEqualTo(65);
         }
     }
 

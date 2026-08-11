@@ -59,7 +59,19 @@ class NotificacionAcuseLoteServiceTest {
                 loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, domicilioRepo, FaltasClockTestSupport.FIXED);
     }
 
-    private FalActa crearActa(Long id) {
+    /** Etiqueta logica del test -> id real que asigno la persistencia. */
+    private final java.util.Map<Long, Long> idsActa = new java.util.HashMap<>();
+
+    /** Id real del acta creada con esa etiqueta. */
+    private Long acta(Long etiqueta) {
+        return idsActa.get(etiqueta);
+    }
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     */
+    private FalActa crearActa(Long etiqueta) {
         Long domId = domicilioRepo.nextId();
         domicilioRepo.guardar(new FalPersonaDomicilio(
                 domId, 1L, null,
@@ -71,12 +83,15 @@ class NotificacionAcuseLoteServiceTest {
                 null, null, "Av. Libertad 100, Malvinas",
                 false, null, null, null,
                 AHORA, "SYS"));
-        FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+        FalActa a = new FalActa(null, "UUID-" + etiqueta + "-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+                null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, AHORA, "SYS");
         a.setBloqueActual(BloqueActual.NOTI);
         a.setIdDomicilioNotifAct(domId);
-        return actaRepo.guardar(a);
+        FalActa persistida = actaRepo.guardar(a);
+        idsActa.put(etiqueta, persistida.getId());
+        return persistida;
     }
 
     private FalNotificacion crearNotificacion(Long id, Long actaId) {
@@ -98,7 +113,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("registrar acuse RECIBIDO - estado inicial RECIBIDO")
         void registrarAcuseRecibido() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.PRESENCIAL);
 
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
@@ -111,7 +126,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("registrar acuse sin intentoId (canal externo)")
         void acuseSinIntento() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_OTRO, null, null, "USR");
             assertThat(acuse.getIntentoId()).isNull();
         }
@@ -119,7 +134,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("acuse duplicado activo lanza excepcion")
         void acuseDuplicado() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.PRESENCIAL);
             acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
             assertThatThrownBy(() -> acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR"))
@@ -129,8 +144,8 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("acuse con intento de otra notificacion lanza excepcion")
         void acuseIntentoOtraNotif() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
-            crearNotificacion(20L, 1L);
+            crearNotificacion(10L, acta(1L));
+            crearNotificacion(20L, acta(1L));
             crearIntento(100L, 20L, (short)1, CanalNotificacion.PRESENCIAL);
             assertThatThrownBy(() -> acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class);
@@ -139,7 +154,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar ACUSE_RECEPCION - resultado POSITIVO en intento y cabecera")
         void validarRecepcionPositivo() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.PRESENCIAL);
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
@@ -158,7 +173,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar ACUSE_RECHAZO - resultado NEGATIVO en intento y cabecera")
         void validarRechazoNegativo() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.CORREO_POSTAL);
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECHAZO, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
@@ -169,7 +184,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar ACUSE_DOMICILIO_INEXISTENTE - resultado NEGATIVO")
         void validarDomicilioInexistente() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.CORREO_POSTAL);
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_DOMICILIO_INEXISTENTE, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
@@ -180,7 +195,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar ACUSE_PERSONA_DESCONOCIDA - resultado NEGATIVO")
         void validarPersonaDesconocida() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.CORREO_POSTAL);
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_PERSONA_DESCONOCIDA, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
@@ -191,7 +206,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar ACUSE_AUSENTE - no produce efecto automatico")
         void validarAusente() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.CORREO_POSTAL);
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_AUSENTE, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
@@ -202,7 +217,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar ACUSE_OTRO - no produce efecto automatico")
         void validarOtro() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.PRESENCIAL);
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_OTRO, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
@@ -213,7 +228,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("positiva no se degrada por negativa posterior")
         void positivaNoSeDegrada() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             crearIntento(100L, 10L, (short)1, CanalNotificacion.PRESENCIAL);
             crearIntento(101L, 10L, (short)2, CanalNotificacion.CORREO_POSTAL);
             FalNotificacionAcuse a1 = acuseService.registrarAcuse(10L, 100L, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
@@ -227,7 +242,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("observar acuse")
         void observar() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_OTRO, null, AHORA, "USR");
             acuseService.observarAcuse(acuse.getId(), "USR");
             assertThat(acuseRepo.buscarPorId(acuse.getId()).orElseThrow().getEstadoAcuse()).isEqualTo(EstadoAcuse.OBSERVADO);
@@ -236,7 +251,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("anular acuse - conserva evidencia")
         void anular() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_OTRO, null, AHORA, "USR");
             acuseService.anularAcuse(acuse.getId(), "USR");
             FalNotificacionAcuse anulado = acuseRepo.buscarPorId(acuse.getId()).orElseThrow();
@@ -247,7 +262,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("doble anulacion lanza excepcion")
         void dobleAnulacion() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_OTRO, null, AHORA, "USR");
             acuseService.anularAcuse(acuse.getId(), "USR");
             assertThatThrownBy(() -> acuseService.anularAcuse(acuse.getId(), "USR"))
@@ -257,7 +272,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("validar anulado lanza excepcion")
         void validarAnulado() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_OTRO, null, AHORA, "USR");
             acuseService.anularAcuse(acuse.getId(), "USR");
             assertThatThrownBy(() -> acuseService.validarAcuse(acuse.getId(), "USR"))
@@ -267,24 +282,24 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("evento ACUGEN registrado al crear acuse")
         void eventoAcugen() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
-            assertThat(eventoRepo.buscarPorActa(1L)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.ACUGEN);
+            assertThat(eventoRepo.buscarPorActa(acta(1L))).anyMatch(e -> e.tipoEvt() == TipoEventoActa.ACUGEN);
         }
 
         @Test @DisplayName("evento ACUVAL registrado al validar")
         void eventoAcuval() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
             acuseService.validarAcuse(acuse.getId(), "USR");
-            assertThat(eventoRepo.buscarPorActa(1L)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.ACUVAL);
+            assertThat(eventoRepo.buscarPorActa(acta(1L))).anyMatch(e -> e.tipoEvt() == TipoEventoActa.ACUVAL);
         }
 
         @Test @DisplayName("idempotencia - segundo registro mismo tipo activo lanza excepcion")
         void idempotencia() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
             assertThatThrownBy(() -> acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR"))
                     .isInstanceOf(AcuseDuplicadoException.class);
@@ -293,7 +308,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("storageKey persiste en acuse")
         void storageKey() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, acta(1L));
             FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_RECEPCION, "storage/acuse-001.pdf", AHORA, "USR");
             assertThat(acuse.getStorageKey()).isEqualTo("storage/acuse-001.pdf");
         }
@@ -380,8 +395,8 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("generarLoteDesdePendientes - crea intento CORREO_POSTAL por notificacion")
         void generarLoteDesdePendientes_creaIntento() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
-            crearNotificacionPendiente(20L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
+            crearNotificacionPendiente(20L, acta(1L));
 
             FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
                     new GenerarLoteCorreoCommand("LOT-001", null, null, "USR"));
@@ -403,7 +418,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("notificacion ya positiva rechazada al incluir en lote")
         void notifPositivaNoSeIncluye() {
             crearActa(1L);
-            FalNotificacion notif = FalNotificacion.preparar(10L, 1L, 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
+            FalNotificacion notif = FalNotificacion.preparar(10L, acta(1L), 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS");
             notif.setResultado(ResultadoNotificacion.POSITIVO);
             notifRepo.guardar(notif);
 
@@ -445,7 +460,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("guidLoteExt en mayusculas se persiste canonicamente en minusculas")
         void generarLote_idsDuplicados() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             FalLoteCorreo lote = loteService.generarLoteDesdePendientes(
                     new GenerarLoteCorreoCommand("LOT-DUP", null,
                             "550E8400-E29B-41D4-A716-446655440000", "SYS"));
@@ -455,7 +470,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("notificacion EN_PROCESO rechazada al incluir en lote")
         void generarLote_notifEnProceso_rechazada() {
             crearActa(1L);
-            FalNotificacion n = notifRepo.guardar(FalNotificacion.preparar(10L, 1L, 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
+            FalNotificacion n = notifRepo.guardar(FalNotificacion.preparar(10L, acta(1L), 10L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
             n.iniciarEnvio("CORREO_POSTAL", AHORA, AHORA, "SYS");
             notifRepo.guardar(n);
             assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
@@ -476,13 +491,14 @@ class NotificacionAcuseLoteServiceTest {
                     null, null, "Av. Libertad 100, Malvinas",
                     false, null, null, null,
                     AHORA, "SYS"));
-            FalActa actaValida = new FalActa(1L, "UUID-1", TipoActa.TRANSITO, 1L, 1L,
+            FalActa actaValida = new FalActa(null, "UUID-VALIDA-" + java.util.UUID.randomUUID(),
+                    TipoActa.TRANSITO, 1L, 1L,
                     java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                    null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+                    null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, AHORA, "SYS");
             actaValida.setBloqueActual(BloqueActual.ANAL);
             actaValida.setIdDomicilioNotifAct(domId);
-            actaRepo.guardar(actaValida);
-            crearNotificacionPendiente(10L, 1L);
+            idsActa.put(1L, actaRepo.guardar(actaValida).getId());
+            crearNotificacionPendiente(10L, acta(1L));
             notifRepo.guardar(FalNotificacion.preparar(20L, 999L, 20L, TipoDocu.NOTIFICACION_ACTA, AHORA, "SYS"));
 
             assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(
@@ -492,14 +508,14 @@ class NotificacionAcuseLoteServiceTest {
             assertThatThrownBy(() -> loteService.buscarPorCodigo("LOT-FAIL")).isInstanceOf(Exception.class);
             assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getEstado()).isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
-            assertThat(eventoRepo.buscarPorActa(1L)).isEmpty();
-            assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
+            assertThat(eventoRepo.buscarPorActa(acta(1L))).isEmpty();
+            assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
         }
 
         @Test @DisplayName("canal final es CORREO_POSTAL al generar lote")
         void generarLote_canal_correoPostal() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-CANAL", null, null, "SYS"));
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getCanal()).isEqualTo("CORREO_POSTAL");
         }
@@ -507,7 +523,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("fechaEnvio no es nula al generar lote")
         void generarLote_fechaEnvio_noNula() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-FECHA", null, null, "SYS"));
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getFechaEnvio()).isNotNull();
         }
@@ -515,7 +531,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("intentos == 1 despues de generar lote")
         void generarLote_intentos_uno() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-INT", null, null, "SYS"));
             assertThat(notifRepo.buscarPorId(10L).orElseThrow().getIntentos()).isEqualTo(1);
         }
@@ -523,7 +539,7 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("exactamente un intento en intentoRepo por notificacion")
         void generarLote_exactamente_un_intento() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-UNO", null, null, "SYS"));
             assertThat(intentoRepo.buscarPorNotificacion(10L)).hasSize(1);
         }
@@ -531,17 +547,17 @@ class NotificacionAcuseLoteServiceTest {
         @Test @DisplayName("evento LOTGEN emitido al generar lote")
         void generarLote_evento_LOTGEN() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-EVT", null, null, "SYS"));
-            assertThat(eventoRepo.buscarPorActa(1L)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.LOTGEN);
+            assertThat(eventoRepo.buscarPorActa(acta(1L))).anyMatch(e -> e.tipoEvt() == TipoEventoActa.LOTGEN);
         }
 
         @Test @DisplayName("snapshot recalculado al generar lote")
         void generarLote_snapshot_recalculado() {
             crearActa(1L);
-            crearNotificacionPendiente(10L, 1L);
+            crearNotificacionPendiente(10L, acta(1L));
             loteService.generarLoteDesdePendientes(new GenerarLoteCorreoCommand("LOT-SNAP", null, null, "SYS"));
-            assertThat(snapshotRepo.buscarPorActa(1L)).isPresent();
+            assertThat(snapshotRepo.buscarPorActa(acta(1L))).isPresent();
         }
     }
     @Nested @DisplayName("FalNotificacion.iniciarEnvio")

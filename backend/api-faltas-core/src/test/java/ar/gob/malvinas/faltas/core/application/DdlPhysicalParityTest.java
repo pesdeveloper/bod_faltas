@@ -124,9 +124,15 @@ class DdlPhysicalParityTest {
         @DisplayName("fal_dia_no_computable: CHECK tipo IN (1, 2, 3) y origen IN (1, 2)")
         void falDiaNoComputable_checks() {
             String bloque = bloquesPorTabla.get("fal_dia_no_computable");
-            // Constraint may have extra spaces: tipo   IN (1, 2, 3)
-            assertThat(bloque).containsPattern("tipo\\s+IN\\s*\\(1,\\s*2,\\s*3\\)");
-            assertThat(bloque).containsPattern("origen\\s+IN\\s*\\(1,\\s*2\\)");
+            // chk_dia_nc_tipo, chk_dia_nc_origen y chk_dia_nc_ref_ext fueron retirados por
+            // DECISION_DDL-SIN-CHECKS-CODIGOS-01: son CHECKs de codigo/enum y de coherencia
+            // funcional; la validacion pasa a dominio/aplicacion.
+            assertThat(bloque)
+                    .as("chk_dia_nc_tipo/chk_dia_nc_origen/chk_dia_nc_ref_ext retirados por "
+                            + "DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_dia_nc_tipo")
+                    .doesNotContain("chk_dia_nc_origen")
+                    .doesNotContain("chk_dia_nc_ref_ext");
         }
 
         @Test
@@ -186,12 +192,94 @@ class DdlPhysicalParityTest {
             assertColumnContains("fal_inspector_version", "ver_insp", "ver_insp en PK");
         }
 
+        /**
+         * Invertido en el mismo trabajo que ejecuto el ALTER (WAVE 1A2-B1.5B0-B), nunca
+         * antes: hasta entonces afirmaba {@code nro_doc INT UNSIGNED NOT NULL} y
+         * {@code tipo_documento SMALLINT NOT NULL}, que era el esquema ejecutado.
+         *
+         * <p>La asercion de que {@code tipo_doc} esta ausente NO se invierte: sigue siendo
+         * verdadera en el modelo objetivo, y {@code tipo_documento} es el unico nombre
+         * fisico canonico (DECISION_DDL-PERS-01 seccion 1).
+         */
         @Test
-        @DisplayName("fal_persona: tipo_documento SMALLINT, nro_doc INT UNSIGNED — no tipo_doc")
+        @DisplayName("fal_persona: tipo_documento SMALLINT NULL, nro_doc VARCHAR(12) NULL — no tipo_doc")
         void falPersona_documentoEstructurado() {
-            assertColumnContains("fal_persona", "tipo_documento          SMALLINT", "documento estructurado SMALLINT");
-            assertColumnContains("fal_persona", "nro_doc                 INT UNSIGNED", "nro_doc INT UNSIGNED");
+            assertColumnContains("fal_persona", "tipo_documento          SMALLINT       NULL",
+                    "tipo_documento nullable: la persona sin documento es un estado valido");
+            assertColumnContains("fal_persona", "nro_doc                 VARCHAR(12)    NULL",
+                    "nro_doc en forma canonica y opcional, no INT UNSIGNED NOT NULL");
             assertColumnAbsente("fal_persona", "tipo_doc", "tipo_doc fue renombrado (HUMAN_DECISION_CLOSED)");
+        }
+
+        /**
+         * Los cuatro componentes del documento y su clave derivada, con la estructura de
+         * CUIT/CUIL intacta (DECISION_DDL-PERS-01 secciones 2, 5 y 6).
+         */
+        @Test
+        @DisplayName("fal_persona: doc_key VARCHAR(12) STORED sin COALESCE ni LPAD")
+        void falPersona_docKeySinRelleno() {
+            String cuerpo = cuerpo("fal_persona");
+            String lineaDocKey = cuerpo.lines()
+                    .filter(l -> !l.strip().startsWith("--"))
+                    .filter(l -> l.strip().startsWith("doc_key"))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("fal_persona debe declarar doc_key"));
+
+            // Solo la expresion generada: el COMMENT nombra COALESCE y LPAD justamente para
+            // declararlos prohibidos, y no debe confundirse con su uso.
+            int inicioExpresion = lineaDocKey.indexOf("AS (");
+            int finExpresion = lineaDocKey.indexOf(" STORED");
+            assertThat(inicioExpresion).as("doc_key debe declarar su expresion con AS (...)").isPositive();
+            assertThat(finExpresion).as("doc_key debe ser STORED, no VIRTUAL").isGreaterThan(inicioExpresion);
+            String expresion = lineaDocKey.substring(inicioExpresion, finExpresion);
+
+            assertThat(lineaDocKey)
+                    .as("doc_key se reduce de VARCHAR(20) a VARCHAR(12) y sigue siendo STORED")
+                    .contains("VARCHAR(12)");
+            assertThat(expresion)
+                    .as("Prohibido rellenar componentes ausentes para producir una clave completa")
+                    .doesNotContain("COALESCE")
+                    .doesNotContain("LPAD");
+            assertThat(expresion)
+                    .as("Sin documento la clave es NULL: asi coexisten las personas sin documento")
+                    .contains("WHEN tipo_documento IS NULL THEN NULL");
+            assertThat(expresion)
+                    .as("doc_key deja de incluir el prefijo 'tipo_documento-': ya es la primera columna del UNIQUE")
+                    .doesNotContain("CONCAT(tipo_documento, '-'");
+        }
+
+        /**
+         * Los seis CHECK nuevos de DECISION_DDL-PERS-01 seccion 7, y la baja del CHECK
+         * aritmetico que no puede sobrevivir a una columna de texto.
+         */
+        @Test
+        @DisplayName("fal_persona: los seis CHECK del documento; chk_fal_persona_nro_doc ya no existe")
+        void falPersona_checksDelDocumento() {
+            // DECISION_DDL-SIN-CHECKS-CODIGOS-01 (ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853)
+            // retiro los CHECK de coherencia documental de fal_persona: son reglas funcionales de
+            // combinacion de campos, no invariantes tecnicos, y la validacion ya vive en
+            // DocumentoPersona (unico normalizador del documento en Java).
+            String cuerpo = cuerpo("fal_persona");
+            for (String constraint : List.of(
+                    "chk_fal_persona_doc_coherente",
+                    "chk_fal_persona_doc_tipo",
+                    "chk_fal_persona_doc_cuit",
+                    "chk_fal_persona_doc_no_cuit",
+                    "chk_fal_persona_nro_doc_canonico",
+                    "chk_fal_persona_nro_doc_dni",
+                    "chk_fal_persona_prefijo",
+                    "chk_fal_persona_digito",
+                    "chk_fal_persona_tipo",
+                    "chk_fal_persona_id_suj",
+                    "chk_fal_persona_id_bie",
+                    "chk_fal_persona_id_bie_suj")) {
+                assertThat(cuerpo)
+                        .as("%s fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01", constraint)
+                        .doesNotContain(constraint);
+            }
+            assertThat(cuerpo)
+                    .as("chk_fal_persona_nro_doc era aritmetico sobre una columna que paso a ser texto")
+                    .doesNotContain("chk_fal_persona_nro_doc CHECK");
         }
 
         @Test
@@ -954,10 +1042,13 @@ class DdlPhysicalParityTest {
             assertColumnContains("fal_normativa_faltas", "tipo_norma", "tipo_norma SMALLINT NOT NULL");
             assertColumnContains("fal_normativa_faltas", "numero_norma", "numero_norma INT NULL");
             assertColumnContains("fal_normativa_faltas", "anio_norma", "anio_norma SMALLINT NULL");
+            // Wave 4 PARTE-2 S6: fh_vig_desde pasa a NOT NULL (versionado real por
+            // codigo_norma+version_norma; el dominio Java siempre la exige, ver
+            // FalNormativaFaltas). Antes era nullable sin razon funcional documentada.
             assertThat(cuerpo("fal_normativa_faltas").lines()
                     .filter(l -> !l.strip().startsWith("--"))
-                    .anyMatch(l -> l.contains("fh_vig_desde") && l.contains("DATE") && !l.contains("NOT NULL")))
-                    .as("fal_normativa_faltas.fh_vig_desde debe ser DATE nullable")
+                    .anyMatch(l -> l.contains("fh_vig_desde") && l.contains("DATE") && l.contains("NOT NULL")))
+                    .as("fal_normativa_faltas.fh_vig_desde debe ser DATE NOT NULL (Wave 4 PARTE-2 S6)")
                     .isTrue();
         }
 
@@ -1017,18 +1108,59 @@ class DdlPhysicalParityTest {
                     .isTrue();
         }
 
+        /**
+         * MARIADB-COORD-TYPE-UNIFY-001: una coordenada en grados decimales tiene un
+         * unico tipo fisico en todo el dominio. DECIMAL(10,7) da 3 digitos enteros
+         * (suficientes para -180..180) y resolucion de ~1,1 cm. DECIMAL(12,8)
+         * reservaba un cuarto digito entero que admite valores imposibles.
+         *
+         * precision_captura_m queda fuera: son metros, no una coordenada, y
+         * DECIMAL(8,2) es su tipo correcto.
+         */
+        @Test
+        @DisplayName("fal_acta: las cuatro coordenadas son DECIMAL(10,7) - no DECIMAL(12,8)")
+        void falActa_coordenadasDecimal10x7() {
+            String cuerpo = cuerpo("fal_acta");
+            for (String columna : new String[]{"lat_captura", "lon_captura", "lat_infr", "lon_infr"}) {
+                assertThat(cuerpo.lines()
+                        .filter(l -> !l.strip().startsWith("--"))
+                        .anyMatch(l -> l.strip().startsWith(columna) && l.contains("DECIMAL(10,7)")))
+                        .as("fal_acta.%s debe ser DECIMAL(10,7), igual que fal_persona_domicilio"
+                                + " (HUMAN_DECISION_CLOSED)", columna)
+                        .isTrue();
+            }
+            assertThat(cuerpo)
+                    .as("ninguna coordenada de fal_acta debe quedar en DECIMAL(12,8)")
+                    .doesNotContain("DECIMAL(12,8)");
+        }
+
+        @Test
+        @DisplayName("fal_acta: precision_captura_m sigue siendo DECIMAL(8,2) - son metros, no grados")
+        void falActa_precisionCapturaEnMetros() {
+            assertThat(cuerpo("fal_acta").lines()
+                    .filter(l -> !l.strip().startsWith("--"))
+                    .anyMatch(l -> l.strip().startsWith("precision_captura_m") && l.contains("DECIMAL(8,2)")))
+                    .as("precision_captura_m es una distancia en metros: DECIMAL(8,2) es su tipo correcto")
+                    .isTrue();
+        }
+
         @Test
         @DisplayName("num_talonario_inspector: estado_asignacion SMALLINT con enum ENTREGADO=1/DEVUELTO=2/CERRADO=3/OBSERVADO=4")
         void numTalonarioInspector_estadoAsignacion() {
             String bloque = bloquesPorTabla.get("num_talonario_inspector");
             assertThat(bloque)
-                    .as("num_talonario_inspector.estado_asignacion debe tener ENTREGADO=1/DEVUELTO=2/CERRADO=3/OBSERVADO=4")
+                    .as("num_talonario_inspector.estado_asignacion debe tener ENTREGADO=1/DEVUELTO=2/CERRADO=3/OBSERVADO=4"
+                            + " documentado en el comentario fisico de la columna")
                     .contains("ENTREGADO")
                     .contains("DEVUELTO")
                     .contains("CERRADO")
                     .contains("OBSERVADO");
+            // chk_tal_insp_estado fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01: es un CHECK
+            // de codigo/enum; el catalogo sigue documentado en el comentario fisico y validado en
+            // dominio.
             assertThat(bloque)
-                    .containsPattern("estado_asignacion\\s+BETWEEN\\s+1\\s+AND\\s+4");
+                    .as("chk_tal_insp_estado fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_tal_insp_estado");
         }
     }
 
@@ -1177,16 +1309,22 @@ class DdlPhysicalParityTest {
                     .isFalse();
         }
 
-        // ---- F2: CHECK autorreferencial en fal_dependencia ----
+        // ---- F2: id_dep_padre <> id (autorreferencia) es enforcement de aplicacion,
+        //          no CHECK fisico -- MariaDB no admite CHECK sobre AUTO_INCREMENT
+        //          (ERROR 1901). Correccion MARIADB-BASELINE-EXEC-001. La regla
+        //          funcional se mantiene sin cambios en FalDependencia.setIdDepPadre()
+        //          (ver DependenciaTest.IdDepPadreAutoReferencialTest). ----
 
         @Test
-        @DisplayName("F2: fal_dependencia tiene CONSTRAINT chk_dep_no_self CHECK (id_dep_padre IS NULL OR id_dep_padre <> id)")
-        void falDependencia_checkAutoReferencial() {
+        @DisplayName("F2: fal_dependencia NO tiene CHECK fisico chk_dep_no_self (MariaDB ERROR 1901: AUTO_INCREMENT en CHECK)")
+        void falDependencia_sinCheckFisicoAutoReferencial() {
             String cuerpo = cuerpo("fal_dependencia");
             assertThat(cuerpo)
-                    .as("fal_dependencia debe tener CHECK autorreferencial chk_dep_no_self")
-                    .contains("chk_dep_no_self")
-                    .containsPattern("id_dep_padre IS NULL OR id_dep_padre <> id");
+                    .as("fal_dependencia NO debe declarar chk_dep_no_self como CHECK fisico: MariaDB rechaza CHECK "
+                            + "sobre columnas AUTO_INCREMENT. La regla id_dep_padre <> id se aplica en "
+                            + "FalDependencia.setIdDepPadre() (aplicacion), no en el DDL.")
+                    .doesNotContain("chk_dep_no_self")
+                    .doesNotContainPattern("CHECK\\s*\\(\\s*id_dep_padre");
         }
 
         // ---- F3: fh_ult_mod NULL en las 7 tablas ----

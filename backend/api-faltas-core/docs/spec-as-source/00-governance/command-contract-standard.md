@@ -193,9 +193,10 @@ Estan prohibidas:
 
 Fuente: `MATRIZ_PROCESO_FALTAS_CIERRE_COMPLETA_2026-06-23.md` (historico,
 eliminado tras esta migracion), seccion "1. Principio de motor
-determinista". El criterio de codigos de `bloque_actual` (`CAPT`/`ENRI`/
+determinista". El criterio de codigos de `bloque_actual` (`ENRI`/
 `NOTI`/`ANAL`/`GEXT`/`ARCH`/`CERR`) y sus equivalencias historicas
-(`D1_CAPTURA`..`D5_ANALISIS`, `D3_DOCUMENTAL` eliminado) ya estaban
+(`D1_CAPTURA`..`D5_ANALISIS`, `D3_DOCUMENTAL` eliminado, `CAPT` eliminado por
+`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`) ya estaban
 documentados de forma completa en
 [`10-domain/states-events-catalogs.md`](../10-domain/states-events-catalogs.md)
 y no se repiten aqui.

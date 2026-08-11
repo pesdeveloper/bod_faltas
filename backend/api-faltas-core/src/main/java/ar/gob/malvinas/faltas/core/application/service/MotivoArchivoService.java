@@ -30,11 +30,12 @@ public class MotivoArchivoService {
         this.repo = repo;
     }
 
-    public FalMotivoArchivo crear(String codigo, String nombre, String descripcion,
+    public FalMotivoArchivo crear(String codigo, String nombre,
                                    boolean siNulidad, boolean siPermiteReingreso,
                                    boolean siRequiereObservacion, String idUserAlta) {
-        Long id = repo.nextId();
-        FalMotivoArchivo motivo = new FalMotivoArchivo(id, codigo, nombre, descripcion,
+        // Sin id: lo asigna la persistencia (AUTO_INCREMENT) y guardar devuelve la
+        // entidad persistida.
+        FalMotivoArchivo motivo = new FalMotivoArchivo(null, codigo, nombre,
                 siNulidad, siPermiteReingreso, siRequiereObservacion, true,
                 faltasClock.now(), idUserAlta);
         return repo.guardar(motivo);
@@ -75,13 +76,12 @@ public class MotivoArchivoService {
         return repo.actualizarAtomicamente(motivo);
     }
 
-    public FalMotivoArchivo actualizar(Long id, String nombre, String descripcion,
+    public FalMotivoArchivo actualizar(Long id, String nombre,
                                         boolean siNulidad, boolean siPermiteReingreso,
                                         boolean siRequiereObservacion, String idUserMod) {
         FalMotivoArchivo motivo = repo.buscarPorId(id)
                 .orElseThrow(() -> new MotivoArchivoNoEncontradoException(id));
         motivo.setNombre(nombre);
-        motivo.setDescripcion(descripcion);
         motivo.setSiNulidad(siNulidad);
         motivo.setSiPermiteReingreso(siPermiteReingreso);
         motivo.setSiRequiereObservacion(siRequiereObservacion);

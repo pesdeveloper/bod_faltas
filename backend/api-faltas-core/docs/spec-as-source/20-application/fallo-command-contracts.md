@@ -50,7 +50,7 @@ Servicio: `DocumentoService.registrarFirmaDocumental`
 - `idFirmante` (body, no nulo): identificador del firmante.
 - `tipoFirma` (body, no nulo): tipo de firma (enum `TipoFirma`).
 - `referenciaFirmaExt` (body, obligatoria, @NotBlank): clave de idempotencia emitida por la app Firmas.
-- `hashDocumento` (body, opcional): hash del documento firmado.
+- `hashDocumento` (body, opcional): hash de entrada del PDF vigente exacto que Firmas recibió y firmó, calculado antes de aplicar esa firma (ver `10-domain/firma-notificacion-fallo.md`, "Integración EDA con Firmas").
 - `storageKey` (body, opcional): clave de storage del documento.
 
 **Clave de idempotencia:** `referenciaFirmaExt`

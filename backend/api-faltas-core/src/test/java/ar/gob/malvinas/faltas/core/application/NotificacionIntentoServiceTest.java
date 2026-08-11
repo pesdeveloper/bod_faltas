@@ -53,12 +53,22 @@ class NotificacionIntentoServiceTest {
                 PlazosTestSupport.conCalendarioVacio(FaltasClockTestSupport.FIXED));
     }
 
-    private FalActa crearActa(Long id) {
-        FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Id que asigno la persistencia al acta del test. */
+    private Long idActa;
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     */
+    private FalActa crearActa(Long etiqueta) {
+        FalActa a = new FalActa(null, "UUID-" + etiqueta + "-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+                null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, AHORA, "SYS");
         a.setBloqueActual(BloqueActual.NOTI);
-        return actaRepo.guardar(a);
+        FalActa persistida = actaRepo.guardar(a);
+        idActa = persistida.getId();
+        return persistida;
     }
 
     private FalNotificacion crearNotificacion(Long id, Long actaId) {
@@ -73,7 +83,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("primer intento en canal presencial - nroIntento=1")
         void primerIntentoPresencial() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
 
             FalNotificacionIntento intento = service.registrarIntento(
                     10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
@@ -87,7 +97,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("canal postal requiere domicilioNotifId")
         void canalPostalRequiereDomicilio() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             assertThatThrownBy(() -> service.registrarIntento(
                     10L, CanalNotificacion.CORREO_POSTAL, null, null, null, null, "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class)
@@ -97,7 +107,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("canal email requiere destinoDigital")
         void canalEmailRequiereDestino() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             assertThatThrownBy(() -> service.registrarIntento(
                     10L, CanalNotificacion.EMAIL, null, null, null, null, "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class)
@@ -107,7 +117,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("canal email - domicilio fisico lanza excepcion")
         void canalEmailConDomicilioFisico() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             assertThatThrownBy(() -> service.registrarIntento(
                     10L, CanalNotificacion.EMAIL, 500L, "email@mail.com", null, null, "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class);
@@ -116,7 +126,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("lote anulado no puede asignarse")
         void loteAnuladoNoPermitido() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalLoteCorreo lote = new FalLoteCorreo(1L, "LOT-001", AHORA, AHORA, "SYS");
             lote.setEstadoLote(EstadoLote.ANULADO);
             loteRepo.guardar(lote);
@@ -129,7 +139,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("referencia externa duplicada lanza excepcion")
         void referenciaExternaDuplicada() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, "REF-001", "USR");
             assertThatThrownBy(() -> service.registrarIntento(
                     10L, CanalNotificacion.PRESENCIAL, null, null, null, "REF-001", "USR"))
@@ -146,7 +156,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("dos intentos sucesivos - correlativos 1 y 2")
         void dosIntentos() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento i1 = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             FalNotificacionIntento i2 = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             assertThat(i1.getNroIntento()).isEqualTo((short)1);
@@ -156,19 +166,19 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("evento NOTINT registrado en primer intento")
         void eventoNotintPrimerIntento() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(1L);
+            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(idActa);
             assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.NOTINT);
         }
 
         @Test @DisplayName("evento NOTREI registrado en segundo intento")
         void eventoNotreiSegundoIntento() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(1L);
+            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(idActa);
             assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.NOTREI);
         }
     }
@@ -179,7 +189,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("resultado POSITIVO - estado CON_ACUSE_POSITIVO")
         void resultadoPositivo() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento intento = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             FalNotificacionIntento result = service.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.POSITIVO, "USR");
             assertThat(result.getResultadoIntento()).isEqualTo(ResultadoNotificacion.POSITIVO);
@@ -190,7 +200,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("resultado NEGATIVO - estado CON_ACUSE_NEGATIVO")
         void resultadoNegativo() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento intento = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             FalNotificacionIntento result = service.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.NEGATIVO, "USR");
             assertThat(result.getResultadoIntento()).isEqualTo(ResultadoNotificacion.NEGATIVO);
@@ -200,7 +210,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("resultado VENCIDO - estado VENCIDA")
         void resultadoVencido() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento intento = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             FalNotificacionIntento result = service.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.VENCIDO, "USR");
             assertThat(result.getEstadoIntento()).isEqualTo(EstadoNotificacion.VENCIDA);
@@ -209,7 +219,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("resultado SUPERADA_POR_PORTAL - estado SIN_EFECTO")
         void resultadoSuperadaPorPortal() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento intento = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             FalNotificacionIntento result = service.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.SUPERADA_POR_PORTAL, "USR");
             assertThat(result.getEstadoIntento()).isEqualTo(EstadoNotificacion.SIN_EFECTO);
@@ -218,7 +228,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("resultado null lanza excepcion")
         void resultadoNull() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento intento = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             assertThatThrownBy(() -> service.registrarResultadoIntento(intento.getId(), null, "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class);
@@ -227,7 +237,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("doble resultado lanza excepcion")
         void dobleResultado() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento intento = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             service.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.NEGATIVO, "USR");
             assertThatThrownBy(() -> service.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.POSITIVO, "USR"))
@@ -247,7 +257,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("reintento desde VENCIDA - nuevo intento con correlativo siguiente")
         void reintentoDesdeVencida() {
             crearActa(1L);
-            FalNotificacion notif = crearNotificacion(10L, 1L);
+            FalNotificacion notif = crearNotificacion(10L, idActa);
             notif.setEstado(EstadoNotificacion.VENCIDA);
             notif.setResultado(ResultadoNotificacion.VENCIDO);
             notifRepo.guardar(notif);
@@ -266,7 +276,7 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("reintento desde no-vencida lanza excepcion")
         void reintentoDesdeNoVencida() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             assertThatThrownBy(() -> service.registrarReintentoPorVencimiento(
                     10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class)
@@ -276,13 +286,13 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("evento NOTRVE registrado")
         void eventoNotrve() {
             crearActa(1L);
-            FalNotificacion notif = crearNotificacion(10L, 1L);
+            FalNotificacion notif = crearNotificacion(10L, idActa);
             notif.setEstado(EstadoNotificacion.VENCIDA);
             notif.setResultado(ResultadoNotificacion.VENCIDO);
             notifRepo.guardar(notif);
 
             service.registrarReintentoPorVencimiento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            assertThat(eventoRepo.buscarPorActa(1L)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.NOTRVE);
+            assertThat(eventoRepo.buscarPorActa(idActa)).anyMatch(e -> e.tipoEvt() == TipoEventoActa.NOTRVE);
         }
     }
 
@@ -292,8 +302,8 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("portal positivo - intento PORTAL_INFRACTOR creado con resultado POSITIVO")
         void portalPositivo() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
-            FalNotificacionIntento portalIntento = service.registrarPortalPositivo(10L, 1L, "user-portal-001", "USR");
+            crearNotificacion(10L, idActa);
+            FalNotificacionIntento portalIntento = service.registrarPortalPositivo(10L, idActa, "user-portal-001", "USR");
             assertThat(portalIntento.getCanalNotif()).isEqualTo(CanalNotificacion.PORTAL_INFRACTOR);
             assertThat(portalIntento.getResultadoIntento()).isEqualTo(ResultadoNotificacion.POSITIVO);
             assertThat(portalIntento.getEstadoIntento()).isEqualTo(EstadoNotificacion.CON_ACUSE_POSITIVO);
@@ -302,8 +312,8 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("portal - notificacion cabecera queda CON_ACUSE_POSITIVO")
         void portalActualizaCabecera() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
-            service.registrarPortalPositivo(10L, 1L, "user-portal-001", "USR");
+            crearNotificacion(10L, idActa);
+            service.registrarPortalPositivo(10L, idActa, "user-portal-001", "USR");
             FalNotificacion notif = notifRepo.buscarPorId(10L).orElseThrow();
             assertThat(notif.getEstado()).isEqualTo(EstadoNotificacion.CON_ACUSE_POSITIVO);
             assertThat(notif.getResultado()).isEqualTo(ResultadoNotificacion.POSITIVO);
@@ -313,11 +323,11 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("portal supera intentos previos en curso")
         void portalSuperaIntentosPrevios() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             FalNotificacionIntento previo = service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             assertThat(previo.getEstadoIntento()).isEqualTo(EstadoNotificacion.EN_PROCESO);
 
-            service.registrarPortalPositivo(10L, 1L, "user-portal-001", "USR");
+            service.registrarPortalPositivo(10L, idActa, "user-portal-001", "USR");
 
             FalNotificacionIntento previoActualizado = intentoRepo.buscarPorId(previo.getId()).orElseThrow();
             assertThat(previoActualizado.getResultadoIntento()).isEqualTo(ResultadoNotificacion.SUPERADA_POR_PORTAL);
@@ -327,10 +337,10 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("portal cuando ya es positiva - lanza excepcion")
         void portalCuandoYaPositiva() {
             crearActa(1L);
-            FalNotificacion notif = crearNotificacion(10L, 1L);
+            FalNotificacion notif = crearNotificacion(10L, idActa);
             notif.setResultado(ResultadoNotificacion.POSITIVO);
             notifRepo.guardar(notif);
-            assertThatThrownBy(() -> service.registrarPortalPositivo(10L, 1L, "user", "USR"))
+            assertThatThrownBy(() -> service.registrarPortalPositivo(10L, idActa, "user", "USR"))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("POSITIVO");
         }
@@ -338,10 +348,10 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("eventos NOTSUP y PORPOS registrados")
         void eventosPortal() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            service.registrarPortalPositivo(10L, 1L, "user-portal", "USR");
-            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(1L);
+            service.registrarPortalPositivo(10L, idActa, "user-portal", "USR");
+            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(idActa);
             assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.NOTSUP);
             assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.PORPOS);
         }
@@ -349,10 +359,10 @@ class NotificacionIntentoServiceTest {
         @Test @DisplayName("obtenerIntentos devuelve historial completo")
         void obtenerIntentos() {
             crearActa(1L);
-            crearNotificacion(10L, 1L);
+            crearNotificacion(10L, idActa);
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
             service.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
-            service.registrarPortalPositivo(10L, 1L, "user", "USR");
+            service.registrarPortalPositivo(10L, idActa, "user", "USR");
             List<FalNotificacionIntento> intentos = service.obtenerIntentos(10L);
             assertThat(intentos).hasSize(3);
         }

@@ -1,10 +1,13 @@
 package ar.gob.malvinas.faltas.core.web;
 
+import ar.gob.malvinas.faltas.core.support.JwtTestSupport;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -26,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Slice 8F-6.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @TestPropertySource(properties = "faltas.demo.enabled=true")
 @DisplayName("8F-6: Contrato frontend-ready de endpoints demo")
@@ -34,6 +38,13 @@ class DemoContractTest {
     @Autowired
     MockMvc mvc;
 
+    private String demoToken;
+
+    @BeforeEach
+    void setUp() {
+        demoToken = JwtTestSupport.token("demo-test");
+    }
+
     // =========================================================================
     // GET /demo/documentos/graph - shape contract
     // =========================================================================
@@ -41,7 +52,8 @@ class DemoContractTest {
     @Test
     @DisplayName("graph: campos raiz clave para frontend presentes")
     void graph_campos_raiz_clave() throws Exception {
-        mvc.perform(get("/demo/documentos/graph"))
+        mvc.perform(get("/demo/documentos/graph")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalCasos").isNumber())
                 .andExpect(jsonPath("$.casosExitosos").isNumber())
@@ -54,7 +66,8 @@ class DemoContractTest {
     @Test
     @DisplayName("graph: caso tiene IDs de navegacion (actaId, documentoId, redaccionId)")
     void graph_caso_ids_navegacion() throws Exception {
-        mvc.perform(get("/demo/documentos/graph"))
+        mvc.perform(get("/demo/documentos/graph")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.casos[0].actaId").isNumber())
                 .andExpect(jsonPath("$.casos[0].documentoId").isNumber())
@@ -64,7 +77,8 @@ class DemoContractTest {
     @Test
     @DisplayName("graph: caso tiene campos de presentacion (codigoCaso, descripcionCaso, accionDocumental, tipoDocu)")
     void graph_caso_campos_presentacion() throws Exception {
-        mvc.perform(get("/demo/documentos/graph"))
+        mvc.perform(get("/demo/documentos/graph")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.casos[0].codigoCaso").isString())
                 .andExpect(jsonPath("$.casos[0].descripcionCaso").isString())
@@ -75,7 +89,8 @@ class DemoContractTest {
     @Test
     @DisplayName("graph: caso exitoso tiene storageKey mock y hashDocu mock")
     void graph_caso_exitoso_storage_mock() throws Exception {
-        mvc.perform(get("/demo/documentos/graph"))
+        mvc.perform(get("/demo/documentos/graph")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.casos[0].storageKey").isString())
                 .andExpect(jsonPath("$.casos[0].hashDocu").isString())
@@ -86,7 +101,8 @@ class DemoContractTest {
     @Test
     @DisplayName("graph: no expone storage real (s3://, file://)")
     void graph_no_storage_real() throws Exception {
-        MvcResult result = mvc.perform(get("/demo/documentos/graph"))
+        MvcResult result = mvc.perform(get("/demo/documentos/graph")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andReturn();
         String body = result.getResponse().getContentAsString();
@@ -101,7 +117,8 @@ class DemoContractTest {
     @Test
     @DisplayName("dataset: campos raiz clave para frontend presentes")
     void dataset_campos_raiz_clave() throws Exception {
-        mvc.perform(get("/demo/actas/dataset-funcional"))
+        mvc.perform(get("/demo/actas/dataset-funcional")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalActasMock").isNumber())
                 .andExpect(jsonPath("$.totalCasosUsoCubiertos").isNumber())
@@ -116,7 +133,8 @@ class DemoContractTest {
     @Test
     @DisplayName("dataset: acta tiene campos de presentacion (codigo, titulo, descripcion, casoUsoPrincipal)")
     void dataset_acta_campos_presentacion() throws Exception {
-        mvc.perform(get("/demo/actas/dataset-funcional"))
+        mvc.perform(get("/demo/actas/dataset-funcional")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actas[0].codigo").isString())
                 .andExpect(jsonPath("$.actas[0].titulo").isString())
@@ -127,7 +145,8 @@ class DemoContractTest {
     @Test
     @DisplayName("dataset: acta tiene campos de estado (bloqueEsperado, situacionEsperada, bandejaEsperada)")
     void dataset_acta_campos_estado() throws Exception {
-        mvc.perform(get("/demo/actas/dataset-funcional"))
+        mvc.perform(get("/demo/actas/dataset-funcional")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.actas[0].bloqueEsperado").isString())
                 .andExpect(jsonPath("$.actas[0].situacionEsperada").isString())
@@ -138,7 +157,8 @@ class DemoContractTest {
     @Test
     @DisplayName("dataset: totalActasMock coincide con largo del array actas")
     void dataset_total_coincide_con_array() throws Exception {
-        MvcResult result = mvc.perform(get("/demo/actas/dataset-funcional"))
+        MvcResult result = mvc.perform(get("/demo/actas/dataset-funcional")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andReturn();
         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -155,21 +175,25 @@ class DemoContractTest {
     @Test
     @DisplayName("reset: GET /demo/dev/reset devuelve 405 (solo POST permitido)")
     void reset_get_devuelve_405() throws Exception {
-        mvc.perform(get("/demo/dev/reset"))
+        mvc.perform(get("/demo/dev/reset")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isMethodNotAllowed());
     }
 
     @Test
     @DisplayName("reset: POST /demo/dev/reset sin habilitar devuelve 404")
     void reset_deshabilitado_devuelve_404() throws Exception {
-        mvc.perform(post("/demo/dev/reset").contentType(MediaType.APPLICATION_JSON))
+        mvc.perform(post("/demo/dev/reset")
+                        .header("Authorization", "Bearer " + demoToken)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     @DisplayName("demo: GET /demo/documentos/graph funciona sin reset habilitado")
     void graph_funciona_sin_reset() throws Exception {
-        mvc.perform(get("/demo/documentos/graph"))
+        mvc.perform(get("/demo/documentos/graph")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.completo").value(true));
     }
@@ -177,7 +201,8 @@ class DemoContractTest {
     @Test
     @DisplayName("demo: GET /demo/actas/dataset-funcional funciona sin reset habilitado")
     void dataset_funciona_sin_reset() throws Exception {
-        mvc.perform(get("/demo/actas/dataset-funcional"))
+        mvc.perform(get("/demo/actas/dataset-funcional")
+                        .header("Authorization", "Bearer " + demoToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalActasMock").value(org.hamcrest.Matchers.greaterThanOrEqualTo(31)));
     }

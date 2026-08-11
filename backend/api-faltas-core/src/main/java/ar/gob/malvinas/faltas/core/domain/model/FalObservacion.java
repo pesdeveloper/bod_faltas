@@ -12,8 +12,12 @@ import java.time.LocalDateTime;
  * No tiene versionRow (es append-only; no se edita).
  * Baja logica mediante siActiva=false + fhBaja + idUserBaja.
  *
- * idActaContexto: FK opcional a fal_acta. Cuando se informa, las observaciones
- * se eliminan en cascada al borrar fisicamente el acta.
+ * idActaContexto: contexto opcional del expediente, NO el propietario
+ * (DECISION_OBS-01). Cuando el propietario es el acta, entidadTipo=ACTA,
+ * entidadId=fal_acta.id e idActaContexto queda nulo.
+ *
+ * Identidad (DECISION_ID-01): id nulo identifica una observacion nueva todavia no
+ * persistida; la PK la asigna la persistencia y se incorpora con conId(Long).
  *
  * Longitud maxima: 512 caracteres (HUMAN_DECISION_CLOSED SPEC-MODEL-DDL-CLOSURE-001).
  */
@@ -111,8 +115,24 @@ public class FalObservacion {
     @Deprecated
     public void setSiActiva(boolean siActiva) { this.siActiva = siActiva; }
 
+    /** Copia defensiva con el mismo id. */
     public FalObservacion copia() {
-        FalObservacion c = new FalObservacion(id, entidadTipo, entidadId, tipoObs,
+        return copiaCon(id);
+    }
+
+    /**
+     * Copia con la PK que asigno la persistencia. Es el unico camino por el que una
+     * observacion nueva adquiere identidad: la entidad no expone un setter de id ni
+     * se vuelve mutable.
+     */
+    public FalObservacion conId(Long idAsignado) {
+        if (idAsignado == null) throw new IllegalArgumentException("idAsignado obligatorio");
+        if (idAsignado <= 0) throw new IllegalArgumentException("idAsignado debe ser positivo: " + idAsignado);
+        return copiaCon(idAsignado);
+    }
+
+    private FalObservacion copiaCon(Long idDestino) {
+        FalObservacion c = new FalObservacion(idDestino, entidadTipo, entidadId, tipoObs,
                 observacion, origenObs, idActaContexto, fhAlta, idUserAlta);
         c.siActiva = this.siActiva;
         c.fhBaja = this.fhBaja;

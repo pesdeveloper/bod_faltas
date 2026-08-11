@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
  * - JURIDICA: apellido y nombres deben ser null; razonSocial o nombreMostrar obligatorios.
  * - tipoDoc y nroDoc se informan juntos o ambos quedan null.
  * - apellido: max 24 caracteres (VARCHAR(24) en MariaDB - HUMAN_DECISION_CLOSED).
+ * - id: null en una entidad nueva; positivo en una entidad persistida (DECISION_ID-01).
  * - nombres: max 36 caracteres (VARCHAR(36) en MariaDB - HUMAN_DECISION_CLOSED).
  * - razonSocial: max 64 caracteres (VARCHAR(64) en MariaDB).
  * - nombreMostrar: calculado; max 64 caracteres (VARCHAR(64) en MariaDB).
@@ -26,27 +27,23 @@ import java.time.LocalDateTime;
  * - idBie: identificador de bien o cuenta; rango 1-9999999 (MEDIUMINT UNSIGNED).
  * - Usar Integer (no Long) para idSuj e idBie (HUMAN_DECISION_CLOSED FULL-R1.2-CORRECCION-10).
  *
- * Estructura fisica del documento (HUMAN_DECISION_CLOSED - SPEC-MODEL-DDL-CLOSURE-001):
- * - tipo_documento SMALLINT NOT NULL (TipoDocumentoPersona)
- * - prefijo_cuit_cuil TINYINT UNSIGNED NULL (solo CUIT/CUIL: 0-99)
- * - nro_doc INT UNSIGNED NOT NULL (solo parte numerica: 1-99999999)
+ * Estructura del documento (DECISION_DDL-PERS-01, modelo objetivo):
+ * - tipo_documento SMALLINT NULL (TipoDocumentoPersona)
+ * - prefijo_cuit_cuil TINYINT UNSIGNED NULL (solo CUIT/CUIL: 10-99)
+ * - nro_doc VARCHAR(12) NULL (forma canonica; cuerpo central de 8 digitos en CUIT/CUIL)
  * - digito_verificador TINYINT UNSIGNED NULL (solo CUIT/CUIL: 0-9)
- * Los campos tipoDoc/nroDoc se mantienen por compatibilidad durante la transicion al adapter JDBC.
+ * Los cuatro componentes viven en un unico value object, {@link DocumentoPersona}, que es
+ * la unica autoridad de normalizacion y la unica via de mutacion: no hay setters
+ * individuales que puedan romper la coherencia del par.
  *
- * No tiene versionRow: fal_persona no lo define en MariaDB (DECISION_DDL-PERS-01 CERRADA).
+ * No tiene versionRow: fal_persona no lo define en MariaDB (DECISION_DDL-PERS-01).
  */
 public class FalPersona {
 
     private final Long id;
     private final TipoPersona tipoPersona;
 
-    private TipoDocumentoPersona tipoDoc;
-    private String nroDoc;
-
-    // Estructura fisica del documento (HUMAN_DECISION_CLOSED - SPEC-MODEL-DDL-CLOSURE-001):
-    // tipo_documento SMALLINT, prefijo_cuit_cuil TINYINT UNSIGNED NULL, nro_doc INT UNSIGNED, digito_verificador TINYINT UNSIGNED NULL
-    private Integer prefijoCuitCuil;
-    private Integer digitoVerificador;
+    private DocumentoPersona documento = DocumentoPersona.ausente();
 
     private String apellido;
     private String nombres;
@@ -66,12 +63,17 @@ public class FalPersona {
     private LocalDateTime fhUltMod;
     private String idUserUltMod;
 
+    /**
+     * @param id {@code null} para una entidad nueva; positivo para una entidad ya
+     *           persistida. La PK la asigna la persistencia (DECISION_ID-01).
+     */
     public FalPersona(
             Long id,
             TipoPersona tipoPersona,
             LocalDateTime fhAlta,
             String idUserAlta) {
-        if (id == null) throw new IllegalArgumentException("id es obligatorio en FalPersona");
+        if (id != null && id <= 0)
+            throw new IllegalArgumentException("id debe ser positivo o null en FalPersona; valor: " + id);
         if (tipoPersona == null) throw new IllegalArgumentException("tipoPersona es obligatorio");
         if (fhAlta == null) throw new IllegalArgumentException("fhAlta es obligatorio");
         if (idUserAlta == null || idUserAlta.isBlank()) throw new IllegalArgumentException("idUserAlta es obligatorio");
@@ -86,10 +88,11 @@ public class FalPersona {
 
     public Long getId() { return id; }
     public TipoPersona getTipoPersona() { return tipoPersona; }
-    public TipoDocumentoPersona getTipoDoc() { return tipoDoc; }
-    public String getNroDoc() { return nroDoc; }
-    public Integer getPrefijoCuitCuil() { return prefijoCuitCuil; }
-    public Integer getDigitoVerificador() { return digitoVerificador; }
+    public DocumentoPersona getDocumento() { return documento; }
+    public TipoDocumentoPersona getTipoDoc() { return documento.tipoDoc(); }
+    public String getNroDoc() { return documento.nroDoc(); }
+    public Integer getPrefijoCuitCuil() { return documento.prefijoCuitCuil(); }
+    public Integer getDigitoVerificador() { return documento.digitoVerificador(); }
     public String getApellido() { return apellido; }
     public String getNombres() { return nombres; }
     public String getRazonSocial() { return razonSocial; }
@@ -107,10 +110,16 @@ public class FalPersona {
 
     // --- Setters controlados ---
 
-    public void setTipoDoc(TipoDocumentoPersona tipoDoc) { this.tipoDoc = tipoDoc; }
-    public void setNroDoc(String nroDoc) { this.nroDoc = nroDoc; }
-    public void setPrefijoCuitCuil(Integer prefijoCuitCuil) { this.prefijoCuitCuil = prefijoCuitCuil; }
-    public void setDigitoVerificador(Integer digitoVerificador) { this.digitoVerificador = digitoVerificador; }
+    /**
+     * Unica via de mutacion del documento. Recibe la forma ya canonica, de modo que la
+     * coherencia del par y de los componentes de CUIT/CUIL queda garantizada por
+     * {@link DocumentoPersona}. No existen setters individuales de tipo, numero, prefijo
+     * ni digito: eso permitiria construir un documento incoherente en dos pasos.
+     */
+    public void setDocumento(DocumentoPersona documento) {
+        this.documento = (documento == null) ? DocumentoPersona.ausente() : documento;
+    }
+
     public void setApellido(String apellido) { this.apellido = apellido; }
     public void setNombres(String nombres) { this.nombres = nombres; }
     public void setRazonSocial(String razonSocial) { this.razonSocial = razonSocial; }
@@ -156,22 +165,52 @@ public class FalPersona {
         return nombreMostrar;
     }
 
-    /** Texto del documento en formato legible. */
+    /**
+     * Texto del documento en formato legible. Para CUIT/CUIL rinde la forma visual
+     * {@code XX-XXXXXXXX-X} reconstruida desde los tres componentes, no el cuerpo central
+     * desnudo.
+     */
     public String docTxt() {
-        if (tipoDoc == null || nroDoc == null) return null;
-        return tipoDoc.name() + " " + nroDoc;
+        if (documento.estaAusente()) return null;
+        return documento.tipoDoc().name() + " " + documento.nroDocVisible();
     }
 
     public boolean tieneCuentaActiva() {
         return sujBieEstado == SujBieEstado.ACTIVA;
     }
 
+    /**
+     * Formas minimas de identificacion. Una persona sin ninguna de ellas no representa a
+     * una persona real y no debe persistirse: la ausencia de sujeto identificado se
+     * expresa con {@code id_persona_infractor} NULL, nunca con una fila vacia
+     * (DECISION_DDL-PERS-01, prohibicion de persona centinela o ficticia).
+     */
+    public boolean tieneIdentificacionMinima() {
+        return nombreMostrar != null
+                || apellido != null
+                || nombres != null
+                || razonSocial != null
+                || documento.nroDoc() != null
+                || idSuj != null;
+    }
+
+    /**
+     * Copia con la PK que asigno la persistencia. No muta la instancia receptora
+     * (DECISION_ID-01).
+     */
+    public FalPersona conId(Long idAsignado) {
+        if (idAsignado == null || idAsignado <= 0)
+            throw new IllegalArgumentException("conId exige un id positivo; valor: " + idAsignado);
+        return copiarCon(idAsignado);
+    }
+
     public FalPersona copia() {
-        FalPersona c = new FalPersona(id, tipoPersona, fhAlta, idUserAlta);
-        c.tipoDoc = this.tipoDoc;
-        c.nroDoc = this.nroDoc;
-        c.prefijoCuitCuil = this.prefijoCuitCuil;
-        c.digitoVerificador = this.digitoVerificador;
+        return copiarCon(this.id);
+    }
+
+    private FalPersona copiarCon(Long idDestino) {
+        FalPersona c = new FalPersona(idDestino, tipoPersona, fhAlta, idUserAlta);
+        c.documento = this.documento;
         c.apellido = this.apellido;
         c.nombres = this.nombres;
         c.razonSocial = this.razonSocial;

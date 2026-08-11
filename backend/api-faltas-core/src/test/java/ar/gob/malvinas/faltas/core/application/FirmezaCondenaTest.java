@@ -1,8 +1,10 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DeclararCondenaFirmePorApelacionRechazadaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
@@ -128,7 +130,7 @@ class FirmezaCondenaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
@@ -164,12 +166,13 @@ class FirmezaCondenaTest {
 
     private Long llegarAAnalisis(String doc) {
         LabrarActaCommand cmd = new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Infractor Test", doc,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                null, null, null, "Infractor Test", null, doc, null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
         Long actaId = actaService.labrar(cmd).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
         String idDoc = docService.generarDocumento(
                 new GenerarDocumentoCommand(actaId, TipoDocu.ACTA_INFRACCION))
@@ -389,9 +392,11 @@ class FirmezaCondenaTest {
         @DisplayName("Test 9: No firmeza sin fallo activo")
         void no_firmeza_sin_fallo() {
             Long actaId = actaService.labrar(new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001", FaltasClockTestSupport.FIXED.now().toLocalDate(),
-                    "Dir", "Dir", null, null, null, "Inf", "30000001",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L, FaltasClockTestSupport.FIXED.now().toLocalDate(),
+                    "Dir", "Dir", null, null, null, "Inf", null, "30000001", null,
+                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
 
             assertThatThrownBy(() -> firmezaService.vencerPlazoApelacion(
                     new VencerPlazoApelacionCommand(actaId, null, "test-user")))

@@ -52,10 +52,9 @@ class ParalizacionActaInvariantesTest {
     }
 
     private FalActa crearActaActiva(BloqueActual bloque) {
-        Long id = actaRepo.nextId();
-        FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
+        FalActa acta = new FalActa(null, "uuid-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "TEST");
+                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, FaltasClockTestSupport.FIXED.now(), "TEST");
         acta.setBloqueActual(bloque);
         return actaRepo.guardar(acta);
     }
@@ -65,9 +64,9 @@ class ParalizacionActaInvariantesTest {
     class ParalizarInvariantes {
 
         @Test
-        @DisplayName("paralizar desde bloque CAPT crea ciclo activo y evento ACTPAR")
-        void paralizar_desde_capt() {
-            FalActa acta = crearActaActiva(BloqueActual.CAPT);
+        @DisplayName("paralizar desde bloque ENRI crea ciclo activo y evento ACTPAR")
+        void paralizar_desde_enri_evento_actpar() {
+            FalActa acta = crearActaActiva(BloqueActual.ENRI);
             service.paralizar(new ParalizarActaCommand(acta.getId(), MotivoParalizacion.ESPERA_DOCUMENTAL, null, "U"));
 
             Optional<FalActaParalizacion> ciclo = paralizacionRepo.buscarActivaPorActa(acta.getId());
@@ -140,7 +139,7 @@ class ParalizacionActaInvariantesTest {
         @Test
         @DisplayName("acta anulada no puede paralizarse")
         void anulada_rechazada() {
-            FalActa acta = crearActaActiva(BloqueActual.CAPT);
+            FalActa acta = crearActaActiva(BloqueActual.ENRI);
             acta = actaRepo.buscarPorId(acta.getId()).orElseThrow();
             acta.setSituacionAdministrativa(SituacionAdministrativaActa.ANULADA);
             actaRepo.guardar(acta);

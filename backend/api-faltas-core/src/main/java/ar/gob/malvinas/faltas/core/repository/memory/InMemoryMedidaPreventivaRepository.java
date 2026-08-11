@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalMedidaPreventiva;
 import ar.gob.malvinas.faltas.core.repository.MedidaPreventivaRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryMedidaPreventivaRepository
         implements MedidaPreventivaRepository, ResettableInMemoryRepository {
 

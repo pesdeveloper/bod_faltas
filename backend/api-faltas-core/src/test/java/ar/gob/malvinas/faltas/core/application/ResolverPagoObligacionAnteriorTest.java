@@ -42,7 +42,8 @@ class ResolverPagoObligacionAnteriorTest {
 
     private static final LocalDateTime T0 = LocalDateTime.of(2026, 7, 1, 10, 0);
     private static final ZoneId ZONA = ZoneId.of("America/Argentina/Buenos_Aires");
-    private static final Long ACTA_ID = 100L;
+    /** Id que asigno la persistencia al acta principal del test. */
+    private Long actaId;
     private static final Long PERSONA_ID = 200L;
 
     private InMemoryObligacionPagoRepository obligacionRepo;
@@ -66,7 +67,7 @@ class ResolverPagoObligacionAnteriorTest {
         clock = new FaltasClock(Clock.fixed(Instant.parse("2026-07-01T13:00:00-03:00"), ZONA));
         montarServicios(clock);
 
-        actaRepo.guardar(crearActa(ACTA_ID));
+        actaId = actaRepo.guardar(crearActa()).getId();
         ActorContextHolder.set(new ActorContext("usuario-demo-faltas"));
     }
 
@@ -87,23 +88,24 @@ class ResolverPagoObligacionAnteriorTest {
                 actaRepo, movimientoRepo, obligacionRepo, proyeccionRepo, integracionService, eventoRepo, clockUsado);
     }
 
-    private FalActa crearActa(Long id) {
-        return new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Alta sin id: la PK la asigna la persistencia. */
+    private FalActa crearActa() {
+        return new FalActa(null, "UUID-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 6, 20), T0, "Av. Libertad 100", null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, PERSONA_ID, T0, "SYS");
+                null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.IDENTIFICADO_COMPLETO, PERSONA_ID, T0, "SYS");
     }
 
     /** Obligacion vigente actual (la "alcanzada" por la resolucion). */
     private FalActaObligacionPago crearVigente(Long id, BigDecimal monto) {
         FalActaObligacionPago o = new FalActaObligacionPago(
-                id, ACTA_ID, PERSONA_ID, TipoObligacionPago.PAGO_VOLUNTARIO, monto, T0, "USR", T0, "USR");
+                id, actaId, PERSONA_ID, TipoObligacionPago.PAGO_VOLUNTARIO, monto, T0, "USR", T0, "USR");
         return obligacionRepo.save(o);
     }
 
     /** Obligacion anterior/reemplazada, no vigente: destino original del pago mal aplicado. */
     private FalActaObligacionPago crearAnterior(Long id, BigDecimal monto) {
         FalActaObligacionPago o = new FalActaObligacionPago(
-                id, ACTA_ID, PERSONA_ID, TipoObligacionPago.PAGO_VOLUNTARIO, monto, T0, "USR", T0, "USR");
+                id, actaId, PERSONA_ID, TipoObligacionPago.PAGO_VOLUNTARIO, monto, T0, "USR", T0, "USR");
         o.setSiVigente(false);
         return obligacionRepo.save(o);
     }
@@ -144,13 +146,13 @@ class ResolverPagoObligacionAnteriorTest {
         var m = notificarPago(9002L, new BigDecimal("300"), "PAGANT-1");
 
         assertThat(m.getClasificacionPago()).isEqualTo(ClasificacionPago.OBLIGACION_ANTERIOR);
-        List<FalActaEvento> eventos = eventoRepo.buscarPorActa(ACTA_ID);
+        List<FalActaEvento> eventos = eventoRepo.buscarPorActa(actaId);
         assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.PAGANT
                 && "PAGANT-1".equals(e.correlacionId()));
         assertThat(eventos).noneMatch(e -> e.tipoEvt() == TipoEventoActa.PAGCNF);
 
         // No debe afectar la proyeccion de la obligacion vigente actual (sin cierre administrativo indebido).
-        var p = recalculador.recalcular(ACTA_ID, OrigenUltimaActualizacion.TIEMPO_REAL, "USR");
+        var p = recalculador.recalcular(actaId, OrigenUltimaActualizacion.TIEMPO_REAL, "USR");
         assertThat(p.getSaldoPendiente()).isEqualByComparingTo("1000.00");
         assertThat(p.getEstadoObligacion()).isNotEqualTo(EstadoObligacionPago.CANCELADA_POR_PAGO);
     }
@@ -176,25 +178,25 @@ class ResolverPagoObligacionAnteriorTest {
         crearAnterior(9003L, new BigDecimal("200"));
 
         var pagant1 = notificarPago(9002L, new BigDecimal("300"), "CASC-1");
-        var r1 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant1.getId(), null, "USR"));
+        var r1 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant1.getId(), null, "USR"));
         assertThat(r1.obligacionAplicadaId()).isEqualTo(9001L);
         assertThat(r1.saldoResultante()).isEqualByComparingTo("700.00");
 
         var pagant2 = notificarPago(9003L, new BigDecimal("250"), "CASC-2");
-        var r2 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant2.getId(), null, "USR"));
+        var r2 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant2.getId(), null, "USR"));
         assertThat(r2.obligacionAplicadaId()).isEqualTo(9001L);
         assertThat(r2.saldoResultante()).isEqualByComparingTo("450.00");
 
         // Sigue existiendo una sola obligacion vigente: la misma de siempre.
-        assertThat(obligacionRepo.findVigenteByActaId(ACTA_ID).orElseThrow().getId()).isEqualTo(9001L);
-        assertThat(obligacionRepo.findByActaId(ACTA_ID)).hasSize(3);
+        assertThat(obligacionRepo.findVigenteByActaId(actaId).orElseThrow().getId()).isEqualTo(9001L);
+        assertThat(obligacionRepo.findByActaId(actaId)).hasSize(3);
 
         // Dos movimientos de aplicacion (uno por cada resolucion) contra la misma obligacion.
         List<FalActaPagoMovimiento> movsVigente = movimientoRepo.findByObligacionPagoId(9001L);
         assertThat(movsVigente).hasSize(2);
         assertThat(movsVigente).allMatch(m -> m.getClasificacionPago() == ClasificacionPago.NORMAL);
 
-        long pagresCount = eventoRepo.buscarPorActa(ACTA_ID).stream()
+        long pagresCount = eventoRepo.buscarPorActa(actaId).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.PAGRES).count();
         assertThat(pagresCount).isEqualTo(2);
     }
@@ -207,7 +209,7 @@ class ResolverPagoObligacionAnteriorTest {
         var pagant = notificarPago(9002L, new BigDecimal("1000"), "TOT-EXACTO");
 
         var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), "resolucion total exacta", "USR"));
+                actaId, pagant.getId(), "resolucion total exacta", "USR"));
 
         assertThat(resultado.importeAplicado()).isEqualByComparingTo("1000.00");
         assertThat(resultado.saldoResultante()).isEqualByComparingTo("0.00");
@@ -216,10 +218,10 @@ class ResolverPagoObligacionAnteriorTest {
         var obl = obligacionRepo.findById(9001L).orElseThrow();
         assertThat(obl.getEstadoObligacion()).isEqualTo(EstadoObligacionPago.CANCELADA_POR_PAGO);
 
-        var p = proyeccionRepo.findByActaId(ACTA_ID).orElseThrow();
+        var p = proyeccionRepo.findByActaId(actaId).orElseThrow();
         assertThat(p.getSaldoPendiente()).isEqualByComparingTo("0.00");
 
-        List<FalActaEvento> eventos = eventoRepo.buscarPorActa(ACTA_ID);
+        List<FalActaEvento> eventos = eventoRepo.buscarPorActa(actaId);
         assertThat(eventos).anyMatch(e -> e.tipoEvt() == TipoEventoActa.PAGRES);
         assertThat(eventos).noneMatch(e -> e.tipoEvt() == TipoEventoActa.OBLREP);
     }
@@ -232,7 +234,7 @@ class ResolverPagoObligacionAnteriorTest {
         var pagant = notificarPago(9002L, new BigDecimal("1500"), "TOT-EXCED");
 
         var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "USR"));
+                actaId, pagant.getId(), null, "USR"));
 
         assertThat(resultado.importeAplicado()).isEqualByComparingTo("1500.00");
         assertThat(resultado.saldoResultante()).isEqualByComparingTo("0.00");
@@ -240,12 +242,12 @@ class ResolverPagoObligacionAnteriorTest {
 
         var obl = obligacionRepo.findById(9001L).orElseThrow();
         assertThat(obl.getEstadoObligacion()).isEqualTo(EstadoObligacionPago.CANCELADA_POR_PAGO);
-        var p = proyeccionRepo.findByActaId(ACTA_ID).orElseThrow();
+        var p = proyeccionRepo.findByActaId(actaId).orElseThrow();
         assertThat(p.getSaldoPendiente()).isEqualByComparingTo("0.00");
         assertThat(p.getImporteExcedente()).isEqualByComparingTo("500.00");
 
         // No se crea ninguna obligacion adicional (ni por diferencia ni por excedente).
-        assertThat(obligacionRepo.findByActaId(ACTA_ID)).hasSize(2);
+        assertThat(obligacionRepo.findByActaId(actaId)).hasSize(2);
     }
 
     @Test
@@ -254,11 +256,11 @@ class ResolverPagoObligacionAnteriorTest {
         crearVigente(9001L, new BigDecimal("1000"));
         crearAnterior(9002L, new BigDecimal("500"));
         var pagant = notificarPago(9002L, new BigDecimal("400"), "DERIV-1");
-        var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant.getId(), null, "USR"));
+        var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant.getId(), null, "USR"));
 
         Long movimientoAplicadoId = resultado.movimientoAplicado().getId();
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, movimientoAplicadoId, null, "USR")))
+                actaId, movimientoAplicadoId, null, "USR")))
                 .isInstanceOf(PrecondicionVioladaException.class);
     }
 
@@ -273,8 +275,8 @@ class ResolverPagoObligacionAnteriorTest {
         crearAnterior(9002L, new BigDecimal("500"));
         var pagant = notificarPago(9002L, new BigDecimal("400"), "IDEMP-1");
 
-        var r1 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant.getId(), "motivo-x", "USR"));
-        var r2 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant.getId(), "motivo-x", "USR"));
+        var r1 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant.getId(), "motivo-x", "USR"));
+        var r2 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant.getId(), "motivo-x", "USR"));
 
         assertThat(r2.movimientoAplicado().getId()).isEqualTo(r1.movimientoAplicado().getId());
         assertThat(r2.obligacionAplicadaId()).isEqualTo(r1.obligacionAplicadaId());
@@ -282,7 +284,7 @@ class ResolverPagoObligacionAnteriorTest {
 
         // Un solo movimiento de aplicacion, un solo evento PAGRES; el reintento no agrega nada.
         assertThat(movimientoRepo.findByMovimientoOrigenId(pagant.getId())).hasSize(1);
-        long pagresCount = eventoRepo.buscarPorActa(ACTA_ID).stream()
+        long pagresCount = eventoRepo.buscarPorActa(actaId).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.PAGRES).count();
         assertThat(pagresCount).isEqualTo(1);
     }
@@ -293,16 +295,16 @@ class ResolverPagoObligacionAnteriorTest {
         crearVigente(9001L, new BigDecimal("1000"));
         crearAnterior(9002L, new BigDecimal("500"));
         var pagant = notificarPago(9002L, new BigDecimal("400"), "CONFLICT-OBLIG");
-        resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant.getId(), null, "USR"));
+        resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant.getId(), null, "USR"));
 
         // Cambia la obligacion vigente del acta (deja sin efecto la anterior vigente y crea otra).
         FalActaObligacionPago vigenteVieja = obligacionRepo.findById(9001L).orElseThrow();
         FalActaObligacionPago nuevaVigente = new FalActaObligacionPago(
-                9010L, ACTA_ID, PERSONA_ID, TipoObligacionPago.PAGO_VOLUNTARIO, new BigDecimal("300"), T0, "USR", T0, "USR");
+                9010L, actaId, PERSONA_ID, TipoObligacionPago.PAGO_VOLUNTARIO, new BigDecimal("300"), T0, "USR", T0, "USR");
         obligacionRepo.crearVigenteAtomico(nuevaVigente, vigenteVieja);
 
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "USR")))
+                actaId, pagant.getId(), null, "USR")))
                 .isInstanceOf(ResolucionPagoAnteriorConflictoException.class);
     }
 
@@ -312,10 +314,10 @@ class ResolverPagoObligacionAnteriorTest {
         crearVigente(9001L, new BigDecimal("1000"));
         crearAnterior(9002L, new BigDecimal("500"));
         var pagant = notificarPago(9002L, new BigDecimal("400"), "CONFLICT-MOTIVO");
-        resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(ACTA_ID, pagant.getId(), "motivo original", "USR"));
+        resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(actaId, pagant.getId(), "motivo original", "USR"));
 
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), "motivo distinto", "USR")))
+                actaId, pagant.getId(), "motivo distinto", "USR")))
                 .isInstanceOf(ResolucionPagoAnteriorConflictoException.class);
     }
 
@@ -335,7 +337,7 @@ class ResolverPagoObligacionAnteriorTest {
                 ActorContextHolder.set(new ActorContext("usuario-demo-faltas"));
                 try {
                     var r = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                            ACTA_ID, pagant.getId(), null, "USR"));
+                            actaId, pagant.getId(), null, "USR"));
                     idsResultado[idx] = r.movimientoAplicado().getId();
                 } finally {
                     ActorContextHolder.clear();
@@ -348,7 +350,7 @@ class ResolverPagoObligacionAnteriorTest {
         Long primerId = idsResultado[0];
         assertThat(idsResultado).allSatisfy(id -> assertThat(id).isEqualTo(primerId));
         assertThat(movimientoRepo.findByMovimientoOrigenId(pagant.getId())).hasSize(1);
-        long pagresCount = eventoRepo.buscarPorActa(ACTA_ID).stream()
+        long pagresCount = eventoRepo.buscarPorActa(actaId).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.PAGRES).count();
         assertThat(pagresCount).isEqualTo(1);
     }
@@ -407,7 +409,7 @@ class ResolverPagoObligacionAnteriorTest {
         CountingClock counting = CountingClock.startingAt("2026-07-01T16:00:00Z");
         montarServicios(counting);
         actaRepo.reset();
-        actaRepo.guardar(crearActa(ACTA_ID));
+        actaId = actaRepo.guardar(crearActa()).getId();
 
         crearVigente(9001L, new BigDecimal("400"));
         crearAnterior(9002L, new BigDecimal("500"));
@@ -415,7 +417,7 @@ class ResolverPagoObligacionAnteriorTest {
 
         counting.reset();
         var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "USR"));
+                actaId, pagant.getId(), null, "USR"));
 
         assertThat(counting.invocationCount())
                 .as("resolver() debe leer FaltasClock.now() exactamente una vez por ejecucion (CMD-ORDER-002)")
@@ -438,14 +440,14 @@ class ResolverPagoObligacionAnteriorTest {
                 .as("fhCancelacion de la obligacion cancelada debe ser el mismo instante")
                 .isEqualTo(instanteResolucion);
 
-        FalActaEvento pagres = eventoRepo.buscarPorActa(ACTA_ID).stream()
+        FalActaEvento pagres = eventoRepo.buscarPorActa(actaId).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.PAGRES)
                 .findFirst().orElseThrow();
         assertThat(pagres.fhEvt())
                 .as("fhEvt del evento PAGRES debe ser el mismo instante que el movimiento de aplicacion (mismo hecho)")
                 .isEqualTo(instanteResolucion);
 
-        var proyeccion = proyeccionRepo.findByActaId(ACTA_ID).orElseThrow();
+        var proyeccion = proyeccionRepo.findByActaId(actaId).orElseThrow();
         assertThat(proyeccion.getFhCorteEconomico())
                 .as("fhCorteEconomico de la proyeccion debe ser el mismo instante")
                 .isEqualTo(instanteResolucion);
@@ -464,7 +466,7 @@ class ResolverPagoObligacionAnteriorTest {
         crearVigente(9001L, new BigDecimal("1000"));
         var normal = notificarPago(9001L, new BigDecimal("100"), "NORMAL-1");
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, normal.getId(), null, "USR")))
+                actaId, normal.getId(), null, "USR")))
                 .isInstanceOf(PrecondicionVioladaException.class);
     }
 
@@ -473,7 +475,7 @@ class ResolverPagoObligacionAnteriorTest {
     void movimientoInexistenteRechazado() {
         crearVigente(9001L, new BigDecimal("1000"));
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, 9999L, null, "USR")))
+                actaId, 9999L, null, "USR")))
                 .isInstanceOf(PagoMovimientoNoEncontradoException.class);
     }
 
@@ -492,15 +494,15 @@ class ResolverPagoObligacionAnteriorTest {
         // Notificar directamente sobre la unica obligacion, que ya es no-vigente.
         var pagant = notificarPago(9001L, new BigDecimal("100"), "SINVIG-1");
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "USR")))
+                actaId, pagant.getId(), null, "USR")))
                 .isInstanceOf(ObligacionPagoNoEncontradaException.class);
     }
 
     @Test
     @DisplayName("19. movimiento de otra acta es rechazado (422)")
     void movimientoDeOtraActaRechazado() {
-        Long otraActaId = 101L;
-        actaRepo.guardar(crearActa(otraActaId));
+        Long otraActaId;
+        otraActaId = actaRepo.guardar(crearActa()).getId();
         crearVigente(9001L, new BigDecimal("1000"));
 
         FalActaObligacionPago anteriorOtraActa = new FalActaObligacionPago(
@@ -514,7 +516,7 @@ class ResolverPagoObligacionAnteriorTest {
         var pagant = notificarPago(9050L, new BigDecimal("100"), "OTRA-ACTA-1");
 
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "USR")))
+                actaId, pagant.getId(), null, "USR")))
                 .isInstanceOf(PrecondicionVioladaException.class);
     }
 
@@ -530,7 +532,7 @@ class ResolverPagoObligacionAnteriorTest {
         var pagant = notificarPago(9002L, new BigDecimal("400"), "RECIBO-1", "RC", (short) 9, 12345);
 
         var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "USR"));
+                actaId, pagant.getId(), null, "USR"));
 
         FalActaPagoMovimiento aplicado = resultado.movimientoAplicado();
         assertThat(aplicado.getCmtePG()).isNull();
@@ -594,7 +596,7 @@ class ResolverPagoObligacionAnteriorTest {
         var pagant = notificarPago(9002L, new BigDecimal("400"), "MOTIVO-1");
 
         var resultado = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), "motivo estructurado", "USR"));
+                actaId, pagant.getId(), "motivo estructurado", "USR"));
 
         assertThat(resultado.movimientoAplicado().getMotivoAplicacionPagoAnterior()).isEqualTo("motivo estructurado");
 
@@ -604,7 +606,7 @@ class ResolverPagoObligacionAnteriorTest {
         eventoRepo.reset();
 
         var reintento = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), "motivo estructurado", "USR"));
+                actaId, pagant.getId(), "motivo estructurado", "USR"));
         assertThat(reintento.movimientoAplicado().getId()).isEqualTo(resultado.movimientoAplicado().getId());
         assertThat(reintento.motivo()).isEqualTo("motivo estructurado");
         assertThat(movimientoRepo.findByMovimientoOrigenId(pagant.getId())).hasSize(1);
@@ -624,11 +626,11 @@ class ResolverPagoObligacionAnteriorTest {
 
         ActorContextHolder.clear();
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, null)))
+                actaId, pagant.getId(), null, null)))
                 .isInstanceOf(PrecondicionVioladaException.class);
 
         assertThat(movimientoRepo.findByMovimientoOrigenId(pagant.getId())).isEmpty();
-        long pagresCount = eventoRepo.buscarPorActa(ACTA_ID).stream()
+        long pagresCount = eventoRepo.buscarPorActa(actaId).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.PAGRES).count();
         assertThat(pagresCount).isEqualTo(0);
 
@@ -648,7 +650,7 @@ class ResolverPagoObligacionAnteriorTest {
 
         ActorContextHolder.clear();
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), null, "   ")))
+                actaId, pagant.getId(), null, "   ")))
                 .isInstanceOf(PrecondicionVioladaException.class);
     }
 
@@ -670,7 +672,7 @@ class ResolverPagoObligacionAnteriorTest {
         movimientoRepo.append(fabricado);
 
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, movId, null, "USR")))
+                actaId, movId, null, "USR")))
                 .isInstanceOf(PrecondicionVioladaException.class);
     }
 
@@ -689,7 +691,7 @@ class ResolverPagoObligacionAnteriorTest {
         movimientoRepo.append(fabricado);
 
         assertThatThrownBy(() -> resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, movId, null, "USR")))
+                actaId, movId, null, "USR")))
                 .isInstanceOf(PrecondicionVioladaException.class);
 
         assertThat(movimientoRepo.findByMovimientoOrigenId(movId)).isEmpty();
@@ -708,11 +710,11 @@ class ResolverPagoObligacionAnteriorTest {
 
         ActorContextHolder.set(new ActorContext("actor-A"));
         var r1 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), "motivo original", "USR"));
+                actaId, pagant.getId(), "motivo original", "USR"));
 
         ActorContextHolder.set(new ActorContext("actor-B"));
         var r2 = resolverService.resolver(new ResolverPagoObligacionAnteriorCommand(
-                ACTA_ID, pagant.getId(), "motivo original", "USR"));
+                actaId, pagant.getId(), "motivo original", "USR"));
 
         assertThat(r2.actor())
                 .as("el actor reportado debe ser el historico (actor-A), no el del reintento (actor-B)")
@@ -723,7 +725,7 @@ class ResolverPagoObligacionAnteriorTest {
         assertThat(r2.movimientoAplicado().getId()).isEqualTo(r1.movimientoAplicado().getId());
 
         assertThat(movimientoRepo.findByMovimientoOrigenId(pagant.getId())).hasSize(1);
-        long pagresCount = eventoRepo.buscarPorActa(ACTA_ID).stream()
+        long pagresCount = eventoRepo.buscarPorActa(actaId).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.PAGRES).count();
         assertThat(pagresCount).isEqualTo(1);
     }

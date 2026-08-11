@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *
  * Valores obligatorios:
  * - PCOINF, PCOCNF, PCOOBS existen como eventos de pago condena (Slice 5)
- * - BloqueActual solo contiene CAPT, ENRI, NOTI, ANAL, GEXT, ARCH, CERR
+ * - BloqueActual solo contiene ENRI, NOTI, ANAL, GEXT, ARCH, CERR
  * - GESTIONAR_PAGO_CONDENA existe en AccionPendiente
  * - EXTDER, EXTRET, PAGAPR existen en TipoEventoActa (reservados para Slice 6)
  */
@@ -95,12 +95,12 @@ class EnumGuardrailTest {
 
         @Test
         @DisplayName("BloqueActual contiene exactamente los 7 bloques productivos")
-        void bloque_actual_contiene_exactamente_7_bloques_productivos() {
+        void bloque_actual_contiene_exactamente_6_bloques_productivos() {
             Set<String> codigos = Arrays.stream(BloqueActual.values())
                     .map(BloqueActual::codigo)
                     .collect(Collectors.toSet());
             assertThat(codigos).containsExactlyInAnyOrder(
-                    "CAPT", "ENRI", "NOTI", "ANAL", "GEXT", "ARCH", "CERR");
+                    "ENRI", "NOTI", "ANAL", "GEXT", "ARCH", "CERR");
         }
 
         @Test

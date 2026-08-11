@@ -5,7 +5,6 @@ import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCo
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.FalloActaService;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
-import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
 import ar.gob.malvinas.faltas.core.web.dto.DictarFalloAbsolutorioRequest;
 import ar.gob.malvinas.faltas.core.web.dto.DictarFalloCondenatorioRequest;
@@ -17,8 +16,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/faltas/actas")
@@ -55,9 +52,9 @@ public class FalloController {
 
     @GetMapping("/{id}/fallo")
     public ResponseEntity<FalActaFallo> obtenerFallo(@PathVariable Long id) {
-        Optional<FalActaFallo> fallo = falloActaService.obtenerFallo(id);
-        return fallo.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return falloActaService.obtenerFallo(id)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ActaNoEncontradaException(id));
     }
 
 }

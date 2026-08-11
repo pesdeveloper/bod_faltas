@@ -16,7 +16,21 @@
 | Migraciones historicas incrementales (V1__, V2__, ...) | NO |
 | Scripts en `src/main/resources` o classpath | NO |
 | Creacion/actualizacion automatica del esquema por Spring | NO |
-| Ejecucion SQL | **exclusivamente manual por Pablo mediante HeidiSQL** |
+| Ejecucion SQL | ver distincion produccion/sandbox debajo |
+
+**Produccion:** ejecucion **exclusivamente manual** por Pablo mediante HeidiSQL
+(u otro cliente), con autorizacion humana explicita y deliberada.
+
+**Sandbox `sb_faltas_db`, unicamente:** ejecucion automatizada autorizada
+mediante un slice explicito (p. ej. `MARIADB-DDL-EXEC-001`,
+`MARIADB-BASELINE-EXEC-001`) que incluya precheck, backup, allowlist,
+proteccion de datos preexistentes, postcheck, rollback, segunda instalacion
+y evidencia. Esta distincion no se extiende a produccion ni habilita
+ejecucion automatica al iniciar Spring: Flyway sigue NO, Liquibase sigue NO.
+
+*Historial de enmienda: 2026-08-02, ampliacion de alcance sandbox, slices
+`MARIADB-DDL-EXEC-001` y `MARIADB-BASELINE-EXEC-001`. Redaccion original
+preservada arriba salvo la distincion produccion/sandbox.*
 
 **Orden conceptual para recrear una instalacion desde cero:**
 

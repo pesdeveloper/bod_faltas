@@ -179,8 +179,10 @@ se cumpla su precondicion y produce efectos definidos.
 **Propietario funcional:** `BloqueActual` (enum).
 
 Representa la etapa principal del circuito en la que se encuentra el acta. Es
-una dimension del acta, no del subagregado. Valores: `CAPT`, `ENRI`, `NOTI`,
-`ANAL`, `GEXT`, `ARCH`, `CERR`.
+una dimension del acta, no del subagregado. Valores: `ENRI`, `NOTI`,
+`ANAL`, `GEXT`, `ARCH`, `CERR`. El acta nace directamente en `ENRI`; `CAPT` NO
+existe como bloque productivo (`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`,
+[`../20-application/command-contracts.md`](../20-application/command-contracts.md)).
 
 No confundir con: bandeja (que es derivada y operativa).
 
@@ -310,12 +312,13 @@ secundaria respecto a la bandeja principal.
 Indica la proxima actuacion que el operador deberia realizar. Es una sugerencia
 derivada del estado persistido; no equivale a un comando ni lo reemplaza.
 
-Valores: `COMPLETAR_CAPTURA`, `ENRIQUECER`, `GENERAR_DOCUMENTO`,
-`FIRMAR_DOCUMENTO`, `ENVIAR_NOTIFICACION`, `EVALUAR_NOTIFICACION`,
-`DECIDIR_REINTENTO_O_GESTION`, `DICTAR_FALLO`, `RESOLVER_APELACION`,
-`REGISTRAR_PAGO`, `DERIVAR_GESTION_EXTERNA`, `CONFIRMAR_PAGO`, `CORREGIR_PAGO`,
-`DECLARAR_CONDENA_FIRME`, `GESTIONAR_PAGO_CONDENA`, `CONFIRMAR_PAGO_CONDENA`,
-`CORREGIR_PAGO_CONDENA`, `NINGUNA`.
+`COMPLETAR_CAPTURA` NO existe (`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`): el alta es
+integral, no queda una captura pendiente de completar. Valores:
+`GENERAR_DOCUMENTO`, `FIRMAR_DOCUMENTO`,
+`ENVIAR_NOTIFICACION`, `EVALUAR_NOTIFICACION`, `DECIDIR_REINTENTO_O_GESTION`,
+`DICTAR_FALLO`, `RESOLVER_APELACION`, `DERIVAR_GESTION_EXTERNA`, `CONFIRMAR_PAGO`,
+`CORREGIR_PAGO`, `DECLARAR_CONDENA_FIRME`, `GESTIONAR_PAGO_CONDENA`,
+`CONFIRMAR_PAGO_CONDENA`, `CORREGIR_PAGO_CONDENA`, `NINGUNA`.
 
 No confundir con: comando (que es la intencion ejecutable real).
 

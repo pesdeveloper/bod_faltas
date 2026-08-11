@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoVariableContextBuilder;
@@ -150,7 +152,7 @@ class DocumentoVariableContextBuilderTest {
             FalActa actaSinNumero = new FalActa(
                     99L, "uuid-sin-nro", "TRANSITO", "DEP-01", "INS-001",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                    "Calle X", "Calle Y", null, null, null,
+                    "Calle X", "Calle Y", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                     "Infractor Test", "99999999",
                     ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.FIRMADA);
             Map<String, Object> ctx = DocumentoVariableContextBuilder.buildDesdeActa(actaSinNumero, null, FaltasClockTestSupport.FIXED.now());

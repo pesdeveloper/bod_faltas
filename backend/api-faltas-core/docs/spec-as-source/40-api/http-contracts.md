@@ -10,8 +10,7 @@ Base path: `/api/faltas`
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
-| POST | /actas/labrar | Labrar nueva acta |
-| POST | /actas/{id}/completar-captura | Completar captura |
+| POST | /actas/labrar | Labrar nueva acta (alta integral; nace directamente en ENRI, `DECISION-ACTA-ALTA-INTEGRAL-01`) |
 | POST | /actas/{id}/enriquecer | Enriquecer acta |
 | GET  | /actas/{id} | Obtener acta |
 | GET  | /actas/{id}/snapshot | Obtener snapshot operativo |
@@ -659,7 +658,7 @@ con la obligacion vigente cambiada o un motivo distinto es un conflicto.
 
 ### POST /api/faltas/documentos/{documentoId}/numerar
 
-**Finalidad:** integracion controlada con la aplicacion de Firmas para asignar un numero de talonario electronico a un documento antes de que Firmas renderice su contenido definitivo y calcule el hash.
+**Finalidad:** integracion controlada con la aplicacion de Firmas para asignar un numero de talonario electronico a un documento antes de que Faltas renderice su contenido definitivo y calcule `hashEntrada`.
 
 **Autenticacion:** requerida. Actor obtenido del JWT `sub` via `ActorContextHolder`. Sin Bearer valido: HTTP 401.
 
@@ -693,6 +692,42 @@ con la obligacion vigente cambiada o un motivo distinto es un conflicto.
 | Estado del documento incompatible | 422 |
 | Talonario no vigente / sin politica | 422 |
 | Sin Bearer valido | 401 |
+
+---
+
+## Endpoints EDA auxiliares para integracion con Firmas (`NORMATIVE`, `DEC-EDA-017`/`018`)
+
+> Contrato completo (request/response exactos, idempotencia, TTL, limites,
+> codigos de error) en `30-integrations/firma-binary-transfer.md`.
+> Autenticacion M2M (`X-Api-Key`) en `30-integrations/eventing-operations.md`.
+> `IMPLEMENTATION_NOT_STARTED`: ninguno de los tres endpoints existe en
+> codigo todavia; el diseno esta cerrado y no admite alternativas.
+
+### POST /api/faltas/integraciones/firmas/solicitudes/{solicitudFirmaId}/preparar-artefacto
+
+Valida solicitud/requisito, exige numeracion previa (422 si falta bajo
+`AL_FIRMAR`), renderiza/consolida el PDF vigente, calcula `hashEntrada` y
+devuelve metadata (nunca el binario). Idempotente por
+`solicitudFirmaId`+`revisionSolicitud`; revision incompatible devuelve 409.
+
+### GET /api/faltas/integraciones/firmas/solicitudes/{solicitudFirmaId}/artefacto
+
+Streaming `application/pdf` autenticado M2M; valida revision; devuelve
+`Content-Length` y `Digest` SHA-256; nunca revela storage ni acepta URL
+externa.
+
+### PUT /api/faltas/integraciones/firmas/solicitudes/{solicitudFirmaId}/resultados/{resultadoFirmaId}
+
+Carga `multipart/form-data` (`metadata` JSON + `archivo` PDF) del
+**candidato firmado temporal**. Solo persiste un recibo técnico en
+`fal_documento_firma_resultado`
+(`30-integrations/firma-binary-transfer.md` §0bis/§3); nunca invoca
+`RegistrarFirmaDocumentalCommand`, nunca crea `fal_documento_firma` y nunca
+reemplaza el PDF vigente. Idempotente por `resultadoFirmaId`+hash; mismo ID
+con hash distinto devuelve 409. El evento `DocumentoFirmado` referencia
+`resultadoFirmaId` sin transportar el binario; Faltas aplica el reemplazo
+definitivo del PDF vigente exclusivamente al consumir ese evento (único
+punto de aplicación del efecto de dominio).
 
 ---
 

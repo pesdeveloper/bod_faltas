@@ -9,7 +9,6 @@ import ar.gob.malvinas.faltas.core.repository.ObservacionRepository;
 import org.springframework.stereotype.Service;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
-import java.time.LocalDateTime;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -84,10 +83,7 @@ public class ObservacionService {
         validarTipoDisponible(tipo);
         validarTexto(texto);
         validadores.get(tipo).validar(entidadId);
-        Long id = repo.nextId();
-        FalObservacion obs = new FalObservacion(id, tipo, entidadId, null, texto.trim(), origen,
-                faltasClock.now(), idUserAlta);
-        return repo.guardar(obs);
+        return repo.guardar(nueva(tipo, entidadId, texto, origen, idUserAlta));
     }
 
     /**
@@ -102,10 +98,21 @@ public class ObservacionService {
             String idUserAlta) {
         validarTipoDisponible(tipo);
         validarTexto(texto);
-        Long id = repo.nextId();
-        FalObservacion obs = new FalObservacion(id, tipo, entidadId, null, texto.trim(), origen,
+        return repo.guardar(nueva(tipo, entidadId, texto, origen, idUserAlta));
+    }
+
+    /**
+     * Construye la observacion con id nulo: la PK la asigna la persistencia
+     * (DECISION_ID-01) y el llamador trabaja con la copia que devuelve el puerto.
+     */
+    private FalObservacion nueva(
+            EntidadTipoObservada tipo,
+            Long entidadId,
+            String texto,
+            OrigenObservacion origen,
+            String idUserAlta) {
+        return new FalObservacion(null, tipo, entidadId, null, texto.trim(), origen,
                 faltasClock.now(), idUserAlta);
-        return repo.guardar(obs);
     }
 
     public List<FalObservacion> listarPorEntidad(EntidadTipoObservada tipo, Long entidadId) {
@@ -116,10 +123,16 @@ public class ObservacionService {
         return repo.listarActivasPorEntidad(tipo, entidadId);
     }
 
-    public void desactivar(Long id) {
-        repo.buscarPorId(id).orElseThrow(() ->
-                new PrecondicionVioladaException("Observacion no encontrada: " + id));
-        repo.desactivar(id);
+    /**
+     * Baja logica de una observacion vigente. El servicio es la fuente del actor y
+     * del reloj; el adaptador solo persiste lo que recibe.
+     *
+     * <p>La existencia la resuelve el propio puerto, que distingue un id inexistente
+     * de una observacion ya inactiva. No se paga una lectura previa para repetir esa
+     * comprobacion.
+     */
+    public FalObservacion desactivar(Long id, String idUserBaja) {
+        return repo.desactivar(id, faltasClock.now(), idUserBaja);
     }
 
     private void validarTipoDisponible(EntidadTipoObservada tipo) {

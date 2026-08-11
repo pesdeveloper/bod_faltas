@@ -2,6 +2,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEvento;
 import ar.gob.malvinas.faltas.core.repository.ActaEventoRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -25,8 +26,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * - reset() solo disponible para infraestructura de tests (ResettableInMemoryRepository).
  *
  * Ordenamiento del timeline: fhEvt (principal) + id (desempate para mismo instante).
+ *
+ * Seleccion por perfil (WAVE 0B): con el perfil jdbc activo este bean no se
+ * registra y el puerto lo resuelve JdbcActaEventoRepository, de modo que queda
+ * exactamente un adaptador por puerto. La logica funcional no cambia.
  */
 @Repository
+@Profile("!jdbc")
 public class InMemoryActaEventoRepository implements ActaEventoRepository, ResettableInMemoryRepository {
 
     private final Map<Long, List<FalActaEvento>> storeByActa = new ConcurrentHashMap<>();

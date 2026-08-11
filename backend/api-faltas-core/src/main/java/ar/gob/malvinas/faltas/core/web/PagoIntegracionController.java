@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.web;
 
+import ar.gob.malvinas.faltas.core.domain.exception.ActorNoAutenticadoException;
 import ar.gob.malvinas.faltas.core.application.command.NotificarMovimientoPagoCommand;
 import ar.gob.malvinas.faltas.core.application.command.ResolverPagoObligacionAnteriorCommand;
 import ar.gob.malvinas.faltas.core.application.service.PagoEconomicoService;
@@ -7,7 +8,6 @@ import ar.gob.malvinas.faltas.core.application.service.ResolverPagoObligacionAnt
 import ar.gob.malvinas.faltas.core.application.service.ResolverPagoObligacionAnteriorService;
 import ar.gob.malvinas.faltas.core.domain.exception.ConciliacionIncompatibleException;
 import ar.gob.malvinas.faltas.core.domain.exception.MovimientoPagoDuplicadoException;
-import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaPagoMovimiento;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.NotificarMovimientoPagoRequest;
@@ -42,7 +42,7 @@ public class PagoIntegracionController {
     public ResponseEntity<FalActaPagoMovimiento> notificarMovimiento(@RequestBody NotificarMovimientoPagoRequest req) {
         String actor = ActorContextHolder.subOr(null);
         if (actor == null) {
-            throw new PrecondicionVioladaException("Actor autenticado requerido");
+            throw new ActorNoAutenticadoException();
         }
         NotificarMovimientoPagoCommand cmd = new NotificarMovimientoPagoCommand(
                 req.obligacionPagoId(), req.formaPagoId(), req.planPagoRefId(),
@@ -58,7 +58,7 @@ public class PagoIntegracionController {
     public ResponseEntity<FalActaPagoMovimiento> revertirMovimiento(@RequestBody RevertirMovimientoPagoRequest req) {
         String actor = ActorContextHolder.subOr(null);
         if (actor == null) {
-            throw new PrecondicionVioladaException("Actor autenticado requerido");
+            throw new ActorNoAutenticadoException();
         }
         return ResponseEntity.ok(pagoEconomicoService.revertirMovimiento(
                 req.movimientoOriginalId(), req.motivo(), req.referenciaExterna(), req.origenMovimiento(), actor));
@@ -69,7 +69,7 @@ public class PagoIntegracionController {
             @Valid @RequestBody ResolverPagoObligacionAnteriorRequest req) {
         String actor = ActorContextHolder.subOr(null);
         if (actor == null) {
-            throw new PrecondicionVioladaException("Actor autenticado requerido");
+            throw new ActorNoAutenticadoException();
         }
         ResolverPagoObligacionAnteriorCommand cmd = new ResolverPagoObligacionAnteriorCommand(
                 req.actaId(), req.movimientoPagoId(), req.motivo(), actor);

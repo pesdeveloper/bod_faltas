@@ -1,8 +1,10 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
 import ar.gob.malvinas.faltas.core.application.command.FirmarDocumentoCommand;
 import ar.gob.malvinas.faltas.core.application.command.GenerarDocumentoCommand;
@@ -111,7 +113,7 @@ class FlujoCompletoTest {
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVoluntarioRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
@@ -137,14 +139,14 @@ class FlujoCompletoTest {
     class LabrarActaTests {
 
         @Test
-        @DisplayName("Crea FalActa con bloque CAPT y evento ACTLAB")
-        void labrar_crea_acta_bloque_capt() {
+        @DisplayName("Alta integral: crea FalActa directamente en ENRI con unico evento ACTLAB")
+        void labrar_crea_acta_directamente_en_enri() {
             ComandoResultado resultado = actaService.labrar(cmdLabrar());
 
             assertThat(resultado.tipoEvento()).isEqualTo(TipoEventoActa.ACTLAB.codigo());
 
             FalActa acta = actaService.obtenerActa(resultado.idActa());
-            assertThat(acta.getBloqueActual()).isEqualTo(BloqueActual.CAPT);
+            assertThat(acta.getBloqueActual()).isEqualTo(BloqueActual.ENRI);
             assertThat(acta.estaCerrada()).isFalse();
             assertThat(acta.getInfractorDocumento()).isEqualTo("12345678");
 
@@ -154,42 +156,15 @@ class FlujoCompletoTest {
         }
 
         @Test
-        @DisplayName("Snapshot inicial con bandeja ACTAS_EN_ENRIQUECIMIENTO y accion COMPLETAR_CAPTURA")
+        @DisplayName("Snapshot inicial con bandeja ACTA_NUEVA y accion GENERAR_DOCUMENTO")
         void labrar_snapshot_inicial_correcto() {
             ComandoResultado resultado = actaService.labrar(cmdLabrar());
 
             FalActaSnapshot snap = actaService.obtenerSnapshot(resultado.idActa());
-            assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO);
-            assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.COMPLETAR_CAPTURA);
-            assertThat(snap.getBloqueActual()).isEqualTo(BloqueActual.CAPT);
-            assertThat(snap.isTieneDocumentos()).isFalse();
-        }
-    }
-
-    @Nested
-    @DisplayName("2. Completar captura")
-    class CompletarCapturaTests {
-
-        @Test
-        @DisplayName("Mueve a bloque ENRI y registra evento ACTCAP")
-        void completarCaptura_mueve_a_enri() {
-            Long id = actaService.labrar(cmdLabrar()).idActa();
-
-            ComandoResultado resultado = actaService.completarCaptura(
-                    new CompletarCapturaCommand(id, "captura ok"));
-
-            assertThat(resultado.tipoEvento()).isEqualTo(TipoEventoActa.ACTCAP.codigo());
-
-            FalActa acta = actaService.obtenerActa(id);
-            assertThat(acta.getBloqueActual()).isEqualTo(BloqueActual.ENRI);
-
-            List<FalActaEvento> eventos = eventoRepo.buscarPorActa(id);
-            assertThat(eventos).hasSize(2);
-            assertThat(eventos.get(1).tipoEvt()).isEqualTo(TipoEventoActa.ACTCAP);
-
-            FalActaSnapshot snap = actaService.obtenerSnapshot(id);
-            assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO);
+            assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.ACTA_NUEVA);
+            assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.GENERAR_DOCUMENTO);
             assertThat(snap.getBloqueActual()).isEqualTo(BloqueActual.ENRI);
+            assertThat(snap.isTieneDocumentos()).isFalse();
         }
     }
 
@@ -340,19 +315,12 @@ class FlujoCompletoTest {
         }
 
         @Test
-        @DisplayName("No permite completar captura si no esta en CAPT")
-        void no_completar_captura_fuera_de_capt() {
-            Long idActa = labrarYCompletarCaptura();
-            assertThatThrownBy(() ->
-                    actaService.completarCaptura(new CompletarCapturaCommand(idActa, null)))
-                    .isInstanceOf(PrecondicionVioladaException.class)
-                    .hasMessageContaining("CAPT");
-        }
-
-        @Test
-        @DisplayName("No permite enriquecer si bloque es CAPT")
-        void no_enriquecer_en_capt() {
+        @DisplayName("No permite enriquecer si el bloque no es ENRI")
+        void no_enriquecer_fuera_de_enri() {
             Long idActa = actaService.labrar(cmdLabrar()).idActa();
+            FalActa acta = actaRepo.buscarPorId(idActa).orElseThrow();
+            acta.setBloqueActual(BloqueActual.NOTI);
+            actaRepo.guardar(acta);
 
             assertThatThrownBy(() ->
                     actaService.enriquecer(new EnriquecerActaCommand(idActa, null)))
@@ -433,14 +401,13 @@ class FlujoCompletoTest {
             notifService.registrarPositiva(new RegistrarNotificacionPositivaCommand(Long.parseLong(idNotif), ar.gob.malvinas.faltas.core.support.IntentoTestSupport.intentoActivo(intentoRepo, Long.parseLong(idNotif)), null, "test-actor"));
 
             List<FalActaEvento> timeline = eventoRepo.buscarPorActa(idActa);
-            assertThat(timeline).hasSize(7);
+            assertThat(timeline).hasSize(6);
             assertThat(timeline.get(0).tipoEvt()).isEqualTo(TipoEventoActa.ACTLAB);
-            assertThat(timeline.get(1).tipoEvt()).isEqualTo(TipoEventoActa.ACTCAP);
-            assertThat(timeline.get(2).tipoEvt()).isEqualTo(TipoEventoActa.ACTENR);
-            assertThat(timeline.get(3).tipoEvt()).isEqualTo(TipoEventoActa.DOCGEN);
-            assertThat(timeline.get(4).tipoEvt()).isEqualTo(TipoEventoActa.DOCFIR);
-            assertThat(timeline.get(5).tipoEvt()).isEqualTo(TipoEventoActa.NOTENV);
-            assertThat(timeline.get(6).tipoEvt()).isEqualTo(TipoEventoActa.NOTPOS);
+            assertThat(timeline.get(1).tipoEvt()).isEqualTo(TipoEventoActa.ACTENR);
+            assertThat(timeline.get(2).tipoEvt()).isEqualTo(TipoEventoActa.DOCGEN);
+            assertThat(timeline.get(3).tipoEvt()).isEqualTo(TipoEventoActa.DOCFIR);
+            assertThat(timeline.get(4).tipoEvt()).isEqualTo(TipoEventoActa.NOTENV);
+            assertThat(timeline.get(5).tipoEvt()).isEqualTo(TipoEventoActa.NOTPOS);
         }
     }
 
@@ -527,12 +494,12 @@ class FlujoCompletoTest {
         }
 
         @Test
-        @DisplayName("TipoEventoActa incluye ACTCAP y ACTENR como eventos productivos")
-        void tipo_evento_incluye_actcap_y_actenr_como_eventos_productivos() {
-            assertThat(TipoEventoActa.ACTCAP.codigo()).isEqualTo("ACTCAP");
+        @DisplayName("TipoEventoActa incluye ACTENR como evento productivo; ACTCAP no existe (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)")
+        void tipo_evento_incluye_actenr_como_evento_productivo() {
             assertThat(TipoEventoActa.ACTENR.codigo()).isEqualTo("ACTENR");
-            assertThat(TipoEventoActa.deCodigo("ACTCAP")).isEqualTo(TipoEventoActa.ACTCAP);
             assertThat(TipoEventoActa.deCodigo("ACTENR")).isEqualTo(TipoEventoActa.ACTENR);
+            assertThatThrownBy(() -> TipoEventoActa.deCodigo("ACTCAP"))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
@@ -547,17 +514,18 @@ class FlujoCompletoTest {
 
     private LabrarActaCommand cmdLabrar() {
         return new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Juan Perez", "12345678",
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null
+                null, null, null, "Juan Perez", null, "12345678", null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null
         );
     }
 
     private Long labrarYCompletarCaptura() {
-        Long idActa = actaService.labrar(cmdLabrar()).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(idActa, null));
-        return idActa;
+        // El alta es integral: el acta ya nace en ENRI (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01).
+        return actaService.labrar(cmdLabrar()).idActa();
     }
 
     private String generarYFirmarDoc(Long idActa) {

@@ -1,0 +1,155 @@
+﻿<div class="tab-content">
+  <div class="tab-header">
+    <mat-icon>person_pin</mat-icon>
+    <h2>Domicilio del Infractor</h2>
+  </div>
+
+  <form [formGroup]="form" class="domicilio-form">
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field-provincia">
+        <mat-label>Provincia*</mat-label>
+        @if (loadingProvincias()) { <mat-spinner matPrefix [diameter]="18" /> }
+        <input matInput
+               [value]="provinciaDisplayText()"
+               (input)="provinciaDisplayText.set($any($event.target).value)"
+               [matAutocomplete]="autoProv"
+               placeholder="Escribir para filtrar..."
+               autocomplete="off">
+        <mat-autocomplete #autoProv="matAutocomplete"
+                          (optionSelected)="onProvinciaSelected($event.option.value)">
+          @for (p of filteredProvincias(); track p.id) {
+            <mat-option [value]="p">{{ p.nombre }}</mat-option>
+          }
+        </mat-autocomplete>
+        @if (errorProvincias()) { <mat-error>{{ errorProvincias() }}</mat-error> }
+        @if (!loadingProvincias() && provincias().length === 0 && !errorProvincias()) {
+          <mat-hint class="hint-pendiente">Backend pendiente</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-unidad">
+        <mat-label>Municipio / Departamento</mat-label>
+        @if (loadingUnidades()) { <mat-spinner matPrefix [diameter]="18" /> }
+        <input matInput
+               [value]="unidadDisplayText()"
+               (input)="unidadDisplayText.set($any($event.target).value)"
+               [matAutocomplete]="autoUnidad"
+               [disabled]="!canSelectUnidad()"
+               placeholder="{{ canSelectUnidad() ? 'Escribir para filtrar...' : 'Seleccione provincia primero' }}"
+               autocomplete="off">
+        <mat-autocomplete #autoUnidad="matAutocomplete"
+                          (optionSelected)="onUnidadTerritorialSelected($event.option.value)">
+          @for (u of filteredUnidades(); track u.id) {
+            <mat-option [value]="u">{{ u.nombre }} <span class="tipo-badge">{{ u.tipo }}</span></mat-option>
+          }
+        </mat-autocomplete>
+        @if (errorUnidades()) { <mat-error>{{ errorUnidades() }}</mat-error> }
+      </mat-form-field>
+    </div>
+
+    @if (esLocal()) {
+      <div class="modo-aviso modo-aviso--local">
+        <mat-icon>location_city</mat-icon>
+        <span>Modo catálogo local Malvinas Argentinas. Calles con historial de nombres.</span>
+      </div>
+    }
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field-localidad">
+        <mat-label>Localidad</mat-label>
+        @if (loadingLocalidades()) {
+          <mat-spinner matPrefix [diameter]="18" />
+        }
+        <input matInput
+               [value]="localidadDisplayText()"
+               (input)="localidadDisplayText.set($any($event.target).value)"
+               [matAutocomplete]="autoLocalidad"
+               placeholder="Escribi la localidad..." />
+        <mat-autocomplete #autoLocalidad="matAutocomplete"
+                          (optionSelected)="onLocalidadSelected($event.option.value)">
+          @for (l of filteredLocalidades(); track l.idLoc) {
+            <mat-option [value]="l">{{ l.nombre }}</mat-option>
+          }
+        </mat-autocomplete>
+        @if (errorLocalidades()) {
+          <mat-error>{{ errorLocalidades() }}</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field-calle">
+        <mat-label>{{ esLocal() ? 'Calle (catálogo local)' : 'Calle' }}</mat-label>
+        <input matInput
+               formControlName="calleTexto"
+               [matAutocomplete]="autoCalles"
+               (input)="onCalleInputChange($any($event.target).value)"
+               placeholder="Buscar por nombre actual o anterior…">
+        @if (loadingCalles()) {
+          <mat-spinner matSuffix [diameter]="18" />
+        }
+        <mat-autocomplete #autoCalles="matAutocomplete"
+                          [displayWith]="getCalleDisplayFn"
+                          (optionSelected)="onCalleSelected($event.option.value)">
+          @for (c of callesFiltradas(); track trackByCalle($index, c)) {
+            <mat-option [value]="c">
+              <div class="calle-option">
+                <span class="calle-nombre">{{ c.nombre }}</span>
+                <span class="calle-loc">{{ c.localidad }}</span>
+                @if (c.nombreAnterior) {
+                  <span class="calle-anterior">ex {{ c.nombreAnterior }}</span>
+                }
+              </div>
+            </mat-option>
+          }
+        </mat-autocomplete>
+        @if (errorCalles()) {
+          <mat-error>{{ errorCalles() }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-altura">
+        <mat-label>Altura</mat-label>
+        <input matInput type="number" formControlName="altura"
+               (change)="onAlturaChange()">
+      </mat-form-field>
+
+      <div class="field-sin-altura">
+        <mat-checkbox formControlName="sinAltura">Sin altura</mat-checkbox>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field-piso">
+        <mat-label>Piso / Depto</mat-label>
+        <input matInput formControlName="piso" (change)="onPisoChange()">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-cp">
+        <mat-label>Código postal</mat-label>
+        <input matInput formControlName="codigoPostal" (change)="onPisoChange()">
+      </mat-form-field>
+    </div>
+  </form>
+
+  @if (state().idTca) {
+    <div class="domicilio-resumen">
+      <mat-icon>check_circle</mat-icon>
+      <div>
+        <div class="resumen-calle">{{ state().calle }}</div>
+        @if (state().altura) {
+          <div class="resumen-detalle">N° {{ state().altura }} · {{ state().localidadNombre }}</div>
+        }
+        @if (esLocal()) {
+          <div class="resumen-ids">
+            <span>id_tca: {{ state().idTca }}</span>
+            @if (state().idLoc) { <span>id_loc: {{ state().idLoc }}</span> }
+          </div>
+        }
+        @if (state().modoDatos) {
+          <div class="resumen-modo">{{ state().modoDatos }}</div>
+        }
+      </div>
+    </div>
+  }
+</div>

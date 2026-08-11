@@ -331,6 +331,53 @@ class DependenciaTest {
     }
 
     // =========================================================================
+    // 8A1-13: idDepPadre autorreferencial rechazado (FalDependencia.setIdDepPadre)
+    //
+    // Correccion MARIADB-BASELINE-EXEC-001 (ERROR 1901): MariaDB no admite CHECK
+    // sobre columnas AUTO_INCREMENT. La regla id_dep_padre <> id se mantiene sin
+    // cambios pero su enforcement se desplaza de un CHECK fisico a este setter,
+    // siguiendo el mismo patron ya establecido en FalActaObligacionPago.setObligacionReemplazadaId
+    // (DECISION_DDL-PAGO-03).
+    // =========================================================================
+
+    @Nested
+    @DisplayName("8A1-13: idDepPadre autorreferencial rechazado")
+    class IdDepPadreAutoReferencialTest {
+
+        @Test
+        @DisplayName("setIdDepPadre(propio idDep) lanza IllegalArgumentException")
+        void idDepPadre_autorreferencia_rechazada() {
+            FalDependencia dep = new FalDependencia(20L, "Dependencia X",
+                    FaltasClockTestSupport.FIXED.now(), "sistema");
+
+            assertThatThrownBy(() -> dep.setIdDepPadre(20L))
+                    .as("idDepPadre == idDep debe lanzar IllegalArgumentException")
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("idDepPadre");
+        }
+
+        @Test
+        @DisplayName("setIdDepPadre(null) se acepta (raiz)")
+        void idDepPadre_null_aceptado() {
+            FalDependencia dep = new FalDependencia(21L, "Dependencia Y",
+                    FaltasClockTestSupport.FIXED.now(), "sistema");
+
+            dep.setIdDepPadre(null);
+            assertThat(dep.getIdDepPadre()).isNull();
+        }
+
+        @Test
+        @DisplayName("setIdDepPadre(id diferente) se acepta")
+        void idDepPadre_diferente_aceptado() {
+            FalDependencia dep = new FalDependencia(22L, "Dependencia Z",
+                    FaltasClockTestSupport.FIXED.now(), "sistema");
+
+            dep.setIdDepPadre(21L);
+            assertThat(dep.getIdDepPadre()).isEqualTo(21L);
+        }
+    }
+
+    // =========================================================================
     // 8A1-12: Versionar dependencia inexistente falla
     // =========================================================================
 

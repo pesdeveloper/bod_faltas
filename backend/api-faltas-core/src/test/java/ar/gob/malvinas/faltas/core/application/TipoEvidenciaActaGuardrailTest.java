@@ -197,7 +197,22 @@ class TipoEvidenciaActaGuardrailTest {
 
         private final LocalDateTime ahora = LocalDateTime.of(2026, 7, 21, 12, 0, 0);
 
+        /**
+         * FOTO exige las siete columnas de fotografia (DECISION_DDL-EVID-03,
+         * Wave 4 Parte 3D): usa el constructor completo con metadata valida.
+         * Los otros seis tipos siguen usando el constructor legacy de 8
+         * argumentos, exactamente como antes de la Parte 3D.
+         */
         private FalActaEvidencia construir(TipoEvidenciaActa tipo) {
+            if (tipo == TipoEvidenciaActa.FOTO) {
+                return new FalActaEvidencia(
+                        1L, 100L, tipo,
+                        "mock://evidencia/foto/file",
+                        ahora, ahora, "test-actor",
+                        "a".repeat(64),
+                        1, null, null, "image/jpeg", 1024L, 800, 600,
+                        null, null, ar.gob.malvinas.faltas.core.domain.enums.OrigenIncorporacionEvidencia.ALTA_INICIAL);
+            }
             return new FalActaEvidencia(
                     1L, 100L, tipo,
                     "mock://evidencia/" + tipo.name().toLowerCase() + "/file",

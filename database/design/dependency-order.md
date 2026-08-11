@@ -3,7 +3,8 @@
 > **Trabajo:** DDL-MARIADB-MANUAL-001-FULL-R1
 > **Fuente normativa:** `50-persistence/mariadb-logical-model.md`
 >
-> Este documento establece el orden real de creación de las 64 tablas nuevas,
+> Este documento establece el orden real de creación de las 65 tablas nuevas
+> (64 del cierre FULL-R1 + `fal_valor_unidad_faltas`, agregada en Wave 4 PARTE-2 S7.2),
 > derivado del grafo de dependencias (DAG). Los ciclos de FK se resuelven
 > mediante `ALTER TABLE` post-creación.
 
@@ -35,6 +36,7 @@
 | G1-10 | `fal_medida_preventiva` | Sin FK externas |
 | G1-11 | `fal_lote_correo` | Sin FK externas |
 | G1-12 | `fal_documento_plantilla` | Sin FK externas |
+| G1-13 | `fal_valor_unidad_faltas` | Sin FK externas (agregada Wave 4 PARTE-2 S7.2) |
 
 **FK autorreferencial a agregar post-G1:**
 ```sql
@@ -240,7 +242,8 @@ No se resuelven ciclos eliminando FK ni degradando integridad referencial.
 ## Grupos de creación en FULL-R1
 
 El trabajo **FULL-R1** del slice DDL-MARIADB-MANUAL-001-FULL-R1 materializa
-las 64 tablas en un único script siguiendo el orden topológico descrito arriba.
+las 65 tablas en un único script siguiendo el orden topológico descrito arriba
+(64 del cierre FULL-R1 + `fal_valor_unidad_faltas`, agregada en Wave 4 PARTE-2 S7.2).
 
 No existe "R2+": todas las tablas se crean en este script.
 Las decisiones sobre `fal_persona`, `fal_inspector` y `fal_dependencia` han

@@ -105,18 +105,16 @@ class NotificacionEnvioIntentoTest {
     }
 
     private Long crearActaConDomicilio(Long domicilioId) {
-        Long id = actaRepo.nextId();
         FalActa acta = new FalActa(
-                id, UUID.randomUUID().toString(),
+                null, UUID.randomUUID().toString(),
                 "TRANSITO", DEP, "INS-001",
                 FaltasClockTestSupport.FIXED.now().toLocalDate(),
                 FaltasClockTestSupport.FIXED.now(),
-                "Belgrano 300", "Ref 1", null, null, null,
+                "Belgrano 300", "Ref 1", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                 "Test Infractor", "12345678", ResultadoFirmaInfractor.FIRMADA);
         acta.setBloqueActual(BloqueActual.ANAL);
         if (domicilioId != null) acta.setIdDomicilioNotifAct(domicilioId);
-        actaRepo.guardar(acta);
-        return id;
+        return actaRepo.guardar(acta).getId();
     }
 
     private Long crearDocFirmado(Long idActa) {

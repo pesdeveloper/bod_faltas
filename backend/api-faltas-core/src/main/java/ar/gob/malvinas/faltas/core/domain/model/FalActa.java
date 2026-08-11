@@ -7,6 +7,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.OrigenUbicacion;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
 
 import java.time.LocalDate;
@@ -19,9 +20,18 @@ import java.time.LocalDateTime;
  * Campos expandidos en 8F-11L para alcanzar ALINEADO completo.
  *
  * FK de persona y domicilios (desde 8F-11C):
- *   idPersonaInfractor  -> fal_persona.id  (nullable durante transicion)
+ *   idPersonaInfractor  -> fal_persona.id  (nullable: ver matriz de identificacion)
  *   idDomicilioInfractorAct -> fal_persona_domicilio.id (nullable)
  *   idDomicilioNotifAct     -> fal_persona_domicilio.id (nullable)
+ *
+ * Identificacion del infractor (DECISION_DDL-ACTA-INFR-01): situacionIdentificacionInfractor
+ * es obligatoria y no admite default. Hay persona exactamente cuando la situacion es
+ * IDENTIFICADO_COMPLETO o IDENTIFICADO_PARCIAL; en las otras cuatro no hay sujeto
+ * identificado y idPersonaInfractor es null. La ausencia de sujeto nunca se representa
+ * con una persona centinela, ficticia o con documento inventado.
+ *
+ * Identidad (DECISION_ID-01): id nulo significa acta todavia no persistida. La PK
+ * la asigna la persistencia (fal_acta.id es BIGINT AUTO_INCREMENT). Ver conId(Long).
  *
  * Reglas invariantes:
  * - idTecnico es UUID unico e idempotente para alta/sync.
@@ -74,7 +84,9 @@ public class FalActa {
     private Integer verInsp;                     // ver_insp SMALLINT NULL (obligatorio si hay inspector)
 
     // --- Infractor y domicilios ---
-    private Long idPersonaInfractor;             // id_persona_infractor BIGINT NOT NULL FK
+    private final SituacionIdentificacionInfractor situacionIdentificacionInfractor;
+                                                 // situacion_identificacion_infractor SMALLINT NOT NULL
+    private Long idPersonaInfractor;             // id_persona_infractor BIGINT NULL FK
     private Long idDomicilioInfractorAct;        // id_domicilio_infractor_act BIGINT NULL FK
     private Long idDomicilioNotifAct;            // id_domicilio_notif_act BIGINT NULL FK
 
@@ -154,12 +166,15 @@ public class FalActa {
             Double latInfr,
             Double lonInfr,
             ResultadoFirmaInfractor resultadoFirmaInfractor,
+            SituacionIdentificacionInfractor situacionIdentificacionInfractor,
             Long idPersonaInfractor,
             LocalDateTime fhAlta,
             String idUserAlta) {
         if (resultadoFirmaInfractor == null) {
             throw new IllegalArgumentException("resultadoFirmaInfractor es obligatorio en el acta");
         }
+        exigirIdentificacionCoherente(situacionIdentificacionInfractor, idPersonaInfractor);
+        this.situacionIdentificacionInfractor = situacionIdentificacionInfractor;
         this.id = id;
         this.uuidTecnico = uuidTecnico;
         this.tipoActa = tipoActa;
@@ -176,7 +191,7 @@ public class FalActa {
         this.idPersonaInfractor = idPersonaInfractor;
         this.fhAlta = fhAlta;
         this.idUserAlta = idUserAlta;
-        this.bloqueActual = BloqueActual.CAPT;
+        this.bloqueActual = BloqueActual.ENRI;
         this.estadoProcesal = EstadoProcesalActa.EN_TRAMITE;
         this.situacionAdministrativa = SituacionAdministrativaActa.ACTIVA;
         this.resultadoFinal = ResultadoFinalActa.SIN_RESULTADO_FINAL;
@@ -190,13 +205,20 @@ public class FalActa {
         this.siEjeUrb = false;
     }
 
-    /** Backward-compatible constructor para tests legacy que usan Strings. */
+    /**
+     * Constructor con identificadores en String para los tests que ya los expresan asi.
+     *
+     * <p>La situacion de identificacion es un parametro explicito igual que en el
+     * constructor principal: no hay valor por defecto ni inferencia desde el nombre o
+     * el documento recibidos ({@code DECISION_DDL-ACTA-INFR-01}).
+     */
     public FalActa(
             Long id, String uuidTecnico,
             String tipoActa, String idDependencia, String idInspector,
             LocalDate fechaActa, LocalDateTime fechaLabrado,
             String domicilioHecho, String domicilioInfractor,
             Double latInfr, Double lonInfr,
+            SituacionIdentificacionInfractor situacionIdentificacionInfractor,
             Long idPersonaInfractor, String infractorNombre, String infractorDocumento,
             ResultadoFirmaInfractor resultadoFirmaInfractor) {
         this(id, uuidTecnico,
@@ -206,12 +228,36 @@ public class FalActa {
                 fechaActa, fechaLabrado,
                 domicilioHecho, domicilioInfractor,
                 latInfr, lonInfr, resultadoFirmaInfractor,
+                situacionIdentificacionInfractor,
                 idPersonaInfractor, fechaLabrado, "SYS");
     }
 
     private static Long parseLongOrDefault(String s) {
         if (s == null) return 1L;
         try { return Long.parseLong(s); } catch (NumberFormatException e) { return 1L; }
+    }
+
+    /**
+     * Matriz obligatoria de {@code DECISION_DDL-ACTA-INFR-01}, verificada en el mismo
+     * punto en el que el acta recibe su estado final. Hay persona exactamente cuando
+     * hay identificacion, completa o parcial.
+     */
+    private static void exigirIdentificacionCoherente(
+            SituacionIdentificacionInfractor situacion, Long idPersonaInfractor) {
+        if (situacion == null) {
+            throw new IllegalArgumentException(
+                    "situacionIdentificacionInfractor es obligatoria en el acta");
+        }
+        if (situacion.exigePersonaInfractora() && idPersonaInfractor == null) {
+            throw new IllegalArgumentException(
+                    "situacionIdentificacionInfractor=" + situacion.name()
+                            + " exige idPersonaInfractor informado");
+        }
+        if (!situacion.exigePersonaInfractora() && idPersonaInfractor != null) {
+            throw new IllegalArgumentException(
+                    "situacionIdentificacionInfractor=" + situacion.name()
+                            + " no admite idPersonaInfractor: no hay sujeto identificado");
+        }
     }
 
     // =====================================================================
@@ -288,8 +334,22 @@ public class FalActa {
     // GETTERS DE INFRACTOR Y DOMICILIOS
     // =====================================================================
 
+    public SituacionIdentificacionInfractor getSituacionIdentificacionInfractor() {
+        return situacionIdentificacionInfractor;
+    }
+
     public Long getIdPersonaInfractor() { return idPersonaInfractor; }
-    public void setIdPersonaInfractor(Long idPersonaInfractor) { this.idPersonaInfractor = idPersonaInfractor; }
+
+    /**
+     * Reasigna la persona infractora verificando la matriz contra la situacion, que es
+     * final. El acta no puede quedar, ni siquiera transitoriamente, con una combinacion
+     * imposible: quitar la persona a un acta identificada o asignarsela a una sin sujeto
+     * identificado se rechaza aqui y no en el CHECK del motor.
+     */
+    public void setIdPersonaInfractor(Long idPersonaInfractor) {
+        exigirIdentificacionCoherente(this.situacionIdentificacionInfractor, idPersonaInfractor);
+        this.idPersonaInfractor = idPersonaInfractor;
+    }
 
     public String getInfractorDocumento() { return infractorDocumento; }
     public void setInfractorDocumento(String infractorDocumento) { this.infractorDocumento = infractorDocumento; }
@@ -385,10 +445,50 @@ public class FalActa {
     // =====================================================================
 
     public String getCodigoQr() { return codigoQr; }
-    public void setCodigoQr(String codigoQr) { this.codigoQr = codigoQr; }
+
+    /**
+     * Asigna el token QR. Es una operacion de una sola vez.
+     *
+     * <p>{@code DECISION-QR-INMUTABLE-01}: el QR se emite durante el labrado y despues es
+     * inmutable. No existe rotacion, regeneracion, revocacion ni reemplazo individual, de
+     * modo que un segundo valor distinto es siempre un error de programa y se rechaza en el
+     * agregado, antes de cualquier persistencia.
+     *
+     * <p>Reasignar el mismo valor se admite para que la hidratacion desde la base y las
+     * copias defensivas no sean casos especiales.
+     */
+    public void setCodigoQr(String codigoQr) {
+        if (tieneQrEmitido() && !this.codigoQr.equals(codigoQr)) {
+            throw new IllegalStateException(
+                    "codigo_qr es inmutable una vez emitido: el acta ya tiene un QR y no existe"
+                            + " rotacion, regeneracion ni reemplazo (DECISION-QR-INMUTABLE-01).");
+        }
+        this.codigoQr = codigoQr;
+    }
 
     public Integer getQrPayloadVersion() { return qrPayloadVersion; }
-    public void setQrPayloadVersion(Integer qrPayloadVersion) { this.qrPayloadVersion = qrPayloadVersion; }
+
+    /**
+     * Asigna la version del <b>formato del payload</b> del QR. No es una version de clave ni
+     * un contador de reemisiones.
+     *
+     * <p>{@code DECISION-QR-INMUTABLE-01}: queda congelada en cuanto el token existe, porque
+     * la version viaja firmada dentro del propio token y cambiarla lo volveria incoherente.
+     * Antes de la emision puede informarse, que es lo que hacen el alta y la hidratacion.
+     */
+    public void setQrPayloadVersion(Integer qrPayloadVersion) {
+        if (tieneQrEmitido() && !java.util.Objects.equals(this.qrPayloadVersion, qrPayloadVersion)) {
+            throw new IllegalStateException(
+                    "qr_payload_version es inmutable una vez emitido el QR: la version viaja"
+                            + " firmada dentro del token (DECISION-QR-INMUTABLE-01).");
+        }
+        this.qrPayloadVersion = qrPayloadVersion;
+    }
+
+    /** {@code true} cuando el acta ya tiene un token QR emitido. */
+    public boolean tieneQrEmitido() {
+        return codigoQr != null && !codigoQr.isBlank();
+    }
 
     // =====================================================================
     // GETTERS DE ESTADO (TRIPLA CANONICA)
@@ -475,10 +575,32 @@ public class FalActa {
     // COPIA DEFENSIVA
     // =====================================================================
 
+    /**
+     * Copia con el id asignado por la persistencia.
+     *
+     * Mismo patron que FalActaEvento.conId(Long) y FalDiaNoComputable.conId(Long):
+     * el adaptador inserta y devuelve la entidad con la PK que genero la base, sin
+     * preasignar identificadores.
+     */
+    public FalActa conId(Long idAsignado) {
+        if (idAsignado == null) {
+            throw new IllegalArgumentException("idAsignado es obligatorio");
+        }
+        if (idAsignado <= 0) {
+            throw new IllegalArgumentException("idAsignado debe ser positivo: " + idAsignado);
+        }
+        return copiaCon(idAsignado);
+    }
+
     public FalActa copia() {
-        FalActa c = new FalActa(id, uuidTecnico, tipoActa, idDependencia, idInspector,
+        return copiaCon(this.id);
+    }
+
+    private FalActa copiaCon(Long idDestino) {
+        FalActa c = new FalActa(idDestino, uuidTecnico, tipoActa, idDependencia, idInspector,
                 fechaActa, fechaLabrado, domicilioHecho, observaciones,
-                latInfr, lonInfr, resultadoFirmaInfractor, idPersonaInfractor,
+                latInfr, lonInfr, resultadoFirmaInfractor,
+                situacionIdentificacionInfractor, idPersonaInfractor,
                 fhAlta, idUserAlta);
         c.nroActa = this.nroActa;
         c.idTalonario = this.idTalonario;

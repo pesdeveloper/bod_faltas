@@ -8,8 +8,9 @@ import ar.gob.malvinas.faltas.core.application.command.CrearNormativaFaltasComma
 import ar.gob.malvinas.faltas.core.application.command.VincularDependenciaNormativaCommand;
 import ar.gob.malvinas.faltas.core.application.service.DependenciaService;
 import ar.gob.malvinas.faltas.core.application.service.NormativaService;
+import ar.gob.malvinas.faltas.core.domain.enums.CategoriaInfraccion;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
-import ar.gob.malvinas.faltas.core.domain.enums.TipoUnidad;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoInfraccion;
 import ar.gob.malvinas.faltas.core.domain.exception.ArticuloNormativaNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.DependenciaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.NormativaNoEncontradaException;
@@ -27,20 +28,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Tests del Slice 8A-4: Normativas in-memory alineadas al modelo MariaDB productivo.
+ * Tests de normativa/articulo versionados (rediseño PROMPT-NOCTURNO-WAVE-04-PARTE-2 S6/S7.3).
+ *
+ * El articulo ya NO contiene datos economicos (cantidadUnidades/tipoUnidad/pagoVoluntario):
+ * esos campos viven exclusivamente en {@code fal_tarifario_unidad_faltas} (por articulo).
+ * En su lugar el articulo declara {@code tipoInfraccion}, {@code categoriaInfraccion} y
+ * {@code siAdmiteMedidaPreventiva}.
  */
-@DisplayName("Slice 8A-4: Normativas in-memory")
+@DisplayName("Normativa y articulo versionados (Wave 4 PARTE-2)")
 class NormativaTest {
 
     private DependenciaRepository dependenciaRepo;
@@ -74,42 +75,15 @@ class NormativaTest {
                 null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
-    private FalArticuloNormativaFaltas crearArticulo(Long normativaId, TipoUnidad tipoUnidad) {
+    private FalArticuloNormativaFaltas crearArticulo(Long normativaId, TipoInfraccion tipoInfraccion) {
         return normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
-                normativaId, "ART01", 1, "Articulo 1",
-                "Descripcion articulo", BigDecimal.valueOf(2.5), tipoUnidad,
-                false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
-    }
-    @Nested
-    @DisplayName("8A4-01: TipoUnidad catalogo productivo cerrado")
-    class TipoUnidadGuardrailTest {
-        @Test
-        @DisplayName("TipoUnidad contiene exactamente SALARIO, UNIDAD_FIJA, MONTO")
-        void tipoUnidad_valores_exactos_del_modelo_productivo() {
-            Set<String> nombres = Arrays.stream(TipoUnidad.values())
-                    .map(Enum::name).collect(Collectors.toSet());
-            assertThat(nombres).containsExactlyInAnyOrder("SALARIO", "UNIDAD_FIJA", "MONTO");
-            assertThat(TipoUnidad.values()).hasSize(3);
-        }
-        @Test
-        @DisplayName("TipoUnidad.SALARIO existe")
-        void tipoUnidad_SALARIO_existe() {
-            assertThat(TipoUnidad.valueOf("SALARIO")).isEqualTo(TipoUnidad.SALARIO);
-        }
-        @Test
-        @DisplayName("TipoUnidad.UNIDAD_FIJA existe")
-        void tipoUnidad_UNIDAD_FIJA_existe() {
-            assertThat(TipoUnidad.valueOf("UNIDAD_FIJA")).isEqualTo(TipoUnidad.UNIDAD_FIJA);
-        }
-        @Test
-        @DisplayName("TipoUnidad.MONTO existe")
-        void tipoUnidad_MONTO_existe() {
-            assertThat(TipoUnidad.valueOf("MONTO")).isEqualTo(TipoUnidad.MONTO);
-        }
+                normativaId, "ART01", 1, "Articulo 1", "Descripcion articulo",
+                tipoInfraccion, null, false,
+                FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
     }
 
     @Nested
-    @DisplayName("8A4-02: Crear normativa valida")
+    @DisplayName("Crear normativa valida")
     class CrearNormativaValidaTest {
         @Test
         @DisplayName("Crear normativa valida asigna id y campos del modelo productivo")
@@ -123,6 +97,7 @@ class NormativaTest {
             assertThat(n.isSiActiva()).isTrue();
             assertThat(n.getFhVigDesde()).isNotNull();
             assertThat(n.getFhVigHasta()).isNull();
+            assertThat(n.getVersionRow()).isZero();
             assertThat(n.getFhAlta()).isNotNull();
             assertThat(n.getIdUserAlta()).isEqualTo("sistema");
         }
@@ -136,7 +111,7 @@ class NormativaTest {
     }
 
     @Nested
-    @DisplayName("8A4-03: Validaciones obligatorias de normativa")
+    @DisplayName("Validaciones obligatorias de normativa")
     class ValidacionesNormativaTest {
         @Test
         @DisplayName("Rechaza normativa sin codigoNorma")
@@ -174,8 +149,9 @@ class NormativaTest {
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
+
     @Nested
-    @DisplayName("8A4-04: Buscar normativa")
+    @DisplayName("Buscar normativa")
     class BuscarNormativaTest {
         @Test
         @DisplayName("Buscar normativa por id retorna la normativa creada")
@@ -206,72 +182,57 @@ class NormativaTest {
     }
 
     @Nested
-    @DisplayName("8A4-05: Crear articulo valido")
+    @DisplayName("Crear articulo valido (sin datos economicos)")
     class CrearArticuloValidoTest {
         @Test
-        @DisplayName("Crear articulo con tipoUnidad SALARIO")
-        void crear_articulo_SALARIO() {
+        @DisplayName("Crear articulo con tipoInfraccion TRANSITO")
+        void crear_articulo_transito() {
             FalNormativaFaltas n = crearNormativa();
-            FalArticuloNormativaFaltas a = crearArticulo(n.getId(), TipoUnidad.SALARIO);
+            FalArticuloNormativaFaltas a = crearArticulo(n.getId(), TipoInfraccion.TRANSITO);
             assertThat(a.getId()).isNotNull().isPositive();
             assertThat(a.getNormativaId()).isEqualTo(n.getId());
             assertThat(a.getCodigoArticulo()).isEqualTo("ART01");
             assertThat(a.getVersionArticulo()).isEqualTo(1);
             assertThat(a.getNombreArticulo()).isEqualTo("Articulo 1");
-            assertThat(a.getCantidadUnidades()).isEqualByComparingTo(BigDecimal.valueOf(2.5));
-            assertThat(a.getTipoUnidad()).isEqualTo(TipoUnidad.SALARIO);
-            assertThat(a.isSiTienePagoVoluntario()).isFalse();
+            assertThat(a.getTipoInfraccion()).isEqualTo(TipoInfraccion.TRANSITO);
+            assertThat(a.getCategoriaInfraccion()).isNull();
+            assertThat(a.isSiAdmiteMedidaPreventiva()).isFalse();
             assertThat(a.isSiActivo()).isTrue();
+            assertThat(a.getVersionRow()).isZero();
             assertThat(a.getFhAlta()).isNotNull();
         }
         @Test
-        @DisplayName("Crear articulo con tipoUnidad UNIDAD_FIJA")
-        void crear_articulo_UNIDAD_FIJA() {
-            FalNormativaFaltas n = crearNormativa();
-            assertThat(crearArticulo(n.getId(), TipoUnidad.UNIDAD_FIJA).getTipoUnidad())
-                    .isEqualTo(TipoUnidad.UNIDAD_FIJA);
-        }
-        @Test
-        @DisplayName("Crear articulo con tipoUnidad MONTO")
-        void crear_articulo_MONTO() {
-            FalNormativaFaltas n = crearNormativa();
-            assertThat(crearArticulo(n.getId(), TipoUnidad.MONTO).getTipoUnidad())
-                    .isEqualTo(TipoUnidad.MONTO);
-        }
-        @Test
-        @DisplayName("Crear articulo con pago voluntario diferenciado")
-        void crear_articulo_con_pago_voluntario() {
+        @DisplayName("Crear articulo con categoriaInfraccion y medida preventiva habilitada")
+        void crear_articulo_con_categoria_y_medida() {
             FalNormativaFaltas n = crearNormativa();
             FalArticuloNormativaFaltas a = normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(
-                            n.getId(), "ART02", 1, "Articulo con pago voluntario",
-                            null, BigDecimal.valueOf(3.0), TipoUnidad.SALARIO,
-                            true, BigDecimal.valueOf(1.5), TipoUnidad.SALARIO,
+                            n.getId(), "ART02", 1, "Articulo con categoria",
+                            null, TipoInfraccion.CONTRAVENCION, CategoriaInfraccion.GRAVE, true,
                             FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
-            assertThat(a.isSiTienePagoVoluntario()).isTrue();
-            assertThat(a.getCantidadUnidadesPagoVoluntario())
-                    .isEqualByComparingTo(BigDecimal.valueOf(1.5));
-            assertThat(a.getTipoUnidadPagoVoluntario()).isEqualTo(TipoUnidad.SALARIO);
+            assertThat(a.getCategoriaInfraccion()).isEqualTo(CategoriaInfraccion.GRAVE);
+            assertThat(a.isSiAdmiteMedidaPreventiva()).isTrue();
         }
         @Test
         @DisplayName("Listar articulos por normativa")
         void listar_articulos_por_normativa() {
             FalNormativaFaltas n = crearNormativa();
-            crearArticulo(n.getId(), TipoUnidad.SALARIO);
+            crearArticulo(n.getId(), TipoInfraccion.TRANSITO);
             normativaService.crearArticulo(new CrearArticuloNormativaFaltasCommand(
-                    n.getId(), "ART02", 1, "Articulo 2",
-                    null, BigDecimal.ONE, TipoUnidad.MONTO,
-                    false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
+                    n.getId(), "ART02", 1, "Articulo 2", null,
+                    TipoInfraccion.COMERCIO, null, false,
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema"));
             assertThat(normativaService.listarArticulosByNormativa(n.getId())).hasSize(2);
         }
     }
+
     @Nested
-    @DisplayName("8A4-06: Validaciones de articulo")
+    @DisplayName("Validaciones de articulo")
     class ValidacionesArticuloTest {
         @Test
         @DisplayName("Rechaza articulo con normativa inexistente")
         void rechaza_normativa_inexistente() {
-            assertThatThrownBy(() -> crearArticulo(9999L, TipoUnidad.SALARIO))
+            assertThatThrownBy(() -> crearArticulo(9999L, TipoInfraccion.TRANSITO))
                     .isInstanceOf(NormativaNoEncontradaException.class);
         }
         @Test
@@ -280,9 +241,9 @@ class NormativaTest {
             FalNormativaFaltas n = crearNormativa();
             assertThatThrownBy(() -> normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(
-                            n.getId(), null, 1, "Nombre",
-                            null, BigDecimal.ONE, TipoUnidad.SALARIO,
-                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
+                            n.getId(), null, 1, "Nombre", null,
+                            TipoInfraccion.TRANSITO, null, false,
+                            FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -291,50 +252,28 @@ class NormativaTest {
             FalNormativaFaltas n = crearNormativa();
             assertThatThrownBy(() -> normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(
-                            n.getId(), "ART01", 1, null,
-                            null, BigDecimal.ONE, TipoUnidad.SALARIO,
-                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
+                            n.getId(), "ART01", 1, null, null,
+                            TipoInfraccion.TRANSITO, null, false,
+                            FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
-        @DisplayName("Rechaza articulo sin tipoUnidad")
-        void rechaza_sin_tipoUnidad() {
+        @DisplayName("Rechaza articulo sin tipoInfraccion")
+        void rechaza_sin_tipoInfraccion() {
             FalNormativaFaltas n = crearNormativa();
             assertThatThrownBy(() -> normativaService.crearArticulo(
                     new CrearArticuloNormativaFaltasCommand(
-                            n.getId(), "ART01", 1, "Nombre",
-                            null, BigDecimal.ONE, null,
-                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
-                    .isInstanceOf(PrecondicionVioladaException.class);
-        }
-        @Test
-        @DisplayName("Rechaza articulo sin cantidadUnidades")
-        void rechaza_sin_cantidadUnidades() {
-            FalNormativaFaltas n = crearNormativa();
-            assertThatThrownBy(() -> normativaService.crearArticulo(
-                    new CrearArticuloNormativaFaltasCommand(
-                            n.getId(), "ART01", 1, "Nombre",
-                            null, null, TipoUnidad.SALARIO,
-                            false, null, null, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
+                            n.getId(), "ART01", 1, "Nombre", null,
+                            null, null, false,
+                            FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
         @DisplayName("Rechaza duplicado funcional codigoArticulo+versionArticulo en misma normativa")
         void rechaza_duplicado_articulo() {
             FalNormativaFaltas n = crearNormativa();
-            crearArticulo(n.getId(), TipoUnidad.SALARIO);
-            assertThatThrownBy(() -> crearArticulo(n.getId(), TipoUnidad.MONTO))
-                    .isInstanceOf(PrecondicionVioladaException.class);
-        }
-        @Test
-        @DisplayName("Rechaza pago voluntario sin cantidadUnidadesPagoVoluntario cuando siTiene=true")
-        void rechaza_pago_voluntario_sin_cantidad() {
-            FalNormativaFaltas n = crearNormativa();
-            assertThatThrownBy(() -> normativaService.crearArticulo(
-                    new CrearArticuloNormativaFaltasCommand(
-                            n.getId(), "ART01", 1, "Nombre",
-                            null, BigDecimal.ONE, TipoUnidad.SALARIO,
-                            true, null, TipoUnidad.SALARIO, FaltasClockTestSupport.FIXED.now().toLocalDate(), "sistema")))
+            crearArticulo(n.getId(), TipoInfraccion.TRANSITO);
+            assertThatThrownBy(() -> crearArticulo(n.getId(), TipoInfraccion.COMERCIO))
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
         @Test
@@ -344,8 +283,9 @@ class NormativaTest {
                     .isInstanceOf(ArticuloNormativaNoEncontradoException.class);
         }
     }
+
     @Nested
-    @DisplayName("8A4-07: Vincular dependencia-normativa")
+    @DisplayName("Vincular dependencia-normativa")
     class VincularDependenciaNormativaTest {
         @Test
         @DisplayName("Vincular dependencia versionada con normativa existente")
@@ -420,61 +360,34 @@ class NormativaTest {
                     .isInstanceOf(PrecondicionVioladaException.class);
         }
     }
-    @Nested
-    @DisplayName("8A4-08: Guardrails - conceptos NO implementados en 8A-4")
-    class GuardrailScopeTest {
 
+    @Nested
+    @DisplayName("Guardrails de campos del modelo productivo")
+    class GuardrailScopeTest {
         @Test
-        @DisplayName("No existe enum RolFirmaReq en el classpath")
-        void no_existe_RolFirmaReq() {
-            assertThatThrownBy(() ->
-                    Class.forName("ar.gob.malvinas.faltas.core.domain.enums.RolFirmaReq"))
-                    .isInstanceOf(ClassNotFoundException.class);
-        }
-        @Test
-        @DisplayName("No existe enum MecanismoFirmaReq en el classpath")
-        void no_existe_MecanismoFirmaReq() {
-            assertThatThrownBy(() ->
-                    Class.forName("ar.gob.malvinas.faltas.core.domain.enums.MecanismoFirmaReq"))
-                    .isInstanceOf(ClassNotFoundException.class);
-        }
-        @Test
-        @DisplayName("No existe TarifarioRepository en el classpath")
-        void no_existe_tarifario_repository() {
+        @DisplayName("No existe TarifarioRepository (nombre generico) en el classpath")
+        void no_existe_tarifario_repository_generico() {
             assertThatThrownBy(() ->
                     Class.forName("ar.gob.malvinas.faltas.core.repository.TarifarioRepository"))
                     .isInstanceOf(ClassNotFoundException.class);
         }
         @Test
-        @DisplayName("FalNormativaFaltas usa campos exactos del modelo productivo fal_normativa_faltas")
-        void falNormativaFaltas_usa_campos_del_modelo_productivo() throws Exception {
+        @DisplayName("FalNormativaFaltas tiene versionNorma (funcional) y versionRow (OCC) separados")
+        void falNormativaFaltas_tiene_ambas_versiones() throws Exception {
             Class<?> clazz = Class.forName("ar.gob.malvinas.faltas.core.domain.model.FalNormativaFaltas");
-            assertThat(clazz.getDeclaredField("codigoNorma")).isNotNull();
             assertThat(clazz.getDeclaredField("versionNorma")).isNotNull();
-            assertThat(clazz.getDeclaredField("nombreNorma")).isNotNull();
-            assertThat(clazz.getDeclaredField("descripcionNorma")).isNotNull();
-            assertThat(clazz.getDeclaredField("siActiva")).isNotNull();
-            assertThat(clazz.getDeclaredField("fhVigDesde")).isNotNull();
-            assertThat(clazz.getDeclaredField("fhVigHasta")).isNotNull();
-            assertThat(clazz.getDeclaredField("fhAlta")).isNotNull();
-            assertThat(clazz.getDeclaredField("idUserAlta")).isNotNull();
+            assertThat(clazz.getDeclaredField("versionRow")).isNotNull();
         }
         @Test
-        @DisplayName("FalArticuloNormativaFaltas usa campos exactos del modelo productivo")
-        void falArticuloNormativaFaltas_usa_campos_del_modelo_productivo() throws Exception {
-            Class<?> clazz = Class.forName("ar.gob.malvinas.faltas.core.domain.model.FalArticuloNormativaFaltas");
-            assertThat(clazz.getDeclaredField("normativaId")).isNotNull();
-            assertThat(clazz.getDeclaredField("codigoArticulo")).isNotNull();
-            assertThat(clazz.getDeclaredField("versionArticulo")).isNotNull();
-            assertThat(clazz.getDeclaredField("nombreArticulo")).isNotNull();
-            assertThat(clazz.getDeclaredField("cantidadUnidades")).isNotNull();
-            assertThat(clazz.getDeclaredField("tipoUnidad")).isNotNull();
-            assertThat(clazz.getDeclaredField("siTienePagoVoluntario")).isNotNull();
-            assertThat(clazz.getDeclaredField("cantidadUnidadesPagoVoluntario")).isNotNull();
-            assertThat(clazz.getDeclaredField("tipoUnidadPagoVoluntario")).isNotNull();
-            assertThat(clazz.getDeclaredField("siActivo")).isNotNull();
-            assertThat(clazz.getDeclaredField("fhVigDesde")).isNotNull();
-            assertThat(clazz.getDeclaredField("fhVigHasta")).isNotNull();
+        @DisplayName("FalArticuloNormativaFaltas NO tiene campos economicos (viven en el tarifario)")
+        void falArticuloNormativaFaltas_sin_campos_economicos() {
+            Class<?> clazz = FalArticuloNormativaFaltas.class;
+            List<String> nombresCampos = java.util.Arrays.stream(clazz.getDeclaredFields())
+                    .map(java.lang.reflect.Field::getName).toList();
+            assertThat(nombresCampos).doesNotContain(
+                    "cantidadUnidades", "tipoUnidad", "siTienePagoVoluntario",
+                    "cantidadUnidadesPagoVoluntario", "tipoUnidadPagoVoluntario");
+            assertThat(nombresCampos).contains("tipoInfraccion", "categoriaInfraccion", "siAdmiteMedidaPreventiva", "versionRow");
         }
         @Test
         @DisplayName("FalDependenciaNormativa usa campos exactos del modelo productivo")

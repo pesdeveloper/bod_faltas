@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.AsignarTalonarioInspectorCommand;
@@ -1365,9 +1367,13 @@ class TalonarioTest {
                     "POL-ACTA-H", "Politica con limite", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
                     "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
+            // MANUAL_FISICO (no ELECTRONICO): este test ejercita el circuito manual/documental
+            // de emitirNumeroActa, que coexiste con multiples talonarios ACTA por prioridad;
+            // ELECTRONICO ya tiene su unico activo (talonarioActa, setUpEmision) protegido por
+            // DECISION-NUM-UNICO-ACTIVO-POR-DEPENDENCIA-01 (Wave 4 Parte 3C §8).
             NumTalonario talLimitado = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-LIM", "Talonario limitado",
-                    TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
+                    TipoTalonario.MANUAL_FISICO, ClaseNumeracion.ACTA,
                     null, null, 1, 2, "seq_limitado",
                     true, false, null, null, "sistema"));
             // priority 5 (beats setUp talonario at priority 10) to avoid ambiguity
@@ -1514,14 +1520,15 @@ class TalonarioTest {
                     "POL-PRI", "Politica prioridades", ClaseNumeracion.ACTA,
                     false, true, "PRI", false, null, false, null,
                     "PRI-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
+            // MANUAL_FISICO (no ELECTRONICO): ver comentario de rechazar_si_nroHasta_superado.
             NumTalonario tal5 = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-PRI5", "Talonario prioridad 5",
-                    TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
+                    TipoTalonario.MANUAL_FISICO, ClaseNumeracion.ACTA,
                     null, null, 1, null, "seq_pri5",
                     true, false, null, null, "sistema"));
             NumTalonario tal10 = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-PRI10", "Talonario prioridad 10",
-                    TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
+                    TipoTalonario.MANUAL_FISICO, ClaseNumeracion.ACTA,
                     null, null, 1, null, "seq_pri10",
                     true, false, null, null, "sistema"));
 
@@ -1546,14 +1553,15 @@ class TalonarioTest {
                     "POL-EMP", "Politica empate", ClaseNumeracion.ACTA,
                     false, false, null, false, null, false, null,
                     "{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
+            // MANUAL_FISICO (no ELECTRONICO): ver comentario de rechazar_si_nroHasta_superado.
             NumTalonario talA = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-EMP-A", "Empate A",
-                    TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
+                    TipoTalonario.MANUAL_FISICO, ClaseNumeracion.ACTA,
                     null, null, 1, null, "seq_empa",
                     true, false, null, null, "sistema"));
             NumTalonario talB = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-EMP-B", "Empate B",
-                    TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
+                    TipoTalonario.MANUAL_FISICO, ClaseNumeracion.ACTA,
                     null, null, 1, null, "seq_empb",
                     true, false, null, null, "sistema"));
 
@@ -1636,9 +1644,10 @@ class TalonarioTest {
                     "POL-PREF", "Con prefijo y longitud", ClaseNumeracion.ACTA,
                     false, true, "ACT", false, null, false, (short) 6,
                     "ACT-{NRO}", true, FaltasClockTestSupport.FIXED.now().toLocalDate(), null, "sistema"));
+            // MANUAL_FISICO (no ELECTRONICO): ver comentario de rechazar_si_nroHasta_superado.
             NumTalonario tal = talonarioService.crearTalonario(new CrearTalonarioCommand(
                     pol.getId(), "TAL-PREF", "Prefijo y longitud",
-                    TipoTalonario.ELECTRONICO, ClaseNumeracion.ACTA,
+                    TipoTalonario.MANUAL_FISICO, ClaseNumeracion.ACTA,
                     null, null, 1, null, "seq_pref",
                     true, false, null, null, "sistema"));
             // priority 5 (beats setUp talonario at priority 10) to avoid ambiguity
@@ -1727,7 +1736,7 @@ class TalonarioTest {
         void falActa_nroActa_nullable_y_setteable() {
             FalActa acta = new FalActa(1L, "uuid1", "TRANSITO", "dep1", "insp1",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), null, null, null,
-                    null, null, null, null,
+                    null, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
             assertThat(acta.getNroActa()).isNull();
             acta.setNroActa("ACT-2025-000001");
@@ -1739,7 +1748,7 @@ class TalonarioTest {
         void falActa_idTalonario_y_nroTalonarioUsado_seteables() {
             FalActa acta = new FalActa(2L, "uuid2", "TRANSITO", "dep1", "insp1",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), null, null, null,
-                    null, null, null, null,
+                    null, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, null, null,
                     ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
             assertThat(acta.getIdTalonario()).isNull();
             assertThat(acta.getNroTalonarioUsado()).isNull();

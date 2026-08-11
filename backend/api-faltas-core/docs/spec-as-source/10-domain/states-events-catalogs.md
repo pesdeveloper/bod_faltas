@@ -8,8 +8,7 @@
 
 | Codigo | Descripcion |
 |--------|-------------|
-| CAPT   | Captura/labrado inicial |
-| ENRI   | Enriquecimiento del acta |
+| ENRI   | Enriquecimiento del acta; bloque de nacimiento del acta (alta integral) |
 | NOTI   | Notificacion del acta, fallo u otra pieza |
 | ANAL   | Analisis, resolucion, fallo, pagos y apelacion |
 | GEXT   | Gestion externa: apremio / juzgado de paz |
@@ -155,6 +154,85 @@ mediante el comando de resolucion de apelacion; determina el evento emitido
 
 ---
 
+## SituacionIdentificacionInfractor
+
+Dimension propia del acta: describe si el infractor estaba presente y en que grado
+quedo identificado al momento del labrado. Es un enum cerrado, codificado como
+`SMALLINT` en `fal_acta.situacion_identificacion_infractor`.
+
+El enum `SituacionIdentificacionInfractor` contiene exactamente estos 6 valores:
+
+| Valor | Codigo | Descripcion |
+|-------|--------|-------------|
+| IDENTIFICADO_COMPLETO      | 1 | Infractor presente e identificado con documento: `tipo_documento` y `nro_doc` informados en `fal_persona` |
+| IDENTIFICADO_PARCIAL       | 2 | Infractor presente que aporto datos parciales verificables sin documento completo |
+| PRESENTE_SE_NIEGA          | 3 | Infractor presente que se niega a identificarse |
+| PRESENTE_NO_APORTA_DATOS   | 4 | Infractor presente que no aporta ningun dato utilizable |
+| AUSENTE                    | 5 | Infractor no presente en el lugar del hecho |
+| DATOS_INSUFICIENTES        | 6 | Datos obtenidos por terceros o por observacion, insuficientes para constituir una persona |
+
+### Que NO es esta dimension
+
+No se confunde con `ResultadoFirmaInfractor`, que califica la firma y no la
+presencia ni la identificacion. Un infractor puede estar presente, identificarse
+completamente y negarse a firmar: son dos hechos distintos y se persisten en dos
+columnas distintas.
+
+Los seis significados no se fusionan. En particular, `IDENTIFICADO_PARCIAL` y
+`DATOS_INSUFICIENTES` no son el mismo estado: el primero produce una persona real
+con los datos disponibles, el segundo no alcanza para constituirla.
+
+### Matriz de coherencia con `id_persona_infractor`
+
+| Situacion | `id_persona_infractor` | `fal_persona` asociada |
+|---|---|---|
+| IDENTIFICADO_COMPLETO    | informado | persona con `tipo_documento` y `nro_doc` informados |
+| IDENTIFICADO_PARCIAL     | informado | persona con los datos parciales reales; `tipo_documento` y `nro_doc` pueden ser ambos NULL segun `DECISION_DDL-PERS-01` |
+| PRESENTE_SE_NIEGA        | NULL      | ninguna |
+| PRESENTE_NO_APORTA_DATOS | NULL      | ninguna |
+| AUSENTE                  | NULL      | ninguna |
+| DATOS_INSUFICIENTES      | NULL      | ninguna |
+
+La regla se reduce a una sola frase: hay persona exactamente cuando hay
+identificacion, completa o parcial. En los otros cuatro casos no existe sujeto
+identificado y la columna queda NULL.
+
+### Prohibiciones
+
+Queda prohibido representar al infractor no identificado mediante:
+
+- persona centinela o reservada;
+- persona ficticia;
+- documento inventado, aunque sea sintacticamente valido;
+- PK fija reservada para "desconocido";
+- `ResultadoFirmaInfractor` usado como situacion de identificacion.
+
+La ausencia de sujeto identificado se expresa con `id_persona_infractor` NULL y la
+situacion correspondiente, nunca con una fila de `fal_persona` que no representa a
+una persona real.
+
+### Consecuencia fisica
+
+La columna fisica, su tipo, su `CHECK` de coherencia y el cambio de nulabilidad de
+`id_persona_infractor` estan registrados en
+[`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md),
+`DECISION_DDL-ACTA-INFR-01`. La situacion se informa siempre de forma explicita en
+el alta: no admite valor por defecto, porque es una calificacion juridica del acto y
+no un detalle tecnico.
+
+Que `IDENTIFICADO_PARCIAL` pueda producir una persona sin documento depende de que
+`fal_persona` admita el documento como opcional. Esa condicion fisica esta cerrada
+en `DECISION_DDL-PERS-01`, que declara `tipo_documento SMALLINT NULL` y
+`nro_doc VARCHAR(12) NULL` con `CHECK (tipo_documento IS NULL) = (nro_doc IS NULL)`,
+y que registra como obsoleta la version ejecutada de documento obligatorio y
+exclusivamente numerico. El nombre fisico canonico de la columna de tipo documental
+es `tipo_documento`; `tipo_doc` esta prohibido como nombre de columna. Mientras ese
+`ALTER` no se ejecute, la persona sin documento es un estado normativamente valido
+que el esquema ejecutado todavia no admite: es una remediacion DDL pendiente, no una
+reapertura del modelo funcional.
+
+---
+
 ## Actores y origenes de evento (ActorTipoEvento, OrigenEvento)
 
 Todo `FalActaEvento` persiste dos dimensiones adicionales al actor autenticado
@@ -194,8 +272,7 @@ dos sustituye al actor autenticado; son metadatos de trazabilidad.
 ### Ciclo inicial
 | Codigo | Descripcion |
 |--------|-------------|
-| ACTLAB | Acta labrada/creada |
-| ACTCAP | Captura completada (CAPT->ENRI) |
+| ACTLAB | Acta labrada/creada; unico evento inicial, el acta nace directamente en ENRI |
 | ACTENR | Acta enriquecida |
 
 ### Documentacion y firma
@@ -281,8 +358,7 @@ los tests de esos subsistemas.
 
 | Codigo | Descripcion | Area | Matriz completa |
 |--------|-------------|------|-------------------|
-| ACTLAB | Acta labrada/creada | Ciclo inicial | `02` (esta seccion) |
-| ACTCAP | Captura completada (CAPT->ENRI) | Ciclo inicial | `02` (esta seccion) |
+| ACTLAB | Acta labrada/creada; unico evento inicial | Ciclo inicial | `02` (esta seccion) |
 | ACTENR | Acta enriquecida | Ciclo inicial | `02` (esta seccion) |
 | DOCGEN | Documento generado | Documentos | Codigo/tests del subsistema documental |
 | DOCFIR | Documento firmado | Documentos / Fallo | `20-application/fallo-command-contracts.md` (CMD-FALLO-001) |
@@ -357,9 +433,19 @@ los tests de esos subsistemas.
 - `D3` NO existe como bloque.
 - `DOCUMENTAL` NO existe como bloque.
 - `D1_CAPTURA`, `D2_ENRIQUECIMIENTO`, `D4_NOTIFICACION`, `D5_ANALISIS` NO existen como bloques productivos.
+- `CAPT` NO existe como bloque productivo (`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`,
+  [`../20-application/command-contracts.md`](../20-application/command-contracts.md)).
+  El alta es integral y no progresiva: el acta nace directamente en `ENRI`. `CAPT`
+  certificó, hasta 2026-07-18, un modelo de captura progresiva hoy superado; no se
+  reintroduce como legacy, compatibilidad ni futura extensión.
 
 ### Eventos prohibidos
 
+- `ACTCAP` NO existe como evento productivo (`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`). La
+  transicion `CAPT->ENRI` que representaba desaparece junto con el bloque `CAPT`: el
+  acta nace en `ENRI` con `ACTLAB` como unico evento inicial.
+- `COMPLETAR_CAPTURA` NO existe como accion pendiente ni como comando productivo
+  (`CompletarCaptura`, endpoint `completar-captura`). Eliminado junto con `CAPT`/`ACTCAP`.
 - `PAGCON` NO existe como evento productivo. Los eventos correctos de pago de condena son: `PCOINF`, `PCOCNF`, `PCOOBS`.
 - `PAGVOL` NO existe como evento productivo. Usar los 7 eventos de pago voluntario.
 - `ACTCER` NO existe como evento. El evento de cierre es `CIERRA`.

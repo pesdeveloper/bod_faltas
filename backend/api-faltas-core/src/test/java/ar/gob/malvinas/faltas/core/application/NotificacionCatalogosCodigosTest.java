@@ -153,7 +153,7 @@ class NotificacionCatalogosCodigosTest {
         assertThat(TipoEventoActa.ACUGEN).isNotNull();
         assertThat(TipoEventoActa.ACUVAL).isNotNull();
         assertThat(TipoEventoActa.LOTGEN).isNotNull();
-        assertThat(TipoEventoActa.LOTEM).isNotNull();
+        assertThat(TipoEventoActa.LOTEMI).isNotNull();
         assertThat(TipoEventoActa.LOTPRC).isNotNull();
         assertThat(TipoEventoActa.LOTANU).isNotNull();
         assertThat(TipoEventoActa.PORPOS).isNotNull();

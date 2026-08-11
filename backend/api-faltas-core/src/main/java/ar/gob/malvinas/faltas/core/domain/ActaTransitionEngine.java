@@ -37,9 +37,8 @@ public class ActaTransitionEngine {
 
     private static Map<TipoEventoActa, TransicionResultado> buildMatriz() {
         var m = new java.util.EnumMap<TipoEventoActa, TransicionResultado>(TipoEventoActa.class);
-        // Creacion y captura
-        m.put(TipoEventoActa.ACTLAB, new TransicionResultado(BloqueActual.CAPT, EstadoProcesalActa.EN_TRAMITE, SituacionAdministrativaActa.ACTIVA));
-        m.put(TipoEventoActa.ACTCAP, new TransicionResultado(BloqueActual.ENRI, null, null));
+        // Creacion: alta integral, el acta nace directamente en ENRI (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)
+        m.put(TipoEventoActa.ACTLAB, new TransicionResultado(BloqueActual.ENRI, EstadoProcesalActa.EN_TRAMITE, SituacionAdministrativaActa.ACTIVA));
         m.put(TipoEventoActa.ACTENR, new TransicionResultado(BloqueActual.NOTI, null, null));
         // Notificacion
         m.put(TipoEventoActa.NOTENV, new TransicionResultado(null, null, null));
@@ -88,7 +87,7 @@ public class ActaTransitionEngine {
         m.put(TipoEventoActa.ACTPAR, new TransicionResultado(null, null, SituacionAdministrativaActa.PARALIZADA));
         m.put(TipoEventoActa.ACTREA, new TransicionResultado(null, null, SituacionAdministrativaActa.ACTIVA));
         // Archivo
-        m.put(TipoEventoActa.ACTARCH, new TransicionResultado(BloqueActual.ARCH, null, SituacionAdministrativaActa.ARCHIVADA));
+        m.put(TipoEventoActa.ACTARC, new TransicionResultado(BloqueActual.ARCH, null, SituacionAdministrativaActa.ARCHIVADA));
         m.put(TipoEventoActa.ACTREI, new TransicionResultado(BloqueActual.ANAL, null, SituacionAdministrativaActa.ACTIVA));
         // Documentos (trazabilidad sin transicion de bloque)
         m.put(TipoEventoActa.DOCGEN, new TransicionResultado(null, null, null));
@@ -96,8 +95,8 @@ public class ActaTransitionEngine {
         m.put(TipoEventoActa.DOCEMI, new TransicionResultado(null, null, null));
         m.put(TipoEventoActa.DOCADJ, new TransicionResultado(null, null, null));
         // QR
-        m.put(TipoEventoActa.QRGEN, new TransicionResultado(null, null, null));
-        m.put(TipoEventoActa.QRACC, new TransicionResultado(null, null, null));
+        m.put(TipoEventoActa.QRGENA, new TransicionResultado(null, null, null));
+        m.put(TipoEventoActa.QRACCA, new TransicionResultado(null, null, null));
         return java.util.Collections.unmodifiableMap(m);
     }
 

@@ -1,6 +1,5 @@
 package ar.gob.malvinas.faltas.core.repository;
 
-import ar.gob.malvinas.faltas.core.domain.enums.TipoUnidadFaltas;
 import ar.gob.malvinas.faltas.core.domain.model.FalTarifarioUnidadFaltas;
 
 import java.time.LocalDate;
@@ -8,7 +7,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Port de acceso al catálogo de tarifario de unidades de faltas.
+ * Port de acceso a la formula tarifaria (por articulo) usada en la valorizacion.
+ * Rediseño PROMPT-NOCTURNO-WAVE-04-PARTE-2 S7.3: la clave es {@code id_articulo}, no
+ * un tipo de unidad global.
  */
 public interface TarifarioUnidadFaltasRepository {
 
@@ -18,13 +19,11 @@ public interface TarifarioUnidadFaltasRepository {
 
     Optional<FalTarifarioUnidadFaltas> findById(Long id);
 
-    List<FalTarifarioUnidadFaltas> findAll();
+    List<FalTarifarioUnidadFaltas> findAllByArticulo(Long articuloId);
 
-    List<FalTarifarioUnidadFaltas> findByTipoUnidad(TipoUnidadFaltas tipoUnidad);
+    /** Lookup normal: la formula activa (operativa) del articulo, si existe. */
+    Optional<FalTarifarioUnidadFaltas> findActivaByArticulo(Long articuloId);
 
-    /** Todos los tarifarios vigentes en la fecha para el tipo dado. */
-    List<FalTarifarioUnidadFaltas> findVigentes(TipoUnidadFaltas tipoUnidad, LocalDate fecha);
-
-    /** El tarifario más reciente (mayor fhVigDesde) vigente en la fecha para el tipo dado. */
-    Optional<FalTarifarioUnidadFaltas> findUltimoVigente(TipoUnidadFaltas tipoUnidad, LocalDate fecha);
+    /** Lookup historico: la formula vigente del articulo en una fecha dada. */
+    Optional<FalTarifarioUnidadFaltas> findVigenteByArticulo(Long articuloId, LocalDate fecha);
 }

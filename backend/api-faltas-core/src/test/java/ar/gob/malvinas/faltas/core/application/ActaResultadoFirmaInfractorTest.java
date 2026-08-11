@@ -1,5 +1,8 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.EvidenciaActaItem;
@@ -63,7 +66,7 @@ class ActaResultadoFirmaInfractorTest {
                 new InMemoryApelacionActaRepository(),
                 new InMemoryPagoCondenaRepository()
         , FaltasClockTestSupport.FIXED, snapshotRepo);
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalculador, evidenciaRepo, FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalculador, evidenciaRepo, FaltasClockTestSupport.FIXED);
     }
 
     @AfterEach
@@ -71,10 +74,12 @@ class ActaResultadoFirmaInfractorTest {
 
     private LabrarActaCommand cmdLabrar(ResultadoFirmaInfractor resultado, List<EvidenciaActaItem> evidencias) {
         return new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Belgrano 100", "San Martin 200",
-                null, null, null, "Juan Perez", "12345678",
-                resultado, evidencias
+                null, null, null, "Juan Perez", null, "12345678", null,
+                resultado, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, evidencias,
+                null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null
         );
     }
 

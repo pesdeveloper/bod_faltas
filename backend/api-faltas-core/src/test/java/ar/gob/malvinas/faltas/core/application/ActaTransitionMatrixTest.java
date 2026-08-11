@@ -31,27 +31,17 @@ class ActaTransitionMatrixTest {
     }
 
     @Nested
-    @DisplayName("Eventos de creacion y captura")
-    class CreacionCaptura {
+    @DisplayName("Evento de creacion (alta integral)")
+    class Creacion {
 
         @Test
-        @DisplayName("ACTLAB inicia el acta en CAPT/EN_TRAMITE/ACTIVA")
+        @DisplayName("ACTLAB inicia el acta directamente en ENRI/EN_TRAMITE/ACTIVA (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)")
         void actlab_inicia_acta() {
             Optional<TransicionResultado> r = engine.calcularTransicion(TipoEventoActa.ACTLAB);
             assertThat(r).isPresent();
-            assertThat(r.get().bloqueNvo()).isEqualTo(BloqueActual.CAPT);
+            assertThat(r.get().bloqueNvo()).isEqualTo(BloqueActual.ENRI);
             assertThat(r.get().estProcNvo()).isEqualTo(EstadoProcesalActa.EN_TRAMITE);
             assertThat(r.get().sitAdmNva()).isEqualTo(SituacionAdministrativaActa.ACTIVA);
-        }
-
-        @Test
-        @DisplayName("ACTCAP avanza a ENRI sin cambiar estado procesal ni situacion adm")
-        void actcap_avanza_a_enri() {
-            Optional<TransicionResultado> r = engine.calcularTransicion(TipoEventoActa.ACTCAP);
-            assertThat(r).isPresent();
-            assertThat(r.get().bloqueNvo()).isEqualTo(BloqueActual.ENRI);
-            assertThat(r.get().estProcNvo()).isNull();
-            assertThat(r.get().sitAdmNva()).isNull();
         }
 
         @Test
@@ -143,7 +133,7 @@ class ActaTransitionMatrixTest {
         @Test
         @DisplayName("QRGEN no produce transicion")
         void qrgen_sin_transicion() {
-            assertThat(engine.calcularTransicion(TipoEventoActa.QRGEN)).isEmpty();
+            assertThat(engine.calcularTransicion(TipoEventoActa.QRGENA)).isEmpty();
         }
 
         @Test
@@ -196,7 +186,7 @@ class ActaTransitionMatrixTest {
         @Test
         @DisplayName("ACTARCH mueve a ARCH/ARCHIVADA")
         void actarch_archivada() {
-            var r = engine.calcularTransicion(TipoEventoActa.ACTARCH).orElseThrow();
+            var r = engine.calcularTransicion(TipoEventoActa.ACTARC).orElseThrow();
             assertThat(r.bloqueNvo()).isEqualTo(BloqueActual.ARCH);
             assertThat(r.sitAdmNva()).isEqualTo(SituacionAdministrativaActa.ARCHIVADA);
         }
