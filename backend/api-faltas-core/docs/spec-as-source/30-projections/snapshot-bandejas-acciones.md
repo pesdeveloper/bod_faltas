@@ -34,16 +34,17 @@ Se recalcula en cada transicion de dominio.
 | ANAL   | fallo PENDIENTE_NOTIFICACION | PENDIENTE_NOTIFICACION | ENVIAR_NOTIFICACION |
 | ANAL   | fallo NOTIFICADO    | PENDIENTES_FALLO | NINGUNA |
 | ANAL   | pago VENCIDO        | PENDIENTE_ANALISIS | DICTAR_FALLO |
+| ANAL   | FalDocumento(tipoDocu=ACTO_ADMINISTRATIVO, estadoDocu=PENDIENTE_FIRMA) existe y FalActaFallo ausente | PENDIENTES_RESOLUCION_REDACCION | FIRMAR_DOCUMENTO |
 | ANAL   | sin condicion especial | PENDIENTE_ANALISIS | DICTAR_FALLO |
 | NOTI   | notif en curso      | EN_NOTIFICACION | EVALUAR_NOTIFICACION |
 | NOTI   | notif positiva      | PENDIENTE_ANALISIS | DICTAR_FALLO |
 | NOTI   | notif sin acuse     | PENDIENTE_ANALISIS | DECIDIR_REINTENTO_O_GESTION |
 | NOTI   | sin notif           | PENDIENTE_NOTIFICACION | ENVIAR_NOTIFICACION |
-| CAPT   | sin docs            | ACTAS_EN_ENRIQUECIMIENTO | COMPLETAR_CAPTURA |
-| ENRI   | sin docs            | ACTAS_EN_ENRIQUECIMIENTO | GENERAR_DOCUMENTO |
-| CAPT/ENRI | docs pendientes firma | PENDIENTE_FIRMA | FIRMAR_DOCUMENTO |
-| CAPT/ENRI | todos docs firmados   | PENDIENTE_NOTIFICACION | ENVIAR_NOTIFICACION |
-| CAPT/ENRI | docs sin estado claro | PENDIENTE_PREPARACION_DOCUMENTAL | GENERAR_DOCUMENTO |
+| ENRI   | sin docs, ultimo evento ACTLAB (acta recien nacida) | ACTA_NUEVA | GENERAR_DOCUMENTO |
+| ENRI   | sin docs, con eventos posteriores a ACTLAB | ACTAS_EN_ENRIQUECIMIENTO | GENERAR_DOCUMENTO |
+| ENRI   | docs pendientes firma | PENDIENTE_FIRMA | FIRMAR_DOCUMENTO |
+| ENRI   | todos docs firmados   | PENDIENTE_NOTIFICACION | ENVIAR_NOTIFICACION |
+| ENRI   | docs sin estado claro | PENDIENTE_PREPARACION_DOCUMENTAL | GENERAR_DOCUMENTO |
 
 ### Routing especial: resultadoFinal ABSUELTO con acta ACTIVA
 
@@ -60,13 +61,33 @@ Si ``acta.resultadoFinal == ABSUELTO`` y ``situacionAdministrativa == ACTIVA``:
    Apelacion resuelta (RECHAZADA) -> PENDIENTE_ANALISIS / DECLARAR_CONDENA_FIRME
 4. Fallo activo (segun EstadoFalloActa: PENDIENTE_FIRMA -> PENDIENTE_NOTIFICACION -> NOTIFICADO)
 5. Pago voluntario VENCIDO
-6. Sin condicion especial: PENDIENTE_ANALISIS / DICTAR_FALLO
+6. FalDocumento(tipoDocu=ACTO_ADMINISTRATIVO, estadoDocu=PENDIENTE_FIRMA) existe y FalActaFallo ausente -> PENDIENTES_RESOLUCION_REDACCION / FIRMAR_DOCUMENTO
+7. Sin condicion especial: PENDIENTE_ANALISIS / DICTAR_FALLO
+
+### Nota: condicion de pieza resolutoria (prioridad 6 ANAL)
+
+La condicion de prioridad 6 aplica cuando:
+- FalActaFallo.buscarActivo(actaId) devuelve Optional.empty() (no hay fallo activo), Y
+- existe al menos un FalDocumento con tipoDocu=ACTO_ADMINISTRATIVO y estadoDocu=PENDIENTE_FIRMA.
+
+Razon de la disambiguation fallo/pieza-resolutoria:
+Los fallos (absolutorio/condenatorio) son TipoDocu=ACTO_ADMINISTRATIVO (ver TipoDocu.java).
+Sin embargo, el routing de fallo (prioridad 4) opera sobre FalActaFallo, no sobre FalDocumento.
+Un FalDocumento(tipoDocu=ACTO_ADMINISTRATIVO) sin FalActaFallo asociado es necesariamente
+una pieza resolutoria no-fallo (acto administrativo distinto). Este es el caso de prioridad 6.
+
+Implementacion en SnapshotRecalculador.java:
+- Variable precalculada: tieneActoAdmPendienteFirma
+  = docs.stream().anyMatch(d -> d.getTipoDocu() == ACTO_ADMINISTRATIVO && estadoDocu == PENDIENTE_FIRMA)
+- Condicion en bloque ANAL: falloOpt.isEmpty() && tieneActoAdmPendienteFirma
+- Resultado: codBandeja=PENDIENTES_RESOLUCION_REDACCION, accionPendiente=FIRMAR_DOCUMENTO
 
 ## Bandejas (CodigoBandeja)
 
 | Valor | Label |
 |-------|-------|
-| ACTAS_EN_ENRIQUECIMIENTO | Actas en captura/enriquecimiento |
+| ACTA_NUEVA | Acta nueva, recien labrada, sin documentos generados aun (`DECISION-ACTA-LIFECYCLE-SIN-CAPT-01`) |
+| ACTAS_EN_ENRIQUECIMIENTO | Actas en enriquecimiento |
 | PENDIENTE_PREPARACION_DOCUMENTAL | Pendiente de preparacion documental |
 | PENDIENTE_FIRMA | Pendiente de firma |
 | PENDIENTE_NOTIFICACION | Pendiente de notificacion |
@@ -87,8 +108,6 @@ Si ``acta.resultadoFinal == ABSUELTO`` y ``situacionAdministrativa == ACTIVA``:
 
 | Valor | Descripcion |
 |-------|-------------|
-| COMPLETAR_CAPTURA | Completar datos de captura |
-| ENRIQUECER | Enriquecer acta |
 | GENERAR_DOCUMENTO | Generar documento |
 | FIRMAR_DOCUMENTO | Firmar documento |
 | ENVIAR_NOTIFICACION | Enviar notificacion |
@@ -100,7 +119,6 @@ Si ``acta.resultadoFinal == ABSUELTO`` y ``situacionAdministrativa == ACTIVA``:
 | GESTIONAR_PAGO_CONDENA  | Condena firme declarada - gestionar pago de condena |
 | CONFIRMAR_PAGO_CONDENA  | Confirmar pago de condena informado |
 | CORREGIR_PAGO_CONDENA   | Corregir pago de condena observado |
-| REGISTRAR_PAGO | Registrar pago de condena |
 | DERIVAR_GESTION_EXTERNA | Derivar a gestion externa |
 | CONFIRMAR_PAGO | Confirmar pago voluntario |
 | CORREGIR_PAGO | Corregir pago observado |

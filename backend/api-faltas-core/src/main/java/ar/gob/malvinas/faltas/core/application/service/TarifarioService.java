@@ -10,14 +10,13 @@ import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Gestión del catálogo de tarifario de unidades de faltas.
- * No permite superponer rangos activos para el mismo tipo.
- * Una fila referenciada no se modifica: se crea una nueva.
+ * Gestión de la formula tarifaria por articulo (Wave 4 PARTE-2 S7.3).
+ * Como máximo una fórmula activa por artículo (UK real en el DDL).
+ * Un cambio de fórmula cierra la vigencia de la anterior y crea una nueva.
  */
 @Service
 public class TarifarioService {
@@ -25,48 +24,82 @@ public class TarifarioService {
     private final TarifarioUnidadFaltasRepository tarifarioRepo;
     private final FaltasClock faltasClock;
 
-    public TarifarioService(TarifarioUnidadFaltasRepository tarifarioRepo,
-            FaltasClock faltasClock) {
+    public TarifarioService(TarifarioUnidadFaltasRepository tarifarioRepo, FaltasClock faltasClock) {
         this.faltasClock = faltasClock;
         this.tarifarioRepo = tarifarioRepo;
     }
 
-    public FalTarifarioUnidadFaltas crear(
+    public FalTarifarioUnidadFaltas crearParaArticulo(
+            Long articuloId,
             TipoUnidadFaltas tipoUnidad,
-            BigDecimal valorUnidad,
+            BigDecimal cantidadUnidadesOrdinaria,
+            BigDecimal montoFijoOrdinario,
+            boolean siAdmitePagoVoluntario,
+            BigDecimal cantidadUnidadesPagoVoluntario,
+            BigDecimal montoFijoPagoVoluntario,
             LocalDate fhVigDesde,
-            LocalDate fhVigHasta,
             String idUser) {
+        if (articuloId == null) throw new PrecondicionVioladaException("articuloId es obligatorio.");
         if (tipoUnidad == null) throw new PrecondicionVioladaException("tipoUnidad es obligatorio.");
-        if (valorUnidad == null || valorUnidad.compareTo(BigDecimal.ZERO) <= 0)
-            throw new PrecondicionVioladaException("valorUnidad debe ser mayor que cero.");
         if (fhVigDesde == null) throw new PrecondicionVioladaException("fhVigDesde es obligatoria.");
-        if (fhVigHasta != null && fhVigHasta.isBefore(fhVigDesde))
-            throw new PrecondicionVioladaException("fhVigHasta no puede ser anterior a fhVigDesde.");
 
-        verificarSinSuperposicion(tipoUnidad, fhVigDesde, fhVigHasta, null);
+        tarifarioRepo.findActivaByArticulo(articuloId).ifPresent(existente -> {
+            throw new PrecondicionVioladaException(
+                    "Ya existe una formula activa (id=" + existente.getId() + ") para el articuloId=" + articuloId
+                            + ". Usar cambiarFormula para reemplazarla.");
+        });
 
         Long id = tarifarioRepo.nextId();
         FalTarifarioUnidadFaltas t = new FalTarifarioUnidadFaltas(
-                id, tipoUnidad, valorUnidad, fhVigDesde, faltasClock.now(), idUser);
-        t.setFhVigHasta(fhVigHasta);
+                id, articuloId, tipoUnidad, cantidadUnidadesOrdinaria, montoFijoOrdinario,
+                siAdmitePagoVoluntario, cantidadUnidadesPagoVoluntario, montoFijoPagoVoluntario,
+                fhVigDesde, faltasClock.now(), idUser);
         return tarifarioRepo.save(t);
+    }
+
+    /** Cierra la vigencia de la fórmula activa actual y crea una nueva activa. */
+    public FalTarifarioUnidadFaltas cambiarFormula(
+            Long articuloId,
+            TipoUnidadFaltas tipoUnidad,
+            BigDecimal cantidadUnidadesOrdinaria,
+            BigDecimal montoFijoOrdinario,
+            boolean siAdmitePagoVoluntario,
+            BigDecimal cantidadUnidadesPagoVoluntario,
+            BigDecimal montoFijoPagoVoluntario,
+            LocalDate fhVigDesde,
+            String idUser) {
+        Optional<FalTarifarioUnidadFaltas> activaActual = tarifarioRepo.findActivaByArticulo(articuloId);
+        activaActual.ifPresent(actual -> {
+            if (!fhVigDesde.isAfter(actual.getFhVigDesde()))
+                throw new PrecondicionVioladaException(
+                        "fhVigDesde de la nueva formula debe ser posterior a la vigencia actual (" + actual.getFhVigDesde() + ").");
+            actual.setFhVigHasta(fhVigDesde);
+            actual.setSiActiva(false);
+            tarifarioRepo.save(actual);
+        });
+
+        Long id = tarifarioRepo.nextId();
+        FalTarifarioUnidadFaltas nueva = new FalTarifarioUnidadFaltas(
+                id, articuloId, tipoUnidad, cantidadUnidadesOrdinaria, montoFijoOrdinario,
+                siAdmitePagoVoluntario, cantidadUnidadesPagoVoluntario, montoFijoPagoVoluntario,
+                fhVigDesde, faltasClock.now(), idUser);
+        return tarifarioRepo.save(nueva);
     }
 
     public FalTarifarioUnidadFaltas obtener(Long id) {
         return tarifarioRepo.findById(id).orElseThrow(() -> new TarifarioNoEncontradoException(id));
     }
 
-    public List<FalTarifarioUnidadFaltas> listarTodos() {
-        return tarifarioRepo.findAll();
+    public List<FalTarifarioUnidadFaltas> listarPorArticulo(Long articuloId) {
+        return tarifarioRepo.findAllByArticulo(articuloId);
     }
 
-    public List<FalTarifarioUnidadFaltas> listarPorTipo(TipoUnidadFaltas tipoUnidad) {
-        return tarifarioRepo.findByTipoUnidad(tipoUnidad);
+    public Optional<FalTarifarioUnidadFaltas> resolverActiva(Long articuloId) {
+        return tarifarioRepo.findActivaByArticulo(articuloId);
     }
 
-    public Optional<FalTarifarioUnidadFaltas> resolverUltimoVigente(TipoUnidadFaltas tipoUnidad, LocalDate fecha) {
-        return tarifarioRepo.findUltimoVigente(tipoUnidad, fecha);
+    public Optional<FalTarifarioUnidadFaltas> resolverVigente(Long articuloId, LocalDate fecha) {
+        return tarifarioRepo.findVigenteByArticulo(articuloId, fecha);
     }
 
     public FalTarifarioUnidadFaltas desactivar(Long id, String idUser) {
@@ -75,25 +108,5 @@ public class TarifarioService {
         if (!t.isSiActiva()) throw new PrecondicionVioladaException("El tarifario id=" + id + " ya está inactivo.");
         t.setSiActiva(false);
         return tarifarioRepo.save(t);
-    }
-
-    private void verificarSinSuperposicion(TipoUnidadFaltas tipoUnidad, LocalDate desde, LocalDate hasta, Long excluirId) {
-        List<FalTarifarioUnidadFaltas> existentes = tarifarioRepo.findByTipoUnidad(tipoUnidad);
-        for (FalTarifarioUnidadFaltas e : existentes) {
-            if (excluirId != null && excluirId.equals(e.getId())) continue;
-            if (!e.isSiActiva()) continue;
-            boolean solapa = solapan(desde, hasta, e.getFhVigDesde(), e.getFhVigHasta());
-            if (solapa) {
-                throw new PrecondicionVioladaException(
-                        "Superposición de vigencia con tarifario id=" + e.getId()
-                                + " para tipoUnidad=" + tipoUnidad);
-            }
-        }
-    }
-
-    private boolean solapan(LocalDate d1, LocalDate h1, LocalDate d2, LocalDate h2) {
-        LocalDate fin1 = (h1 == null) ? LocalDate.MAX : h1;
-        LocalDate fin2 = (h2 == null) ? LocalDate.MAX : h2;
-        return !d1.isAfter(fin2.minusDays(1)) && !d2.isAfter(fin1.minusDays(1));
     }
 }

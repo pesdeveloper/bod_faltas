@@ -1,9 +1,11 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarPagoCondenaCommand;
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.DerivarGestionExternaCommand;
 import ar.gob.malvinas.faltas.core.application.command.InformarPagoCondenaCommand;
 import ar.gob.malvinas.faltas.core.application.command.ReingresarDesdeGestionExternaCommand;
@@ -136,7 +138,7 @@ class GestionExternaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         docService = new DocumentoService(
                 actaRepo, docRepo, firmaRepo, eventoRepo, snapshotRepo, recalc, falloRepo,
 
@@ -173,12 +175,13 @@ class GestionExternaTest {
 
     private Long crearActaConCondenaFirme(String docNum) {
         LabrarActaCommand cmd = new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 100", "San Martin 200",
-                null, null, null, "Infractor Test", docNum,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                null, null, null, "Infractor Test", null, docNum,
+                null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
         Long actaId = actaService.labrar(cmd).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(actaId, null));
         actaService.enriquecer(new EnriquecerActaCommand(actaId, "enriquecido"));
 
         String idDoc = docService.generarDocumento(
@@ -477,10 +480,12 @@ class GestionExternaTest {
         @DisplayName("Test 16: No permitir derivar si resultado final es ABSUELTO")
         void no_derivar_absuelto() {
             LabrarActaCommand cmd = new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001",
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. X 1", "Calle Y 2",
-                    null, null, null, "Test", "60000036",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                    null, null, null, "Test", null, "60000036",
+                    null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
             Long actaId = actaService.labrar(cmd).idActa();
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             acta.setResultadoFinal(ResultadoFinalActa.ABSUELTO);
@@ -495,10 +500,12 @@ class GestionExternaTest {
         @DisplayName("Test 17: No permitir derivar si resultado final es PAGO_VOLUNTARIO_PAGADO")
         void no_derivar_PAGO_VOLUNTARIO_PAGADO() {
             LabrarActaCommand cmd = new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001",
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. X 1", "Calle Y 2",
-                    null, null, null, "Test", "60000037",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                    null, null, null, "Test", null, "60000037",
+                    null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
             Long actaId = actaService.labrar(cmd).idActa();
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             acta.setResultadoFinal(ResultadoFinalActa.PAGO_VOLUNTARIO_PAGADO);
@@ -513,10 +520,12 @@ class GestionExternaTest {
         @DisplayName("Test 18: No permitir derivar si resultado final es CONDENA_FIRME_PAGADA")
         void no_derivar_condena_firme_pagada() {
             LabrarActaCommand cmd = new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001",
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. X 1", "Calle Y 2",
-                    null, null, null, "Test", "60000038",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                    null, null, null, "Test", null, "60000038",
+                    null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
             Long actaId = actaService.labrar(cmd).idActa();
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             acta.setResultadoFinal(ResultadoFinalActa.CONDENA_FIRME_PAGADA);
@@ -1002,10 +1011,12 @@ class GestionExternaTest {
         @DisplayName("Test 6B-26: Rechaza REINGRESO_SIN_PAGO si resultadoFinal no es CONDENA_FIRME")
         void rechaza_pago_condena_sin_condena_firme() {
             LabrarActaCommand cmd = new LabrarActaCommand(
-                    "TRANSITO", "DEP-001", "INS-001",
+                    ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. X 1", "Calle Y 2",
-                    null, null, null, "Test", "60001049",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null);
+                    null, null, null, "Test", null, "60001049",
+                    null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null);
             Long actaId = actaService.labrar(cmd).idActa();
             FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
             acta.setBloqueActual(BloqueActual.GEXT);
@@ -1610,7 +1621,7 @@ class GestionExternaTest {
             // cargarActaOperativa() la rechaza antes de llegar a validarCondenaFirme.
             // El mensaje correcto es "cerrada", no "CONDENA_FIRME" (esa seria la razon si el acta estuviera activa).
             assertThatThrownBy(() ->
-                    pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null)))
+                    pagoCondenaService.confirmar(new ConfirmarPagoCondenaCommand(actaId, null, "test-actor")))
                     .isInstanceOf(PrecondicionVioladaException.class)
                     .hasMessageContaining("cerrada");
 

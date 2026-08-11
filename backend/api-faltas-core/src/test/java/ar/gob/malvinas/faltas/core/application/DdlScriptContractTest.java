@@ -85,12 +85,13 @@ class DdlScriptContractTest {
         }
 
         @Test
-        @DisplayName("el script declara exactamente 64 CREATE TABLE")
+        @DisplayName("el script declara exactamente 65 CREATE TABLE")
         void exactamente64CreateTable() throws IOException {
             List<String> bloques = bloquesDdl();
             assertThat(bloques)
-                    .as("El script debe tener exactamente 64 CREATE TABLE")
-                    .hasSize(64);
+                    .as("El script debe tener exactamente 65 CREATE TABLE (64 del cierre FULL-R1 + "
+                            + "fal_valor_unidad_faltas de Wave 4 PARTE-2 S7.2)")
+                    .hasSize(65);
         }
 
         @Test
@@ -543,7 +544,7 @@ class DdlScriptContractTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("DDL-G16: conjuntos exactos de enums persistidos declarados como CHECK")
+    @DisplayName("DDL-G16: CHECKs de codigo/enum retirados por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
     class G16_EnumsExactos {
 
         private String bloqueParaTabla(String tabla) throws IOException {
@@ -554,33 +555,33 @@ class DdlScriptContractTest {
         }
 
         @Test
-        @DisplayName("num_politica tiene CHECK de ClaseNumeracion exactamente IN (1, 2)")
+        @DisplayName("num_politica ya no tiene CHECK de ClaseNumeracion: catalogo validado en dominio")
         void claseNumeracionCheckExacto() throws IOException {
             String bloque = bloqueParaTabla("num_politica");
             assertThat(bloque).isNotEmpty();
-            assertThat(bloque.replaceAll("\\s+", " ").toUpperCase())
-                    .as("num_politica debe tener CHECK (clase_numeracion IN (1, 2))")
-                    .containsPattern("(?i)CLASE_NUMERACION\\s+IN\\s*\\(\\s*1\\s*,\\s*2\\s*\\)");
+            assertThat(bloque)
+                    .as("chk_num_pol_clase fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_num_pol_clase");
         }
 
         @Test
-        @DisplayName("fal_dia_no_computable tiene CHECK de TipoDiaNoComputable exactamente IN (1, 2, 3)")
+        @DisplayName("fal_dia_no_computable ya no tiene CHECK de TipoDiaNoComputable: catalogo validado en dominio")
         void tipoDiaNoComputableCheckExacto() throws IOException {
             String bloque = bloqueParaTabla("fal_dia_no_computable");
             assertThat(bloque).isNotEmpty();
             assertThat(bloque)
-                    .as("fal_dia_no_computable debe tener CHECK (tipo IN (1, 2, 3))")
-                    .containsPattern("(?i)\\bTIPO\\s+IN\\s*\\(\\s*1\\s*,\\s*2\\s*,\\s*3\\s*\\)");
+                    .as("chk_dia_nc_tipo fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_dia_nc_tipo");
         }
 
         @Test
-        @DisplayName("fal_dia_no_computable tiene CHECK de OrigenDiaNoComputable exactamente IN (1, 2)")
+        @DisplayName("fal_dia_no_computable ya no tiene CHECK de OrigenDiaNoComputable: catalogo validado en dominio")
         void origenDiaNoComputableCheckExacto() throws IOException {
             String bloque = bloqueParaTabla("fal_dia_no_computable");
             assertThat(bloque).isNotEmpty();
             assertThat(bloque)
-                    .as("fal_dia_no_computable debe tener CHECK (origen IN (1, 2))")
-                    .containsPattern("(?i)\\bORIGEN\\s+IN\\s*\\(\\s*1\\s*,\\s*2\\s*\\)");
+                    .as("chk_dia_nc_origen fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_dia_nc_origen");
         }
     }
 

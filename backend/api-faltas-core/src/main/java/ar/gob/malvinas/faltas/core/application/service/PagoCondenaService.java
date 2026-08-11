@@ -170,6 +170,10 @@ public class PagoCondenaService {
     // -------------------------------------------------------------------------
 
     public ComandoResultado confirmar(ConfirmarPagoCondenaCommand cmd) {
+        if (cmd.actor() == null || cmd.actor().isBlank()) {
+            throw new PrecondicionVioladaException("El actor es obligatorio para confirmar el pago.");
+        }
+        String actor = cmd.actor().trim();
         synchronized (pagoCondenaMonitor) {
             FalActa acta = cargarActaOperativa(cmd.actaId());
             validarCondenaFirme(acta);
@@ -199,11 +203,11 @@ public class PagoCondenaService {
             }
             actaRepository.guardar(acta);
 
-            registrarEvento(acta.getId(), TipoEventoActa.PCOCNF, null, null, null,
+            registrarEvento(acta.getId(), TipoEventoActa.PCOCNF, null, null, actor,
                     "Pago de condena confirmado. " + nvl(cmd.observaciones()));
 
             if (!hayBloqueantes) {
-                registrarEvento(acta.getId(), TipoEventoActa.CIERRA, null, null, null,
+                registrarEvento(acta.getId(), TipoEventoActa.CIERRA, null, null, actor,
                         "Acta cerrada por pago de condena confirmado.");
             }
 
@@ -222,6 +226,10 @@ public class PagoCondenaService {
     // -------------------------------------------------------------------------
 
     public ComandoResultado observar(ObservarPagoCondenaCommand cmd) {
+        if (cmd.actor() == null || cmd.actor().isBlank()) {
+            throw new PrecondicionVioladaException("El actor es obligatorio para observar el pago.");
+        }
+        String actor = cmd.actor().trim();
         synchronized (pagoCondenaMonitor) {
             FalActa acta = cargarActaOperativa(cmd.actaId());
 
@@ -245,7 +253,7 @@ public class PagoCondenaService {
             if (cmd.observaciones() != null) pago.setObservaciones(cmd.observaciones());
             pagoCondenaRepository.guardar(pago);
 
-            registrarEvento(acta.getId(), TipoEventoActa.PCOOBS, null, null, null,
+            registrarEvento(acta.getId(), TipoEventoActa.PCOOBS, null, null, actor,
                     "Pago de condena observado. Motivo: " + cmd.motivoObservacion()
                             + ". " + nvl(cmd.observaciones()));
 

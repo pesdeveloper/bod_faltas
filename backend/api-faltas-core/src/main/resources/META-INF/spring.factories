@@ -1,0 +1,1 @@
+org.springframework.boot.env.EnvironmentPostProcessor=ar.gob.malvinas.faltas.core.infrastructure.startup.JdbcOnlyStartupGuardrail

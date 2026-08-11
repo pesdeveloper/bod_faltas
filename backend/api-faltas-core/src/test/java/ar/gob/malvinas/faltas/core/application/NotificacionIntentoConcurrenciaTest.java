@@ -59,12 +59,20 @@ class NotificacionIntentoConcurrenciaTest {
         loteService = new LoteCorreoService(loteRepo, notifRepo, intentoRepo, actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryPersonaDomicilioRepository(), FaltasClockTestSupport.FIXED);
     }
 
-    private void crearActa(Long id) {
-        FalActa a = new FalActa(id, "UUID-C-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Id que asigno la persistencia al acta del test. */
+    private Long idActa;
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     */
+    private void crearActa(Long etiqueta) {
+        FalActa a = new FalActa(null, "UUID-C-" + etiqueta + "-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 java.time.LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+                null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, AHORA, "SYS");
         a.setBloqueActual(BloqueActual.NOTI);
-        actaRepo.guardar(a);
+        idActa = actaRepo.guardar(a).getId();
     }
 
     private void crearNotif(Long id, Long actaId) {
@@ -92,7 +100,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C2: dos reintentos simultaneos - correlativos distintos")
     void c2_dosReintentosSim() throws InterruptedException {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         int N = 10;
         CountDownLatch latch = new CountDownLatch(N);
         AtomicInteger ok = new AtomicInteger();
@@ -116,7 +124,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C3: misma referencia externa - solo uno persiste, el otro lanza excepcion")
     void c3_mismaReferenciaExterna() throws InterruptedException {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         AtomicInteger ok = new AtomicInteger();
         AtomicInteger err = new AtomicInteger();
         CountDownLatch latch = new CountDownLatch(2);
@@ -137,7 +145,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C4: mismo acuse - idempotencia, solo uno persiste")
     void c4_mismoAcuse() throws InterruptedException {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         AtomicInteger ok = new AtomicInteger();
         AtomicInteger err = new AtomicInteger();
         CountDownLatch latch = new CountDownLatch(3);
@@ -193,9 +201,9 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C7: portal vs intento postal - portal supera, historia intacta")
     void c7_portalVsPostal() {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         FalNotificacionIntento postal = intentoService.registrarIntento(10L, CanalNotificacion.CORREO_POSTAL, 100L, null, null, null, "USR");
-        intentoService.registrarPortalPositivo(10L, 1L, "user-portal", "USR");
+        intentoService.registrarPortalPositivo(10L, idActa, "user-portal", "USR");
 
         FalNotificacionIntento postalPost = intentoRepo.buscarPorId(postal.getId()).orElseThrow();
         assertThat(postalPost.getResultadoIntento()).isEqualTo(ResultadoNotificacion.SUPERADA_POR_PORTAL);
@@ -206,7 +214,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C8: acuse positivo y negativo simultáneos - solo el primero aplica")
     void c8_acusePositivoVsNegativo() throws InterruptedException {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         AtomicInteger ok = new AtomicInteger();
         CountDownLatch latch = new CountDownLatch(2);
 
@@ -229,7 +237,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C9: resultado tardio de intento con resultado ya registrado - lanza excepcion")
     void c9_resultadoTardio() {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         FalNotificacionIntento intento = intentoService.registrarIntento(10L, CanalNotificacion.PRESENCIAL, null, null, null, null, "USR");
         intentoService.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.NEGATIVO, "USR");
         assertThatThrownBy(() -> intentoService.registrarResultadoIntento(intento.getId(), ResultadoNotificacion.POSITIVO, "USR"))
@@ -239,7 +247,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C10: doble validacion de acuse - segunda lanza excepcion")
     void c10_dobleValidacion() {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         FalNotificacionAcuse acuse = acuseService.registrarAcuse(10L, null, TipoAcuse.ACUSE_RECEPCION, null, AHORA, "USR");
         acuseService.validarAcuse(acuse.getId(), "USR");
         assertThatThrownBy(() -> acuseService.validarAcuse(acuse.getId(), "USR"))
@@ -258,7 +266,7 @@ class NotificacionIntentoConcurrenciaTest {
     @Test @DisplayName("C12: anular intento con referencia - intento previo queda intacto")
     void c12_reintentoNuevoDomicilio() {
         crearActa(1L);
-        crearNotif(10L, 1L);
+        crearNotif(10L, idActa);
         FalNotificacionIntento i1 = intentoService.registrarIntento(10L, CanalNotificacion.CORREO_POSTAL, 100L, null, null, null, "USR");
         intentoService.registrarResultadoIntento(i1.getId(), ResultadoNotificacion.NEGATIVO, "USR");
         FalNotificacionIntento i2 = intentoService.registrarIntento(10L, CanalNotificacion.CORREO_POSTAL, 200L, null, null, null, "USR");

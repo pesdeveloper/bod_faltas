@@ -99,20 +99,23 @@ class IdSujBieGuardrailTest {
         @Test
         @DisplayName("id_suj tiene CHECK BETWEEN 1 AND 255 (rango abierto aprobado)")
         void check_id_suj_rango() {
-            assertThat(cuerpo("fal_persona")).contains("id_suj BETWEEN 1 AND 255");
+            // chk_fal_persona_id_suj retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01: el rango
+            // abierto ya estaba prohibido como CHECK de catalogo cerrado (DECISION_DDL-PERS-02);
+            // la validacion vive en dominio/aplicacion.
+            assertThat(cuerpo("fal_persona")).doesNotContain("chk_fal_persona_id_suj");
         }
 
         @Test
-        @DisplayName("id_bie tiene CHECK BETWEEN 1 AND 9999999")
+        @DisplayName("id_bie ya no tiene CHECK de rango: retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
         void check_id_bie_rango() {
-            assertThat(cuerpo("fal_persona")).contains("id_bie BETWEEN 1 AND 9999999");
+            assertThat(cuerpo("fal_persona")).doesNotContain("chk_fal_persona_id_bie CHECK");
         }
 
         @Test
-        @DisplayName("id_bie requiere id_suj (CHECK id_bie IS NULL OR id_suj IS NOT NULL)")
+        @DisplayName("id_bie/id_suj: coherencia retirada como CHECK (DECISION_DDL-SIN-CHECKS-CODIGOS-01)")
         void check_id_bie_requiere_id_suj() {
             assertThat(cuerpo("fal_persona"))
-                    .contains("id_bie IS NULL OR id_suj IS NOT NULL");
+                    .doesNotContain("chk_fal_persona_id_bie_suj");
         }
 
         @Test
@@ -176,21 +179,19 @@ class IdSujBieGuardrailTest {
         @Test
         @DisplayName("id_suj_i CHECK BETWEEN 1 AND 255 (antes BETWEEN 1 AND 99)")
         void check_id_suj_i_255() {
+            // chk_ctv_suj_i retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01: mismo criterio que
+            // fal_persona.id_suj (DECISION_DDL-PERS-02), rango abierto validado en dominio.
             assertThat(cuerpo("fal_acta_contravencion"))
-                    .as("id_suj_i debe tener BETWEEN 1 AND 255 (no BETWEEN 1 AND 99)")
-                    .contains("id_suj_i BETWEEN 1 AND 255");
-            assertThat(cuerpo("fal_acta_contravencion"))
-                    .doesNotContain("id_suj_i BETWEEN 1 AND 99");
+                    .as("chk_ctv_suj_i fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_ctv_suj_i");
         }
 
         @Test
-        @DisplayName("id_suj_c CHECK BETWEEN 1 AND 255 (antes BETWEEN 1 AND 99)")
+        @DisplayName("id_suj_c: CHECK de rango retirado (DECISION_DDL-SIN-CHECKS-CODIGOS-01)")
         void check_id_suj_c_255() {
             assertThat(cuerpo("fal_acta_contravencion"))
-                    .as("id_suj_c debe tener BETWEEN 1 AND 255 (no BETWEEN 1 AND 99)")
-                    .contains("id_suj_c BETWEEN 1 AND 255");
-            assertThat(cuerpo("fal_acta_contravencion"))
-                    .doesNotContain("id_suj_c BETWEEN 1 AND 99");
+                    .as("chk_ctv_suj_c fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_ctv_suj_c");
         }
     }
 

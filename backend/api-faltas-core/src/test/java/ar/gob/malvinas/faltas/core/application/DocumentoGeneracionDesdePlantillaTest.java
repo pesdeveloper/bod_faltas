@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.AgregarFirmaReqPlantillaCommand;
@@ -100,15 +102,13 @@ class DocumentoGeneracionDesdePlantillaTest {
     // -------------------------------------------------------------------------
 
     private FalActa crearActa() {
-        Long id = actaRepo.nextId();
         FalActa acta = new FalActa(
-                id, UUID.randomUUID().toString(),
+                null, UUID.randomUUID().toString(),
                 "TRANSITO", "DEP-001", "INS-001",
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
+                "Belgrano 200", "Calle 123", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
-        actaRepo.guardar(acta);
-        return acta;
+        return actaRepo.guardar(acta);
     }
 
     private FalDocumentoPlantilla crearPlantillaActivaNoNumerada(String codigo) {
@@ -414,7 +414,16 @@ class DocumentoGeneracionDesdePlantillaTest {
         @Test
         @DisplayName("18. AL_CREAR intenta numerar automaticamente; falla si no hay dependencia registrada")
         void al_crear_intenta_numerar_falla_sin_dependencia() {
-            FalActa acta = crearActa();
+            // idDependencia numerico deliberadamente inexistente (no el fallback 1L de "DEP-001",
+            // seedeado como dependencia por defecto no productiva desde Wave 4 PARTE-3A en
+            // InMemoryDependenciaRepository).
+            FalActa acta = actaRepo.guardar(new FalActa(
+                    null, UUID.randomUUID().toString(), TipoActa.TRANSITO, 999_999L, 1L,
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
+                    "Belgrano 200", null, null, null,
+                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                    SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
+                    FaltasClockTestSupport.FIXED.now(), "SYS"));
             CrearDocumentoPlantillaCommand cmdP = new CrearDocumentoPlantillaCommand(
                     "PLNT-8C3-018", "Al crear",
                     TipoDocu.ACTA_INFRACCION, AccionDocumental.GENERAR_ACTA_INFRACCION, TipoActa.TRANSITO,

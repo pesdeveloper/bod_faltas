@@ -1,6 +1,5 @@
 package ar.gob.malvinas.faltas.core.infrastructure.qr;
 
-import ar.gob.malvinas.faltas.core.application.port.QrTokenProtector;
 import ar.gob.malvinas.faltas.core.domain.exception.QrTokenInvalidoException;
 
 import javax.crypto.Cipher;
@@ -15,7 +14,29 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /**
- * Implementacion de QrTokenProtector usando AES/GCM/NoPadding (AEAD).
+ * RETIRADA — no es el protector del QR de actas.
+ *
+ * <p>{@code DECISION_DDL-ACTA-QR-01} declara esta implementacion incompatible con el
+ * contrato del token por tres motivos verificados materialmente:
+ *
+ * <pre>
+ * produce 211 caracteres y no entra en codigo_qr VARCHAR(128);
+ * usa nonce de 16 bytes, IV de 12 bytes y marca temporal, de modo que no es deterministica;
+ * resuelve confidencialidad de un identificador opaco cuando el QR necesita autenticidad
+ *   e integridad.
+ * </pre>
+ *
+ * <p>El protector canonico es {@link HmacSha256QrTokenProtector}. Desde WAVE 1A2-B1.5B2
+ * esta clase quedo fuera de {@link QrConfig}: ninguna clase de produccion la instancia, no
+ * es bean y su constructor sin argumentos —el que deriva una clave AES aleatoria al
+ * construir— no tiene ningun camino alcanzable desde la configuracion productiva. El
+ * archivo se conserva porque el slice que la retiro no tenia autorizacion para eliminar
+ * archivos; su unico proposito es documental.
+ *
+ * <p>No reintroducirla como implementacion de {@code QrTokenProtector} para actas y no
+ * dejar dos candidatos del mismo puerto.
+ *
+ * <p>Descripcion historica del formato que producia:
  *
  * Formato del token:
  *   Base64URL( IV[12] + GCM_Ciphertext + GCM_AuthTag[16] )
@@ -32,9 +53,9 @@ import java.util.HexFormat;
  *  Si se usa el constructor sin argumentos, la clave es efimera (random al construir).
  *  Tokens generados con clave efimera no son validos tras reiniciar.
  *  El constructor sin argumentos es SOLO para desarrollo/test.
- *  En produccion, inyectar la clave via application.yml (faltas.qr.secret=base64key).
+ *  La propiedad faltas.qr.secret que lo alimentaba dejo de leerse.
  */
-public class AesGcmQrTokenProtector implements QrTokenProtector {
+public class AesGcmQrTokenProtector {
 
     private static final String SCOPE = "ACTA_QR";
     private static final int VERSION = 0;
@@ -71,7 +92,6 @@ public class AesGcmQrTokenProtector implements QrTokenProtector {
         this.clock = new FaltasClock().clock();
     }
 
-    @Override
     public String generar(String uuidTecnico) {
         if (uuidTecnico == null || uuidTecnico.isBlank()) {
             throw new IllegalArgumentException("uuidTecnico no puede ser nulo/blanco");
@@ -86,7 +106,6 @@ public class AesGcmQrTokenProtector implements QrTokenProtector {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(cipherBlob);
     }
 
-    @Override
     public String resolverUuidTecnico(String token) {
         if (token == null || token.isBlank()) {
             throw new QrTokenInvalidoException("token nulo o vacio");

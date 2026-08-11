@@ -8,8 +8,12 @@ import java.time.LocalDateTime;
  * Imputación de un artículo normativo a un acta de faltas.
  * Mapeada a fal_acta_articulo_infringido en MariaDB.
  *
- * Solo registra qué se imputó. No guarda montos, unidades ni tarifario.
+ * Solo registra qué se imputó (sin cantidad ni tarifario: eso vive en el
+ * historial versionado {@link FalActaValorizacionItem}, hijo de esta fila).
  * Baja lógica preserva la historia. Corrección crea nueva fila.
+ *
+ * {@code versionRow} agrega OCC real (PROMPT-NOCTURNO-WAVE-04-PARTE-2 S7.4):
+ * antes no existía protección de concurrencia sobre la baja lógica.
  */
 public class FalActaArticuloInfringido {
 
@@ -21,6 +25,7 @@ public class FalActaArticuloInfringido {
     private MotivoBajaArticuloInfringido motivoBaja;
     private LocalDateTime fhBaja;
     private String idUserBaja;
+    private int versionRow;
     private final LocalDateTime fhAlta;
     private final String idUserAlta;
 
@@ -42,6 +47,7 @@ public class FalActaArticuloInfringido {
         this.normativaId = normativaId;
         this.articuloId = articuloId;
         this.siActivo = true;
+        this.versionRow = 0;
         this.fhAlta = fhAlta;
         this.idUserAlta = idUserAlta;
     }
@@ -56,6 +62,8 @@ public class FalActaArticuloInfringido {
     public MotivoBajaArticuloInfringido getMotivoBaja() { return motivoBaja; }
     public LocalDateTime getFhBaja() { return fhBaja; }
     public String getIdUserBaja() { return idUserBaja; }
+    public int getVersionRow() { return versionRow; }
+    public void setVersionRow(int v) { this.versionRow = v; }
 
     public void darDeBaja(MotivoBajaArticuloInfringido motivo, LocalDateTime fhBaja, String idUserBaja) {
         if (!siActivo) throw new IllegalStateException("El artículo imputado ya está inactivo: id=" + id);
@@ -77,6 +85,7 @@ public class FalActaArticuloInfringido {
         c.motivoBaja = this.motivoBaja;
         c.fhBaja = this.fhBaja;
         c.idUserBaja = this.idUserBaja;
+        c.versionRow = this.versionRow;
         return c;
     }
 }

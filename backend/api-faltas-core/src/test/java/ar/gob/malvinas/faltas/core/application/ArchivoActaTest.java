@@ -64,24 +64,22 @@ class ArchivoActaTest {
     private long idMotivoReqObs;
 
     private void sembrarMotivos() {
-        idMotivoConReingreso = crearMotivo("M_CON_REINGRSO", false, true, false);
-        idMotivoSinReingreso = crearMotivo("M_SIN_REINGRSO", false, false, false);
-        idMotivoNulidad = crearMotivo("M_NULIDAD", true, false, false);
-        idMotivoReqObs = crearMotivo("M_REQ_OBS", false, true, true);
+        idMotivoConReingreso = crearMotivo("M_CONREI", false, true, false);
+        idMotivoSinReingreso = crearMotivo("M_SINREI", false, false, false);
+        idMotivoNulidad = crearMotivo("M_NULID", true, false, false);
+        idMotivoReqObs = crearMotivo("M_REQOBS", false, true, true);
     }
 
     private long crearMotivo(String cod, boolean nulidad, boolean reingreso, boolean reqObs) {
-        Long id = motivoRepo.nextId();
-        FalMotivoArchivo m = new FalMotivoArchivo(id, cod, "Nombre " + cod, null,
+        FalMotivoArchivo m = new FalMotivoArchivo(null, cod, "Nombre " + cod,
                 nulidad, reingreso, reqObs, true, FaltasClockTestSupport.FIXED.now(), "S");
         return motivoRepo.guardar(m).getId();
     }
 
     private FalActa crearActaActiva(BloqueActual bloque) {
-        Long id = actaRepo.nextId();
-        FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
+        FalActa acta = new FalActa(null, "uuid-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle 1", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null, FaltasClockTestSupport.FIXED.now(), "TEST");
+                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, FaltasClockTestSupport.FIXED.now(), "TEST");
         acta.setBloqueActual(bloque);
         return actaRepo.guardar(acta);
     }
@@ -98,7 +96,7 @@ class ArchivoActaTest {
 
             assertThat(archivoRepo.buscarActivoPorActa(acta.getId())).isPresent();
             assertThat(eventoRepo.buscarPorActa(acta.getId()))
-                    .anyMatch(e -> e.tipoEvt() == TipoEventoActa.ACTARCH);
+                    .anyMatch(e -> e.tipoEvt() == TipoEventoActa.ACTARC);
         }
 
         @Test

@@ -25,8 +25,11 @@ slices ni directorio `handoff/`:
 - [`10-domain/`](10-domain/) — dimensiones de estado y lifecycle, catálogo de bloques/estados/eventos, calendario de plazos, firma y notificación del fallo.
 - [`20-application/`](20-application/) — contratos de comandos de aplicación (catálogo general y familia de fallo).
 - [`30-projections/`](30-projections/) — snapshot, bandejas y acciones pendientes derivadas.
-- [`40-api/`](40-api/) — contratos HTTP de los endpoints productivos.
+- [`30-integrations/`](30-integrations/) — arquitectura conceptual y operación del bus de eventos municipal (Outbox/Bus/Inbox) y transferencia binaria Faltas↔Firmas.
+- [`40-api/`](40-api/) — contratos HTTP de los endpoints productivos y contratos de eventos de integración EDA.
+- [`40-domain/`](40-domain/) — spec de dominio complementaria: observaciones libres en `fal_observacion`.
 - [`50-persistence/`](50-persistence/) — estrategia e infraestructura JDBC, deltas InMemory/MariaDB, modelo lógico de MariaDB y decisiones DDL (todas cerradas).
+- [`60-geo/`](60-geo/) — arquitectura GeoDomicilios: modelo canónico, geocodificación y contratos del subsistema de georreferenciación.
 - [`90-roadmap/`](90-roadmap/) — roadmap vigente posterior al cierre de spec-as-source.
 
 ## 3. Registro documental
@@ -85,7 +88,13 @@ Para cualquier trabajo en `backend/api-faltas-core`:
 4. leer solamente el subconjunto adicional necesario para el alcance:
    [`20-application/command-contracts.md`](20-application/command-contracts.md),
    [`30-projections/snapshot-bandejas-acciones.md`](30-projections/snapshot-bandejas-acciones.md),
-   [`40-api/http-contracts.md`](40-api/http-contracts.md);
+   [`40-api/http-contracts.md`](40-api/http-contracts.md),
+   y, para la integración EDA con Firmas,
+   [`40-api/firma-event-contracts.md`](40-api/firma-event-contracts.md),
+   [`30-integrations/municipal-eventing.md`](30-integrations/municipal-eventing.md),
+   [`30-integrations/firma-binary-transfer.md`](30-integrations/firma-binary-transfer.md),
+   [`30-integrations/eventing-operations.md`](30-integrations/eventing-operations.md) y
+   [`50-persistence/firma-eda-physical-model.md`](50-persistence/firma-eda-physical-model.md);
 5. consultar código y tests como evidencia de conformidad;
 6. consultar documentación externa a esta spec (si existiera) únicamente como fuente de auditoría o diseño físico, nunca como autoridad normativa;
 7. detenerse y reportar si existe una contradicción no resuelta.

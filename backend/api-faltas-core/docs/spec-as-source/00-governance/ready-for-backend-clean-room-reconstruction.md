@@ -7,6 +7,16 @@
 > sin acceso al codigo Java productivo actual, los tests internos, la historia
 > Git ni documentacion externa no canonica.
 
+> **Nota de superación parcial (2026-08-04).** El Gate 1 certificó suficiencia
+> documental para un backend cuyo alta de acta era progresiva (bloque `CAPT`, evento
+> `ACTCAP`, comando `CompletarCaptura`: los tres eliminados y prohibidos como productivos).
+> `ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853` reemplazó ese
+> modelo por un alta integral en `ENRI`
+> (ver [`../20-application/command-contracts.md`](../20-application/command-contracts.md)).
+> La suficiencia documental para una reconstrucción clean-room debe reevaluarse contra
+> el modelo vigente una vez cerradas las waves de esa remediación; este documento no se
+> reescribe para simular que ya certificó el modelo nuevo.
+
 ## 1. Dos gates separados
 
 ### Gate 1: READY_FOR_BACKEND_CLEAN_ROOM_RECONSTRUCTION

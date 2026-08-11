@@ -40,7 +40,12 @@ import ar.gob.malvinas.faltas.core.domain.enums.ResultadoResolucionApelacion;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDiaNoComputable;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoDocumentoPersona;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoPersona;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
+import ar.gob.malvinas.faltas.core.domain.model.DocumentoPersona;
+import ar.gob.malvinas.faltas.core.domain.model.FalPersona;
+import ar.gob.malvinas.faltas.core.repository.PersonaRepository;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaEconomiaProyeccion;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.domain.model.FalBloqueanteMaterial;
@@ -173,7 +178,8 @@ class SpecAsSourceGuardrailTest {
             "NORMATIVE", "SUPPORTING_CURRENT", "PRE_DDL_PLAN");
 
     private static final List<String> TERMINOS_PROHIBIDOS = List.of(
-            "PAGCON", "ACTCER", "APELAC", "DRVEXT", "D3_DOCUMENTAL");
+            "PAGCON", "ACTCER", "APELAC", "DRVEXT", "D3_DOCUMENTAL",
+            "ACTCAP", "COMPLETAR_CAPTURA", "CompletarCaptura");
 
     /**
      * Marcadores de negacion/prohibicion. Un termino obsoleto solo esta documentado
@@ -1851,12 +1857,12 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("el documento UX del frontend no referencia docs-trabajo")
-        void ux_demo_overview_sin_docs_trabajo() throws IOException {
-            String contenido = leerDesdeRepo("apps/web-direccion-faltas/docs/00-ux-demo-overview.md");
-            assertThat(contenido)
-                    .as("apps/web-direccion-faltas/docs/00-ux-demo-overview.md no debe referenciar docs-trabajo/ (eliminado)")
-                    .doesNotContain("docs-trabajo/");
+        @DisplayName("el documento UX del frontend ha sido eliminado (MANIFEST-010/Wave F)")
+        void ux_demo_overview_sin_docs_trabajo() {
+            Path archivo = repoRoot.resolve("apps/web-direccion-faltas/docs/00-ux-demo-overview.md");
+            assertThat(Files.exists(archivo))
+                    .as("apps/web-direccion-faltas/docs/00-ux-demo-overview.md debe haber sido eliminado (MANIFEST-010)")
+                    .isFalse();
         }
     }
 
@@ -1887,15 +1893,16 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("ddl-decisions.md registra exactamente 27 decisiones cerradas (20 originales + 4 transversales + 3 CORRECCION-10)")
+        @DisplayName("ddl-decisions.md registra exactamente 29 decisiones cerradas (28 previas + DECISION_DDL-SIN-CHECKS-CODIGOS-01)")
         void exactamente_24_decisiones_cerradas() throws IOException {
             String contenido = leerDdlDecisiones();
             long conteo = contenido.lines()
                     .filter(l -> l.startsWith("### `DECISION_DDL-"))
                     .count();
             assertThat(conteo)
-                    .as("ddl-decisions.md debe registrar exactamente 27 decisiones cerradas (20 originales + 4 transversales + 3 CORRECCION-10)")
-                    .isEqualTo(27L);
+                    .as("ddl-decisions.md debe registrar exactamente 29 decisiones cerradas (28 previas "
+                            + "+ DECISION_DDL-SIN-CHECKS-CODIGOS-01 de ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853)")
+                    .isEqualTo(29L);
         }
 
         @Test
@@ -2360,7 +2367,7 @@ class SpecAsSourceGuardrailTest {
         void inmemory_snapshot_repo_retorna_copia_en_read() {
             InMemoryActaSnapshotRepository repo = new InMemoryActaSnapshotRepository();
             FalActaSnapshot original = new FalActaSnapshot(1L);
-            original.setBloqueActual(BloqueActual.CAPT);
+            original.setBloqueActual(BloqueActual.ENRI);
             repo.guardar(original);
 
             FalActaSnapshot leida = repo.buscarPorActa(1L).orElseThrow();
@@ -2369,7 +2376,7 @@ class SpecAsSourceGuardrailTest {
             FalActaSnapshot segundaLectura = repo.buscarPorActa(1L).orElseThrow();
             assertThat(segundaLectura.getBloqueActual())
                     .as("La modificacion de la copia no debe contaminar el store (copy-on-read garantizado)")
-                    .isEqualTo(BloqueActual.CAPT);
+                    .isEqualTo(BloqueActual.ENRI);
         }
 
         @Test
@@ -2799,7 +2806,7 @@ class SpecAsSourceGuardrailTest {
         @DisplayName("ActaService tiene exigirActor() que lanza PrecondicionVioladaException cuando contexto es null")
         void exige_actor_sin_fallback() {
             ar.gob.malvinas.faltas.core.application.service.ActaService svc =
-                    new ar.gob.malvinas.faltas.core.application.service.ActaService(
+                    ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport.actaService(
                             new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaRepository(),
                             new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaEventoRepository(),
                             new ar.gob.malvinas.faltas.core.repository.memory.InMemoryActaSnapshotRepository(),
@@ -2821,8 +2828,10 @@ class SpecAsSourceGuardrailTest {
             assertThatThrownBy(() -> svc.labrar(
                     new ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand(
                             ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO,
-                            null, null, null, null, null, null, null, null, null, null,
+                            null, null, null, null, null, null, null, null, null, null, null, null,
                             ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                            ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor
+                                    .PRESENTE_NO_APORTA_DATOS,
                             null)))
                     .as("sin ActorContext, labrar debe lanzar PrecondicionVioladaException")
                     .isInstanceOf(ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException.class)
@@ -3004,6 +3013,1435 @@ class SpecAsSourceGuardrailTest {
             assertThat(contenido)
                     .as("current-roadmap.md no debe contener 'NO_EXPLICIT_CODE pendientes de decision fisica'")
                     .doesNotContain("NO_EXPLICIT_CODE pendientes de decision fisica");
+        }
+    }
+
+    // =====================================================================
+    // G-28: observaciones - nombres fisicos, enum canonico y frontera transaccional
+    // =====================================================================
+
+    /**
+     * Protege las tres decisiones documentales de `DECISION_OBS-NAMES-01`,
+     * `DECISION_OBS-ENUM-01` y `DECISION_OBS-TX-01`.
+     *
+     * Los guardrails son deliberadamente estructurales (tokens y filas de tabla) y no
+     * dependen de la prosa: la spec puede explicar el drift fisico del COMMENT cuanto
+     * quiera sin romperlos.
+     */
+    @Nested
+    @DisplayName("G-28: observaciones - nombres fisicos, enum canonico y frontera transaccional")
+    class G28ObservacionNombresYFrontera {
+
+        private static final Path OBSERVACIONES =
+                Paths.get("docs/spec-as-source/40-domain/observaciones.md");
+        private static final Path DDL_DECISIONS =
+                Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md");
+        private static final Path ACTA_SERVICE = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/"
+                + "core/application/service/ActaService.java");
+        private static final Path DDL_FUENTE =
+                Paths.get("..", "..", "database", "ddl", "create-bod-faltas-domain.sql");
+
+        /** Ninguno existe en el motor ni en el DDL fuente: `DECISION_OBS-NAMES-01`. */
+        private static final List<String> NOMBRES_OBSOLETOS =
+                List.of("idx_obs_entidad", "idx_obs_ctx_acta", "fk_obs_acta_ctx");
+
+        private static final List<String> NOMBRES_CANONICOS =
+                List.of("ix_obs_entidad", "ix_obs_acta_contexto", "fk_obs_acta_contexto");
+
+        /** Fila de datos de la tabla del enum: codigo numerico y nombre entre backticks. */
+        private static final Pattern PATRON_FILA_ORIGEN =
+                Pattern.compile("^\\|\\s*(\\d+)\\s*\\|\\s*`(\\w+)`\\s*\\|");
+
+        /**
+         * Mismo criterio que G-6 para los terminos obsoletos: un alias muerto solo esta
+         * documentado legitimamente cuando su propia linea lo marca como prohibido, o
+         * cuando el heading mas cercano hacia arriba lo hace. Fuera de esas dos formas se
+         * interpreta como uso vigente y el guardrail falla.
+         */
+        @Test
+        @DisplayName("los nombres obsoletos de indices y FK no se usan como vigentes en la spec")
+        void nombres_obsoletos_ausentes_en_toda_la_spec() throws IOException {
+            List<String> violaciones = new ArrayList<>();
+            for (Path archivo : listarMarkdownDeLaSpec()) {
+                List<String> lineas = Files.readAllLines(archivo, StandardCharsets.UTF_8);
+                for (int i = 0; i < lineas.size(); i++) {
+                    for (String obsoleto : NOMBRES_OBSOLETOS) {
+                        if (!lineas.get(i).contains(obsoleto)) {
+                            continue;
+                        }
+                        if (tieneMarcadorDeProhibicion(lineas.get(i))
+                                || enSeccionDeProhibicion(lineas, i)) {
+                            continue;
+                        }
+                        violaciones.add(pathRegistroDe(archivo) + ":" + (i + 1)
+                                + " usa el nombre obsoleto '" + obsoleto
+                                + "' sin marcarlo como prohibido");
+                    }
+                }
+            }
+            assertThat(violaciones)
+                    .as("DECISION_OBS-NAMES-01: los nombres obsoletos de fal_observacion"
+                        + " no pueden aparecer como nombres vigentes")
+                    .isEmpty();
+        }
+
+        private boolean tieneMarcadorDeProhibicion(String linea) {
+            String lineaMinuscula = linea.toLowerCase(Locale.ROOT);
+            for (String marcador : MARCADORES_NEGACION) {
+                if (lineaMinuscula.contains(marcador)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean enSeccionDeProhibicion(List<String> lineas, int indiceLinea) {
+            for (int i = indiceLinea; i >= 0; i--) {
+                String linea = lineas.get(i).trim();
+                if (linea.startsWith("#")) {
+                    return tieneMarcadorDeProhibicion(linea);
+                }
+            }
+            return false;
+        }
+
+        /**
+         * El bloque de constraints de la seccion 2.3 es el que un lector copia: ahi los
+         * nombres obsoletos no pueden aparecer ni siquiera marcados.
+         */
+        @Test
+        @DisplayName("el bloque de constraints de la seccion 2.3 no menciona ningun alias obsoleto")
+        void bloque_de_constraints_sin_aliases_obsoletos() throws IOException {
+            List<String> lineas = Files.readAllLines(OBSERVACIONES, StandardCharsets.UTF_8);
+            String seccion = extraerSeccion(lineas, Pattern.compile("^### 2\\.3 Constraints"));
+            for (String obsoleto : NOMBRES_OBSOLETOS) {
+                assertThat(seccion)
+                        .as("La seccion 2.3 de observaciones.md no debe mencionar '%s'", obsoleto)
+                        .doesNotContain(obsoleto);
+            }
+            for (String canonico : NOMBRES_CANONICOS) {
+                assertThat(seccion)
+                        .as("La seccion 2.3 de observaciones.md debe declarar '%s'", canonico)
+                        .contains(canonico);
+            }
+        }
+
+        @Test
+        @DisplayName("observaciones.md declara los tres nombres fisicos canonicos")
+        void nombres_canonicos_presentes_en_observaciones() throws IOException {
+            String contenido = Files.readString(OBSERVACIONES, StandardCharsets.UTF_8);
+            for (String canonico : NOMBRES_CANONICOS) {
+                assertThat(contenido)
+                        .as("observaciones.md debe declarar el nombre fisico '%s'", canonico)
+                        .contains(canonico);
+            }
+        }
+
+        /** La spec no puede quedar alineada con un DDL fuente que diga otra cosa. */
+        @Test
+        @DisplayName("los nombres canonicos coinciden con create-bod-faltas-domain.sql")
+        void nombres_canonicos_coinciden_con_el_ddl_fuente() throws IOException {
+            String ddl = Files.readString(DDL_FUENTE, StandardCharsets.UTF_8);
+            for (String canonico : NOMBRES_CANONICOS) {
+                assertThat(ddl)
+                        .as("El DDL fuente debe declarar '%s'", canonico)
+                        .contains(canonico);
+            }
+            for (String obsoleto : NOMBRES_OBSOLETOS) {
+                assertThat(ddl)
+                        .as("El DDL fuente no debe declarar el nombre obsoleto '%s'", obsoleto)
+                        .doesNotContain(obsoleto);
+            }
+        }
+
+        /**
+         * `DECISION_OBS-ENUM-01`: la tabla normativa fija los tres pares codigo/nombre y
+         * coincide exactamente con el enum Java. Se parsea solo la tabla de la seccion 4,
+         * de modo que las explicaciones sobre el COMMENT fisico no intervienen.
+         */
+        @Test
+        @DisplayName("origen_observacion_tabla_canonica: 1 USUARIO, 2 SISTEMA, 3 INTEGRACION")
+        void origen_observacion_tabla_canonica() throws IOException {
+            List<String> lineas = Files.readAllLines(OBSERVACIONES, StandardCharsets.UTF_8);
+            int inicio = -1;
+            for (int i = 0; i < lineas.size(); i++) {
+                if (lineas.get(i).startsWith("## 4. Enum `OrigenObservacion`")) {
+                    inicio = i;
+                    break;
+                }
+            }
+            assertThat(inicio)
+                    .as("observaciones.md debe tener la seccion '## 4. Enum `OrigenObservacion`'")
+                    .isGreaterThanOrEqualTo(0);
+
+            Map<String, String> nombrePorCodigo = new LinkedHashMap<>();
+            for (int i = inicio + 1; i < lineas.size(); i++) {
+                if (lineas.get(i).startsWith("## ")) {
+                    break;
+                }
+                Matcher m = PATRON_FILA_ORIGEN.matcher(lineas.get(i));
+                if (m.find()) {
+                    nombrePorCodigo.put(m.group(1), m.group(2));
+                }
+            }
+
+            assertThat(nombrePorCodigo)
+                    .as("Tabla normativa de OrigenObservacion en observaciones.md")
+                    .containsExactlyInAnyOrderEntriesOf(
+                            Map.of("1", "USUARIO", "2", "SISTEMA", "3", "INTEGRACION"));
+
+            for (ar.gob.malvinas.faltas.core.domain.enums.OrigenObservacion valor
+                    : ar.gob.malvinas.faltas.core.domain.enums.OrigenObservacion.values()) {
+                assertThat(nombrePorCodigo.get(String.valueOf(valor.codigo())))
+                        .as("El codigo %s documentado debe ser %s", valor.codigo(), valor.name())
+                        .isEqualTo(valor.name());
+            }
+        }
+
+        /**
+         * Las etiquetas del COMMENT fisico no pueden colarse como valores del dominio: la
+         * tabla normativa es la unica fuente de nombres, y el drift vive registrado como
+         * decision DDL, no como alternativa vigente.
+         */
+        @Test
+        @DisplayName("comment_fisico_obsoleto_registrado_en_ddl_decisions")
+        void comment_fisico_obsoleto_registrado_en_ddl_decisions() throws IOException {
+            String ddlDecisiones = Files.readString(DDL_DECISIONS, StandardCharsets.UTF_8);
+            assertThat(ddlDecisiones)
+                    .as("El COMMENT fisico obsoleto de origen_observacion debe estar registrado"
+                        + " como DECISION_DDL-OBS-COMMENT-01")
+                    .contains("DECISION_DDL-OBS-COMMENT-01")
+                    .contains("origen_observacion");
+
+            String observaciones = Files.readString(OBSERVACIONES, StandardCharsets.UTF_8);
+            assertThat(observaciones)
+                    .as("observaciones.md debe apuntar a la decision DDL en vez de duplicarla")
+                    .contains("DECISION_DDL-OBS-COMMENT-01");
+        }
+
+        /**
+         * Asercion invertida en WAVE 1A2-B2, el slice que implementa
+         * {@code DECISION_OBS-TX-01}. Hasta B1.5C la decision se declaraba documentada y
+         * bloqueada; desde B2 tiene que declararse implementada, con la frontera y el rollback
+         * total explicitos. Un documento que siguiera diciendo "no implementada" con la
+         * anotacion presente en el codigo seria drift documental.
+         */
+        @Test
+        @DisplayName("DECISION_OBS-TX-01 declara ActaService.labrar como frontera implementada")
+        void decision_obs_tx_01_declara_frontera_implementada() throws IOException {
+            String contenido = Files.readString(OBSERVACIONES, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("DECISION_OBS-TX-01 debe estar declarada en observaciones.md")
+                    .contains("DECISION_OBS-TX-01")
+                    .contains("ActaService.labrar")
+                    .contains("id_persona_infractor");
+            String enMinuscula = contenido.toLowerCase(Locale.ROOT);
+            assertThat(enMinuscula)
+                    .as("DECISION_OBS-TX-01 debe declarar su implementacion y el rollback total")
+                    .contains("implementada")
+                    .contains("rollback total");
+            assertThat(enMinuscula)
+                    .as("y ya no puede declararse bloqueada ni pendiente de implementacion")
+                    .doesNotContain("sigue bloqueada")
+                    .doesNotContain("no implementada");
+        }
+
+        /**
+         * Contraparte material del estado "implementada": la anotacion existe y esta sobre el
+         * metodo publico exacto que la decision declara como frontera, no sobre la clase.
+         */
+        @Test
+        @DisplayName("ActaService declara @Transactional sobre labrar")
+        void acta_service_declara_transactional_en_labrar() throws IOException {
+            String codigo = Files.readString(ACTA_SERVICE, StandardCharsets.UTF_8);
+            assertThat(codigo)
+                    .as("DECISION_OBS-TX-01 esta implementada: la frontera es el metodo labrar"
+                            + " (Wave 4 PARTE-3A ajusta el isolation level a READ_COMMITTED,"
+                            + " ver Javadoc de ActaService.labrar; sigue sobre el mismo metodo)")
+                    .contains("@Transactional(isolation = org.springframework.transaction.annotation"
+                            + ".Isolation.READ_COMMITTED)\n    public ComandoResultado labrar(LabrarActaCommand cmd)");
+            assertThat(codigo)
+                    .as("la demarcacion no se extiende a la clase entera")
+                    .doesNotContain("@Transactional\npublic class ActaService");
+        }
+
+        /**
+         * La lectura batch no puede convertirse en una segunda semantica del historial: la
+         * decision tiene que seguir declarando el orden canonico, la inclusion de las
+         * inactivas y que la ausencia representa el historial vacio.
+         */
+        @Test
+        @DisplayName("DECISION-OBS-BATCH-01 declara el contrato batch sin cambiar el orden canonico")
+        void decision_obs_batch_01_declara_el_contrato() throws IOException {
+            String contenido = Files.readString(OBSERVACIONES, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("DECISION-OBS-BATCH-01 debe estar declarada en observaciones.md")
+                    .contains("DECISION-OBS-BATCH-01")
+                    .contains("listarPorEntidades");
+            String plano = contenido.replaceAll("\\s+", " ");
+            assertThat(plano)
+                    .as("El batch debe conservar el orden canonico por propietario")
+                    .contains("cada historial conserva el orden canonico fh_alta ASC, id ASC");
+            assertThat(plano)
+                    .as("El batch debe incluir activas e inactivas, como la lectura individual")
+                    .contains("se incluyen activas e inactivas");
+            assertThat(plano)
+                    .as("La ausencia del propietario en el mapa debe ser el historial vacio")
+                    .contains("puede estar ausente del mapa");
+            assertThat(plano)
+                    .as("Una coleccion vacia no debe consultar la persistencia")
+                    .contains("una coleccion vacia no ejecuta consulta alguna contra el motor");
+            assertThat(plano)
+                    .as("El batch no debe habilitar DDL ni un indice nuevo")
+                    .contains("No se crea ningún índice nuevo y no se ejecuta DDL por esta decisión.");
+            assertThat(plano)
+                    .as("Las dos lecturas individuales deben conservar su contrato")
+                    .contains("`listarPorEntidad` y `listarActivasPorEntidad` conservan su contrato");
+        }
+
+        /** Contraparte material: la remediacion fisica de fal_observacion sigue pendiente. */
+        @Test
+        @DisplayName("el batch no adelanta la remediacion fisica de fal_observacion")
+        void batch_no_adelanta_la_remediacion_fisica() throws IOException {
+            String plano = Files.readString(OBSERVACIONES, StandardCharsets.UTF_8)
+                    .replaceAll("\\s+", " ");
+            assertThat(plano)
+                    .as("La decision batch debe declarar que la remediacion fisica sigue pendiente")
+                    .contains("sigue pendiente y esta decisión no la adelanta ni la modifica");
+        }
+    }
+
+    // =====================================================================
+    // G-29: reglas de alta del acta (identificacion del infractor, QR, actor)
+    // =====================================================================
+
+    /**
+     * Cierre normativo de las tres reglas que bloqueaban la activacion del adaptador
+     * JDBC del acta. El grupo verifica que la spec las declare de forma inequivoca y
+     * que no reintroduzca las representaciones prohibidas.
+     *
+     * <p>Deliberadamente no verifica codigo productivo: las tres reglas estan
+     * definidas y todavia no implementadas. La contraparte de implementacion se
+     * agrega cuando el codigo exista.
+     */
+    @Nested
+    @DisplayName("G-29: reglas de alta del acta - infractor, QR y actor autenticado")
+    class G29ActaAltaRules {
+
+        private static final Path CATALOGOS =
+                Paths.get("docs/spec-as-source/10-domain/states-events-catalogs.md");
+        private static final Path COMANDOS =
+                Paths.get("docs/spec-as-source/20-application/command-contracts.md");
+        private static final Path DDL_DECISIONS_B15A =
+                Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md");
+        private static final Path MODELO =
+                Paths.get("docs/spec-as-source/50-persistence/mariadb-logical-model.md");
+
+        /** Los seis significados de la situacion de identificacion, sin fusionar. */
+        private static final List<String> SITUACIONES = List.of(
+                "IDENTIFICADO_COMPLETO",
+                "IDENTIFICADO_PARCIAL",
+                "PRESENTE_SE_NIEGA",
+                "PRESENTE_NO_APORTA_DATOS",
+                "AUSENTE",
+                "DATOS_INSUFICIENTES");
+
+        @Test
+        @DisplayName("el catalogo declara los 6 significados de la situacion de identificacion")
+        void catalogo_declara_las_seis_situaciones() throws IOException {
+            String contenido = Files.readString(CATALOGOS, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("states-events-catalogs.md debe declarar el catalogo de la situacion")
+                    .contains("## SituacionIdentificacionInfractor");
+            for (String situacion : SITUACIONES) {
+                assertThat(contenido)
+                        .as("El catalogo debe declarar el significado '%s'", situacion)
+                        .contains(situacion);
+            }
+        }
+
+        /**
+         * Los seis codigos deben ser 1..6 sin huecos ni repeticiones: es la forma de que
+         * ningun par de significados quede indistinguible.
+         */
+        @Test
+        @DisplayName("los 6 codigos de la situacion son 1..6, unicos y sin fusionar")
+        void codigos_de_situacion_completos_y_unicos() throws IOException {
+            List<String> lineas = Files.readAllLines(CATALOGOS, StandardCharsets.UTF_8);
+            String seccion = extraerSeccion(lineas,
+                    Pattern.compile("^## SituacionIdentificacionInfractor"));
+            Map<String, String> nombrePorCodigo = new LinkedHashMap<>();
+            Pattern filaEnum = Pattern.compile("^\\|\\s*([A-Z_]+)\\s*\\|\\s*(\\d)\\s*\\|");
+            for (String linea : seccion.lines().toList()) {
+                Matcher m = filaEnum.matcher(linea);
+                if (m.find()) {
+                    nombrePorCodigo.put(m.group(2), m.group(1));
+                }
+            }
+            assertThat(nombrePorCodigo)
+                    .as("Tabla normativa de SituacionIdentificacionInfractor")
+                    .containsOnlyKeys("1", "2", "3", "4", "5", "6");
+            assertThat(nombrePorCodigo.values())
+                    .as("Ningun significado puede repetirse en dos codigos")
+                    .doesNotHaveDuplicates()
+                    .containsExactlyInAnyOrderElementsOf(SITUACIONES);
+        }
+
+        /**
+         * La matriz situacion/persona es la regla operativa: hay persona exactamente en
+         * las dos situaciones de identificacion.
+         */
+        @Test
+        @DisplayName("la matriz situacion/id_persona_infractor esta declarada")
+        void matriz_situacion_persona_declarada() throws IOException {
+            String contenido = Files.readString(CATALOGOS, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("El catalogo debe declarar la matriz contra id_persona_infractor")
+                    .contains("id_persona_infractor");
+            assertThat(contenido.toLowerCase(Locale.ROOT))
+                    .as("La matriz debe decir que hay persona solo cuando hay identificacion")
+                    .contains("hay persona exactamente cuando hay");
+        }
+
+        @Test
+        @DisplayName("la persona centinela esta prohibida de forma explicita")
+        void persona_centinela_prohibida() throws IOException {
+            String catalogos = Files.readString(CATALOGOS, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
+            assertThat(catalogos)
+                    .as("El catalogo debe prohibir explicitamente la persona centinela")
+                    .contains("persona centinela")
+                    .contains("prohibid");
+            assertThat(catalogos)
+                    .as("Tampoco se admite documento inventado ni PK reservada")
+                    .contains("documento inventado");
+
+            String decisiones = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8)
+                    .toLowerCase(Locale.ROOT);
+            assertThat(decisiones)
+                    .as("La decision fisica debe repetir la prohibicion de persona centinela")
+                    .contains("persona centinela");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-ACTA-INFR-01 define columna, CHECK y nulabilidad")
+        void decision_infractor_definida() throws IOException {
+            String contenido = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("La decision fisica del infractor debe estar registrada")
+                    .contains("DECISION_DDL-ACTA-INFR-01")
+                    .contains("situacion_identificacion_infractor SMALLINT NOT NULL")
+                    .contains("chk_acta_infractor_coherente")
+                    .contains("chk_acta_situacion_infractor")
+                    .contains("BIGINT NULL");
+            assertThat(contenido)
+                    .as("El modelo debe apuntar a la decision del infractor")
+                    .isNotEmpty();
+            assertThat(Files.readString(MODELO, StandardCharsets.UTF_8))
+                    .as("mariadb-logical-model.md debe referenciar la decision del infractor")
+                    .contains("DECISION_DDL-ACTA-INFR-01");
+        }
+
+        /**
+         * Contraparte de implementacion agregada en WAVE 1A2-B1.5B1. La verificacion
+         * normativa no se borra: lo que cambia es cual es el esquema ejecutado. Antes
+         * del ALTER este test exigia {@code id_persona_infractor BIGINT NOT NULL};
+         * ahora exige que el modelo describa la forma fisica realmente aplicada y que
+         * la redaccion obsoleta no reaparezca.
+         */
+        @Test
+        @DisplayName("el modelo describe el esquema ejecutado tras aplicar DECISION_DDL-ACTA-INFR-01")
+        void modelo_describe_el_esquema_ejecutado() throws IOException {
+            String contenido = Files.readString(MODELO, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("El ALTER ya se ejecuto: el modelo describe id_persona_infractor BIGINT NULL")
+                    .containsPattern("(?i)id_persona_infractor BIGINT NULL");
+            assertThat(contenido)
+                    .as("La redaccion NOT NULL quedo obsoleta y no debe reaparecer")
+                    .doesNotContainPattern("(?i)id_persona_infractor BIGINT NOT NULL");
+            assertThat(contenido)
+                    .as("El modelo declara la columna nueva sin default y los dos CHECK canonicos")
+                    .containsPattern("(?i)situacion_identificacion_infractor SMALLINT NOT NULL")
+                    .contains("chk_acta_situacion_infractor")
+                    .contains("chk_acta_infractor_coherente");
+            assertThat(contenido)
+                    .as("El modelo registra la aplicacion fisica, no la promesa")
+                    .contains("DDL_EXECUTED");
+        }
+
+        /**
+         * Contraparte de implementacion: el paquete forward/rollback y sus tres
+         * diagnosticos existen con los nombres canonicos y el orden que la decision fija.
+         */
+        @Test
+        @DisplayName("el paquete DDL de la situacion de identificacion existe y respeta el orden de la decision")
+        void paquete_ddl_de_la_situacion_existe() throws IOException {
+            Path raiz = Paths.get("..", "..", "database");
+            for (String archivo : List.of(
+                    "ddl/alter-fal-acta-situacion-infractor-001-forward.sql",
+                    "ddl/alter-fal-acta-situacion-infractor-001-rollback.sql",
+                    "diagnostics/verify-fal-acta-situacion-infractor-001-precheck.sql",
+                    "diagnostics/verify-fal-acta-situacion-infractor-001-postcheck.sql",
+                    "diagnostics/verify-fal-acta-situacion-infractor-001-rollback-precheck.sql")) {
+                assertThat(raiz.resolve(archivo))
+                        .as("El paquete de DECISION_DDL-ACTA-INFR-01 debe incluir %s", archivo)
+                        .exists().isRegularFile();
+            }
+
+            String forward = Files.readString(
+                    raiz.resolve("ddl/alter-fal-acta-situacion-infractor-001-forward.sql"),
+                    StandardCharsets.UTF_8);
+            assertThat(forward.indexOf("ADD COLUMN situacion_identificacion_infractor SMALLINT NULL"))
+                    .as("El ADD COLUMN nullable precede al backfill")
+                    .isGreaterThan(0)
+                    .isLessThan(forward.indexOf("MODIFY COLUMN situacion_identificacion_infractor SMALLINT NOT NULL"));
+            assertThat(forward.indexOf("MODIFY COLUMN id_persona_infractor BIGINT NULL"))
+                    .as("Los dos CHECK se agregan despues de ambos MODIFY")
+                    .isLessThan(forward.indexOf("ADD CONSTRAINT chk_acta_situacion_infractor"));
+            assertThat(forward.indexOf("ADD CONSTRAINT chk_acta_situacion_infractor"))
+                    .isLessThan(forward.indexOf("ADD CONSTRAINT chk_acta_infractor_coherente"));
+            // El nombre obsoleto puede citarse en un comentario como antecedente, pero no
+            // puede aparecer como columna en el SQL ejecutable.
+            String forwardEjecutable = forward.lines()
+                    .filter(l -> !l.stripLeading().startsWith("--"))
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            assertThat(forwardEjecutable)
+                    .as("El backfill usa el nombre fisico canonico tipo_documento")
+                    .contains("p.tipo_documento IS NOT NULL")
+                    .contains("p.tipo_documento IS NULL");
+            assertThat(forwardEjecutable)
+                    .as("tipo_doc esta prohibido como nombre de columna en el SQL ejecutable")
+                    .doesNotContainPattern("(?<![A-Za-z_])tipo_doc(?!umento)");
+
+            String rollback = Files.readString(
+                    raiz.resolve("ddl/alter-fal-acta-situacion-infractor-001-rollback.sql"),
+                    StandardCharsets.UTF_8);
+            assertThat(rollback.indexOf("DROP CONSTRAINT chk_acta_infractor_coherente"))
+                    .as("El rollback recorre el orden inverso exacto")
+                    .isGreaterThan(0)
+                    .isLessThan(rollback.indexOf("DROP CONSTRAINT chk_acta_situacion_infractor"));
+            assertThat(rollback.indexOf("DROP CONSTRAINT chk_acta_situacion_infractor"))
+                    .isLessThan(rollback.indexOf("MODIFY COLUMN id_persona_infractor BIGINT NOT NULL"));
+            assertThat(rollback.indexOf("MODIFY COLUMN id_persona_infractor BIGINT NOT NULL"))
+                    .isLessThan(rollback.indexOf("DROP COLUMN situacion_identificacion_infractor"));
+        }
+
+        /**
+         * Las dos unicidades no primarias de fal_acta protegen valores que el sistema
+         * genera, de modo que su violacion no puede convertirse en contrato funcional. La
+         * decision tiene que seguir declarando las cuatro prohibiciones, no solo existir.
+         */
+        @Test
+        @DisplayName("DECISION-ACTA-UNIQUE-01 declara las unicidades tecnicas y sus prohibiciones")
+        void decision_unicidades_del_acta_registrada() throws IOException {
+            String contenido = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("La decision de unicidades del acta debe estar registrada con sus dos constraints")
+                    .contains("DECISION-ACTA-UNIQUE-01")
+                    .contains("uq_fal_acta_id_tecnico")
+                    .contains("uq_fal_acta_codigo_qr");
+            assertThat(contenido)
+                    .as("La decision debe prohibir crear una excepcion funcional para estas colisiones")
+                    .contains("ActaDuplicadaException")
+                    .contains("ConflictoActaException");
+            assertThat(contenido)
+                    .as("La decision debe declarar que no se agrega contrato HTTP de conflicto")
+                    .contains("No existe ni se agrega un mapeo a `409 CONFLICT`");
+            assertThat(contenido)
+                    .as("La decision debe declarar el delta aceptado del doble de prueba")
+                    .contains("`InMemoryActaRepository` **no simula** estas dos unicidades");
+            assertThat(contenido)
+                    .as("La decision debe acotar la unicidad y no extenderla a la numeracion")
+                    .contains("**No se agrega** `UNIQUE` sobre `nro_acta`");
+            assertThat(contenido)
+                    .as("La decision debe prohibir el reintento silencioso con otro UUID")
+                    .contains("**no se reintenta** con otro UUID");
+        }
+
+        @Test
+        @DisplayName("DECISION_DDL-ACTA-QR-01 fija el formato canonico y su algoritmo")
+        void decision_qr_definida() throws IOException {
+            String contenido = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("La decision del QR debe estar registrada con formato y algoritmo")
+                    .contains("DECISION_DDL-ACTA-QR-01")
+                    .contains("HMAC-SHA-256")
+                    .contains("QR0.");
+            assertThat(contenido.toLowerCase(Locale.ROOT))
+                    .as("El token debe declararse deterministico y derivado de id_tecnico")
+                    .contains("determinístico")
+                    .contains("id_tecnico");
+        }
+
+        /**
+         * El punto central de la regla: el QR se deriva de la identidad tecnica y nunca
+         * de la PK, porque debe existir antes del INSERT.
+         */
+        @Test
+        @DisplayName("el QR se genera antes del alta desde id_tecnico y nunca desde id_acta")
+        void qr_previo_desde_id_tecnico() throws IOException {
+            String decisiones = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8);
+            assertThat(decisiones)
+                    .as("La decision del QR debe prohibir derivarlo de id_acta")
+                    .contains("nunca de `id_acta`");
+
+            String comandos = Files.readString(COMANDOS, StandardCharsets.UTF_8);
+            assertThat(comandos)
+                    .as("El contrato del alta debe exigir el QR previo derivado de id_tecnico")
+                    .contains("codigo_qr")
+                    .contains("id_tecnico")
+                    .contains("DECISION_DDL-ACTA-QR-01");
+        }
+
+        /** El ancho de la columna queda ratificado por la decision, no reversado. */
+        @Test
+        @DisplayName("la decision del QR ratifica VARCHAR(128) en lugar de ensancharlo")
+        void decision_qr_ratifica_el_ancho() throws IOException {
+            String decisiones = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8);
+            assertThat(decisiones)
+                    .as("La decision del QR debe conservar VARCHAR(128)")
+                    .contains("`VARCHAR(128)`");
+            assertThat(Files.readString(MODELO, StandardCharsets.UTF_8))
+                    .as("El modelo debe conservar codigo_qr VARCHAR(128)")
+                    .contains("codigo_qr VARCHAR(128)");
+        }
+
+        @Test
+        @DisplayName("id_user_alta es el subject autenticado, hasta 36, sin FK ni catalogo")
+        void id_user_alta_es_subject_autenticado() throws IOException {
+            String contenido = Files.readString(COMANDOS, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("El contrato del alta debe declarar el origen de id_user_alta")
+                    .contains("id_user_alta")
+                    .contains("CHAR(36)");
+            String enMinuscula = contenido.toLowerCase(Locale.ROOT);
+            assertThat(enMinuscula)
+                    .as("id_user_alta no lleva FK, catalogo ni lookup")
+                    .contains("sin fk")
+                    .contains("sin catálogo")
+                    .contains("sin lookup");
+            assertThat(enMinuscula)
+                    .as("Un id_user_alta aportado por el cliente no es fuente de verdad")
+                    .contains("no es fuente de verdad");
+            assertThat(enMinuscula)
+                    .as("La ausencia de actor no se rellena con un usuario ficticio")
+                    .contains("usuario ficticio");
+        }
+
+        @Test
+        @DisplayName("el contrato del alta documenta la secuencia transaccional completa")
+        void secuencia_transaccional_documentada() throws IOException {
+            String contenido = Files.readString(COMANDOS, StandardCharsets.UTF_8);
+            assertThat(contenido)
+                    .as("La frontera transaccional del alta debe estar declarada en el comando")
+                    .contains("ActaService.labrar")
+                    .contains("DECISION_OBS-TX-01");
+            assertThat(contenido.toLowerCase(Locale.ROOT))
+                    .as("La secuencia debe exigir rollback total ante cualquier fallo")
+                    .contains("rollback total");
+        }
+
+        /**
+         * Las dos deudas de la wave del adaptador siguen abiertas y separadas: cerrar las
+         * reglas de alta no las resuelve.
+         */
+        @Test
+        @DisplayName("las reglas de alta no declaran resueltas las deudas del adaptador")
+        void deudas_del_adaptador_siguen_separadas() throws IOException {
+            String decisiones = Files.readString(DDL_DECISIONS_B15A, StandardCharsets.UTF_8);
+            assertThat(decisiones)
+                    .as("Ninguna de las dos decisiones nuevas puede afirmar que el bean ya se activa")
+                    .doesNotContain("JdbcActaRepository se activa")
+                    .doesNotContain("bean activo");
+        }
+    }
+
+    // =====================================================================
+    // G-30: documento e identidad de fal_persona (DECISION_DDL-PERS-01)
+    // =====================================================================
+
+    /**
+     * Cierre normativo del documento de {@code fal_persona}. Antes de este grupo la spec
+     * contenia dos versiones incompatibles de la misma decision: una declaraba
+     * {@code tipo_doc} / {@code nro_doc} opcionales con {@code UNIQUE(tipo_doc, nro_doc)},
+     * y el esquema ejecutado tenia {@code tipo_documento SMALLINT NOT NULL} y
+     * {@code nro_doc INT UNSIGNED NOT NULL} con {@code UNIQUE(tipo_documento, doc_key)}.
+     *
+     * <p>El grupo fija la version unica vigente y verifica que el modelo siga
+     * distinguiendo tres planos que no deben mezclarse: modelo objetivo normativo,
+     * esquema ejecutado actual y remediacion DDL pendiente.
+     *
+     * <p>Deliberadamente no verifica codigo productivo: la decision esta cerrada y
+     * todavia no implementada. La contraparte de implementacion se agrega cuando el
+     * codigo exista.
+     */
+    @Nested
+    @DisplayName("G-30: fal_persona - documento opcional, canonico y estructurado")
+    class G30PersonaDocumento {
+
+        private static final Path DECISIONES =
+                Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md");
+        private static final Path MODELO_PERS =
+                Paths.get("docs/spec-as-source/50-persistence/mariadb-logical-model.md");
+        private static final Path DELTAS =
+                Paths.get("docs/spec-as-source/50-persistence/inmemory-mariadb-deltas.md");
+        private static final Path CATALOGOS_PERS =
+                Paths.get("docs/spec-as-source/10-domain/states-events-catalogs.md");
+
+        private String decisiones() throws IOException {
+            return Files.readString(DECISIONES, StandardCharsets.UTF_8);
+        }
+
+        /**
+         * Una sola decision vigente. La redaccion anterior debe quedar marcada obsoleta
+         * en el mismo lugar, no borrada en silencio ni conservada como alternativa.
+         */
+        @Test
+        @DisplayName("DECISION_DDL-PERS-01 es unica y declara obsoleta la version anterior")
+        void decision_unica_con_predecesora_obsoleta() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("La decision del documento de persona debe estar registrada")
+                    .contains("DECISION_DDL-PERS-01");
+            assertThat(contenido)
+                    .as("La redaccion anterior debe quedar explicitamente marcada como obsoleta")
+                    .contains("OBSOLETA");
+            assertThat(Files.readString(MODELO_PERS, StandardCharsets.UTF_8))
+                    .as("El modelo debe registrar como obsoletos el tipo numerico y el nombre tipo_doc, "
+                            + "para que nadie los reintroduzca")
+                    .contains("declara obsoletas tanto `INT UNSIGNED NOT NULL` como los nombres `tipo_doc`");
+            assertThat(Files.readString(DELTAS, StandardCharsets.UTF_8))
+                    .as("Los deltas no pueden seguir afirmando la unicidad por (tipo_doc, nro_doc)")
+                    .doesNotContain("unicidad de persona por `(tipo_doc, nro_doc)`");
+        }
+
+        @Test
+        @DisplayName("tipo_documento es el nombre fisico y tipo_doc queda prohibido")
+        void tipo_documento_es_el_nombre_fisico() throws IOException {
+            assertThat(decisiones())
+                    .as("La decision debe fijar tipo_documento y prohibir tipo_doc como columna")
+                    .contains("`tipo_documento`")
+                    .contains("`tipo_doc` está prohibido como nombre físico");
+            assertThat(Files.readString(MODELO_PERS, StandardCharsets.UTF_8))
+                    .as("El modelo debe repetir la prohibicion de tipo_doc como nombre fisico")
+                    .contains("`tipo_doc` como nombre físico");
+            assertThat(Files.readString(CATALOGOS_PERS, StandardCharsets.UTF_8))
+                    .as("El catalogo de situaciones debe nombrar tipo_documento, no tipo_doc")
+                    .contains("`tipo_documento` y `nro_doc` informados")
+                    .doesNotContain("`tipo_doc` y `nro_doc` informados");
+        }
+
+        @Test
+        @DisplayName("el documento es opcional en conjunto: (tipo_documento IS NULL) = (nro_doc IS NULL)")
+        void documento_opcional_en_conjunto() throws IOException {
+            assertThat(decisiones())
+                    .as("La coherencia del par documento debe estar declarada como CHECK")
+                    .contains("(tipo_documento IS NULL) = (nro_doc IS NULL)")
+                    .contains("chk_fal_persona_doc_coherente");
+            assertThat(decisiones().toLowerCase(Locale.ROOT))
+                    .as("La persona sin documento debe declararse estado modelado y valido")
+                    .contains("sin documento");
+        }
+
+        /** El ancho definitivo es 12 y el tipo anterior queda declarado obsoleto. */
+        @Test
+        @DisplayName("nro_doc queda cerrado como VARCHAR(12) NULL y no vuelve a INT UNSIGNED")
+        void nro_doc_es_varchar_12() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("nro_doc debe quedar cerrado como VARCHAR(12)")
+                    .contains("`VARCHAR(12)`");
+            assertThat(contenido)
+                    .as("La decision debe declarar obsoleto el tipo numerico ejecutado")
+                    .contains("`nro_doc INT UNSIGNED NOT NULL`");
+            assertThat(contenido)
+                    .as("El ancho no se amplia por prevencion ni se reduce")
+                    .contains("no `VARCHAR(20)`")
+                    .contains("no `VARCHAR(10)`");
+        }
+
+        @Test
+        @DisplayName("los documentos alfanumericos se soportan y la conversion a entero esta prohibida")
+        void alfanumericos_soportados_y_conversion_prohibida() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("El catalogo de tipos debe contemplar los tipos alfanumericos")
+                    .contains("PASAPORTE")
+                    .contains("DNI_EXTRANJERO");
+            assertThat(contenido)
+                    .as("Convertir un documento alfanumerico a entero queda prohibido")
+                    .contains("convertir un documento alfanumérico a entero")
+                    .contains("descartar caracteres para forzar `INT UNSIGNED`");
+            assertThat(contenido)
+                    .as("El truncamiento silencioso queda prohibido")
+                    .contains("truncar en silencio");
+        }
+
+        @Test
+        @DisplayName("CUIT/CUIL queda estructurado en prefijo + cuerpo de 8 + digito verificador")
+        void cuit_cuil_estructurado() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("Los tres componentes de CUIT/CUIL deben declararse")
+                    .contains("prefijo_cuit_cuil")
+                    .contains("digito_verificador")
+                    .contains("cuerpo central");
+            assertThat(contenido)
+                    .as("El cuerpo central debe ser exactamente de ocho digitos como texto")
+                    .contains("exactamente ocho digitos como texto");
+            assertThat(contenido)
+                    .as("Un CUIT/CUIL invalido se rechaza y no se degrada ni se completa")
+                    .contains("no se degrada a `DNI`")
+                    .contains("no se inventa prefijo ni dígito");
+            assertThat(contenido)
+                    .as("El formato visual se reconstruye, no se almacena")
+                    .contains("XX-XXXXXXXX-X");
+        }
+
+        /**
+         * La clave no puede fabricarse rellenando componentes ausentes: son los CHECK los
+         * que exigen la estructura antes de que la columna generada exista.
+         */
+        @Test
+        @DisplayName("doc_key se define sin COALESCE ni LPAD y es NULL sin documento")
+        void doc_key_sin_coalesce_ni_lpad() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("La expresion objetivo de doc_key debe estar declarada")
+                    .contains("CONCAT(prefijo_cuit_cuil, nro_doc, digito_verificador)")
+                    .contains("STORED");
+            assertThat(contenido)
+                    .as("COALESCE y LPAD quedan prohibidos dentro de la expresion")
+                    .contains("Queda prohibido `COALESCE(...)` y `LPAD(...)` dentro de la expresión");
+            assertThat(contenido)
+                    .as("Sin documento la clave debe ser NULL")
+                    .contains("`doc_key` es NULL");
+        }
+
+        @Test
+        @DisplayName("la unicidad fisica sigue siendo UNIQUE (tipo_documento, doc_key)")
+        void unique_tipo_documento_doc_key() throws IOException {
+            assertThat(decisiones())
+                    .as("El UNIQUE debe declararse con su nombre fisico real")
+                    .contains("uq_fal_persona_tipo_doc_key (tipo_documento, doc_key)");
+            assertThat(Files.readString(MODELO_PERS, StandardCharsets.UTF_8))
+                    .as("El modelo debe conservar el UNIQUE (tipo_documento, doc_key)")
+                    .contains("UNIQUE (tipo_documento, doc_key)");
+        }
+
+        /**
+         * El punto que motivo todo el slice: la persona identificada parcialmente sin
+         * documento tiene que ser representable, y nunca mediante una persona inventada.
+         */
+        @Test
+        @DisplayName("la persona parcial sin documento es coherente y no admite centinela")
+        void persona_parcial_sin_documento_coherente() throws IOException {
+            String catalogos = Files.readString(CATALOGOS_PERS, StandardCharsets.UTF_8);
+            assertThat(catalogos)
+                    .as("El catalogo debe apoyar la persona parcial en la decision fisica del documento")
+                    .contains("DECISION_DDL-PERS-01")
+                    .contains("IDENTIFICADO_PARCIAL");
+            assertThat(decisiones().toLowerCase(Locale.ROOT))
+                    .as("La decision debe repetir las prohibiciones de representacion falsa")
+                    .contains("persona centinela")
+                    .contains("documento inventado");
+            assertThat(decisiones())
+                    .as("Un centinela numerico o una cadena vacia tampoco representan ausencia")
+                    .contains("centinela numérico");
+        }
+
+        @Test
+        @DisplayName("la semantica INSERT/UPDATE del puerto queda cerrada y el id inexistente no inserta")
+        void semantica_insert_update_del_puerto() throws IOException {
+            String deltas = Files.readString(DELTAS, StandardCharsets.UTF_8);
+            assertThat(deltas)
+                    .as("La aplicacion de DECISION_ID-01 a PersonaRepository debe estar registrada")
+                    .contains("`DECISION_ID-01` aplicada a `PersonaRepository`");
+            assertThat(deltas)
+                    .as("Alta con id nulo y copia persistida por conId(Long)")
+                    .contains("FalPersona.conId(Long)");
+            assertThat(deltas)
+                    .as("Un id informado actualiza y no puede resolverse con upsert de motor")
+                    .contains("REPLACE")
+                    .contains("ON DUPLICATE KEY UPDATE");
+            assertThat(deltas)
+                    .as("Un id informado inexistente no se inserta y usa la excepcion canonica ya existente")
+                    .contains("No se inserta nunca")
+                    .contains("PersonaNoEncontradaException");
+            assertThat(deltas)
+                    .as("El upsert incondicional del InMemory queda prohibido como contrato futuro")
+                    .contains("Upsert incondicional: prohibido como contrato futuro");
+        }
+
+        @Test
+        @DisplayName("los 3 callsites de nextId quedan autorizados para la transicion de identidad")
+        void tres_callsites_nextid_autorizados() throws IOException {
+            String deltas = Files.readString(DELTAS, StandardCharsets.UTF_8);
+            for (String callsite : List.of(
+                    "PersonaService.crear",
+                    "PersonaService.crearMinimal",
+                    "ActaService.crearPersonaMinimal")) {
+                assertThat(deltas)
+                        .as("El callsite '%s' debe quedar nombrado en la transicion autorizada", callsite)
+                        .contains(callsite);
+            }
+            assertThat(deltas)
+                    .as("La modificacion de ActaService debe quedar expresamente autorizada")
+                    .contains("expresamente autorizada");
+            assertThat(deltas)
+                    .as("La autorizacion no reabre las reglas de alta del acta")
+                    .contains("no reabre las reglas de alta del acta");
+        }
+
+        /**
+         * Separacion de planos. Hasta WAVE 1A2-B1.5B0-B este test exigia que el modelo
+         * mantuviera dos filas distintas, porque el esquema ejecutado y el objetivo
+         * diferian. Aplicado el ALTER, los dos planos convergieron y lo que se verifica
+         * es lo contrario: que el modelo declare la convergencia, conserve el
+         * antecedente historico y no siga presentando `INT UNSIGNED NOT NULL` como la
+         * forma vigente.
+         */
+        @Test
+        @DisplayName("el modelo declara que el esquema ejecutado ya coincide con el objetivo (G-30)")
+        void modelo_objetivo_y_esquema_ejecutado_convergieron() throws IOException {
+            String modelo = Files.readString(MODELO_PERS, StandardCharsets.UTF_8);
+            assertThat(modelo)
+                    .as("El modelo debe declarar que el esquema ejecutado coincide con el objetivo")
+                    .contains("Campos documento — esquema ejecutado, coincide con el modelo objetivo");
+            assertThat(modelo)
+                    .as("La forma anterior se conserva como antecedente, nunca como estado vigente")
+                    .contains("Campos documento — antecedente histórico, ya no vigente");
+            assertThat(modelo)
+                    .as("La forma vigente del documento es opcional y de texto canonico")
+                    .contains("`nro_doc VARCHAR(12) NULL`")
+                    .contains("`tipo_documento SMALLINT NULL`");
+            assertThat(decisiones())
+                    .as("La decision debe declarar el plan de migracion con punto de no retorno")
+                    .contains("punto de no retorno")
+                    .contains("Postcheck");
+            assertThat(decisiones())
+                    .as("Los guardrails del esquema ejecutado se invierten con el ALTER, nunca antes")
+                    .contains("en el mismo trabajo que ejecute el `ALTER`, nunca antes");
+            assertThat(decisiones())
+                    .as("La ejecucion del ALTER debe quedar registrada sin reabrir la decision")
+                    .contains("DDL_EXECUTED");
+        }
+
+        /**
+         * El drift de tiempo verbal que B1.5B0-A dejo registrado como deuda: la seccion 8
+         * describia en presente dos normalizaciones que ese mismo slice unifico.
+         */
+        @Test
+        @DisplayName("la divergencia de normalizacion es antecedente historico, no estado presente (G-30)")
+        void normalizacion_divergente_es_antecedente_historico() throws IOException {
+            assertThat(decisiones())
+                    .as("DocumentoPersona debe declararse como la autoridad unica actual")
+                    .contains("es el value object `DocumentoPersona`");
+            assertThat(decisiones())
+                    .as("La divergencia debe quedar en pasado y marcada como antecedente")
+                    .contains("Antecedente histórico, no estado presente")
+                    .contains("Las dos expresiones regulares fueron eliminadas");
+            assertThat(decisiones())
+                    .as("La seccion 8 ya no puede afirmar en presente que existen dos normalizaciones")
+                    .doesNotContain("Hoy existen dos incompatibles");
+        }
+    }
+
+    // =====================================================================
+    // G-31: transicion Java de identidad y documento de Persona
+    // =====================================================================
+
+    /**
+     * Contraparte de codigo del grupo G-30. Mientras G-30 verifica que la spec declare una
+     * sola decision, este grupo verifica que el codigo productivo la cumpla: identidad
+     * asignada por la persistencia, documento canonico en un unico normalizador y patron
+     * P3 en el puerto.
+     *
+     * <p>No verifica el adaptador JDBC ni el DDL: los dos siguen pendientes y este grupo
+     * comprueba justamente que no se hayan adelantado.
+     */
+    @Nested
+    @DisplayName("G-31: Persona en Java - identidad, documento canonico y patron P3")
+    class G31PersonaJavaIdentidad {
+
+        private static final Path PUERTO = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/core/repository/PersonaRepository.java");
+        private static final Path IN_MEMORY = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/core/repository/memory/InMemoryPersonaRepository.java");
+        private static final Path FAL_PERSONA = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/core/domain/model/FalPersona.java");
+        private static final Path DOCUMENTO = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/core/domain/model/DocumentoPersona.java");
+        private static final Path PERSONA_SERVICE = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/core/application/service/PersonaService.java");
+        private static final Path ACTA_SERVICE_PERS = Paths.get(
+                "src/main/java/ar/gob/malvinas/faltas/core/application/service/ActaService.java");
+
+        @Test
+        @DisplayName("PersonaRepository no declara nextId() y no queda ningun callsite de Persona")
+        void puerto_sin_next_id() throws IOException {
+            assertThat(Arrays.stream(PersonaRepository.class.getDeclaredMethods())
+                    .map(Method::getName))
+                    .as("El puerto de Persona no puede declarar nextId(): DECISION_ID-01")
+                    .doesNotContain("nextId");
+
+            for (Path archivo : List.of(PUERTO, IN_MEMORY, PERSONA_SERVICE, ACTA_SERVICE_PERS)) {
+                assertThat(Files.readString(archivo, StandardCharsets.UTF_8))
+                        .as("%s no puede declarar ni invocar nextId() sobre Persona",
+                                archivo.getFileName())
+                        .doesNotContain("Long nextId()")
+                        .doesNotContain("personaRepository.nextId(")
+                        .doesNotContain("personas.nextId(");
+            }
+        }
+
+        @Test
+        @DisplayName("FalPersona admite id null y expone conId(Long) sin setter de id")
+        void modelo_admite_id_null_y_expone_conId() throws Exception {
+            LocalDateTime ahora = LocalDateTime.of(2026, 1, 1, 10, 0);
+            FalPersona nueva = new FalPersona(null, TipoPersona.FISICA, ahora, "USR1");
+            assertThat(nueva.getId()).as("Una entidad nueva tiene id nulo").isNull();
+
+            assertThat(FalPersona.class.getMethod("conId", Long.class).getReturnType())
+                    .as("conId debe devolver una copia de FalPersona")
+                    .isEqualTo(FalPersona.class);
+
+            assertThat(Arrays.stream(FalPersona.class.getDeclaredMethods())
+                    .filter(m -> Modifier.isPublic(m.getModifiers()))
+                    .map(Method::getName))
+                    .as("No puede existir un setter publico de id: la PK la asigna la persistencia")
+                    .doesNotContain("setId");
+
+            FalPersona persistida = nueva.conId(9L);
+            assertThat(persistida.getId()).isEqualTo(9L);
+            assertThat(nueva.getId()).as("conId no muta la instancia receptora").isNull();
+        }
+
+        @Test
+        @DisplayName("el documento vive en un unico value object, sin setters individuales")
+        void documento_sin_setters_individuales() {
+            assertThat(Arrays.stream(FalPersona.class.getDeclaredMethods())
+                    .filter(m -> Modifier.isPublic(m.getModifiers()))
+                    .map(Method::getName))
+                    .as("Los componentes del documento no pueden mutarse por separado: "
+                            + "eso permitiria un par incoherente en dos pasos")
+                    .doesNotContain("setTipoDoc", "setNroDoc",
+                            "setPrefijoCuitCuil", "setDigitoVerificador")
+                    .contains("setDocumento");
+        }
+
+        @Test
+        @DisplayName("existe un unico normalizador de documento y los servicios no duplican regex")
+        void normalizador_unico() throws IOException {
+            String personaService = Files.readString(PERSONA_SERVICE, StandardCharsets.UTF_8);
+            String actaService = Files.readString(ACTA_SERVICE_PERS, StandardCharsets.UTF_8);
+
+            assertThat(personaService)
+                    .as("PersonaService debe delegar la normalizacion en DocumentoPersona")
+                    .contains("DocumentoPersona.normalizar(");
+            for (String servicio : List.of(personaService, actaService)) {
+                assertThat(servicio)
+                        .as("Ningun servicio puede normalizar el documento con su propia regex")
+                        .doesNotContain("[^0-9a-zA-Z")
+                        .doesNotContain("replaceAll(\"\\\\s+\", \"\")");
+            }
+        }
+
+        @Test
+        @DisplayName("nroDoc canonico admite hasta 12 caracteres y ni uno mas")
+        void nro_doc_maximo_12() {
+            assertThat(DocumentoPersona.LONGITUD_MAXIMA_NRO_DOC)
+                    .as("El ancho fisico de nro_doc quedo cerrado en 12")
+                    .isEqualTo(12);
+            assertThat(DocumentoPersona.normalizar(TipoDocumentoPersona.OTRO, "AB0123456789").nroDoc())
+                    .hasSize(12);
+            assertThatThrownBy(() ->
+                    DocumentoPersona.normalizar(TipoDocumentoPersona.OTRO, "AB01234567890"))
+                    .as("13 caracteres canonicos se rechazan, no se truncan")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("CUIT/CUIL se almacena estructurado y nunca como los once digitos en nroDoc")
+        void cuit_cuil_estructurado() {
+            DocumentoPersona cuit = DocumentoPersona.normalizar(TipoDocumentoPersona.CUIT, "20-12345678-3");
+            assertThat(cuit.nroDoc())
+                    .as("nroDoc guarda el cuerpo central, no el CUIT completo")
+                    .isEqualTo("12345678")
+                    .hasSize(DocumentoPersona.LONGITUD_CUERPO_CUIT_CUIL);
+            assertThat(cuit.prefijoCuitCuil()).isEqualTo(20);
+            assertThat(cuit.digitoVerificador()).isEqualTo(3);
+            assertThat(cuit.esCuitCuil()).isTrue();
+
+            assertThatThrownBy(() ->
+                    new DocumentoPersona(TipoDocumentoPersona.CUIT, "20123456783", 20, 3))
+                    .as("Los once digitos completos no pueden vivir en nroDoc")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("el normalizador no rellena componentes ausentes ni usa COALESCE")
+        void sin_componentes_inventados() throws IOException {
+            String documento = Files.readString(DOCUMENTO, StandardCharsets.UTF_8);
+            assertThat(documento)
+                    .as("No se rellenan componentes ausentes para fabricar una identidad")
+                    .doesNotContain("COALESCE")
+                    .doesNotContain("LPAD");
+
+            assertThatThrownBy(() ->
+                    new DocumentoPersona(TipoDocumentoPersona.CUIT, "12345678", null, null))
+                    .as("Un CUIT sin prefijo ni digito se rechaza en lugar de completarse")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("la validacion aritmetica del digito verificador no se exige todavia")
+        void sin_modulo_11_obligatorio() {
+            assertThat(DocumentoPersona.normalizar(TipoDocumentoPersona.CUIT, "20-12345678-0").digitoVerificador())
+                    .as("D-PERS-CUIT-DV-01: el modulo 11 no se exige en este slice")
+                    .isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("ningun camino infiere el tipo documental desde un texto sin tipo")
+        void sin_inferencia_de_tipo() throws IOException {
+            for (Path archivo : List.of(PERSONA_SERVICE, ACTA_SERVICE_PERS)) {
+                String contenido = Files.readString(archivo, StandardCharsets.UTF_8);
+                assertThat(contenido)
+                        .as("%s no puede asumir DNI para un texto sin tipo documental",
+                                archivo.getFileName())
+                        .doesNotContain("TipoDocumentoPersona.DNI");
+            }
+            assertThatThrownBy(() -> DocumentoPersona.normalizar(null, "12345678"))
+                    .as("Un numero sin tipo no constituye un documento")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("el documento no se trunca en silencio para respetar un ancho")
+        void sin_truncamiento_silencioso() throws IOException {
+            String documento = Files.readString(DOCUMENTO, StandardCharsets.UTF_8);
+            assertThat(documento)
+                    .as("El normalizador rechaza un documento demasiado largo; no lo recorta")
+                    .doesNotContain("substring(0, LONGITUD_MAXIMA_NRO_DOC)");
+            for (Path archivo : List.of(PERSONA_SERVICE, ACTA_SERVICE_PERS)) {
+                assertThat(Files.readString(archivo, StandardCharsets.UTF_8))
+                        .as("%s no puede recortar el documento", archivo.getFileName())
+                        .doesNotContain("nroDocNorm");
+            }
+        }
+
+        @Test
+        @DisplayName("el mensaje de rechazo no reproduce el documento recibido")
+        void mensajes_sin_datos_personales() {
+            assertThatThrownBy(() ->
+                    DocumentoPersona.normalizar(TipoDocumentoPersona.DNI, "12A45678"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageNotContaining("12A45678");
+        }
+
+        @Test
+        @DisplayName("el puerto declara el patron P3 y la excepcion canonica ya existente")
+        void puerto_declara_p3() throws IOException {
+            String puerto = Files.readString(PUERTO, StandardCharsets.UTF_8);
+            assertThat(puerto)
+                    .as("El contrato debe declarar alta con id nulo, actualizacion con id informado "
+                            + "y el orden que promete")
+                    .contains("PersonaNoEncontradaException")
+                    .contains("ascendente")
+                    .contains("nunca se inserta");
+
+            // WAVE 1A2-B2 agrega listarPagina: el puerto pasa de cinco a seis operaciones. El
+            // cambio es aditivo y ninguna firma existente cambio.
+            assertThat(Arrays.stream(PersonaRepository.class.getDeclaredMethods())
+                    .map(Method::getName))
+                    .as("El puerto conserva sus cinco metodos reales y suma la consulta paginada")
+                    .containsExactlyInAnyOrder("guardar", "buscarPorId", "listarTodas",
+                            "buscarPorTipoDocYNroDoc", "buscarPorIdSujBie", "listarPagina");
+        }
+
+        @Test
+        @DisplayName("el InMemory diferencia alta de actualizacion y no hace upsert incondicional")
+        void inmemory_p3_sin_upsert() throws IOException {
+            String inMemory = Files.readString(IN_MEMORY, StandardCharsets.UTF_8);
+            assertThat(inMemory)
+                    .as("Un id informado inexistente debe fallar, no insertarse")
+                    .contains("PersonaNoEncontradaException")
+                    .contains("containsKey");
+            assertThat(inMemory)
+                    .as("El orden por id ascendente es contrato del puerto")
+                    .contains("Comparator.comparing(FalPersona::getId)");
+        }
+
+        /**
+         * La asercion {@code doesNotContain("situacionIdentificacion")} se invirtio en
+         * WAVE 1A2-B1.5B1, el slice que implementa {@code DECISION_DDL-ACTA-INFR-01}.
+         *
+         * <p>La asercion {@code doesNotContain("QrActaService")} se invierte en
+         * WAVE 1A2-B1.5B2, el slice que implementa {@code DECISION_DDL-ACTA-QR-01}: el alta
+         * pasa a pedirle el token al servicio de QR antes de la primera escritura, de modo
+         * que la ausencia de esa referencia ya no es la propiedad correcta.
+         *
+         * <p>La asercion {@code doesNotContain("@Transactional")} se retira en WAVE 1A2-B2, el
+         * slice que implementa {@code DECISION_OBS-TX-01}. La frontera del alta se verifica
+         * ahora en {@code G28.acta_service_declara_transactional_en_labrar}, que afirma sobre
+         * el metodo exacto y por lo tanto es mas estricta. Lo que sigue protegiendo la misma
+         * frontera aca es que el alta coordine puertos y no adaptadores concretos.
+         */
+        @Test
+        @DisplayName("ActaService solo recibio el cambio minimo autorizado")
+        void acta_service_cambio_minimo() throws IOException {
+            String actaService = Files.readString(ACTA_SERVICE_PERS, StandardCharsets.UTF_8);
+            assertThat(actaService)
+                    .as("El texto libre del infractor se conserva en el acta")
+                    .contains("setInfractorDocumento");
+            assertThat(actaService)
+                    .as("La persona minima se construye sin PK y sin documento estructurado")
+                    .contains("new FalPersona(null, TipoPersona.FISICA");
+            assertThat(actaService)
+                    .as("El alta propaga la situacion de identificacion sin default")
+                    .contains("cmd.situacionIdentificacionInfractor()");
+            assertThat(actaService)
+                    .as("El QR se pide al servicio de QR y se asigna antes de guardar el acta")
+                    .contains("qrActaService.emitirTokenPara(uuidTecnico)")
+                    .contains("setCodigoQr")
+                    .contains("setQrPayloadVersion");
+            assertThat(actaService)
+                    .as("El alta usa el actor real y propaga lonInfr")
+                    .contains("cmd.lonInfr()");
+            assertThat(actaService)
+                    .as("El servicio coordina puertos y nunca adaptadores concretos")
+                    .doesNotContain("JdbcActaRepository")
+                    .doesNotContain("JdbcObservacionRepository")
+                    .doesNotContain("JdbcPersonaRepository");
+        }
+
+        /**
+         * Invertido en WAVE 1A2-B1.5B0-B, el slice que crea el adaptador. Hasta entonces
+         * este test verificaba que B1.5B0-A no se hubiera adelantado y afirmaba que el
+         * archivo no existia.
+         *
+         * <p>La asercion de "candidato sin anotaciones" se invierte en WAVE 1A2-B2, el slice
+         * que activa el adaptador: pasa a exigir {@code @Repository} con
+         * {@code @Profile("jdbc")} y, sobre todo, la ausencia de {@code @Primary}, que es la
+         * propiedad que garantiza una sola implementacion por puerto en vez de esconder una
+         * ambiguedad. Todo lo demas que este caso verifica sobre el SQL, los enums y la
+         * identidad sigue igual y no depende de la activacion.
+         */
+        @Test
+        @DisplayName("el adaptador JDBC de persona es bean solo bajo jdbc y el modelo no conoce la infraestructura")
+        void adaptador_jdbc_activado_solo_en_perfil_jdbc() throws IOException {
+            Path adaptador = Paths.get("src/main/java/ar/gob/malvinas/faltas/core/infrastructure/jdbc/"
+                    + "JdbcPersonaRepository.java");
+            assertThat(adaptador)
+                    .as("WAVE 1A2-B1.5B0-B crea el adaptador candidato")
+                    .exists();
+
+            // El Javadoc del adaptador nombra las anotaciones y los antipatrones
+            // justamente para declararlos prohibidos: se verifica el codigo, no el texto
+            // que los menciona.
+            String codigo = sinComentariosJava(Files.readString(adaptador, StandardCharsets.UTF_8));
+            assertThat(codigo)
+                    .as("WAVE 1A2-B2 lo activa como bean exclusivamente bajo el perfil jdbc")
+                    .contains("@Repository")
+                    .contains("@Profile(\"jdbc\")")
+                    .doesNotContain("@Primary");
+            assertThat(codigo)
+                    .as("Persistencia con Spring JDBC explicito, nunca JPA ni ORM")
+                    .contains("JdbcClient")
+                    .doesNotContain("javax.persistence")
+                    .doesNotContain("jakarta.persistence");
+            assertThat(codigo)
+                    .as("Sin SELECT *, sin upsert de motor y sin PK preasignada")
+                    .doesNotContain("SELECT *")
+                    .doesNotContain("REPLACE INTO")
+                    .doesNotContain("ON DUPLICATE KEY UPDATE")
+                    .doesNotContain("MAX(id)");
+            assertThat(codigo)
+                    .as("La PK la asigna el motor y se recupera con GeneratedKeyHolder")
+                    .contains("GeneratedKeyHolder");
+            assertThat(codigo)
+                    .as("doc_key es STORED GENERATED: ni el INSERT ni el UPDATE la informan")
+                    .doesNotContain("doc_key");
+            assertThat(codigo)
+                    .as("Los enums viajan por codigo(), nunca por ordinal() ni name()")
+                    .doesNotContain("ordinal()");
+
+            assertThat(Files.readString(FAL_PERSONA, StandardCharsets.UTF_8))
+                    .as("El modelo no puede quedar acoplado a la infraestructura")
+                    .doesNotContain("JdbcClient")
+                    .doesNotContain("org.springframework");
+        }
+
+        /**
+         * Quita comentarios de bloque y de linea. Un guardrail que prohibe un patron no
+         * puede fallar porque la documentacion del archivo lo nombre para prohibirlo.
+         */
+        private static String sinComentariosJava(String fuente) {
+            return fuente
+                    .replaceAll("(?s)/\\*.*?\\*/", "")
+                    .replaceAll("(?m)^\\s*//.*$", "");
+        }
+    }
+
+    // =====================================================================
+    // G-32: consultas listables - contrato de pagina, orden y deuda de indices
+    // =====================================================================
+
+    /**
+     * Registro normativo de {@code DECISION-LIST-PAGE-SORT-01} y de la deuda
+     * {@code D-PERSISTENCE-PAGING-INDEX-01}, mas la coherencia entre la spec y la regla
+     * persistente de Cursor que la referencia.
+     *
+     * <p>La regla {@code .cursor/rules/paginated-list-queries.mdc} la creo el usuario y este
+     * grupo <b>no</b> la reescribe: solo verifica que exista, que apunte a la decision canonica
+     * y que no se haya duplicado en una segunda regla. Una regla que referencie una decision
+     * inexistente es drift, y es lo unico que estos casos pueden detectar sin invadir el trabajo
+     * del usuario.
+     */
+    @Nested
+    @DisplayName("G-32: DECISION-LIST-PAGE-SORT-01, deuda de indices y regla de Cursor")
+    class G32ListPageSort {
+
+        private static final Path DECISIONES =
+                Paths.get("docs/spec-as-source/50-persistence/ddl-decisions.md");
+        private static final Path REGLA_CURSOR =
+                Paths.get("../../.cursor/rules/paginated-list-queries.mdc");
+        private static final Path REGLAS_CURSOR_DIR = Paths.get("../../.cursor/rules");
+
+        private String decisiones() throws IOException {
+            return Files.readString(DECISIONES, StandardCharsets.UTF_8);
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md registra DECISION-LIST-PAGE-SORT-01 con sus defaults y limites")
+        void decision_list_page_sort_registrada() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("la decision debe estar registrada en el registro de decisiones")
+                    .contains("DECISION-LIST-PAGE-SORT-01");
+            assertThat(contenido)
+                    .as("defaults y maximo explicitos: 0, 50 y 100")
+                    .contains("`page = 0`")
+                    .contains("`size = 50`")
+                    .contains("`100`");
+            String enMinuscula = contenido.toLowerCase(Locale.ROOT);
+            assertThat(enMinuscula)
+                    .as("el rechazo del tamano excedido debe ser explicito, no un recorte silencioso")
+                    .contains("se rechaza explícitamente");
+            assertThat(enMinuscula)
+                    .as("la decision debe declarar la allowlist, el desempate y la ejecucion en el motor")
+                    .contains("allowlist")
+                    .contains("desempate")
+                    .contains("parámetros enlazados");
+            assertThat(contenido)
+                    .as("y debe declarar que no existe variante publica ilimitada")
+                    .contains("No existe una variante pública ilimitada del listado");
+        }
+
+        @Test
+        @DisplayName("la decision declara los ordenes predeterminados de Acta y Persona con su desempate")
+        void decision_declara_orden_predeterminado_por_entidad() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("Acta declara su orden predeterminado con la PK como desempate")
+                    .contains("`fechaActa DESC`, más la PK como desempate");
+            assertThat(contenido)
+                    .as("Persona declara su orden predeterminado con la PK como desempate")
+                    .contains("`fechaAlta DESC`, más la PK como desempate");
+            assertThat(contenido)
+                    .as("la politica de nulos debe ser explicita y no accidental")
+                    .contains("nulos primero en `ASC` y últimos en `DESC`");
+        }
+
+        @Test
+        @DisplayName("ddl-decisions.md registra D-PERSISTENCE-PAGING-INDEX-01 abierta y con su wave")
+        void deuda_paging_index_registrada_y_abierta() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("la deuda de optimizacion fisica debe estar registrada")
+                    .contains("D-PERSISTENCE-PAGING-INDEX-01");
+            assertThat(contenido)
+                    .as("debe declararse abierta y diferida deliberadamente")
+                    .contains("**ABIERTA.** Diferida deliberadamente");
+            assertThat(contenido)
+                    .as("debe nombrar la wave que la cierra")
+                    .contains("WAVE 1A2-PERSISTENCE-PERF-01");
+            assertThat(contenido)
+                    .as("debe prohibir los indices especulativos mientras siga abierta")
+                    .contains("combinatoria teórica o especulativa");
+            assertThat(contenido.toLowerCase(Locale.ROOT))
+                    .as("no puede declararse cerrada mientras el registro diga lo contrario")
+                    .doesNotContain("d-persistence-paging-index-01 cerrada");
+        }
+
+        @Test
+        @DisplayName("la deuda registra las consultas, los indices actuales y los metodos ilimitados")
+        void deuda_registra_consultas_e_indices_actuales() throws IOException {
+            String contenido = decisiones();
+            assertThat(contenido)
+                    .as("debe registrar la tabla, los filtros y el orden de cada entidad")
+                    .contains("Tabla `fal_acta`, sin joins")
+                    .contains("Tabla `fal_persona`, sin joins");
+            assertThat(contenido)
+                    .as("debe registrar los indices actuales relacionados, verificados contra el motor")
+                    .contains("uq_fal_persona_tipo_doc_key")
+                    .contains("ix_fal_persona_apellido")
+                    .contains("ix_fal_acta_fecha")
+                    .contains("ix_fal_acta_estado");
+            assertThat(contenido)
+                    .as("debe registrar los dos metodos ilimitados a migrar o eliminar")
+                    .contains("ActaRefPersonaDomicilioUsoChecker");
+        }
+
+        /**
+         * La regla persistente y la spec tienen que hablar de la misma decision. No se verifica
+         * el texto completo de la regla: es del usuario y este slice no la reescribe.
+         */
+        @Test
+        @DisplayName("la regla de Cursor existe, es siempre aplicable y apunta a la decision canonica")
+        void regla_cursor_existe_y_referencia_la_decision() throws IOException {
+            assertThat(REGLA_CURSOR)
+                    .as("la regla persistente de consultas listables debe existir")
+                    .exists();
+            String regla = Files.readString(REGLA_CURSOR, StandardCharsets.UTF_8);
+            assertThat(regla)
+                    .as("debe aplicarse siempre y referenciar la decision canonica")
+                    .contains("alwaysApply: true")
+                    .contains("DECISION-LIST-PAGE-SORT-01")
+                    .contains("D-PERSISTENCE-PAGING-INDEX-01");
+            assertThat(regla)
+                    .as("debe declarar los defaults, el maximo y el rechazo explicito")
+                    .contains("`page = 0`")
+                    .contains("`size = 50`")
+                    .contains("El tamaño máximo permitido es `100`");
+        }
+
+        /**
+         * Una segunda regla que hable del mismo contrato es peor que ninguna: dos guardrails
+         * persistentes pueden divergir y no hay forma de saber cual gobierna.
+         */
+        @Test
+        @DisplayName("no existe una segunda regla de Cursor duplicando el contrato de paginacion")
+        void sin_regla_cursor_duplicada() throws IOException {
+            if (!Files.isDirectory(REGLAS_CURSOR_DIR)) {
+                return;
+            }
+            List<String> duplicadas = new ArrayList<>();
+            try (var reglas = Files.list(REGLAS_CURSOR_DIR)) {
+                for (Path regla : reglas.filter(Files::isRegularFile).toList()) {
+                    if (regla.getFileName().toString().equals("paginated-list-queries.mdc")) {
+                        continue;
+                    }
+                    String contenido = Files.readString(regla, StandardCharsets.UTF_8);
+                    if (contenido.contains("DECISION-LIST-PAGE-SORT-01")) {
+                        duplicadas.add(regla.getFileName().toString());
+                    }
+                }
+            }
+            assertThat(duplicadas)
+                    .as("solo paginated-list-queries.mdc puede declarar el contrato de paginacion")
+                    .isEmpty();
         }
     }
 }

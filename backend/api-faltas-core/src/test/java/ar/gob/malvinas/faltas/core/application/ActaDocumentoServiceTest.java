@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.ActaDocumentoService;
@@ -44,13 +46,26 @@ class ActaDocumentoServiceTest {
         service = new ActaDocumentoService(pivotRepo, actaRepo, docRepo, FaltasClockTestSupport.FIXED);
     }
 
-    private FalActa crearActa(Long id) {
-        FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Etiqueta logica del test -> id real que asigno la persistencia. */
+    private final java.util.Map<Long, Long> idsActa = new java.util.HashMap<>();
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     */
+    private FalActa crearActa(Long etiqueta) {
+        FalActa a = new FalActa(null, "UUID-" + etiqueta, TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.FIRMADA,
+                null, null, ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS,
                 null, AHORA, "SYS");
-        actaRepo.guardar(a);
-        return a;
+        FalActa persistida = actaRepo.guardar(a);
+        idsActa.put(etiqueta, persistida.getId());
+        return persistida;
+    }
+
+    /** Id real del acta creada con esa etiqueta. */
+    private Long acta(Long etiqueta) {
+        return idsActa.get(etiqueta);
     }
 
     private FalDocumento crearDoc(Long id, Long actaId, TipoDocu tipo) {
@@ -90,11 +105,11 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T02: FalActaDocumento guarda todos los campos y es inmutable en id")
     void t02_camposAuditoria() {
         crearActa(1L);
-        crearDoc(10L, 1L, TipoDocu.ACTA_INFRACCION);
+        crearDoc(10L, acta(1L), TipoDocu.ACTA_INFRACCION);
 
-        FalActaDocumento rel = service.asociar(1L, 10L, RolDocuActa.ACTA_PRINCIPAL, true, "USR-01");
+        FalActaDocumento rel = service.asociar(acta(1L), 10L, RolDocuActa.ACTA_PRINCIPAL, true, "USR-01");
 
-        assertThat(rel.getActaId()).isEqualTo(1L);
+        assertThat(rel.getActaId()).isEqualTo(acta(1L));
         assertThat(rel.getDocumentoId()).isEqualTo(10L);
         assertThat(rel.getRolDocuActa()).isEqualTo(RolDocuActa.ACTA_PRINCIPAL);
         assertThat(rel.isSiPrincipal()).isTrue();
@@ -105,8 +120,8 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T02b: FalActaDocumento.copia() devuelve copia defensiva")
     void t02b_copiaDefensiva() {
         crearActa(1L);
-        crearDoc(10L, 1L, TipoDocu.ACTA_INFRACCION);
-        FalActaDocumento rel = service.asociar(1L, 10L, RolDocuActa.ACTA_PRINCIPAL, true, "USR");
+        crearDoc(10L, acta(1L), TipoDocu.ACTA_INFRACCION);
+        FalActaDocumento rel = service.asociar(acta(1L), 10L, RolDocuActa.ACTA_PRINCIPAL, true, "USR");
         FalActaDocumento copia = rel.copia();
         assertThat(copia).isEqualTo(rel);
         assertThat(copia).isNotSameAs(rel);
@@ -182,25 +197,25 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T05a: un solo ACTA_PRINCIPAL por acta")
     void t05a_unicidadPrincipal() {
         crearActa(1L);
-        crearDoc(10L, 1L, TipoDocu.ACTA_INFRACCION);
-        crearDoc(11L, 1L, TipoDocu.ACTA_INFRACCION);
+        crearDoc(10L, acta(1L), TipoDocu.ACTA_INFRACCION);
+        crearDoc(11L, acta(1L), TipoDocu.ACTA_INFRACCION);
 
-        service.asociarPrincipal(1L, 10L, RolDocuActa.ACTA_PRINCIPAL, "SYS");
-        service.asociarPrincipal(1L, 11L, RolDocuActa.ACTA_PRINCIPAL, "SYS");
+        service.asociarPrincipal(acta(1L), 10L, RolDocuActa.ACTA_PRINCIPAL, "SYS");
+        service.asociarPrincipal(acta(1L), 11L, RolDocuActa.ACTA_PRINCIPAL, "SYS");
 
         // El primero deja de ser principal
-        assertThat(pivotRepo.buscarPorIdCompuesto(new ActaDocumentoId(1L, 10L)).get().isSiPrincipal()).isFalse();
+        assertThat(pivotRepo.buscarPorIdCompuesto(new ActaDocumentoId(acta(1L), 10L)).get().isSiPrincipal()).isFalse();
         // El nuevo es el principal
-        assertThat(pivotRepo.buscarPorIdCompuesto(new ActaDocumentoId(1L, 11L)).get().isSiPrincipal()).isTrue();
+        assertThat(pivotRepo.buscarPorIdCompuesto(new ActaDocumentoId(acta(1L), 11L)).get().isSiPrincipal()).isTrue();
         // Historia preservada
-        assertThat(pivotRepo.listarPorActa(1L)).hasSize(2);
+        assertThat(pivotRepo.listarPorActa(acta(1L))).hasSize(2);
     }
 
     @Test @DisplayName("T05b: rol ANEXO no admite principalidad")
     void t05b_rolSinPrincipal() {
         crearActa(1L);
-        crearDoc(20L, 1L, TipoDocu.ANEXO);
-        assertThatThrownBy(() -> service.asociar(1L, 20L, RolDocuActa.ANEXO, true, "SYS"))
+        crearDoc(20L, acta(1L), TipoDocu.ANEXO);
+        assertThatThrownBy(() -> service.asociar(acta(1L), 20L, RolDocuActa.ANEXO, true, "SYS"))
                 .isInstanceOf(PrecondicionVioladaException.class);
     }
 
@@ -211,18 +226,18 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T06: reemplazarPrincipal preserva historial")
     void t06_historialReemplazo() {
         crearActa(1L);
-        crearDoc(30L, 1L, TipoDocu.ACTO_ADMINISTRATIVO);
-        crearDoc(31L, 1L, TipoDocu.ACTO_ADMINISTRATIVO);
+        crearDoc(30L, acta(1L), TipoDocu.ACTO_ADMINISTRATIVO);
+        crearDoc(31L, acta(1L), TipoDocu.ACTO_ADMINISTRATIVO);
 
-        service.asociarPrincipal(1L, 30L, RolDocuActa.FALLO, "SYS");
-        FalActaDocumento nuevo = service.reemplazarPrincipal(1L, 31L, RolDocuActa.FALLO, "SYS");
+        service.asociarPrincipal(acta(1L), 30L, RolDocuActa.FALLO, "SYS");
+        FalActaDocumento nuevo = service.reemplazarPrincipal(acta(1L), 31L, RolDocuActa.FALLO, "SYS");
 
         assertThat(nuevo.isSiPrincipal()).isTrue();
         assertThat(nuevo.getDocumentoId()).isEqualTo(31L);
 
-        FalActaDocumento anterior = pivotRepo.buscarPorIdCompuesto(new ActaDocumentoId(1L, 30L)).orElseThrow();
+        FalActaDocumento anterior = pivotRepo.buscarPorIdCompuesto(new ActaDocumentoId(acta(1L), 30L)).orElseThrow();
         assertThat(anterior.isSiPrincipal()).isFalse();
-        assertThat(pivotRepo.listarPorActaYRol(1L, RolDocuActa.FALLO)).hasSize(2);
+        assertThat(pivotRepo.listarPorActaYRol(acta(1L), RolDocuActa.FALLO)).hasSize(2);
     }
 
     // =========================================================================
@@ -233,20 +248,20 @@ class ActaDocumentoServiceTest {
     void t07_queries() {
         crearActa(1L);
         crearActa(2L);
-        crearDoc(40L, 1L, TipoDocu.ACTA_INFRACCION);
-        crearDoc(41L, 1L, TipoDocu.ACTO_ADMINISTRATIVO);
-        crearDoc(42L, 2L, TipoDocu.ACTA_INFRACCION);
+        crearDoc(40L, acta(1L), TipoDocu.ACTA_INFRACCION);
+        crearDoc(41L, acta(1L), TipoDocu.ACTO_ADMINISTRATIVO);
+        crearDoc(42L, acta(2L), TipoDocu.ACTA_INFRACCION);
 
-        service.asociar(1L, 40L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
-        service.asociar(1L, 41L, RolDocuActa.FALLO, true, "SYS");
-        service.asociar(2L, 42L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
+        service.asociar(acta(1L), 40L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
+        service.asociar(acta(1L), 41L, RolDocuActa.FALLO, true, "SYS");
+        service.asociar(acta(2L), 42L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
 
-        assertThat(service.consultarPorActa(1L)).hasSize(2);
-        assertThat(service.consultarPorActa(2L)).hasSize(1);
-        assertThat(service.consultarPorActaYRol(1L, RolDocuActa.FALLO)).hasSize(1);
+        assertThat(service.consultarPorActa(acta(1L))).hasSize(2);
+        assertThat(service.consultarPorActa(acta(2L))).hasSize(1);
+        assertThat(service.consultarPorActaYRol(acta(1L), RolDocuActa.FALLO)).hasSize(1);
         assertThat(service.consultarPorDocumento(40L)).hasSize(1);
-        assertThat(service.consultarPrincipal(1L, RolDocuActa.ACTA_PRINCIPAL)).isPresent();
-        assertThat(service.consultarPrincipal(1L, RolDocuActa.NOTIFICACION)).isEmpty();
+        assertThat(service.consultarPrincipal(acta(1L), RolDocuActa.ACTA_PRINCIPAL)).isPresent();
+        assertThat(service.consultarPrincipal(acta(1L), RolDocuActa.NOTIFICACION)).isEmpty();
     }
 
     // =========================================================================
@@ -256,13 +271,13 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T08: validarPertenencia lanza excepcion si no esta asociado")
     void t08_validarPertenencia() {
         crearActa(1L);
-        crearDoc(50L, 1L, TipoDocu.ACTA_INFRACCION);
+        crearDoc(50L, acta(1L), TipoDocu.ACTA_INFRACCION);
 
-        assertThatThrownBy(() -> service.validarPertenencia(1L, 50L))
+        assertThatThrownBy(() -> service.validarPertenencia(acta(1L), 50L))
                 .isInstanceOf(PrecondicionVioladaException.class);
 
-        service.asociar(1L, 50L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
-        assertThatNoException().isThrownBy(() -> service.validarPertenencia(1L, 50L));
+        service.asociar(acta(1L), 50L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
+        assertThatNoException().isThrownBy(() -> service.validarPertenencia(acta(1L), 50L));
     }
 
     // =========================================================================
@@ -272,19 +287,19 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T09: resolverUltimoDocumentoOperativo prioriza FALLO sobre NOTIFICACION")
     void t09_resolverUltimoDoc() {
         crearActa(1L);
-        crearDoc(60L, 1L, TipoDocu.NOTIFICACION_ACTA);
-        crearDoc(61L, 1L, TipoDocu.ACTO_ADMINISTRATIVO);
+        crearDoc(60L, acta(1L), TipoDocu.NOTIFICACION_ACTA);
+        crearDoc(61L, acta(1L), TipoDocu.ACTO_ADMINISTRATIVO);
 
-        service.asociar(1L, 60L, RolDocuActa.NOTIFICACION, true, "SYS");
-        service.asociar(1L, 61L, RolDocuActa.FALLO, true, "SYS");
+        service.asociar(acta(1L), 60L, RolDocuActa.NOTIFICACION, true, "SYS");
+        service.asociar(acta(1L), 61L, RolDocuActa.FALLO, true, "SYS");
 
-        assertThat(service.resolverUltimoDocumentoOperativo(1L)).hasValue(61L);
+        assertThat(service.resolverUltimoDocumentoOperativo(acta(1L))).hasValue(61L);
     }
 
     @Test @DisplayName("T09b: resolverUltimoDocumentoOperativo retorna empty si sin documentos")
     void t09b_sinDocumentos() {
         crearActa(1L);
-        assertThat(service.resolverUltimoDocumentoOperativo(1L)).isEmpty();
+        assertThat(service.resolverUltimoDocumentoOperativo(acta(1L))).isEmpty();
     }
 
     // =========================================================================
@@ -301,18 +316,18 @@ class ActaDocumentoServiceTest {
     @Test @DisplayName("T10b: asociar falla si documento no existe")
     void t10b_docNoExiste() {
         crearActa(1L);
-        assertThatThrownBy(() -> service.asociar(1L, 999L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS"))
+        assertThatThrownBy(() -> service.asociar(acta(1L), 999L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS"))
                 .isInstanceOf(DocumentoNoEncontradoException.class);
     }
 
     @Test @DisplayName("T10c: par duplicado lanza ActaDocumentoYaExisteException")
     void t10c_parDuplicado() {
         crearActa(1L);
-        crearDoc(80L, 1L, TipoDocu.ACTA_INFRACCION);
-        service.asociar(1L, 80L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
+        crearDoc(80L, acta(1L), TipoDocu.ACTA_INFRACCION);
+        service.asociar(acta(1L), 80L, RolDocuActa.ACTA_PRINCIPAL, true, "SYS");
         // Segundo guardar del mismo par (sin usar asociarPrincipal)
         assertThatThrownBy(() ->
-                pivotRepo.guardar(new FalActaDocumento(1L, 80L, RolDocuActa.ACTA_PRINCIPAL, false,
+                pivotRepo.guardar(new FalActaDocumento(acta(1L), 80L, RolDocuActa.ACTA_PRINCIPAL, false,
                         FaltasClockTestSupport.FIXED.now(), "SYS")))
                 .isInstanceOf(ActaDocumentoYaExisteException.class);
     }

@@ -1,0 +1,194 @@
+<div class="ubicacion-wrapper">
+
+  <!-- MAP full background -->
+  <app-malvinas-map
+    class="full-map"
+    [markerLat]="punto()?.lat ?? null"
+    [markerLng]="punto()?.lng ?? null"
+    [colocarModoActivo]="colocarModoActivo()"
+    (mapClick)="onMapClick($event)"
+    (mapReady)="mapComponent?.resize()"
+    (zoomChange)="onZoomChange($event)"
+    (parcelaSeleccionada)="onParcelaSeleccionada($event)"
+  />
+
+  <!-- OVERLAY: floating controls over the map -->
+  <div class="map-overlay" #mapOverlay>
+
+    <!-- ── Search bar ─────────────────────────────────────── -->
+    <div class="search-bar-wrap">
+      <div class="search-bar mat-elevation-z4">
+        <mat-icon class="search-icon-prefix">search</mat-icon>
+        <input
+          class="search-input"
+          [value]="searchText()"
+          (input)="onSearchInput($event)"
+          (keydown)="onSearchKeydown($event)"
+          (blur)="hideSuggestions()"
+          (focus)="showSuggestions.set(calleSuggestions().length > 0)"
+          placeholder="Ej: Tres Arroyos 1234  •  Rosario esq Sucre  •  Belgrano entre Sucre y Hugo Victor"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        @if (loadingCalles()) {
+          <mat-spinner [diameter]="18" class="search-spinner" />
+        } @else if (searchText()) {
+          <button class="search-clear" mat-icon-button (click)="clearSearch()" tabindex="-1">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      <!-- Mode badge -->
+      @if (modeLabel()) {
+        <div class="mode-badge">
+          <mat-icon>{{ modeIcon() }}</mat-icon>
+          <span>{{ modeLabel() }}</span>
+        </div>
+      }
+
+      <!-- Suggestions dropdown -->
+      @if (showSuggestions() && suggestions().length > 0) {
+        <div class="suggestions-panel mat-elevation-z6">
+          @for (s of suggestions(); track $index) {
+            <button class="suggestion-row" [class.focused]="focusedSuggestionIndex() === $index" (mousedown)="onSuggestionClick(s)">
+              <mat-icon class="sugg-icon" [class.geocodable]="s.geocodable">{{ s.icon }}</mat-icon>
+              <div class="sugg-text">
+                <span class="sugg-label">{{ s.label }}</span>
+                <span class="sugg-sub">{{ s.sub }}</span>
+              </div>
+              <mat-icon class="sugg-type">{{ s.geocodable ? 'send' : 'north_east' }}</mat-icon>
+            </button>
+          }
+          <div class="suggestions-hint">
+            <mat-icon>info_outline</mat-icon>
+            Separadores: esq &middot; entre … y &middot; espacio + numero
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ── Controls row ───────────────────────────────────── -->
+    <div class="map-controls-row">
+      <div class="theme-selector">
+        <button mat-button [class.active]="themeService.mode() === 'auto'" (click)="setTheme('auto')">AUTO</button>
+        <button mat-button [class.active]="themeService.mode() === 'day'" (click)="setTheme('day')">CLARO</button>
+        <button mat-button [class.active]="themeService.mode() === 'night'" (click)="setTheme('night')">OSCURO</button>
+      </div>
+      <button mat-mini-fab
+              [color]="colocarModoActivo() ? 'warn' : 'primary'"
+              [matTooltip]="colocarModoActivo() ? 'Cancelar colocación' : 'Colocar punto en mapa'"
+              (click)="toggleColocarModo()">
+        <mat-icon>{{ colocarModoActivo() ? 'close' : 'add_location' }}</mat-icon>
+      </button>
+      @if (punto()) {
+        <button mat-icon-button matTooltip="Limpiar punto" (click)="limpiarPunto()">
+          <mat-icon>clear</mat-icon>
+        </button>
+      }
+      <span class="zoom-badge">Z {{ currentZoom() }}</span>
+    </div>
+
+    <!-- ── Geocode error ──────────────────────────────────── -->
+    @if (errorGeocode()) {
+      <div class="floating-msg error-msg">
+        <mat-icon>warning</mat-icon> {{ errorGeocode() }}
+      </div>
+    }
+
+    <!-- ── Geocode loading ────────────────────────────────── -->
+    @if (loadingGeocode()) {
+      <div class="floating-msg info-msg">
+        <mat-spinner [diameter]="16" /> Buscando...
+      </div>
+    }
+
+    <!-- ── Candidates ─────────────────────────────────────── -->
+    @if (candidatos().length > 1) {
+      <div class="floating-panel mat-elevation-z3">
+        <div class="panel-header">
+          <mat-icon>list_alt</mat-icon>
+          <span>{{ candidatos().length }} candidatos — seleccione uno</span>
+        </div>
+        @for (c of candidatos(); track trackByCandidato($index, c)) {
+          <button class="panel-row" mat-button (click)="seleccionarCandidato(c)">
+            <mat-icon>place</mat-icon>
+            <div class="panel-row-text">
+              <span class="panel-row-title">{{ c.descripcion }}</span>
+              @if (c.calidad) { <span class="calidad-badge">{{ c.calidad }}</span> }
+              @if (c.localidad) { <span class="panel-row-sub">{{ c.localidad }}</span> }
+            </div>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- ── Reverse results ────────────────────────────────── -->
+    @if (reverseResultados().length > 0 && !reverseAplicado()) {
+      <div class="floating-panel mat-elevation-z3">
+        <div class="panel-header">
+          <mat-icon>my_location</mat-icon>
+          <span>Calle más cercana al punto</span>
+          @if (loadingReverse()) { <mat-spinner [diameter]="14" /> }
+        </div>
+        @if (reverseResultados().length === 1) {
+          <div class="reverse-single">
+            <div class="panel-row-title">{{ reverseResultados()[0].calle }}</div>
+            @if (reverseResultados()[0].localidad) { <div class="panel-row-sub">{{ reverseResultados()[0].localidad }}</div> }
+            <button mat-stroked-button color="primary" (click)="aplicarReverse()">
+              <mat-icon>check</mat-icon> Aplicar sugerencia
+            </button>
+          </div>
+        } @else {
+          @for (r of reverseResultados(); track $index) {
+            <button class="panel-row" mat-button
+                    [class.selected]="reverseSeleccionado() === r"
+                    (click)="seleccionarReverseResultado(r)">
+              <mat-icon>place</mat-icon>
+              <div class="panel-row-text">
+                <span class="panel-row-title">{{ r.descripcion ?? r.calle }}</span>
+                @if (r.calidad) { <span class="calidad-badge">{{ r.calidad }}</span> }
+              </div>
+            </button>
+          }
+          <button mat-stroked-button color="primary" [disabled]="!reverseSeleccionado()" (click)="aplicarReverse()">
+            <mat-icon>check</mat-icon> Aplicar selección
+          </button>
+        }
+      </div>
+    }
+
+    <!-- ── Punto info ─────────────────────────────────────── -->
+    @if (punto()) {
+      <div class="floating-panel punto-info mat-elevation-z2">
+        <div class="panel-header">
+          <mat-icon style="color: #e53935">place</mat-icon>
+          <span>Punto actual</span>
+          <button mat-icon-button style="margin-left:auto;width:28px;height:28px;line-height:28px" matTooltip="Ir al punto" (click)="navegarAPunto()">
+            <mat-icon style="font-size:18px;width:18px;height:18px;line-height:18px">my_location</mat-icon>
+          </button>
+        </div>
+        <div class="punto-coords">
+          {{ punto()!.lat | number:'1.6-6' }}, {{ punto()!.lng | number:'1.6-6' }}
+        </div>
+        @if (punto()!.calle) { <div class="punto-field"><strong>Calle:</strong> {{ punto()!.calle }}</div> }
+        @if (punto()!.altura) { <div class="punto-field"><strong>Nro:</strong> {{ punto()!.altura }}</div> }
+        @if (punto()!.localidad) { <div class="punto-field"><strong>Localidad:</strong> {{ punto()!.localidad }}</div> }
+        @if (punto()!.calidad) { <div class="calidad-badge">{{ punto()!.calidad }}</div> }
+      </div>
+    }
+
+    <!-- Parcela detail panel (inspector visual) -->
+    <app-parcela-detail-panel [parcelaRef]="parcelaActual()" />
+
+  </div>
+
+  <!-- Colocar punto indicator -->
+  @if (colocarModoActivo()) {
+    <div class="colocar-indicator">
+      <mat-icon>touch_app</mat-icon>
+      <span>Haga click en el mapa para colocar el punto</span>
+    </div>
+  }
+
+</div>

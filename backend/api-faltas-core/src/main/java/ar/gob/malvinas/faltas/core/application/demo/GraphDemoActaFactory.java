@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.core.application.demo;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoActa;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor;
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFalloActa;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoFirmaReq;
@@ -15,6 +16,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalPagoVoluntario;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Factory de datos demo deterministicos para pruebas del graph demo in-memory.
@@ -40,12 +42,37 @@ public final class GraphDemoActaFactory {
     private GraphDemoActaFactory() {}
 
     /**
-     * Crea un acta demo de transito con todos los datos necesarios para combinacion documental.
+     * Crea un acta demo de transito nueva, sin identidad asignada.
+     *
+     * id nulo y versionRow 0: la PK la asigna la persistencia (DECISION_ID-01).
+     *
+     * El resto de los datos demo es deterministico, pero el id_tecnico NO: es un
+     * UUID canonico de 36 caracteres, uno distinto por invocacion. Debe serlo por
+     * dos razones fisicas de fal_acta:
+     *   id_tecnico CHAR(36) NOT NULL   -> cualquier prefijo lo vuelve no persistible
+     *   uq_fal_acta_id_tecnico         -> dos ejecuciones demo no pueden colisionar
+     * Tampoco se deriva de la PK, que en el alta todavia no existe.
+     *
+     * Es la unica variante que puede usar produccion.
+     */
+    public static FalActa crearActaDemo() {
+        return crearActaDemo(null, UUID.randomUUID().toString());
+    }
+
+    /**
+     * Variante con id preasignado, reservada a los tests que NO persisten el acta.
+     * No debe usarse desde produccion ni antes de guardar: insertar una PK elegida
+     * por el llamador esta prohibido por DECISION_ID-01. Su id_tecnico deriva del
+     * id justamente porque nunca llega a la base.
      */
     public static FalActa crearActaDemo(Long id) {
+        return crearActaDemo(id, "uuid-demo-" + id);
+    }
+
+    private static FalActa crearActaDemo(Long id, String uuidTecnico) {
         FalActa acta = new FalActa(
                 id,
-                "uuid-demo-" + id,
+                uuidTecnico,
                 TipoActa.TRANSITO,
                 DEPENDENCIA_DEMO,
                 INSPECTOR_DEMO,
@@ -56,6 +83,7 @@ public final class GraphDemoActaFactory {
                 -34.5678,
                 -58.1234,
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS,
                 null,
                 FH_LABRADO_DEMO,
                 "SYS"

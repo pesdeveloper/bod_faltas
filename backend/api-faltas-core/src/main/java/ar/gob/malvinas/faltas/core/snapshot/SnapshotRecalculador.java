@@ -11,6 +11,7 @@ import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoCondena;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoPagoVoluntario;
 import ar.gob.malvinas.faltas.core.domain.enums.ResultadoFinalActa;
 import ar.gob.malvinas.faltas.core.domain.enums.SituacionAdministrativaActa;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoDocu;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActa;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaParalizacion;
@@ -71,9 +72,12 @@ import java.util.Optional;
  *   2. ResultadoFinal ABSUELTO con acta aun ACTIVA: PENDIENTE_ANALISIS / NINGUNA.
  *   2b. ResultadoFinal CONDENA_FIRME con acta ACTIVA: routing por estado pago condena.
  *   3. Bloque CERR, ARCH, GEXT.
- *   4. Bloque ANAL: evalua en orden pago voluntario, apelacion, fallo.
+ *   4. Bloque ANAL: evalua en orden (1) pago voluntario, (2) apelacion, (3) fallo,
+ *      (4) pago vencido, (5) pieza resolutoria ACTO_ADMINISTRATIVO sin fallo activo,
+ *      (6) fallthrough PENDIENTE_ANALISIS/DICTAR_FALLO.
  *   5. Bloque NOTI: evalua notificaciones.
- *   6. Bloque CAPT/ENRI: evalua documentos.
+ *   6. Bloque ENRI: evalua documentos (ACTA_NUEVA si aun no hay ninguno y el unico
+ *      evento es ACTLAB).
  */
 @Component
 public class SnapshotRecalculador {
@@ -274,6 +278,9 @@ public class SnapshotRecalculador {
                 .allMatch(d -> d.getEstadoDocu() == ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.FIRMADO
                         || d.getEstadoDocu() == ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.EMITIDO
                         || d.getEstadoDocu() == ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.ADJUNTO);
+        boolean tieneActoAdmPendienteFirma = docs.stream()
+                .anyMatch(d -> d.getTipoDocu() == TipoDocu.ACTO_ADMINISTRATIVO
+                        && d.getEstadoDocu() == ar.gob.malvinas.faltas.core.domain.enums.EstadoDocu.PENDIENTE_FIRMA);
         boolean tieneNotificaciones = !notifs.isEmpty();
         boolean notificacionEnCurso = notifs.stream()
                 .anyMatch(n -> n.getEstado() == EstadoNotificacion.EN_PROCESO
@@ -311,7 +318,7 @@ public class SnapshotRecalculador {
                 tieneDocumentos, tieneDocsPendientesFirma,
                 todosDocsFirmados, tieneDocsFirmados, tieneNotificaciones,
                 notificacionEnCurso, tieneNotificacionPositiva, esReingresoParaRevision,
-                tuvoPagoExterno);
+                tuvoPagoExterno, tieneActoAdmPendienteFirma);
 
         proyectarSatelites(snap, acta.getId());
         proyectarPagos(snap, acta.getId());
@@ -339,9 +346,9 @@ public class SnapshotRecalculador {
             FalActaValorizacion op = operativaOpt.get();
             snap.setValorizacionOperativaId(op.getId());
             snap.setEstadoValorizacionOperativa(op.getEstadoValorizacion());
-            snap.setTipoValorizacionOperativa(op.getTipoValorizacionActa());
-            snap.setMontoOperativoVigente(op.getMontoFinal());
-            snap.setSiMontoConfirmado(true);
+            snap.setTipoValorizacionOperativa(null);
+            snap.setMontoOperativoVigente(op.getMontoTotalOrdinario());
+            snap.setSiMontoConfirmado(op.isSiConfirmada());
         } else {
             snap.setValorizacionOperativaId(null);
             snap.setEstadoValorizacionOperativa(null);
@@ -366,7 +373,8 @@ public class SnapshotRecalculador {
             boolean notificacionEnCurso,
             boolean tieneNotificacionPositiva,
             boolean esReingresoParaRevision,
-            boolean tuvoPagoExterno) {
+            boolean tuvoPagoExterno,
+            boolean tieneActoAdmPendienteFirma) {
 
         switch (acta.getSituacionAdministrativa()) {
             case CERRADA, ANULADA -> {
@@ -518,6 +526,16 @@ public class SnapshotRecalculador {
                 return;
             }
 
+            // Prioridad 6: pieza resolutoria (ACTO_ADMINISTRATIVO, no fallo) pendiente de firma.
+            // Aplica cuando no existe FalActaFallo activo pero si un FalDocumento
+            // de tipo ACTO_ADMINISTRATIVO en estado PENDIENTE_FIRMA.
+            // Ver snapshot-bandejas-acciones.md, seccion "Nota: condicion de pieza resolutoria".
+            if (falloOpt.isEmpty() && tieneActoAdmPendienteFirma) {
+                snap.setCodBandeja(CodigoBandeja.PENDIENTES_RESOLUCION_REDACCION);
+                snap.setAccionPendiente(AccionPendiente.FIRMAR_DOCUMENTO);
+                return;
+            }
+
             snap.setCodBandeja(CodigoBandeja.PENDIENTE_ANALISIS);
             snap.setAccionPendiente(AccionPendiente.DICTAR_FALLO);
             return;
@@ -541,13 +559,15 @@ public class SnapshotRecalculador {
         }
 
         if (!tieneDocumentos) {
-            if (bloque == BloqueActual.CAPT) {
-                snap.setCodBandeja(CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO);
-                snap.setAccionPendiente(AccionPendiente.COMPLETAR_CAPTURA);
+            // Acta recien nacida (alta integral, unico evento ACTLAB, sin documentos aun):
+            // bandeja ACTA_NUEVA en lugar de ACTAS_EN_ENRIQUECIMIENTO
+            // (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01).
+            if (snap.getUltimoEventoTipo() == TipoEventoActa.ACTLAB) {
+                snap.setCodBandeja(CodigoBandeja.ACTA_NUEVA);
             } else {
                 snap.setCodBandeja(CodigoBandeja.ACTAS_EN_ENRIQUECIMIENTO);
-                snap.setAccionPendiente(AccionPendiente.GENERAR_DOCUMENTO);
             }
+            snap.setAccionPendiente(AccionPendiente.GENERAR_DOCUMENTO);
             return;
         }
 

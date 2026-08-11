@@ -16,6 +16,8 @@ import ar.gob.malvinas.faltas.core.domain.enums.EstadoNumeroTalonario;
 import ar.gob.malvinas.faltas.core.domain.enums.MotivoAnulacionTalonario;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoTalonario;
 import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
+import ar.gob.malvinas.faltas.core.domain.model.FalDependenciaVersion;
+import ar.gob.malvinas.faltas.core.domain.model.FalInspector;
 import ar.gob.malvinas.faltas.core.domain.model.FalInspectorVersion;
 import ar.gob.malvinas.faltas.core.domain.model.NumPolitica;
 import ar.gob.malvinas.faltas.core.domain.model.NumTalonario;
@@ -31,7 +33,6 @@ import ar.gob.malvinas.faltas.core.domain.enums.EstadoAsignacionTalonario;
 import ar.gob.malvinas.faltas.core.repository.DependenciaRepository;
 import ar.gob.malvinas.faltas.core.repository.InspectorRepository;
 import ar.gob.malvinas.faltas.core.repository.TalonarioRepository;
-import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository;
 import org.springframework.stereotype.Service;
 import ar.gob.malvinas.faltas.core.infrastructure.time.FaltasClock;
 
@@ -238,6 +239,21 @@ public class TalonarioService {
     // Ambitos
     // -------------------------------------------------------------------------
 
+    /**
+     * {@code isolation = READ_COMMITTED} (mismo hallazgo material que
+     * {@code ActaService.labrar}, Wave 4 PARTE-3A §12): esta transaccion bloquea
+     * {@code fal_dependencia} con {@code SELECT ... FOR UPDATE}
+     * ({@link #validarExclusividadElectronicaActa}) y despues vuelve a leer
+     * {@code num_talonario_ambito} con una lectura simple. Bajo {@code REPEATABLE READ} (nivel
+     * por defecto de InnoDB/MariaDB), esa lectura simple posterior reutiliza el snapshot
+     * consistente establecido por la PRIMERA lectura de la transaccion -- anterior al bloqueo --
+     * y no veria el ambito recien commiteado por la transaccion que tenia el bloqueo antes:
+     * ambas transacciones concurrentes verian "cero conflictos" y las dos insertarian. Con
+     * {@code READ_COMMITTED}, cada statement lee la version mas reciente ya commiteada, por lo
+     * que la segunda transaccion, al desbloquearse, ve el ambito que la primera ya commiteo.
+     */
+    @org.springframework.transaction.annotation.Transactional(
+            isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public NumTalonarioAmbito crearAmbito(CrearTalonarioAmbitoCommand cmd) {
         if (cmd.talonarioId() == null) {
             throw new PrecondicionVioladaException("talonarioId es obligatorio.");
@@ -300,6 +316,17 @@ public class TalonarioService {
                                     + " en fecha: " + fechaRef));
         }
 
+        // DECISION-NUM-UNICO-ACTIVO-POR-DEPENDENCIA-01 (Wave 4 Parte 3C §8): una dependencia no
+        // puede tener dos o mas talonarios ACTA ELECTRONICO activos aplicables simultaneamente.
+        // Se previene en el camino de escritura (aqui), no solo se detecta al labrar. Solo aplica
+        // cuando el nuevo ambito seria efectivamente activo, de clase ACTA y de un talonario
+        // ELECTRONICO: los demas casos (DOCUMENTO, MANUAL_FISICO, ambito inactivo) no participan
+        // de esta exclusividad.
+        if (cmd.siActivo() && cmd.claseTalonario() == ClaseNumeracion.ACTA
+                && talonario.getTipoTalonario() == TipoTalonario.ELECTRONICO) {
+            validarExclusividadElectronicaActa(cmd);
+        }
+
         long id = nextAmbitoId();
         LocalDateTime fhAlta = faltasClock.now();
 
@@ -320,6 +347,60 @@ public class TalonarioService {
                 cmd.idUserAlta());
 
         return talonarioRepository.guardarAmbito(ambito);
+    }
+
+    /**
+     * Protege {@code DECISION-NUM-UNICO-ACTIVO-POR-DEPENDENCIA-01} en el camino de escritura.
+     *
+     * <p>Bloquea primero las filas de {@code fal_dependencia} afectadas por {@code cmd}
+     * ({@link TalonarioRepository#bloquearParaExclusividadElectronicaActa}), serializando
+     * cualquier otra activacion concurrente que compita por la misma dependencia. Con el
+     * bloqueo tomado, relee el estado ya consistente de ambitos ACTA ELECTRONICO activos y
+     * rechaza si alguno se superpone en vigencia, alcance y tipoActa con el que se esta creando.
+     */
+    private void validarExclusividadElectronicaActa(CrearTalonarioAmbitoCommand cmd) {
+        talonarioRepository.bloquearParaExclusividadElectronicaActa(cmd.alcance(), cmd.idDep());
+
+        for (NumTalonarioAmbito otro : talonarioRepository.listarAmbitosActivos()) {
+            if (!otro.isSiActivo()) continue;
+            NumTalonario otroTalonario = talonarioRepository.buscarTalonarioPorId(otro.getTalonarioId())
+                    .orElse(null);
+            if (otroTalonario == null) continue;
+            if (otroTalonario.getClaseTalonario() != ClaseNumeracion.ACTA) continue;
+            if (otroTalonario.getTipoTalonario() != TipoTalonario.ELECTRONICO) continue;
+            if (!seAplicanALaMismaDependencia(cmd, otro)) continue;
+            if (!seSuperponenEnTipoActa(cmd.tipoActa(), otro.getTipoActa())) continue;
+            if (!seSuperponenEnVigencia(cmd.fhDesde(), cmd.fhHasta(), otro.getFhDesde(), otro.getFhHasta())) continue;
+
+            throw new PrecondicionVioladaException(
+                    "Ya existe un talonario ACTA ELECTRONICO activo (id=" + otro.getTalonarioId()
+                            + ", ambito=" + otro.getId() + ") aplicable a la misma dependencia/alcance."
+                            + " Maximo un talonario electronico activo por dependencia"
+                            + " (DECISION-NUM-UNICO-ACTIVO-POR-DEPENDENCIA-01, Wave 4 Parte 3C §8).");
+        }
+    }
+
+    private static boolean seAplicanALaMismaDependencia(CrearTalonarioAmbitoCommand cmd, NumTalonarioAmbito otro) {
+        if (cmd.alcance() == AlcanceTalonario.GLOBAL || otro.getAlcance() == AlcanceTalonario.GLOBAL) {
+            return true;
+        }
+        if (cmd.alcance() == AlcanceTalonario.DEPENDENCIA && otro.getAlcance() == AlcanceTalonario.DEPENDENCIA) {
+            return java.util.Objects.equals(cmd.idDep(), otro.getIdDep());
+        }
+        // TRANSVERSAL_DOCUMENTO no aplica a ACTA (se filtra por claseTalonario=ACTA arriba).
+        return false;
+    }
+
+    private static boolean seSuperponenEnTipoActa(Short tipoActaNuevo, Short tipoActaExistente) {
+        return tipoActaNuevo == null || tipoActaExistente == null
+                || tipoActaNuevo.equals(tipoActaExistente);
+    }
+
+    private static boolean seSuperponenEnVigencia(
+            LocalDate desdeNuevo, LocalDate hastaNuevo, LocalDate desdeExistente, LocalDate hastaExistente) {
+        boolean empiezaAntesDeQueTermineElExistente = hastaExistente == null || !desdeNuevo.isAfter(hastaExistente);
+        boolean terminaDespuesDeQueEmpieceElNuevo = hastaNuevo == null || !desdeExistente.isAfter(hastaNuevo);
+        return empiezaAntesDeQueTermineElExistente && terminaDespuesDeQueEmpieceElNuevo;
     }
 
     public NumTalonarioAmbito obtenerAmbito(Long id) {
@@ -599,6 +680,151 @@ public class TalonarioService {
         talonarioRepository.guardarMovimiento(movimiento);
 
         return new NumeroActaEmitidoResponse(movimientoId, talonario.getId(), nroUsado, nroActa);
+    }
+
+    /**
+     * Dependencia e inspector ya validados, con la version congelada de cada uno
+     * (Wave 4 PARTE-3A S10): {@code idDep+verDep} vigente en la fecha y, si se informo
+     * inspector, {@code idInsp+verInsp} vigente y habilitado exactamente para esa
+     * version de dependencia.
+     */
+    public record DependenciaInspectorValidados(
+            FalDependenciaVersion dependenciaVersion, FalInspectorVersion inspectorVersion) {}
+
+    /**
+     * Valida dependencia e inspector ANTES de la seccion critica de numeracion
+     * (Wave 4 PARTE-3A S10, prompt §10). Debe invocarse antes de resolver/bloquear el
+     * talonario: un fallo aqui no debe dejar contador tocado ni trabajo parcial.
+     *
+     * <p>Dependencia: debe existir, estar activa y tener version vigente en {@code fecha}
+     * compatible con {@code tipoActa} (si se informa tipoActa).
+     *
+     * <p>Inspector (opcional): si se informa {@code idInsp}, debe existir, estar activo y
+     * tener una version vigente en {@code fecha} cuya {@code idDep+verDep} coincida
+     * exactamente con la version de dependencia resuelta arriba (habilitacion real, no solo
+     * existencia de alguna version).
+     *
+     * @throws PrecondicionVioladaException con un mensaje preciso sobre cual verificacion fallo
+     */
+    public DependenciaInspectorValidados validarDependenciaEInspectorParaActa(
+            Long idDep, Long idInsp, ar.gob.malvinas.faltas.core.domain.enums.TipoActa tipoActa, LocalDate fecha) {
+        if (idDep == null) throw new PrecondicionVioladaException("idDep es obligatorio para validar el alta.");
+        if (fecha == null) throw new PrecondicionVioladaException("fecha es obligatoria para validar el alta.");
+
+        ar.gob.malvinas.faltas.core.domain.model.FalDependencia dependencia = dependenciaRepository.findById(idDep)
+                .orElseThrow(() -> new PrecondicionVioladaException("Dependencia no encontrada: " + idDep));
+        if (!dependencia.isSiActiva()) {
+            throw new PrecondicionVioladaException("La dependencia " + idDep + " no esta activa.");
+        }
+        FalDependenciaVersion depVersion = dependenciaRepository.findVersionVigente(idDep, fecha)
+                .orElseThrow(() -> new PrecondicionVioladaException(
+                        "La dependencia " + idDep + " no tiene version vigente en fecha " + fecha + "."));
+        if (tipoActa != null && depVersion.getTipoActa() != null && depVersion.getTipoActa() != tipoActa) {
+            throw new PrecondicionVioladaException(
+                    "La dependencia " + idDep + " (version " + depVersion.getVerDep()
+                            + ") no habilita tipoActa=" + tipoActa
+                            + "; habilita " + depVersion.getTipoActa() + ".");
+        }
+
+        FalInspectorVersion inspVersion = null;
+        if (idInsp != null) {
+            FalInspector inspector = inspectorRepository.findById(idInsp)
+                    .orElseThrow(() -> new PrecondicionVioladaException("Inspector no encontrado: " + idInsp));
+            if (!inspector.isSiActivo()) {
+                throw new PrecondicionVioladaException("El inspector " + idInsp + " no esta activo.");
+            }
+            inspVersion = inspectorRepository.findVersionVigente(idInsp, fecha)
+                    .orElseThrow(() -> new PrecondicionVioladaException(
+                            "El inspector " + idInsp + " no tiene habilitacion vigente en fecha " + fecha + "."));
+            if (!java.util.Objects.equals(inspVersion.getIdDep(), depVersion.getIdDep())
+                    || inspVersion.getVerDep() != depVersion.getVerDep()) {
+                throw new PrecondicionVioladaException(
+                        "El inspector " + idInsp + " no esta habilitado para la dependencia " + idDep
+                                + " (version " + depVersion.getVerDep() + ").");
+            }
+        }
+        return new DependenciaInspectorValidados(depVersion, inspVersion);
+    }
+
+    /**
+     * Resultado de la resolucion de talonario ACTA compatible con un contexto, SIN reclamar
+     * numero todavia. Separado de la emision para permitir resolver el talonario antes de la
+     * seccion critica (Wave 4 PARTE-2 S8.3: "resolver politica y talonario elegible" es parte
+     * del trabajo previo a la transaccion/seccion critica, no de la seccion critica en si).
+     */
+    public record TalonarioResuelto(NumTalonario talonario, NumPolitica politica) {}
+
+    /**
+     * Resuelve el talonario ACTA ELECTRONICO compatible con el contexto, sin tocar el
+     * contador ({@code DECISION-NUM-UNICO-ACTIVO-01}, Wave 4 Parte 3B §9.2, prompt §9.2):
+     * <b>cada dependencia puede tener como maximo un unico talonario electronico activo</b>.
+     *
+     * <p>A diferencia de {@link #emitirNumeroActa} (circuito manual/documental, no tocado por
+     * esta decision), esta resolucion ya NO desambigua por prioridad entre varios talonarios
+     * ELECTRONICO compatibles: la prioridad solo tiene sentido cuando coexistir es una
+     * configuracion valida (circuito manual). Para el circuito electronico, coexistir 2+
+     * talonarios activos compatibles con la misma dependencia es en si mismo una
+     * inconsistencia de configuracion, nunca un empate a resolver silenciosamente.
+     *
+     * <p>Comportamiento exacto:
+     * <pre>
+     * 0 talonarios ELECTRONICO activos compatibles -&gt; PrecondicionVioladaException (config ausente)
+     * 1 talonario                                  -&gt; se usa, sin importar su prioridad
+     * 2+ talonarios                                -&gt; PrecondicionVioladaException (inconsistencia)
+     * </pre>
+     */
+    public TalonarioResuelto resolverTalonarioActaElectronico(Long idDep, Short tipoActa, LocalDate fecha) {
+        if (idDep == null) throw new PrecondicionVioladaException("idDep es obligatorio.");
+        if (fecha == null) throw new PrecondicionVioladaException("fecha es obligatoria.");
+
+        List<NumTalonario> talonariosActa = talonarioRepository.listarTalonariosActivos().stream()
+                .filter(t -> t.getClaseTalonario() == ClaseNumeracion.ACTA)
+                .filter(t -> t.getTipoTalonario() == TipoTalonario.ELECTRONICO)
+                .filter(t -> !t.isSiBloqueado())
+                .toList();
+
+        List<NumTalonario> candidatos = talonariosActa.stream()
+                .filter(t -> talonarioRepository.listarAmbitosPorTalonario(t.getId()).stream()
+                        .filter(NumTalonarioAmbito::isSiActivo)
+                        .filter(a -> a.esVigenteEn(fecha))
+                        .filter(a -> a.getAlcance() != AlcanceTalonario.TRANSVERSAL_DOCUMENTO)
+                        .filter(a -> a.getAlcance() != AlcanceTalonario.DEPENDENCIA || idDep.equals(a.getIdDep()))
+                        .anyMatch(a -> tipoActa == null || a.getTipoActa() == null || tipoActa.equals(a.getTipoActa())))
+                .toList();
+
+        if (candidatos.isEmpty()) {
+            throw new ar.gob.malvinas.faltas.core.domain.exception.SinTalonarioElectronicoActivoException(
+                    "No hay talonario ACTA ELECTRONICO activo compatible con la dependencia idDep=" + idDep
+                            + ": 0 talonarios activos (DECISION-NUM-UNICO-ACTIVO-01, prompt Wave 4 Parte 3B §9.2).");
+        }
+        if (candidatos.size() > 1) {
+            throw new PrecondicionVioladaException(
+                    "Inconsistencia de numeracion: " + candidatos.size()
+                            + " talonarios ACTA ELECTRONICO activos aplican simultaneamente a la dependencia idDep="
+                            + idDep + " (ids=" + candidatos.stream().map(NumTalonario::getId).toList()
+                            + "). Debe existir exactamente un unico talonario electronico activo por dependencia"
+                            + " (DECISION-NUM-UNICO-ACTIVO-01, prompt Wave 4 Parte 3B §9.2).");
+        }
+        NumTalonario talonario = candidatos.get(0);
+        NumPolitica politica = talonarioRepository.buscarPoliticaPorId(talonario.getPoliticaId())
+                .orElseThrow(() -> new PrecondicionVioladaException("Politica no encontrada para talonario: " + talonario.getId()));
+        return new TalonarioResuelto(talonario, politica);
+    }
+
+    /** Numero de acta electronico ya reclamado: listo para asignar a fal_acta. */
+    public record NumeroActaReclamado(Long idTalonario, int nroTalonarioUsado, String nroActa) {}
+
+    /**
+     * Seccion critica de la numeracion electronica del alta (Wave 4 PARTE-2 S8.3): reclama el
+     * siguiente numero del talonario ya resuelto y construye el numero visible. NO inserta
+     * {@code num_talonario_movimiento} (reservado al circuito de talonario manual, S8.2): el
+     * repositorio JDBC solo bloquea la fila del talonario con {@code FOR UPDATE} e incrementa
+     * {@code ultimo_nro_emitido} en la misma transaccion del llamador.
+     */
+    public NumeroActaReclamado reclamarNumeroActaElectronico(TalonarioResuelto resuelto) {
+        int nroUsado = nextNumeroTalonario(resuelto.talonario().getId(), resuelto.talonario().getNroDesde(), resuelto.talonario().getNroHasta());
+        String nroActa = construirNroActa(resuelto.politica(), resuelto.talonario(), nroUsado);
+        return new NumeroActaReclamado(resuelto.talonario().getId(), nroUsado, nroActa);
     }
 
     public List<NumTalonarioMovimiento> listarMovimientosPorTalonario(Long idTalonario) {
@@ -955,45 +1181,27 @@ public class TalonarioService {
     // -------------------------------------------------------------------------
 
     private long nextPoliticaId() {
-        if (talonarioRepository instanceof InMemoryTalonarioRepository r) {
-            return r.nextPoliticaId();
-        }
-        throw new IllegalStateException("nextPoliticaId no disponible en esta implementacion.");
+        return talonarioRepository.nextPoliticaId();
     }
 
     private long nextTalonarioId() {
-        if (talonarioRepository instanceof InMemoryTalonarioRepository r) {
-            return r.nextTalonarioId();
-        }
-        throw new IllegalStateException("nextTalonarioId no disponible en esta implementacion.");
+        return talonarioRepository.nextTalonarioId();
     }
 
     private long nextAmbitoId() {
-        if (talonarioRepository instanceof InMemoryTalonarioRepository r) {
-            return r.nextAmbitoId();
-        }
-        throw new IllegalStateException("nextAmbitoId no disponible en esta implementacion.");
+        return talonarioRepository.nextAmbitoId();
     }
 
     private long nextAsignacionInspectorId() {
-        if (talonarioRepository instanceof InMemoryTalonarioRepository r) {
-            return r.nextAsignacionInspectorId();
-        }
-        throw new IllegalStateException("nextAsignacionInspectorId no disponible en esta implementacion.");
+        return talonarioRepository.nextAsignacionInspectorId();
     }
 
     private long nextMovimientoId() {
-        if (talonarioRepository instanceof InMemoryTalonarioRepository r) {
-            return r.nextMovimientoId();
-        }
-        throw new IllegalStateException("nextMovimientoId no disponible en esta implementacion.");
+        return talonarioRepository.nextMovimientoId();
     }
 
     private int nextNumeroTalonario(Long idTalonario, int nroDesde, Integer nroHasta) {
-        if (talonarioRepository instanceof InMemoryTalonarioRepository r) {
-            return r.nextNumeroTalonario(idTalonario, nroDesde, nroHasta);
-        }
-        throw new IllegalStateException("nextNumeroTalonario no disponible en esta implementacion.");
+        return talonarioRepository.nextNumeroTalonario(idTalonario, nroDesde, nroHasta);
     }
 
     private void validarNroEnRango(NumTalonario talonario, int nroTalonario) {

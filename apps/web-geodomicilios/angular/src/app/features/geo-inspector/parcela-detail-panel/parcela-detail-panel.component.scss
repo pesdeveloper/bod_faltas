@@ -1,0 +1,145 @@
+.parcela-panel {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  margin-top: 6px;
+  max-width: 280px;
+}
+
+.parcela-loading,
+.parcela-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.parcela-error { color: #b71c1c; }
+
+.parcela-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px 8px;
+}
+
+.parcela-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #1565c0;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.parcela-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.parcela-direccion {
+  font-weight: 600;
+  font-size: 12px;
+  color: #1a2332;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.parcela-nomenclatura {
+  font-size: 10px;
+  color: #546e7a;
+  font-family: monospace;
+  letter-spacing: 0.3px;
+}
+
+.parcela-section {
+  padding: 8px 12px;
+}
+
+.parcela-section-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #78909c;
+  margin-bottom: 6px;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.cuenta-row {
+  margin-bottom: 3px;
+}
+
+.cuenta-badge {
+  display: inline-block;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.comercios-list {
+  max-height: 150px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comercio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.comercio-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: #ef6c00;
+  flex-shrink: 0;
+}
+
+.comercio-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.comercio-nombre {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a2332;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.parcela-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #90a4ae;
+  font-style: italic;
+
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}

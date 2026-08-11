@@ -10,6 +10,11 @@ public enum ResultadoFinalActa {
     ABSUELTO((short) 2),
     CONDENA_FIRME((short) 3),
     CONDENA_FIRME_PAGADA((short) 4),
+    /**
+     * @deprecated Código 5 obsoleto. Usar {@link #CONDENA_FIRME_PAGADA} (4) para condenas pagadas.
+     * Mantenido solo para compatibilidad de lectura de datos históricos.
+     */
+    @Deprecated
     FALLO_CONDENATORIO_PAGADO((short) 5),
     FALLO_CONDENATORIO_GESTION_EXTERNA((short) 6),
     PRESCRIPTO((short) 7),

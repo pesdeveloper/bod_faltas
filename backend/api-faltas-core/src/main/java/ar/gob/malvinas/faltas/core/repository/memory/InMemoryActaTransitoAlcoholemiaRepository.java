@@ -2,6 +2,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 
 import ar.gob.malvinas.faltas.core.domain.model.FalActaTransitoAlcoholemia;
 import ar.gob.malvinas.faltas.core.repository.ActaTransitoAlcoholemiaRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryActaTransitoAlcoholemiaRepository
         implements ActaTransitoAlcoholemiaRepository, ResettableInMemoryRepository {
 

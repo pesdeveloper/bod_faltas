@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
@@ -135,15 +137,13 @@ class DocumentoNumeracionFirmasTest {
     // =========================================================================
 
     private FalActa crearActa() {
-        Long id = actaRepo.nextId();
         FalActa acta = new FalActa(
-                id, UUID.randomUUID().toString(),
+                null, UUID.randomUUID().toString(),
                 "TRANSITO", DEP_COD, "INS-001",
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
+                "Belgrano 200", "Calle 123", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
-        actaRepo.guardar(acta);
-        return acta;
+        return actaRepo.guardar(acta);
     }
 
     private FalDependencia crearDependencia() {

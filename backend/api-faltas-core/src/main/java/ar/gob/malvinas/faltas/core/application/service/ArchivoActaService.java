@@ -117,9 +117,9 @@ public class ArchivoActaService {
                 ahora, usuario, ahora, usuario);
 
         snapActual.ifPresent(s -> {
-            if (s.getCodBandeja() != null) archivo.setCodBandejaOrigen(s.getCodBandeja().name());
+            if (s.getCodBandeja() != null) archivo.setCodBandejaOrigen(s.getCodBandeja().codigo());
             if (s.getSubBandeja() != null) archivo.setSubBandejaOrigen(s.getSubBandeja());
-            if (s.getAccionPendiente() != null) archivo.setAccionPendienteOrigen(s.getAccionPendiente().name());
+            if (s.getAccionPendiente() != null) archivo.setAccionPendienteOrigen(s.getAccionPendiente().codigo());
         });
 
         if (cmd.documentoId() != null) {
@@ -128,12 +128,10 @@ public class ArchivoActaService {
 
         Long obsId = null;
         if (cmd.observacionTexto() != null && !cmd.observacionTexto().trim().isEmpty()) {
-            Long id = observacionRepository.nextId();
-            FalObservacion obs = new FalObservacion(id, EntidadTipoObservada.ARCHIVO,
+            FalObservacion obs = new FalObservacion(null, EntidadTipoObservada.ARCHIVO,
                     archivoId, null, cmd.observacionTexto().trim(),
                     OrigenObservacion.USUARIO, ahora, usuario);
-            observacionRepository.guardar(obs);
-            obsId = id;
+            obsId = observacionRepository.guardar(obs).getId();
             archivo.setObservacionId(obsId);
         }
 
@@ -152,7 +150,7 @@ public class ArchivoActaService {
 
         FalActaArchivo archivoGuardado = archivoRepository.crearActivoAtomicamente(archivo);
 
-        FalActaEvento evento = registrarEvento(acta.getId(), TipoEventoActa.ACTARCH, usuario,
+        FalActaEvento evento = registrarEvento(acta.getId(), TipoEventoActa.ACTARC, usuario,
                 "Acta archivada. Motivo: " + motivo.getCodMotivoArchivo()
                 + (estabaParalizada ? " (paralizacion cerrada)" : "")
                 + (obsId != null ? ". Obs: " + obsId : ""));
@@ -170,7 +168,7 @@ public class ArchivoActaService {
         snapshotRepository.guardar(snap);
 
         return ComandoResultado.de(acta.getId(), String.valueOf(archivoConEvento.getId()),
-                TipoEventoActa.ACTARCH.codigo(),
+                TipoEventoActa.ACTARC.codigo(),
                 "Acta archivada. Motivo: " + motivo.getCodMotivoArchivo());
     }
 

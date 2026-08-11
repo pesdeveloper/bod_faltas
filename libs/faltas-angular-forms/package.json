@@ -1,0 +1,10 @@
+{
+  "name": "@faltas/angular-forms",
+  "version": "0.0.1",
+  "description": "Libreria interna compartida de Angular para el sistema Faltas. Contiene directivas y servicios reutilizables de formularios.",
+  "private": true,
+  "peerDependencies": {
+    "@angular/core": ">=19.0.0",
+    "@angular/common": ">=19.0.0"
+  }
+}

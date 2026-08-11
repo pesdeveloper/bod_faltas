@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.combinacion.DocumentoCombinacionService;
@@ -89,7 +90,7 @@ class ActaFlujoDocumentalFuncionalTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoVolRepo, falloRepo, apelRepo, pagoCondRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
 
         docService = new DocumentoService(
@@ -131,13 +132,14 @@ class ActaFlujoDocumentalFuncionalTest {
 
     private Long labrarCapturarEnriquecer() {
         Long id = actaService.labrar(new LabrarActaCommand(
-                "TRANSITO", "DEP-01", "INS-001",
+                TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2024, 3, 15),
                 "Av. Pioneros 2345", "Belgrano 200",
                 null, null, null,
-                "Juan Carlos Perez", "12345678",
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(id, null));
+                "Juan Carlos Perez", null, "12345678", null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
         actaService.enriquecer(new EnriquecerActaCommand(id, null));
         return id;
     }
@@ -270,10 +272,12 @@ class ActaFlujoDocumentalFuncionalTest {
         @DisplayName("DictarFallo en bloque CAPT lanza PrecondicionVioladaException")
         void fallo_en_capt_lanza_precondicion() {
             Long actaId = actaService.labrar(new LabrarActaCommand(
-                    "TRANSITO", "DEP-01", "INS-001",
+                    TipoActa.TRANSITO, 1L, 1L,
                     LocalDate.of(2024, 1, 1), "Dom1", "Dom2",
-                    null, null, null, "Test", "99999999",
-                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
+                    null, null, null, "Test", null, "99999999", null,
+                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                    null, null, null, null, null,
+                    ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
 
             assertThatThrownBy(() ->
                     falloService.dictarAbsolutorio(new DictarFalloAbsolutorioCommand(actaId, "test", null)))

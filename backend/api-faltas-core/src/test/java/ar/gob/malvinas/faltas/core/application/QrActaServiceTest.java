@@ -2,14 +2,18 @@ package ar.gob.malvinas.faltas.core.application;
 
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
+import ar.gob.malvinas.faltas.core.support.QrTestSupport;
 
+import ar.gob.malvinas.faltas.core.application.port.QrTokenEmitido;
+import ar.gob.malvinas.faltas.core.application.port.QrTokenProtector;
 import ar.gob.malvinas.faltas.core.application.service.NoOpBloqueantesMaterialesChecker;
+import ar.gob.malvinas.faltas.core.application.service.QrAccesoTransaccionalService;
 import ar.gob.malvinas.faltas.core.application.service.QrActaService;
 import ar.gob.malvinas.faltas.core.application.service.NotificacionIntentoService;
 import ar.gob.malvinas.faltas.core.domain.enums.*;
 import ar.gob.malvinas.faltas.core.domain.exception.*;
 import ar.gob.malvinas.faltas.core.domain.model.*;
-import ar.gob.malvinas.faltas.core.infrastructure.qr.AesGcmQrTokenProtector;
+import ar.gob.malvinas.faltas.core.infrastructure.qr.HmacSha256QrTokenProtector;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
 import org.junit.jupiter.api.*;
@@ -34,7 +38,7 @@ class QrActaServiceTest {
     private InMemoryActaEventoRepository eventoRepo;
     private InMemoryActaSnapshotRepository snapshotRepo;
     private InMemoryQrAccesoRepository qrAccesoRepo;
-    private AesGcmQrTokenProtector tokenProtector;
+    private QrTokenProtector tokenProtector;
     private QrActaService service;
 
     @BeforeEach
@@ -43,7 +47,7 @@ class QrActaServiceTest {
         eventoRepo = new InMemoryActaEventoRepository();
         snapshotRepo = new InMemoryActaSnapshotRepository();
         qrAccesoRepo = new InMemoryQrAccesoRepository();
-        tokenProtector = new AesGcmQrTokenProtector(); // clave efimera para tests
+        tokenProtector = QrTestSupport.protector(); // clave fija TEST_ONLY, payload version 0
 
         var docRepo = new InMemoryDocumentoRepository();
         var pagoVolRepo = new InMemoryPagoVoluntarioRepository();
@@ -55,72 +59,142 @@ class QrActaServiceTest {
                 eventoRepo, docRepo, new InMemoryNotificacionRepository(),
                 pagoVolRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
 
-        service = new QrActaService(actaRepo, eventoRepo, snapshotRepo, qrAccesoRepo, recalc, tokenProtector, FaltasClockTestSupport.FIXED);
+        QrAccesoTransaccionalService transaccional =
+                new QrAccesoTransaccionalService(qrAccesoRepo, eventoRepo, recalc);
+        service = new QrActaService(actaRepo, qrAccesoRepo, transaccional, tokenProtector, FaltasClockTestSupport.FIXED);
     }
 
-    private FalActa crearActa(Long id) {
-        FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Etiqueta logica del test -> id real que asigno la persistencia. */
+    private final java.util.Map<Long, Long> idsActa = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Etiqueta logica del test -> token emitido en el alta de esa acta. */
+    private final java.util.Map<Long, String> tokensActa = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     *
+     * <p>El QR se emite <b>en el alta</b> y nunca despues, igual que en
+     * {@code ActaService.labrar} ({@code DECISION-QR-INMUTABLE-01}). Por eso el fixture lo
+     * emite aca: no existe ninguna operacion posterior que se lo pueda asignar.
+     *
+     * <p>El uuidTecnico es un UUID canonico porque el token canonico solo admite esa forma
+     * ({@code DECISION_DDL-ACTA-QR-01}).
+     */
+    private FalActa crearActa(Long etiqueta) {
+        String uuidTecnico = java.util.UUID.randomUUID().toString();
+        QrTokenEmitido qr = service.emitirTokenPara(uuidTecnico);
+
+        FalActa a = new FalActa(null, uuidTecnico,
+                TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+                null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, AHORA, "SYS");
         a.setBloqueActual(BloqueActual.NOTI);
-        return actaRepo.guardar(a);
+        a.setQrPayloadVersion(qr.version());
+        a.setCodigoQr(qr.token());
+
+        FalActa persistida = actaRepo.guardar(a);
+        idsActa.put(etiqueta, persistida.getId());
+        tokensActa.put(etiqueta, qr.token());
+        return persistida;
+    }
+
+    /** Id real del acta creada con esa etiqueta. */
+    private Long acta(Long etiqueta) {
+        return idsActa.get(etiqueta);
+    }
+
+    /** Token emitido en el alta de esa acta. */
+    private String token(Long etiqueta) {
+        return tokensActa.get(etiqueta);
     }
 
     // ----------------------------------------------------------------
-    @Nested @DisplayName("Generacion de QR")
-    class GenerarQr {
+    @Nested @DisplayName("Emision unica del QR")
+    class EmisionUnica {
 
-        @Test @DisplayName("genera token para acta sin QR previo")
-        void generaTokenSinQrPrevio() {
+        @Test @DisplayName("el alta emite el token y queda informado en el acta")
+        void altaEmiteElToken() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            assertThat(token).isNotNull().isNotBlank();
+            assertThat(token(1L)).isNotNull().isNotBlank();
+            assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getCodigoQr())
+                    .isEqualTo(token(1L));
         }
 
-        @Test @DisplayName("token generado tiene longitud <= 512 chars")
+        @Test @DisplayName("token generado tiene longitud <= 128 chars y entra en codigo_qr VARCHAR(128)")
         void tokenMaxLength() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            assertThat(token.length()).isLessThanOrEqualTo(512);
+            String token = token(1L);
+            assertThat(token.length())
+                    .as("el token debe entrar en fal_acta.codigo_qr VARCHAR(128)")
+                    .isLessThanOrEqualTo(128);
+            assertThat(token)
+                    .as("version 0 produce exactamente 86 caracteres: QR0.(4) + uuid(36) + .(1)"
+                            + " + version(1) + .(1) + firma(43)")
+                    .hasSize(86);
         }
 
-        @Test @DisplayName("no regenera silenciosamente si ya existe QR")
-        void noRegenera_SinRota() {
+        @Test @DisplayName("el token persistido y la version quedan juntos y coherentes")
+        void tokenYVersionSePersistenJuntos() {
             crearActa(1L);
-            service.generarQr(1L, "USR");
-            assertThatThrownBy(() -> service.generarQr(1L, "USR"))
-                    .isInstanceOf(PrecondicionVioladaException.class)
-                    .hasMessageContaining("QR emitido");
+            String token = token(1L);
+            FalActa acta = actaRepo.buscarPorId(acta(1L)).orElseThrow();
+            assertThat(acta.getCodigoQr()).isEqualTo(token);
+            assertThat(acta.getQrPayloadVersion())
+                    .as("qr_payload_version debe ser la version firmada dentro del token")
+                    .isZero();
+            assertThat(token.split("\\.")[2])
+                    .as("el segmento de version del token debe coincidir con qr_payload_version")
+                    .isEqualTo(String.valueOf(acta.getQrPayloadVersion()));
         }
 
-        @Test @DisplayName("rotarQr genera nuevo token distinto al previo")
-        void rotarQrGeneraNuevo() {
+        @Test @DisplayName("la generacion es deterministica: mismo uuid, version y clave dan el mismo token")
+        void generacionDeterministica() {
+            FalActa acta = crearActa(1L);
+            String token = token(1L);
+            assertThat(tokenProtector.generar(acta.getUuidTecnico()))
+                    .as("el token no depende del reloj ni de aleatoriedad")
+                    .isEqualTo(token);
+        }
+
+        /**
+         * {@code DECISION-QR-INMUTABLE-01} elimina el caso de uso: no hay rotacion,
+         * regeneracion, revocacion ni reemplazo individual del QR de un acta. La ausencia se
+         * verifica sobre el API publico real del servicio, no sobre su texto.
+         */
+        @Test @DisplayName("el servicio no expone ninguna operacion de rotacion o regeneracion")
+        void sinApiDeRotacionNiRegeneracion() {
+            Set<String> operaciones = new HashSet<>();
+            for (java.lang.reflect.Method m : QrActaService.class.getDeclaredMethods()) {
+                if (java.lang.reflect.Modifier.isPublic(m.getModifiers())) {
+                    operaciones.add(m.getName());
+                }
+            }
+            assertThat(operaciones)
+                    .as("el QR se emite una sola vez, durante el labrado")
+                    .doesNotContain("rotarQr", "generarQr", "regenerarQr", "revocarQr",
+                            "reemitirQr", "persistirQr");
+            assertThat(operaciones)
+                    .as("el API minimo realmente usado por el alta y por el portal")
+                    .containsExactlyInAnyOrder("emitirTokenPara", "registrarAcceso",
+                            "registrarAccesoConNotificacion", "listarAccesosPorActa");
+        }
+
+        @Test @DisplayName("el alta no emite QRGENA y ninguna operacion posterior lo emite")
+        void sinEventoQrgena() {
             crearActa(1L);
-            String token1 = service.generarQr(1L, "USR");
-            String token2 = service.rotarQr(1L, "USR");
-            assertThat(token2).isNotNull().isNotBlank().isNotEqualTo(token1);
+            service.registrarAcceso(token(1L), CanalAccesoQr.PORTAL, null, null, "c");
+
+            assertThat(eventoRepo.buscarPorActa(acta(1L)))
+                    .as("no hay reemision, de modo que no hay QRGENA posterior")
+                    .noneMatch(e -> e.tipoEvt() == TipoEventoActa.QRGENA);
         }
 
         @Test @DisplayName("token no predecible - dos actas generan tokens distintos")
         void tokenNoPredecible() {
             crearActa(1L);
             crearActa(2L);
-            String t1 = service.generarQr(1L, "USR");
-            String t2 = service.generarQr(2L, "USR");
-            assertThat(t1).isNotEqualTo(t2);
-        }
-
-        @Test @DisplayName("multiples llamadas a generarQr para misma acta producen tokens distintos (tras rotacion)")
-        void multipleRota() {
-            crearActa(1L);
-            Set<String> tokens = new HashSet<>();
-            service.generarQr(1L, "USR");
-            String t0 = actaRepo.buscarPorId(1L).orElseThrow().getCodigoQr();
-            tokens.add(t0);
-            for (int i = 0; i < 5; i++) {
-                tokens.add(service.rotarQr(1L, "USR"));
-            }
-            assertThat(tokens).hasSize(6);
+            assertThat(token(1L)).isNotEqualTo(token(2L));
         }
 
         @Test @DisplayName("unicidad: tokens para distintas actas son distintos")
@@ -128,7 +202,7 @@ class QrActaServiceTest {
             Set<String> tokens = new HashSet<>();
             for (long id = 1; id <= 10; id++) {
                 crearActa(id);
-                tokens.add(service.generarQr(id, "USR"));
+                tokens.add(token(id));
             }
             assertThat(tokens).hasSize(10);
         }
@@ -136,7 +210,7 @@ class QrActaServiceTest {
         @Test @DisplayName("payload no contiene PII visible en texto plano")
         void payloadSinPii() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             // el token es cifrado; no debe contener nada legible
             assertThat(token).doesNotContain("nombre")
                     .doesNotContain("documento")
@@ -148,23 +222,24 @@ class QrActaServiceTest {
         @Test @DisplayName("token NO contiene actaId numerica en claro")
         void tokenNoContieneIdNumerico() {
             crearActa(42L);
-            String token = service.generarQr(42L, "USR");
-            // base64url no deberia decodificarse a algo que contenga el id en claro
-            assertThat(token).doesNotContain("\"id\":42").doesNotContain("id=42");
+            // el token solo transporta prefijo, identidad tecnica, version y firma
+            assertThat(token(42L))
+                    .doesNotContain("\"id\":" + acta(42L))
+                    .doesNotContain("id=" + acta(42L));
         }
 
-        @Test @DisplayName("evento QRGEN registrado tras generacion")
-        void eventoQrgenRegistrado() {
-            crearActa(1L);
-            service.generarQr(1L, "USR");
-            assertThat(eventoRepo.buscarPorActa(1L))
-                    .anyMatch(e -> e.tipoEvt() == TipoEventoActa.QRGEN);
-        }
+        @Test @DisplayName("el agregado rechaza un segundo QR distinto para la misma acta")
+        void agregadoRechazaSegundoQr() {
+            FalActa acta = crearActa(1L);
+            String otroToken = service.emitirTokenPara(java.util.UUID.randomUUID().toString()).token();
 
-        @Test @DisplayName("acta inexistente lanza excepcion")
-        void actaInexistente() {
-            assertThatThrownBy(() -> service.generarQr(999L, "USR"))
-                    .isInstanceOf(ActaNoEncontradaException.class);
+            assertThatThrownBy(() -> acta.setCodigoQr(otroToken))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("inmutable");
+
+            assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getCodigoQr())
+                    .as("el token persistido no cambia")
+                    .isEqualTo(token(1L));
         }
     }
 
@@ -175,36 +250,36 @@ class QrActaServiceTest {
         @Test @DisplayName("token valido genera acceso VALIDO en repositorio")
         void accesoValidoInsertado() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             QrActaService.AccesoQrResultado r = service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "corr-1");
             assertThat(r.resultado()).isEqualTo(ResultadoAccesoQr.VALIDO);
-            assertThat(r.actaId()).isEqualTo(1L);
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+            assertThat(r.actaId()).isEqualTo(acta(1L));
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(1);
         }
 
         @Test @DisplayName("multiples accesos validos al mismo QR son legitimos")
         void multiplesAccesosValidos() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "c1");
             service.registrarAcceso(token, CanalAccesoQr.APP, null, null, "c2");
             service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "c3");
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(3);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(3);
         }
 
         @Test @DisplayName("evento QRACC registrado tras acceso valido")
         void eventoQraccRegistrado() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "corr-1");
-            assertThat(eventoRepo.buscarPorActa(1L))
-                    .anyMatch(e -> e.tipoEvt() == TipoEventoActa.QRACC);
+            assertThat(eventoRepo.buscarPorActa(acta(1L)))
+                    .anyMatch(e -> e.tipoEvt() == TipoEventoActa.QRACCA);
         }
 
         @Test @DisplayName("acceso con IP IPv4 valida")
         void accesoConIpv4() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             QrActaService.AccesoQrResultado r = service.registrarAcceso(
                     token, CanalAccesoQr.PORTAL, "192.168.1.1", null, "c");
             assertThat(r.resultado()).isEqualTo(ResultadoAccesoQr.VALIDO);
@@ -215,7 +290,7 @@ class QrActaServiceTest {
         @Test @DisplayName("acceso con IP IPv6 valida")
         void accesoConIpv6() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             QrActaService.AccesoQrResultado r = service.registrarAcceso(
                     token, CanalAccesoQr.PORTAL, "2001:db8::1", null, "c");
             assertThat(r.resultado()).isEqualTo(ResultadoAccesoQr.VALIDO);
@@ -226,7 +301,7 @@ class QrActaServiceTest {
         @Test @DisplayName("acceso con user-agent valido")
         void accesoConUserAgent() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             String ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0";
             QrActaService.AccesoQrResultado r = service.registrarAcceso(
                     token, CanalAccesoQr.APP, null, ua, "c");
@@ -238,33 +313,33 @@ class QrActaServiceTest {
         @Test @DisplayName("acceso con todos los canales disponibles")
         void todosCanalesTolerados() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             for (CanalAccesoQr canal : CanalAccesoQr.values()) {
                 service.registrarAcceso(token, canal, null, null, "c");
             }
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(CanalAccesoQr.values().length);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(CanalAccesoQr.values().length);
         }
 
         @Test @DisplayName("resultado devuelto no incluye token ni payload")
         void resultadoSinToken() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             QrActaService.AccesoQrResultado r = service.registrarAcceso(
                     token, CanalAccesoQr.PORTAL, null, null, "corr");
             // el record no tiene campo token
             // comprobamos que los campos visibles son solo los seguros
             assertThat(r.idAcceso()).isNotNull();
-            assertThat(r.actaId()).isEqualTo(1L);
+            assertThat(r.actaId()).isEqualTo(acta(1L));
             assertThat(r.canal()).isEqualTo(CanalAccesoQr.PORTAL);
         }
 
         @Test @DisplayName("copias defensivas: modificar objeto devuelto no afecta repositorio")
         void copiasDefensivas() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "c");
-            List<FalActaQrAcceso> lista1 = qrAccesoRepo.listarPorActa(1L);
-            List<FalActaQrAcceso> lista2 = qrAccesoRepo.listarPorActa(1L);
+            List<FalActaQrAcceso> lista1 = qrAccesoRepo.listarPorActa(acta(1L));
+            List<FalActaQrAcceso> lista2 = qrAccesoRepo.listarPorActa(acta(1L));
             assertThat(lista1).isNotSameAs(lista2);
         }
     }
@@ -278,7 +353,7 @@ class QrActaServiceTest {
             crearActa(1L);
             assertThatThrownBy(() -> service.registrarAcceso(null, CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(QrTokenInvalidoException.class);
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
         }
 
         @Test @DisplayName("token en blanco lanza excepcion y no inserta acceso")
@@ -286,7 +361,7 @@ class QrActaServiceTest {
             crearActa(1L);
             assertThatThrownBy(() -> service.registrarAcceso("  ", CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(QrTokenInvalidoException.class);
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
         }
 
         @Test @DisplayName("token corrupto/manipulado lanza excepcion y no inserta")
@@ -295,47 +370,47 @@ class QrActaServiceTest {
             assertThatThrownBy(() -> service.registrarAcceso(
                     "ZXN0b2VzdW50b2tlbmNvcnJ1cHRv", CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(QrTokenInvalidoException.class);
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
         }
 
-        @Test @DisplayName("token de otra clave (diferente protector) es invalido")
+        @Test @DisplayName("token firmado con otra clave es invalido")
         void tokenDeOtraClave() {
-            crearActa(1L);
-            AesGcmQrTokenProtector otraInstancia = new AesGcmQrTokenProtector();
-            String tokenOtro = otraInstancia.generar("UUID-1");
+            FalActa acta = crearActa(1L);
+            String tokenOtro = QrTestSupport.protectorAlternativo().generar(acta.getUuidTecnico());
             assertThatThrownBy(() -> service.registrarAcceso(tokenOtro, CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(QrTokenInvalidoException.class);
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
         }
 
-        @Test @DisplayName("token con scope incorrecto es invalido")
-        void tokenScopeIncorrecto() {
-            // Verificamos directo en el protector que scope incorrecto lanza
-            byte[] fixedKey = new byte[32];
-            java.util.Arrays.fill(fixedKey, (byte) 0x42);
-            AesGcmQrTokenProtector prot = new AesGcmQrTokenProtector(fixedKey);
-            // No podemos construir un token con scope incorrecto directamente,
-            // pero podemos verificar que el protector rechaza un payload modificado
-            // via el token de otra clave (scope/version distintos)
-            AesGcmQrTokenProtector otraProt = new AesGcmQrTokenProtector();
-            String tokenOtroScope = otraProt.generar("UUID-CUALQUIERA");
-            assertThatThrownBy(() -> prot.resolverUuidTecnico(tokenOtroScope))
-                    .isInstanceOf(QrTokenInvalidoException.class);
+        @Test @DisplayName("token con una version de payload no soportada es invalido")
+        void tokenDeVersionNoSoportada() {
+            FalActa acta = crearActa(1L);
+            // Unico formato implementado: 0. Se fuerza la version 1 conservando la forma
+            // canonica; el rechazo debe venir de la version, antes de verificar la firma.
+            String[] partes = token(1L).split("\\.");
+            String tokenV1 = partes[0] + "." + partes[1] + ".1." + partes[3];
+
+            assertThatThrownBy(() -> service.registrarAcceso(tokenV1, CanalAccesoQr.PORTAL, null, null, "c"))
+                    .isInstanceOf(QrTokenInvalidoException.class)
+                    .hasMessageContaining("version de payload no soportada");
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
+            assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getUuidTecnico())
+                    .isEqualTo(acta.getUuidTecnico());
         }
 
         @Test @DisplayName("token demasiado largo lanza excepcion y no inserta")
         void tokenDemasiadoLargo() {
             crearActa(1L);
-            String tokenLargo = "x".repeat(513);
+            String tokenLargo = "x".repeat(129);
             assertThatThrownBy(() -> service.registrarAcceso(tokenLargo, CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(QrTokenInvalidoException.class);
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
         }
 
         @Test @DisplayName("acta inexistente (uuid no registrado) lanza excepcion")
         void actaInexistente() {
-            // generamos un token valido para un UUID que no existe en el repositorio
-            String token = tokenProtector.generar("UUID-NO-EXISTE");
+            // token criptograficamente valido para un UUID que no existe en el repositorio
+            String token = tokenProtector.generar(java.util.UUID.randomUUID().toString());
             assertThatThrownBy(() -> service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(QrTokenInvalidoException.class);
             // no existe acta en el repo, por lo tanto no hay accesos
@@ -349,7 +424,7 @@ class QrActaServiceTest {
             assertThatThrownBy(() -> service.registrarAcceso("token-invalido", CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(expected);
             // acta inexistente -> tambien QrTokenInvalidoException
-            String tokenParaUuidNoExiste = tokenProtector.generar("UUID-NO-EXISTE");
+            String tokenParaUuidNoExiste = tokenProtector.generar(java.util.UUID.randomUUID().toString());
             assertThatThrownBy(() -> service.registrarAcceso(tokenParaUuidNoExiste, CanalAccesoQr.PORTAL, null, null, "c"))
                     .isInstanceOf(expected);
         }
@@ -357,7 +432,6 @@ class QrActaServiceTest {
         @Test @DisplayName("excepcion de token invalido no incluye el token en el mensaje")
         void excepcionNoContieneToken() {
             crearActa(1L);
-            service.generarQr(1L, "USR");
             try {
                 service.registrarAcceso("token-secreto-no-debe-aparecer", CanalAccesoQr.PORTAL, null, null, "c");
                 fail("debia lanzar excepcion");
@@ -456,7 +530,7 @@ class QrActaServiceTest {
         @Test @DisplayName("resolucion concurrente - multiples threads acceden al mismo QR")
         void resolucionConcurrente() throws InterruptedException {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             int N = 20;
             ExecutorService exec = Executors.newFixedThreadPool(8);
             CountDownLatch latch = new CountDownLatch(N);
@@ -478,13 +552,13 @@ class QrActaServiceTest {
             exec.shutdown();
             assertThat(exitos.get()).isEqualTo(N);
             assertThat(errores.get()).isZero();
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(N);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(N);
         }
 
         @Test @DisplayName("QR compite con modificacion de acta - OCC se resuelve correctamente")
         void qrCompiteConModificacionActa() throws InterruptedException {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
 
             // Simular que mientras se genera el QR, hay modificaciones al acta
             int N = 10;
@@ -507,19 +581,19 @@ class QrActaServiceTest {
             assertThat(qrExitos.get()).isEqualTo(N);
         }
 
-        @Test @DisplayName("generacion concurrente de QR para distintas actas es thread-safe")
-        void generacionConcurrenteDistintasActas() throws InterruptedException {
+        @Test @DisplayName("emision concurrente para distintos uuid es thread-safe y sin colisiones")
+        void emisionConcurrenteDistintasActas() throws InterruptedException {
             int N = 10;
-            for (long id = 1; id <= N; id++) crearActa(id);
+            List<String> uuids = new CopyOnWriteArrayList<>();
+            for (int i = 0; i < N; i++) uuids.add(java.util.UUID.randomUUID().toString());
 
             ExecutorService exec = Executors.newFixedThreadPool(4);
             CountDownLatch latch = new CountDownLatch(N);
             List<String> tokens = new CopyOnWriteArrayList<>();
-            for (long id = 1; id <= N; id++) {
-                final long actaId = id;
+            for (String uuid : uuids) {
                 exec.submit(() -> {
                     try {
-                        tokens.add(service.generarQr(actaId, "USR"));
+                        tokens.add(service.emitirTokenPara(uuid).token());
                     } finally {
                         latch.countDown();
                     }
@@ -533,70 +607,68 @@ class QrActaServiceTest {
     }
 
     // ----------------------------------------------------------------
-    @Nested @DisplayName("AesGcmQrTokenProtector - seguridad del token")
+    @Nested @DisplayName("HmacSha256QrTokenProtector - seguridad del token vista desde el servicio")
     class ProtectorSeguridad {
+
+        private static final String UUID_A = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 
         @Test @DisplayName("version 0 valida resuelve uuidTecnico correctamente")
         void versionCeroValida() {
-            AesGcmQrTokenProtector prot = new AesGcmQrTokenProtector();
-            String token = prot.generar("mi-uuid-tecnico");
-            String uuid = prot.resolverUuidTecnico(token);
-            assertThat(uuid).isEqualTo("mi-uuid-tecnico");
+            QrTokenProtector prot = QrTestSupport.protector();
+            String token = prot.generar(UUID_A);
+            assertThat(prot.resolverUuidTecnico(token)).isEqualTo(UUID_A);
         }
 
-        @Test @DisplayName("token con clave diferente (scope incorrecto desde perspectiva del receptor) falla")
+        @Test @DisplayName("token firmado con otra clave no verifica")
         void claveDiferente() {
-            AesGcmQrTokenProtector prot1 = new AesGcmQrTokenProtector();
-            AesGcmQrTokenProtector prot2 = new AesGcmQrTokenProtector();
-            String token = prot1.generar("uuid-x");
-            assertThatThrownBy(() -> prot2.resolverUuidTecnico(token))
+            String token = QrTestSupport.protector().generar(UUID_A);
+            assertThatThrownBy(() -> QrTestSupport.protectorAlternativo().resolverUuidTecnico(token))
                     .isInstanceOf(QrTokenInvalidoException.class);
         }
 
-        @Test @DisplayName("token alterado en un byte falla autenticacion GCM")
+        @Test @DisplayName("un caracter alterado en la firma falla la verificacion HMAC")
         void tokenAlterado() {
-            AesGcmQrTokenProtector prot = new AesGcmQrTokenProtector();
-            String token = prot.generar("uuid-x");
-            byte[] bytes = java.util.Base64.getUrlDecoder().decode(token);
-            bytes[bytes.length - 1] ^= 0xFF; // flip ultimo byte (auth tag)
-            String tokenAlterado = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+            QrTokenProtector prot = QrTestSupport.protector();
+            String token = prot.generar(UUID_A);
+            String firma = token.substring(token.lastIndexOf('.') + 1);
+            char primero = firma.charAt(0);
+            String firmaAlterada = (primero == 'A' ? 'B' : 'A') + firma.substring(1);
+            String tokenAlterado = token.substring(0, token.lastIndexOf('.') + 1) + firmaAlterada;
+
             assertThatThrownBy(() -> prot.resolverUuidTecnico(tokenAlterado))
                     .isInstanceOf(QrTokenInvalidoException.class);
         }
 
-        @Test @DisplayName("dos tokens generados para mismo uuid son distintos (nonce aleatorio)")
-        void tokensDistintosParaMismoUuid() {
-            AesGcmQrTokenProtector prot = new AesGcmQrTokenProtector();
-            String t1 = prot.generar("uuid-y");
-            String t2 = prot.generar("uuid-y");
-            assertThat(t1).isNotEqualTo(t2);
+        /** Contraparte invertida del test legacy que afirmaba diversidad por nonce aleatorio. */
+        @Test @DisplayName("dos generaciones para el mismo uuid producen exactamente el mismo token")
+        void tokensIgualesParaMismoUuid() {
+            QrTokenProtector prot = QrTestSupport.protector();
+            assertThat(prot.generar(UUID_A)).isEqualTo(prot.generar(UUID_A));
         }
 
-        @Test @DisplayName("clave fija de 32 bytes - generar y resolver correctamente")
+        @Test @DisplayName("clave fija TEST_ONLY - generar y resolver correctamente")
         void claveFijaFunciona() {
-            byte[] key = new byte[32];
-            java.util.Arrays.fill(key, (byte) 0xAB);
-            AesGcmQrTokenProtector prot = new AesGcmQrTokenProtector(key);
-            String token = prot.generar("uuid-fijo");
-            assertThat(prot.resolverUuidTecnico(token)).isEqualTo("uuid-fijo");
+            QrTokenProtector prot = QrTestSupport.protector();
+            String token = prot.generar(UUID_A);
+            assertThat(prot.resolverUuidTecnico(token)).isEqualTo(UUID_A);
         }
 
-        @Test @DisplayName("clave de longitud incorrecta lanza excepcion")
-        void claveLongitudIncorrecta() {
-            assertThatThrownBy(() -> new AesGcmQrTokenProtector(new byte[16]))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("32 bytes");
+        @Test @DisplayName("clave mas corta que la salida HMAC no construye el protector")
+        void claveLongitudInsuficiente() {
+            assertThatThrownBy(() ->
+                    new HmacSha256QrTokenProtector(QrTestSupport.SECRETO_DEMASIADO_CORTO_TEST_ONLY))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("minimo");
         }
 
-        @Test @DisplayName("token de longitud exactamente 512 es aceptado por validacion de formato")
+        @Test @DisplayName("token de longitud exactamente 128 pasa la validacion de longitud y falla por formato")
         void tokenLongitudMaxAceptado() {
-            // Construir un token de 512 chars (incluso si no es valido criptograficamente, la longitud pasa)
-            // Verificamos que la validacion de longitud no rechaza token == 512 chars
-            // (el fallo debe ser por descifrado, no por longitud)
-            String tokenMax = "a".repeat(512);
+            // La validacion de longitud no debe rechazar un token de exactamente 128 chars:
+            // el rechazo tiene que venir del formato canonico, no del limite.
+            String tokenMax = "a".repeat(128);
             assertThatThrownBy(() -> service.registrarAcceso(tokenMax, CanalAccesoQr.PORTAL, null, null, "c"))
-                    .isInstanceOf(QrTokenInvalidoException.class);
-            // no deve ser "excede longitud maxima"
+                    .isInstanceOf(QrTokenInvalidoException.class)
+                    .hasMessageNotContaining("excede longitud maxima");
         }
     }
 
@@ -607,10 +679,10 @@ class QrActaServiceTest {
         @Test @DisplayName("listarAccesosPorActa devuelve todos los accesos en orden")
         void listarOrdenado() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
             service.registrarAcceso(token, CanalAccesoQr.PORTAL, null, null, "c1");
             service.registrarAcceso(token, CanalAccesoQr.APP, null, null, "c2");
-            List<FalActaQrAcceso> accesos = service.listarAccesosPorActa(1L);
+            List<FalActaQrAcceso> accesos = service.listarAccesosPorActa(acta(1L));
             assertThat(accesos).hasSize(2);
         }
 
@@ -662,8 +734,8 @@ class QrActaServiceTest {
         @Test @DisplayName("delega exactamente una vez a registrarPortalPositivo cuando notificacionId no es nulo")
         void delega_exactamente_una_vez() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            FalNotificacion notif = sembraNotificacion(1L);
+            String token = token(1L);
+            FalNotificacion notif = sembraNotificacion(acta(1L));
 
             service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.PORTAL, null, null, "corr",
@@ -676,19 +748,19 @@ class QrActaServiceTest {
             assertThat(intentos.get(0).getResultadoIntento()).isEqualTo(ResultadoNotificacion.POSITIVO);
 
             // acceso QR registrado independientemente
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(1);
         }
 
         @Test @DisplayName("notificacionId null: acceso QR registrado; portal no invocado")
         void sin_notificacion_no_invoca_portal() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
+            String token = token(1L);
 
             service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.PORTAL, null, null, "corr",
                     null, "CUIT-20123456780", "USR", notifSvc);
 
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(1);
             // no se sembro ninguna notificacion, por lo tanto ningun intento fue creado
             assertThat(intentoRepo.size()).isZero();
         }
@@ -696,8 +768,8 @@ class QrActaServiceTest {
         @Test @DisplayName("notificacionId informado + notifService null: IllegalArgumentException; cero acceso QR; cero intento portal")
         void notificacionId_informado_notifService_null_falla() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            FalNotificacion notif = sembraNotificacion(1L);
+            String token = token(1L);
+            FalNotificacion notif = sembraNotificacion(acta(1L));
 
             assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.PORTAL, null, null, "corr",
@@ -705,7 +777,7 @@ class QrActaServiceTest {
                     .isInstanceOf(IllegalArgumentException.class);
 
             // cero acceso QR (la excepcion ocurre antes de registrarAcceso)
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
             // cero intento portal
             assertThat(intentoRepo.buscarPorNotificacion(notif.getId())).isEmpty();
         }
@@ -713,15 +785,15 @@ class QrActaServiceTest {
         @Test @DisplayName("QR acta A + notificacion acta A: delegacion exitosa; un acceso QR; un intento PORTAL_INFRACTOR")
         void qr_acta_a_notificacion_acta_a_match() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            FalNotificacion notif = sembraNotificacion(1L); // notif.actaId = 1L
+            String token = token(1L);
+            FalNotificacion notif = sembraNotificacion(acta(1L)); // notif.actaId = 1L
 
             service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.PORTAL, null, null, "corr",
                     notif.getId(), "CUIT-20123456780", "CUIT-20123456780", notifSvc);
 
             // un acceso QR registrado
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(1);
 
             // exactamente un intento PORTAL_INFRACTOR para la notificacion
             List<FalNotificacionIntento> intentos = intentoRepo.buscarPorNotificacion(notif.getId());
@@ -734,8 +806,8 @@ class QrActaServiceTest {
         void qr_acta_a_notificacion_acta_b_mismatch() {
             crearActa(1L); // acta A
             crearActa(2L); // acta B (necesita existir para que la notificacion sea valida)
-            String token = service.generarQr(1L, "USR"); // QR resuelve acta A
-            FalNotificacion notifB = sembraNotificacion(2L); // notif pertenece a acta B
+            String token = token(1L); // QR resuelve acta A
+            FalNotificacion notifB = sembraNotificacion(acta(2L)); // notif pertenece a acta B
 
             assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.PORTAL, null, null, "corr",
@@ -743,7 +815,7 @@ class QrActaServiceTest {
                     .isInstanceOf(ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException.class);
 
             // acceso QR de acta A queda registrado (append-only, independiente del resultado notificatorio)
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isEqualTo(1);
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isEqualTo(1);
 
             // notificacion B permanece intacta: cero intento portal
             assertThat(intentoRepo.buscarPorNotificacion(notifB.getId()).stream()
@@ -754,22 +826,22 @@ class QrActaServiceTest {
         @Test @DisplayName("token invalido: falla en acceso QR; portal no invocado; ningun acceso persiste")
         void token_invalido_no_invoca_portal() {
             crearActa(1L);
-            FalNotificacion notif = sembraNotificacion(1L);
+            FalNotificacion notif = sembraNotificacion(acta(1L));
 
             assertThatThrownBy(() -> service.registrarAccesoConNotificacion(
                     "token-invalido", CanalAccesoQr.PORTAL, null, null, "corr",
                     notif.getId(), "CUIT-20123456780", "USR", notifSvc))
                     .isInstanceOf(QrTokenInvalidoException.class);
 
-            assertThat(qrAccesoRepo.contarPorActa(1L)).isZero();
+            assertThat(qrAccesoRepo.contarPorActa(acta(1L))).isZero();
             assertThat(intentoRepo.buscarPorNotificacion(notif.getId())).isEmpty();
         }
 
         @Test @DisplayName("repeticion: segunda invocacion rechazada por portal; primer acceso QR persiste")
         void repeticion_no_duplica_portal() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            FalNotificacion notif = sembraNotificacion(1L);
+            String token = token(1L);
+            FalNotificacion notif = sembraNotificacion(acta(1L));
 
             service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.PORTAL, null, null, "corr-1",
@@ -790,14 +862,14 @@ class QrActaServiceTest {
         @Test @DisplayName("la respuesta devuelta por registrarAccesoConNotificacion corresponde al acceso QR, no al intento portal")
         void respuesta_corresponde_a_acceso_qr() {
             crearActa(1L);
-            String token = service.generarQr(1L, "USR");
-            FalNotificacion notif = sembraNotificacion(1L);
+            String token = token(1L);
+            FalNotificacion notif = sembraNotificacion(acta(1L));
 
             QrActaService.AccesoQrResultado resultado = service.registrarAccesoConNotificacion(
                     token, CanalAccesoQr.APP, null, null, "corr",
                     notif.getId(), "CUIT-20123456780", "USR", notifSvc);
 
-            assertThat(resultado.actaId()).isEqualTo(1L);
+            assertThat(resultado.actaId()).isEqualTo(acta(1L));
             assertThat(resultado.canal()).isEqualTo(CanalAccesoQr.APP);
             assertThat(resultado.resultado()).isEqualTo(ResultadoAccesoQr.VALIDO);
             assertThat(resultado.idAcceso()).isNotNull();

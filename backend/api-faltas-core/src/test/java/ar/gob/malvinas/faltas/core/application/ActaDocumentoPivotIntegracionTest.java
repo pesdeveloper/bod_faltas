@@ -65,13 +65,22 @@ class ActaDocumentoPivotIntegracionTest {
         ReflectionTestUtils.setField(falloService, "actaDocumentoService", actaDocService);
     }
 
-    private FalActa crearActaConBloque(Long id, BloqueActual bloque) {
-        FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Id que asigno la persistencia al acta del test. */
+    private Long actaId;
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     */
+    private FalActa crearActaConBloque(Long etiqueta, BloqueActual bloque) {
+        FalActa a = new FalActa(null, "UUID-" + etiqueta + "-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, null, AHORA, "SYS");
+                null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null, AHORA, "SYS");
         a.setBloqueActual(bloque);
-        actaRepo.guardar(a);
-        return a;
+        FalActa persistida = actaRepo.guardar(a);
+        actaId = persistida.getId();
+        return persistida;
     }
 
     // =========================================================================
@@ -83,11 +92,11 @@ class ActaDocumentoPivotIntegracionTest {
         crearActaConBloque(1L, BloqueActual.ANAL);
 
         DictarFalloCondenatorioCommand cmd = new DictarFalloCondenatorioCommand(
-                1L, BigDecimal.valueOf(5000), null, null);
+                actaId, BigDecimal.valueOf(5000), null, null);
         falloService.dictarCondenatorio(cmd);
 
-        assertThat(pivotRepo.listarPorActaYRol(1L, RolDocuActa.FALLO)).hasSize(1);
-        assertThat(pivotRepo.buscarPrincipalPorActaYRol(1L, RolDocuActa.FALLO)).isPresent();
+        assertThat(pivotRepo.listarPorActaYRol(actaId, RolDocuActa.FALLO)).hasSize(1);
+        assertThat(pivotRepo.buscarPrincipalPorActaYRol(actaId, RolDocuActa.FALLO)).isPresent();
     }
 
     // =========================================================================
@@ -99,10 +108,10 @@ class ActaDocumentoPivotIntegracionTest {
         FalActa acta = crearActaConBloque(1L, BloqueActual.ANAL);
 
         // Crear documento y asociar via pivot
-        FalDocumento doc = new FalDocumento(100L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
+        FalDocumento doc = new FalDocumento(100L, actaId, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
         doc.setStorageKey("storage/1/fallo/100");
         docRepo.guardar(doc);
-        pivotRepo.asociarComoPrincipalAtomico(1L, 100L, RolDocuActa.FALLO, "SYS", AHORA);
+        pivotRepo.asociarComoPrincipalAtomico(actaId, 100L, RolDocuActa.FALLO, "SYS", AHORA);
 
         FalActaSnapshot snap = recalculador.recalcular(acta);
         assertThat(snap.getIdDocuUlt()).isEqualTo(100L);
@@ -114,7 +123,7 @@ class ActaDocumentoPivotIntegracionTest {
 
     @Test @DisplayName("INT-03: sin pivot, snapshot.idDocuUlt es null")
     void integracion03_sinPivotIdDocuUltNull() {
-        FalActa acta = crearActaConBloque(1L, BloqueActual.CAPT);
+        FalActa acta = crearActaConBloque(1L, BloqueActual.ENRI);
 
         FalActaSnapshot snap = recalculador.recalcular(acta);
         assertThat(snap.getIdDocuUlt()).isNull();
@@ -129,16 +138,16 @@ class ActaDocumentoPivotIntegracionTest {
         FalActa acta = crearActaConBloque(1L, BloqueActual.ANAL);
 
         // Agregar acta principal y notificacion
-        FalDocumento actaPrincipal = new FalDocumento(200L, 1L, TipoDocu.ACTA_INFRACCION, AHORA);
-        FalDocumento notif = new FalDocumento(201L, 1L, TipoDocu.NOTIFICACION_ACTA, AHORA);
-        FalDocumento fallo = new FalDocumento(202L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
+        FalDocumento actaPrincipal = new FalDocumento(200L, actaId, TipoDocu.ACTA_INFRACCION, AHORA);
+        FalDocumento notif = new FalDocumento(201L, actaId, TipoDocu.NOTIFICACION_ACTA, AHORA);
+        FalDocumento fallo = new FalDocumento(202L, actaId, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
         docRepo.guardar(actaPrincipal);
         docRepo.guardar(notif);
         docRepo.guardar(fallo);
 
-        pivotRepo.asociarComoPrincipalAtomico(1L, 200L, RolDocuActa.ACTA_PRINCIPAL, "SYS", AHORA);
-        pivotRepo.asociarComoPrincipalAtomico(1L, 201L, RolDocuActa.NOTIFICACION, "SYS", AHORA);
-        pivotRepo.asociarComoPrincipalAtomico(1L, 202L, RolDocuActa.FALLO, "SYS", AHORA);
+        pivotRepo.asociarComoPrincipalAtomico(actaId, 200L, RolDocuActa.ACTA_PRINCIPAL, "SYS", AHORA);
+        pivotRepo.asociarComoPrincipalAtomico(actaId, 201L, RolDocuActa.NOTIFICACION, "SYS", AHORA);
+        pivotRepo.asociarComoPrincipalAtomico(actaId, 202L, RolDocuActa.FALLO, "SYS", AHORA);
 
         FalActaSnapshot snap = recalculador.recalcular(acta);
         assertThat(snap.getIdDocuUlt()).isEqualTo(202L);
@@ -152,16 +161,16 @@ class ActaDocumentoPivotIntegracionTest {
     void integracion05_reemplazoPivotActualizaDocuUlt() {
         FalActa acta = crearActaConBloque(1L, BloqueActual.ANAL);
 
-        FalDocumento fallo1 = new FalDocumento(300L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
-        FalDocumento fallo2 = new FalDocumento(301L, 1L, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
+        FalDocumento fallo1 = new FalDocumento(300L, actaId, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
+        FalDocumento fallo2 = new FalDocumento(301L, actaId, TipoDocu.ACTO_ADMINISTRATIVO, AHORA);
         docRepo.guardar(fallo1);
         docRepo.guardar(fallo2);
 
-        pivotRepo.asociarComoPrincipalAtomico(1L, 300L, RolDocuActa.FALLO, "SYS", AHORA);
+        pivotRepo.asociarComoPrincipalAtomico(actaId, 300L, RolDocuActa.FALLO, "SYS", AHORA);
         FalActaSnapshot snap1 = recalculador.recalcular(acta);
         assertThat(snap1.getIdDocuUlt()).isEqualTo(300L);
 
-        pivotRepo.reemplazarPrincipalAtomico(1L, 301L, RolDocuActa.FALLO, "SYS", AHORA);
+        pivotRepo.reemplazarPrincipalAtomico(actaId, 301L, RolDocuActa.FALLO, "SYS", AHORA);
         FalActaSnapshot snap2 = recalculador.recalcular(acta);
         assertThat(snap2.getIdDocuUlt()).isEqualTo(301L);
     }

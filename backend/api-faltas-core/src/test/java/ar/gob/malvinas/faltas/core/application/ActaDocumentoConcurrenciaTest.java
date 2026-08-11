@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.ActaDocumentoService;
@@ -51,19 +53,22 @@ class ActaDocumentoConcurrenciaTest {
         docRepo = new InMemoryDocumentoRepository();
         pivotRepo = new InMemoryActaDocumentoRepository();
         service = new ActaDocumentoService(pivotRepo, actaRepo, docRepo, FaltasClockTestSupport.FIXED);
-        crearActa(1L);
+        actaId = crearActa();
     }
 
-    private void crearActa(Long id) {
-        FalActa a = new FalActa(id, "UUID-" + id, TipoActa.TRANSITO, 1L, 1L,
+    /** Id que asigno la persistencia al acta del test. */
+    private Long actaId;
+
+    private Long crearActa() {
+        FalActa a = new FalActa(null, "UUID-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 6), AHORA, "Av. Libertad 100", null,
-                null, null, ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.FIRMADA,
+                null, null, ar.gob.malvinas.faltas.core.domain.enums.ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS,
                 null, AHORA, "SYS");
-        actaRepo.guardar(a);
+        return actaRepo.guardar(a).getId();
     }
 
     private FalDocumento crearDoc(Long id, TipoDocu tipo) {
-        FalDocumento doc = new FalDocumento(id, 1L, tipo, AHORA);
+        FalDocumento doc = new FalDocumento(id, actaId, tipo, AHORA);
         docRepo.guardar(doc);
         return doc;
     }
@@ -83,7 +88,7 @@ class ActaDocumentoConcurrenciaTest {
         for (int i = 0; i < 2; i++) {
             new Thread(() -> {
                 try {
-                    service.asociar(1L, 10L, RolDocuActa.ACTA_PRINCIPAL, false, "USR");
+                    service.asociar(actaId, 10L, RolDocuActa.ACTA_PRINCIPAL, false, "USR");
                     ok.incrementAndGet();
                 } catch (ActaDocumentoYaExisteException e) {
                     err.incrementAndGet();
@@ -111,13 +116,13 @@ class ActaDocumentoConcurrenciaTest {
 
         for (Long docId : docs) {
             new Thread(() -> {
-                service.asociarPrincipal(1L, docId, RolDocuActa.ACTA_PRINCIPAL, "USR");
+                service.asociarPrincipal(actaId, docId, RolDocuActa.ACTA_PRINCIPAL, "USR");
                 latch.countDown();
             }).start();
         }
         latch.await(5, TimeUnit.SECONDS);
 
-        List<FalActaDocumento> principales = pivotRepo.listarPorActaYRol(1L, RolDocuActa.ACTA_PRINCIPAL)
+        List<FalActaDocumento> principales = pivotRepo.listarPorActaYRol(actaId, RolDocuActa.ACTA_PRINCIPAL)
                 .stream().filter(FalActaDocumento::isSiPrincipal).toList();
         assertThat(principales).hasSize(1);
     }
@@ -131,19 +136,19 @@ class ActaDocumentoConcurrenciaTest {
         crearDoc(30L, TipoDocu.ACTO_ADMINISTRATIVO);
         crearDoc(31L, TipoDocu.ACTO_ADMINISTRATIVO);
         crearDoc(32L, TipoDocu.ACTO_ADMINISTRATIVO);
-        service.asociarPrincipal(1L, 30L, RolDocuActa.FALLO, "SYS");
+        service.asociarPrincipal(actaId, 30L, RolDocuActa.FALLO, "SYS");
 
         CountDownLatch latch = new CountDownLatch(2);
 
-        new Thread(() -> { service.reemplazarPrincipal(1L, 31L, RolDocuActa.FALLO, "USR1"); latch.countDown(); }).start();
-        new Thread(() -> { service.reemplazarPrincipal(1L, 32L, RolDocuActa.FALLO, "USR2"); latch.countDown(); }).start();
+        new Thread(() -> { service.reemplazarPrincipal(actaId, 31L, RolDocuActa.FALLO, "USR1"); latch.countDown(); }).start();
+        new Thread(() -> { service.reemplazarPrincipal(actaId, 32L, RolDocuActa.FALLO, "USR2"); latch.countDown(); }).start();
 
         latch.await(5, TimeUnit.SECONDS);
 
-        List<FalActaDocumento> principales = pivotRepo.listarPorActaYRol(1L, RolDocuActa.FALLO)
+        List<FalActaDocumento> principales = pivotRepo.listarPorActaYRol(actaId, RolDocuActa.FALLO)
                 .stream().filter(FalActaDocumento::isSiPrincipal).toList();
         assertThat(principales).hasSize(1);
-        assertThat(pivotRepo.listarPorActaYRol(1L, RolDocuActa.FALLO)).hasSize(3);
+        assertThat(pivotRepo.listarPorActaYRol(actaId, RolDocuActa.FALLO)).hasSize(3);
     }
 
     // =========================================================================
@@ -164,7 +169,7 @@ class ActaDocumentoConcurrenciaTest {
             final long docId = 100L + i;
             new Thread(() -> {
                 try {
-                    service.asociar(1L, docId, RolDocuActa.CONSTANCIA, false, "USR");
+                    service.asociar(actaId, docId, RolDocuActa.CONSTANCIA, false, "USR");
                     ok.incrementAndGet();
                 } catch (Exception e) {
                     // no esperado
@@ -200,13 +205,13 @@ class ActaDocumentoConcurrenciaTest {
 
         CountDownLatch latch = new CountDownLatch(2);
 
-        new Thread(() -> { service.asociarPrincipal(1L, 300L, RolDocuActa.FALLO, "SYS"); latch.countDown(); }).start();
-        new Thread(() -> { service.asociarPrincipal(1L, 301L, RolDocuActa.NOTIFICACION, "SYS"); latch.countDown(); }).start();
+        new Thread(() -> { service.asociarPrincipal(actaId, 300L, RolDocuActa.FALLO, "SYS"); latch.countDown(); }).start();
+        new Thread(() -> { service.asociarPrincipal(actaId, 301L, RolDocuActa.NOTIFICACION, "SYS"); latch.countDown(); }).start();
 
         latch.await(5, TimeUnit.SECONDS);
 
-        assertThat(pivotRepo.buscarPrincipalPorActaYRol(1L, RolDocuActa.FALLO)).isPresent();
-        assertThat(pivotRepo.buscarPrincipalPorActaYRol(1L, RolDocuActa.NOTIFICACION)).isPresent();
+        assertThat(pivotRepo.buscarPrincipalPorActaYRol(actaId, RolDocuActa.FALLO)).isPresent();
+        assertThat(pivotRepo.buscarPrincipalPorActaYRol(actaId, RolDocuActa.NOTIFICACION)).isPresent();
         assertThat(pivotRepo.size()).isEqualTo(2);
     }
 
@@ -227,13 +232,13 @@ class ActaDocumentoConcurrenciaTest {
 
         for (Long docId : docs) {
             new Thread(() -> {
-                service.asociarPrincipal(1L, docId, RolDocuActa.ACTA_PRINCIPAL, "USR");
+                service.asociarPrincipal(actaId, docId, RolDocuActa.ACTA_PRINCIPAL, "USR");
                 latch.countDown();
             }).start();
         }
         latch.await(5, TimeUnit.SECONDS);
 
-        List<FalActaDocumento> principales = pivotRepo.listarPorActaYRol(1L, RolDocuActa.ACTA_PRINCIPAL)
+        List<FalActaDocumento> principales = pivotRepo.listarPorActaYRol(actaId, RolDocuActa.ACTA_PRINCIPAL)
                 .stream().filter(FalActaDocumento::isSiPrincipal).toList();
         assertThat(principales).hasSize(1);
     }
@@ -246,7 +251,7 @@ class ActaDocumentoConcurrenciaTest {
     void c8_consultaDuranteReemplazo() throws InterruptedException {
         crearDoc(500L, TipoDocu.ACTO_ADMINISTRATIVO);
         crearDoc(501L, TipoDocu.ACTO_ADMINISTRATIVO);
-        service.asociarPrincipal(1L, 500L, RolDocuActa.FALLO, "SYS");
+        service.asociarPrincipal(actaId, 500L, RolDocuActa.FALLO, "SYS");
 
         AtomicReference<AssertionError> error = new AtomicReference<>();
         CountDownLatch latch = new CountDownLatch(2);
@@ -254,8 +259,8 @@ class ActaDocumentoConcurrenciaTest {
         // Hilo 1: reemplaza principal
         new Thread(() -> {
             for (int i = 0; i < 50; i++) {
-                service.reemplazarPrincipal(1L, 501L, RolDocuActa.FALLO, "USR");
-                service.reemplazarPrincipal(1L, 500L, RolDocuActa.FALLO, "USR");
+                service.reemplazarPrincipal(actaId, 501L, RolDocuActa.FALLO, "USR");
+                service.reemplazarPrincipal(actaId, 500L, RolDocuActa.FALLO, "USR");
             }
             latch.countDown();
         }).start();
@@ -266,7 +271,7 @@ class ActaDocumentoConcurrenciaTest {
                 for (int i = 0; i < 100; i++) {
                     // La lista puede tener 0 o 1 durante el lock, pero si esta disponible debe ser 1
                     // (el invariante no se puede verificar mid-lock, pero al menos no crashea)
-                    pivotRepo.buscarPrincipalPorActaYRol(1L, RolDocuActa.FALLO);
+                    pivotRepo.buscarPrincipalPorActaYRol(actaId, RolDocuActa.FALLO);
                 }
             } finally { latch.countDown(); }
         }).start();
@@ -284,7 +289,7 @@ class ActaDocumentoConcurrenciaTest {
         crearDoc(600L, TipoDocu.ACTA_INFRACCION);
 
         // ACTA_INFRACCION no puede ser FALLO
-        assertThatThrownBy(() -> service.asociar(1L, 600L, RolDocuActa.FALLO, true, "SYS"))
+        assertThatThrownBy(() -> service.asociar(actaId, 600L, RolDocuActa.FALLO, true, "SYS"))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(pivotRepo.size()).isEqualTo(0);
@@ -302,11 +307,11 @@ class ActaDocumentoConcurrenciaTest {
         }
 
         for (int i = 0; i < N; i++) {
-            service.reemplazarPrincipal(1L, 700L + i, RolDocuActa.FALLO, "SYS");
+            service.reemplazarPrincipal(actaId, 700L + i, RolDocuActa.FALLO, "SYS");
         }
 
-        assertThat(pivotRepo.listarPorActaYRol(1L, RolDocuActa.FALLO)).hasSize(N);
-        assertThat(pivotRepo.listarPorActaYRol(1L, RolDocuActa.FALLO)
+        assertThat(pivotRepo.listarPorActaYRol(actaId, RolDocuActa.FALLO)).hasSize(N);
+        assertThat(pivotRepo.listarPorActaYRol(actaId, RolDocuActa.FALLO)
                 .stream().filter(FalActaDocumento::isSiPrincipal)).hasSize(1);
     }
 }

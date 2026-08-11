@@ -131,6 +131,99 @@ al inventario canónico del dominio Faltas.
 | Ciclos resueltos via ALTER TABLE | 3 (G1-self, G4-cross, G8-cross) |
 | Entrega por slices | No — entrega integral única |
 
+## Paquete DDL incremental: integración EDA Faltas ↔ Firmas (endurecimiento final)
+
+Además del baseline FULL-R1, este directorio contiene el paquete DDL del
+endurecimiento final pre-DDL `SPEC-FIRMAS-EDA-CLOSURE-001` (diseño cerrado,
+`DDL_READY`, `DDL_NOT_EXECUTED`, `IMPLEMENTATION_NOT_STARTED`), que altera
+`fal_documento_firma_req`, `fal_documento_firma` y `fal_documento`, y agrega
+6 tablas nuevas de propiedad Faltas: `fal_documento_firma_resultado` y el
+modelo mínimo aprobado del bus de eventos — `bus_evento` (única tabla
+central, append-only e inmutable) más el Outbox/checkpoint/Inbox/Inbox
+error locales de Faltas (`fal_outbox`, `fal_bus_checkpoint`, `fal_inbox`,
+`fal_inbox_error`). Sin fan-out central, sin entregas, sin suscripciones,
+sin permisos de publicación tabulares, sin rutinas `SQL SECURITY DEFINER`,
+sin vistas diagnósticas ni `bus_definer`: cada aplicación municipal
+(Faltas, Firmas) publica con `INSERT` directo y lee con `SELECT` directo,
+con grants mínimos por cuenta. Además, un paquete DDL ejecutable separado
+para el bounded context Firmas (otra base de datos), con la misma
+estructura local (`fir_outbox`/`fir_bus_checkpoint`/`fir_inbox`/
+`fir_inbox_error`):
+
+```text
+database/
+├── ddl/
+│   ├── alter-firmas-eda-closure-001-forward.sql        (ALTER + CREATE + seed; no ejecutado)
+│   ├── alter-firmas-eda-closure-001-rollback.sql       (reversión completa; no ejecutado)
+│   ├── grants-firmas-eda-bus.sql                       (5 cuentas SQL de mínimo privilegio: INSERT column-level —excluyendo bus_evento_id— para publishers, SELECT/DELETE de tabla completa para consumers/maintenance sobre bus_evento, sin passwords; no ejecutado)
+│   ├── rollback-grants-firmas-eda-bus.sql              (REVOKE simétrico; no ejecutado)
+│   └── firmas/
+│       ├── create-firmas-eda-outbox-inbox.sql      (fir_outbox/fir_bus_checkpoint/fir_inbox/fir_inbox_error, bounded context Firmas; no ejecutado)
+│       └── rollback-firmas-eda-outbox-inbox.sql    (reversión; no ejecutado)
+├── diagnostics/
+│   ├── verify-firmas-eda-closure-001-precheck.sql            (solo lectura; antes del forward)
+│   ├── verify-firmas-eda-closure-001-postcheck.sql           (solo lectura; postcheck ESTRUCTURAL tras el forward + postcheck RUNTIME de seguridad tras los grants, sección 6)
+│   ├── verify-firmas-eda-closure-001-parity.sql              (solo lectura; paridad tipo-a-tipo)
+│   ├── verify-firmas-eda-closure-001-rollback-precheck.sql   (solo lectura; antes del rollback)
+│   ├── verify-firmas-eda-bus-principals-precheck.sql         (solo lectura; antes de los grants de aplicación)
+│   └── firmas/
+│       ├── verify-firmas-eda-outbox-inbox-precheck.sql             (solo lectura; antes del create de Firmas)
+│       ├── verify-firmas-eda-outbox-inbox-postcheck.sql            (solo lectura; después del create de Firmas)
+│       └── verify-firmas-eda-outbox-inbox-rollback-precheck.sql    (solo lectura; antes del rollback de Firmas)
+└── design/
+    └── firmas-eda-closure-001-scope.md              (inventario y orden de este paquete)
+```
+
+Precondición: `ddl/create-bod-faltas-domain.sql` (baseline de 65 tablas) ya
+ejecutado. Fuente normativa del modelo físico:
+`backend/api-faltas-core/docs/spec-as-source/50-persistence/firma-eda-physical-model.md`.
+Este paquete no modifica ningún artefacto del baseline FULL-R1 listado arriba.
+El paquete `ddl/firmas/` es responsabilidad del equipo de Firmas y nunca se
+ejecuta desde este repositorio ni contra `sb_faltas_db`.
+
+### Orden operativo (`SPEC-FIRMAS-EDA-CLOSURE-001`)
+
+Secuencia obligatoria, sin atajos ni orden circular. Sin `DEFINER` que
+provisionar: `bus_evento` es de propiedad directa de cada cuenta de
+aplicación (grants mínimos por tabla, no por rutina):
+
+1. Ejecutar `verify-firmas-eda-closure-001-precheck.sql` (precheck
+   principal); debe reportar `READY`.
+2. Ejecutar `alter-firmas-eda-closure-001-forward.sql`.
+3. Ejecutar `verify-firmas-eda-closure-001-postcheck.sql` (secciones 1-5,
+   postcheck **estructural**) y `verify-firmas-eda-closure-001-parity.sql`.
+4. Ejecutar `verify-firmas-eda-bus-principals-precheck.sql` (precheck de las
+   5 cuentas de aplicación: `bus_publisher_faltas`, `bus_publisher_firmas`,
+   `bus_consumer_faltas`, `bus_consumer_firmas`, `bus_maintenance`); debe
+   reportar `READY`.
+5. Aplicar `grants-firmas-eda-bus.sql` (`INSERT` **column-level**, excluyendo
+   `bus_evento_id`, para los 2 publishers; `SELECT` de tabla completa para
+   consumers; `SELECT`+`DELETE` de tabla completa para maintenance; todos
+   directos sobre `bus_evento`).
+6. Ejecutar `verify-firmas-eda-closure-001-postcheck.sql` sección 6
+   (postcheck **runtime de seguridad y permisos**): privilegio column-level
+   exacto de los publishers (`information_schema.column_privileges`,
+   nunca `bus_evento_id`), privilegio de tabla completa exacto de
+   consumers/maintenance, ausencia de privilegios sobre las tablas locales
+   de Faltas (`fal_*`), y ausencia de privilegios excedentes (publishers
+   sin ningún privilegio de tabla completa ni columna distinta de
+   `INSERT`, consumers sin `INSERT`/`UPDATE`/`DELETE`).
+
+El rollback completo invierte este orden: `rollback-grants-firmas-eda-bus.sql`
+→ `alter-firmas-eda-closure-001-rollback.sql`, cada uno con su propio
+precheck donde corresponda
+(`verify-firmas-eda-closure-001-rollback-precheck.sql`).
+
+Los 5 usuarios MariaDB de aplicación del bus central (`bus_publisher_faltas`,
+`bus_publisher_firmas`, `bus_consumer_faltas`, `bus_consumer_firmas`,
+`bus_maintenance`) se aprovisionan fuera de este repositorio (secret
+manager/pipeline de la plataforma); `grants-firmas-eda-bus.sql` únicamente
+otorga privilegios de mínimo privilegio sobre `bus_evento` (objeto ya
+existente), nunca crea usuarios ni contiene contraseñas o placeholders. No
+hay retención automática dentro de MariaDB (sin `sp_bus_purgar`): la purga
+de `bus_evento` por antigüedad, cuando corresponda, es una tarea operativa
+externa que usa `bus_maintenance` (`SELECT`+`DELETE`).
+
 ## Fuentes canónicas
 
 La spec-as-source que rige el diseño del DDL está en:

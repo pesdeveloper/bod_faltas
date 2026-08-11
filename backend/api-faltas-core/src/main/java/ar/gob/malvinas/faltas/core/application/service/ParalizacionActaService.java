@@ -103,12 +103,10 @@ public class ParalizacionActaService {
 
         Long obsId = null;
         if (cmd.observacionTexto() != null && !cmd.observacionTexto().trim().isEmpty()) {
-            Long id = observacionRepository.nextId();
-            FalObservacion obs = new FalObservacion(id, EntidadTipoObservada.PARALIZACION,
+            FalObservacion obs = new FalObservacion(null, EntidadTipoObservada.PARALIZACION,
                     cicloGuardado.getId(), null, cmd.observacionTexto().trim(),
                     OrigenObservacion.USUARIO, ahora, usuario);
-            observacionRepository.guardar(obs);
-            obsId = id;
+            obsId = observacionRepository.guardar(obs).getId();
         }
 
         acta.setSituacionAdministrativa(SituacionAdministrativaActa.PARALIZADA);

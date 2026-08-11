@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "outDir": "../../dist/faltas-angular-forms",
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    "types": [],
+    "lib": ["ES2022", "dom"],
+    "module": "ES2022",
+    "target": "ES2022",
+    "strict": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "node_modules", "dist"]
+}

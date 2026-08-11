@@ -1,7 +1,9 @@
 package ar.gob.malvinas.faltas.core.web;
 
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
+import ar.gob.malvinas.faltas.core.application.service.ActaAltaTransientRetryService;
 import ar.gob.malvinas.faltas.core.application.service.ActaService;
+import ar.gob.malvinas.faltas.core.application.service.FotografiaEvidenciaService;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoEventoActa;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
@@ -40,13 +42,16 @@ class ActaControllerActorTest {
     private static final String ACTOR_SUB = "sub-acta-actor-test";
 
     private ActaService actaService;
+    private ActaAltaTransientRetryService altaTransientRetryService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         actaService = mock(ActaService.class);
+        altaTransientRetryService = mock(ActaAltaTransientRetryService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(
-                new ActaController(actaService, mock(ActaEventoRepository.class))).build();
+                new ActaController(actaService, altaTransientRetryService, mock(ActaEventoRepository.class),
+                        mock(FotografiaEvidenciaService.class))).build();
     }
 
     @AfterEach
@@ -68,8 +73,10 @@ class ActaControllerActorTest {
                   "tipoActa": "TRANSITO",
                   "idDependencia": "1",
                   "idInspector": "42",
+                  "tipoDocumentoInfractor": "DNI",
                   "infractorDocumento": "12345678",
-                  "resultadoFirmaInfractor": "SE_NIEGA_A_FIRMAR"
+                  "resultadoFirmaInfractor": "SE_NIEGA_A_FIRMAR",
+                  "situacionIdentificacionInfractor": "IDENTIFICADO_COMPLETO"
                 }
                 """;
 
@@ -80,28 +87,28 @@ class ActaControllerActorTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(BODY))
                     .andExpect(status().isUnauthorized());
-            verifyNoInteractions(actaService);
+            verifyNoInteractions(altaTransientRetryService);
         }
 
         @Test
-        @DisplayName("02. con ActorContext -> servicio invocado; respuesta 201")
+        @DisplayName("02. con ActorContext -> orquestador de reintento invocado; respuesta 201")
         void labrar_con_contexto_invoca_servicio() throws Exception {
             ActorContextHolder.set(new ActorContext(ACTOR_SUB));
-            when(actaService.labrar(any())).thenReturn(
+            when(altaTransientRetryService.labrarConReintento(any())).thenReturn(
                     ComandoResultado.de(1L, "1", TipoEventoActa.ACTLAB.codigo(), "ok"));
 
             mockMvc.perform(post(URL)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(BODY))
                     .andExpect(status().isCreated());
-            verify(actaService).labrar(any());
+            verify(altaTransientRetryService).labrarConReintento(any());
         }
 
         @Test
         @DisplayName("03. idInspector del body no es el actor — actor viene del JWT sub")
         void labrar_idInspector_no_es_actor() throws Exception {
             ActorContextHolder.set(new ActorContext(ACTOR_SUB));
-            when(actaService.labrar(any())).thenReturn(
+            when(altaTransientRetryService.labrarConReintento(any())).thenReturn(
                     ComandoResultado.de(1L, "1", TipoEventoActa.ACTLAB.codigo(), "ok"));
 
             ArgumentCaptor<ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand> captor =
@@ -112,44 +119,9 @@ class ActaControllerActorTest {
                             .content(BODY))
                     .andExpect(status().isCreated());
 
-            verify(actaService).labrar(captor.capture());
+            verify(altaTransientRetryService).labrarConReintento(captor.capture());
             assertThat(captor.getValue().idInspector()).isEqualTo(42L);
             assertThat(ActorContextHolder.subOr("fallback")).isEqualTo(ACTOR_SUB);
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // completarCaptura
-    // -------------------------------------------------------------------------
-
-    @Nested
-    @DisplayName("POST /api/faltas/actas/{id}/completar-captura")
-    class CompletarCapturaTests {
-
-        private static final String URL_TPL = "/api/faltas/actas/{id}/completar-captura";
-
-        @Test
-        @DisplayName("04. sin ActorContext (null) -> HTTP 401; servicio no invocado")
-        void completar_sin_contexto_retorna_401() throws Exception {
-            mockMvc.perform(post(URL_TPL, 1L)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isUnauthorized());
-            verifyNoInteractions(actaService);
-        }
-
-        @Test
-        @DisplayName("05. con ActorContext -> servicio invocado; respuesta 200")
-        void completar_con_contexto_invoca_servicio() throws Exception {
-            ActorContextHolder.set(new ActorContext(ACTOR_SUB));
-            when(actaService.completarCaptura(any())).thenReturn(
-                    ComandoResultado.de(1L, "1", TipoEventoActa.ACTCAP.codigo(), "ok"));
-
-            mockMvc.perform(post(URL_TPL, 1L)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isOk());
-            verify(actaService).completarCaptura(any());
         }
     }
 

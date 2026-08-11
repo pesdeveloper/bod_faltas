@@ -1,9 +1,11 @@
 package ar.gob.malvinas.faltas.core.domain.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum TipoEventoActa {
 
-    ACTLAB("ACTLAB", "Acta labrada/creada"),
-    ACTCAP("ACTCAP", "Captura completada - transicion CAPT->ENRI"),
+    ACTLAB("ACTLAB", "Acta labrada/creada - unico evento inicial, el acta nace directamente en ENRI"),
     ACTENR("ACTENR", "Acta enriquecida - datos del expediente completados"),
     DOCGEN("DOCGEN", "Documento generado"),
     DOCFIR("DOCFIR", "Documento firmado"),
@@ -14,7 +16,7 @@ public enum TipoEventoActa {
     NOTVNC("NOTVNC", "Notificacion vencida sin acuse"),
     ACTPAR("ACTPAR", "Acta paralizada"),
     ACTREA("ACTREA", "Acta reactivada"),
-    ACTARCH("ACTARC", "Acta archivada"),
+    ACTARC("ACTARC", "Acta archivada"),
     ACTREI("ACTREI", "Acta reingresada desde archivo"),
     FALABS("FALABS", "Fallo absolutorio dictado"),
     FALCON("FALCON", "Fallo condenatorio dictado"),
@@ -59,14 +61,14 @@ public enum TipoEventoActa {
     ACUGEN("ACUGEN", "Acuse de notificacion registrado"),
     ACUVAL("ACUVAL", "Acuse de notificacion validado"),
     LOTGEN("LOTGEN", "Lote de correo generado"),
-    LOTEM("LOTEMI", "Lote de correo emitido"),
+    LOTEMI("LOTEMI", "Lote de correo emitido"),
     LOTPRC("LOTPRC", "Lote de correo procesado"),
     LOTANU("LOTANU", "Lote de correo anulado"),
     PORPOS("PORPOS", "Notificacion positiva por portal infractor"),
     NOTSUP("NOTSUP", "Intento de notificacion superado por portal"),
     DOCAMP("DOCAMP", "Documento adjuntado a apelacion"),
-    QRGEN("QRGENA", "Codigo QR de acceso generado para el acta"),
-    QRACC("QRACCA", "Acceso valido al acta registrado via codigo QR");
+    QRGENA("QRGENA", "Codigo QR de acceso generado para el acta"),
+    QRACCA("QRACCA", "Acceso valido al acta registrado via codigo QR");
 
     private final String codigo;
     private final String descripcion;
@@ -76,13 +78,19 @@ public enum TipoEventoActa {
         this.descripcion = descripcion;
     }
 
+    @JsonValue
     public String codigo() { return codigo; }
     public String descripcion() { return descripcion; }
 
-    public static TipoEventoActa deCodigo(String codigo) {
+    @JsonCreator
+    public static TipoEventoActa fromCodigo(String codigo) {
         for (TipoEventoActa t : values()) {
             if (t.codigo.equals(codigo)) return t;
         }
         throw new IllegalArgumentException("TipoEventoActa no reconocido: '" + codigo + "'");
+    }
+
+    public static TipoEventoActa deCodigo(String codigo) {
+        return fromCodigo(codigo);
     }
 }

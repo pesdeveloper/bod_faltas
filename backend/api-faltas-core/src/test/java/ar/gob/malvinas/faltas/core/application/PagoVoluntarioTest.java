@@ -1,9 +1,11 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.ConfirmarPagoVoluntarioCommand;
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
 import ar.gob.malvinas.faltas.core.application.command.FijarMontoPagoVoluntarioCommand;
 import ar.gob.malvinas.faltas.core.application.command.InformarPagoVoluntarioCommand;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
@@ -98,7 +100,7 @@ class PagoVoluntarioTest {
 
         PagoCondenaRepository pagoCondenaRepo = new InMemoryPagoCondenaRepository();
         SnapshotRecalculador recalc = new SnapshotRecalculador(eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, FaltasClockTestSupport.FIXED, snapshotRepo);
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc, new InMemoryActaEvidenciaRepository(), FaltasClockTestSupport.FIXED);
         pagoService = new PagoVoluntarioService(
                 actaRepo, eventoRepo, snapshotRepo, pagoRepo, recalc,
                 new NoOpBloqueantesMaterialesChecker(), FaltasClockTestSupport.FIXED);
@@ -450,9 +452,12 @@ class PagoVoluntarioTest {
         }
 
         @Test
-        @DisplayName("No solicitar pago en bloque CAPT")
-        void no_solicitar_en_capt() {
+        @DisplayName("No solicitar pago en bloque NOTI (fuera de ENRI/ANAL)")
+        void no_solicitar_fuera_de_enri_o_anal() {
             Long idActa = actaService.labrar(cmdLabrar()).idActa();
+            FalActa acta = actaRepo.buscarPorId(idActa).orElseThrow();
+            acta.setBloqueActual(BloqueActual.NOTI);
+            actaRepo.guardar(acta);
 
             assertThatThrownBy(() ->
                     pagoService.solicitar(new SolicitarPagoVoluntarioCommand(idActa, null)))
@@ -505,17 +510,18 @@ class PagoVoluntarioTest {
 
     private LabrarActaCommand cmdLabrar() {
         return new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001",
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Juan Perez", "12345678",
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null
+                null, null, null, "Juan Perez", null, "12345678", null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null
         );
     }
 
     private Long labrarYCompletarCaptura() {
-        Long idActa = actaService.labrar(cmdLabrar()).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(idActa, null));
-        return idActa;
+        // El alta es integral: el acta ya nace en ENRI (DECISION-ACTA-LIFECYCLE-SIN-CAPT-01).
+        return actaService.labrar(cmdLabrar()).idActa();
     }
 
     private Long labrarYSolicitar() {

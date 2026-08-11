@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -33,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Slice GAP-CONFORMIDAD-PAGO-CONDENA-INFORMAR-001 (CMD-FALLO-007).
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @DisplayName("IT seguridad: POST actas/{id}/pago-condena/informar requiere Bearer JWT firmado")
 class PagoCondenaInformarSecurityTest {
@@ -89,10 +91,9 @@ class PagoCondenaInformarSecurityTest {
     }
 
     @Test
-    @DisplayName("GET sin Bearer a la misma URI -> NO es 401 (filtro no protege GET)")
-    void get_sinBearer_no_es_401() throws Exception {
-        MvcResult result = mockMvc.perform(get(URL)).andReturn();
-        assertThat(result.getResponse().getStatus()).isNotEqualTo(401);
+    @DisplayName("GET sin Bearer a la misma URI -> 401 (anyRequest().authenticated() protege GET tambien)")
+    void get_sinBearer_es_401() throws Exception {
+        mockMvc.perform(get(URL)).andExpect(status().isUnauthorized());
     }
 
     @Test

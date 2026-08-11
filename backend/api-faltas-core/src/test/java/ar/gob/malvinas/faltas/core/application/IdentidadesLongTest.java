@@ -39,7 +39,7 @@ class IdentidadesLongTest {
     private FalActa crearActa(Long id) {
         return new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                "Calle 123", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                "Calle 123", null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), "TEST_USER");
     }
 

@@ -1,7 +1,7 @@
 package ar.gob.malvinas.faltas.core.web.dto;
-import ar.gob.malvinas.faltas.core.domain.enums.TipoUnidad;
+import ar.gob.malvinas.faltas.core.domain.enums.CategoriaInfraccion;
+import ar.gob.malvinas.faltas.core.domain.enums.TipoInfraccion;
 import ar.gob.malvinas.faltas.core.domain.model.FalArticuloNormativaFaltas;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 public record ArticuloNormativaFaltasResponse(
@@ -11,11 +11,9 @@ public record ArticuloNormativaFaltasResponse(
     int versionArticulo,
     String nombreArticulo,
     String descripcionArticulo,
-    BigDecimal cantidadUnidades,
-    TipoUnidad tipoUnidad,
-    boolean siTienePagoVoluntario,
-    BigDecimal cantidadUnidadesPagoVoluntario,
-    TipoUnidad tipoUnidadPagoVoluntario,
+    TipoInfraccion tipoInfraccion,
+    CategoriaInfraccion categoriaInfraccion,
+    boolean siAdmiteMedidaPreventiva,
     boolean siActivo,
     LocalDate fhVigDesde,
     LocalDate fhVigHasta,
@@ -25,9 +23,7 @@ public record ArticuloNormativaFaltasResponse(
         return new ArticuloNormativaFaltasResponse(
             a.getId(), a.getNormativaId(), a.getCodigoArticulo(), a.getVersionArticulo(),
             a.getNombreArticulo(), a.getDescripcionArticulo(),
-            a.getCantidadUnidades(), a.getTipoUnidad(),
-            a.isSiTienePagoVoluntario(), a.getCantidadUnidadesPagoVoluntario(),
-            a.getTipoUnidadPagoVoluntario(), a.isSiActivo(),
-            a.getFhVigDesde(), a.getFhVigHasta(), a.getFhAlta());
+            a.getTipoInfraccion(), a.getCategoriaInfraccion(), a.isSiAdmiteMedidaPreventiva(),
+            a.isSiActivo(), a.getFhVigDesde(), a.getFhVigHasta(), a.getFhAlta());
     }
 }

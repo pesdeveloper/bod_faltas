@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaMedidaPreventiva;
 import ar.gob.malvinas.faltas.core.domain.enums.EstadoMedidaAplicada;
 import ar.gob.malvinas.faltas.core.repository.ActaMedidaPreventivaRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
+@Profile("!jdbc")
 public class InMemoryActaMedidaPreventivaRepository
         implements ActaMedidaPreventivaRepository, ResettableInMemoryRepository {
     private final List<FalActaMedidaPreventiva> store = new CopyOnWriteArrayList<>();

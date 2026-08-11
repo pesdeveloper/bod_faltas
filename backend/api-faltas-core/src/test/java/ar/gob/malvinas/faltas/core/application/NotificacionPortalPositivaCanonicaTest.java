@@ -1,6 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
-import ar.gob.malvinas.faltas.core.application.command.CompletarCapturaCommand;
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.EnriquecerActaCommand;
@@ -70,6 +71,7 @@ import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPagoVoluntarioRepos
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryPersonaDomicilioRepository;
 import ar.gob.malvinas.faltas.core.repository.memory.InMemoryTalonarioRepository;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.PlazosTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -157,7 +159,7 @@ class NotificacionPortalPositivaCanonicaTest {
         SnapshotRecalculador recalc = new SnapshotRecalculador(
                 eventoRepo, docRepo, notifRepo, pagoRepo, falloRepo, apelacionRepo, pagoCondenaRepo, relojFijo, snapshotRepo);
 
-        actaService = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        actaService = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), relojFijo);
 
         TalonarioService talonarioService = new TalonarioService(
@@ -910,10 +912,11 @@ class NotificacionPortalPositivaCanonicaTest {
     private Long avanzarAAnalisis() {
         String nro = String.valueOf(++contadorNroActa);
         Long idActa = actaService.labrar(new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001", FECHA_ORIGEN, "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Maria Lopez", nro,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(idActa, null));
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L, FECHA_ORIGEN, "Av. Argentina 123", "San Martin 456",
+                null, null, null, "Maria Lopez", null, nro, null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
         actaService.enriquecer(new EnriquecerActaCommand(idActa, "enriquecido"));
 
         String idDoc = docService.generarDocumento(
@@ -934,10 +937,11 @@ class NotificacionPortalPositivaCanonicaTest {
     private Fixture piezaPrevia() {
         String nro = String.valueOf(++contadorNroActa);
         Long idActa = actaService.labrar(new LabrarActaCommand(
-                "TRANSITO", "DEP-001", "INS-001", FECHA_ORIGEN, "Av. Argentina 123", "San Martin 456",
-                null, null, null, "Maria Lopez", nro,
-                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null)).idActa();
-        actaService.completarCaptura(new CompletarCapturaCommand(idActa, null));
+                ar.gob.malvinas.faltas.core.domain.enums.TipoActa.TRANSITO, 1L, 1L, FECHA_ORIGEN, "Av. Argentina 123", "San Martin 456",
+                null, null, null, "Maria Lopez", null, nro, null,
+                ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES,
+                null, null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null)).idActa();
         actaService.enriquecer(new EnriquecerActaCommand(idActa, "enriquecido"));
         String idDoc = docService.generarDocumento(
                 new GenerarDocumentoCommand(idActa, TipoDocu.ACTA_INFRACCION))

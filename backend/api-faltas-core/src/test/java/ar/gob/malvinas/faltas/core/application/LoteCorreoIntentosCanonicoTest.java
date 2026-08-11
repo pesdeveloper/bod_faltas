@@ -70,7 +70,19 @@ class LoteCorreoIntentosCanonicoTest {
                 snapshotRepo, snapshotRecalc, domicilioRepo, clock);
     }
 
-    private FalActa crearActaConDomicilio(Long actaId) {
+    /** Etiqueta logica del test -> id real que asigno la persistencia. */
+    private final java.util.Map<Long, Long> idsActa = new java.util.HashMap<>();
+
+    /** Id real del acta creada con esa etiqueta. */
+    private Long acta(Long etiqueta) {
+        return idsActa.get(etiqueta);
+    }
+
+    /**
+     * Alta real: el acta se construye sin id y la PK la asigna la persistencia.
+     * La etiqueta solo sirve para referirse al acta dentro del test; no es la PK.
+     */
+    private FalActa crearActaConDomicilio(Long etiqueta) {
         Long domId = domicilioRepo.nextId();
         domicilioRepo.guardar(new FalPersonaDomicilio(
                 domId, 1L, null,
@@ -82,14 +94,17 @@ class LoteCorreoIntentosCanonicoTest {
                 null, null, "Av. Libertad 100, Malvinas",
                 false, null, null, null,
                 FaltasClockTestSupport.FIXED.now(), ACTOR));
-        FalActa acta = new FalActa(actaId, "UUID-" + actaId, TipoActa.TRANSITO, 1L, 1L,
+        FalActa acta = new FalActa(null, "UUID-" + etiqueta + "-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 9), FaltasClockTestSupport.FIXED.now(),
                 "Av. Libertad 100", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null,
+                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), ACTOR);
         acta.setBloqueActual(BloqueActual.ANAL);
         acta.setIdDomicilioNotifAct(domId);
-        return actaRepo.guardar(acta);
+        FalActa persistida = actaRepo.guardar(acta);
+        idsActa.put(etiqueta, persistida.getId());
+        return persistida;
     }
 
     private FalNotificacion crearNotifPendiente(Long notifId, Long actaId, Long docId) {
@@ -106,7 +121,7 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T01: una notif -> lote GENERADO, intento postal, domicilio, EN_PROCESO, NOTI, LOTGEN, snapshot")
     void t01_unaNotificacion() {
         FalActa acta = crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
+        crearNotifPendiente(10L, acta(1L), 10L);
 
         FalLoteCorreo lote = loteService.generarLoteDesdePendientes(cmd("LOT-T01"));
 
@@ -146,10 +161,10 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(notif.getIdUserUltMod()).isEqualTo(ACTOR);
 
         // Acta ANAL -> NOTI
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
 
         // Exactamente un LOTGEN
-        List<FalActaEvento> eventos = eventoRepo.buscarPorActa(1L);
+        List<FalActaEvento> eventos = eventoRepo.buscarPorActa(acta(1L));
         assertThat(eventos.stream().filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
         FalActaEvento lotgen = eventos.stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).findFirst().orElseThrow();
@@ -157,7 +172,7 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(lotgen.idUserEvt()).isEqualTo(ACTOR);
 
         // Snapshot exacto
-        FalActaSnapshot snap = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
     }
@@ -166,8 +181,8 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T02: dos notifs misma acta -> dos intentos, un LOTGEN, un snapshot")
     void t02_dosNotifsMismaActa() {
         crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
-        crearNotifPendiente(20L, 1L, 20L);
+        crearNotifPendiente(10L, acta(1L), 10L);
+        crearNotifPendiente(20L, acta(1L), 20L);
 
         loteService.generarLoteDesdePendientes(cmd("LOT-T02"));
 
@@ -175,14 +190,14 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(intentoRepo.buscarPorNotificacion(20L)).hasSize(1);
 
         // Acta ANAL -> NOTI
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
 
-        long lotgenCount = eventoRepo.buscarPorActa(1L).stream()
+        long lotgenCount = eventoRepo.buscarPorActa(acta(1L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count();
         assertThat(lotgenCount).isEqualTo(1);
 
         // Snapshot exacto
-        FalActaSnapshot snap = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
     }
@@ -192,25 +207,25 @@ class LoteCorreoIntentosCanonicoTest {
     void t03_dosActasDistintas() {
         crearActaConDomicilio(1L);
         crearActaConDomicilio(2L);
-        crearNotifPendiente(10L, 1L, 10L);
-        crearNotifPendiente(20L, 2L, 20L);
+        crearNotifPendiente(10L, acta(1L), 10L);
+        crearNotifPendiente(20L, acta(2L), 20L);
 
         FalLoteCorreo lote = loteService.generarLoteDesdePendientes(cmd("LOT-T03"));
 
         // Cada acta ANAL -> NOTI
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
-        assertThat(actaRepo.buscarPorId(2L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(2L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
 
-        assertThat(eventoRepo.buscarPorActa(1L).stream()
+        assertThat(eventoRepo.buscarPorActa(acta(1L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
-        assertThat(eventoRepo.buscarPorActa(2L).stream()
+        assertThat(eventoRepo.buscarPorActa(acta(2L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
 
         // Snapshots exactos
-        FalActaSnapshot snap1 = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap1 = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap1.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap1.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
-        FalActaSnapshot snap2 = snapshotRepo.buscarPorActa(2L).orElseThrow();
+        FalActaSnapshot snap2 = snapshotRepo.buscarPorActa(acta(2L)).orElseThrow();
         assertThat(snap2.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap2.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
 
@@ -224,7 +239,7 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T04: intento previo nro=1 -> nuevo intento nro=2, contador cabecera incrementado una vez")
     void t04_intentoPrevioExistente() {
         FalActa acta = crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
+        crearNotifPendiente(10L, acta(1L), 10L);
         intentoRepo.guardar(new FalNotificacionIntento(
                 99L, 10L, (short) 1, CanalNotificacion.PRESENCIAL,
                 acta.getIdDomicilioNotifAct(), null, null, null,
@@ -240,12 +255,12 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(notifRepo.buscarPorId(10L).orElseThrow().getIntentos()).isEqualTo(1);
 
         // Acta ANAL -> NOTI
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
-        assertThat(eventoRepo.buscarPorActa(1L).stream()
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(eventoRepo.buscarPorActa(acta(1L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
 
         // Snapshot exacto
-        FalActaSnapshot snap = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
     }
@@ -254,7 +269,7 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T05: CountingClock.calls=1, mismo ahora en lote/intentos/cabeceras/eventos, actor identico")
     void t05_instanteYActorUnicos() {
         crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
+        crearNotifPendiente(10L, acta(1L), 10L);
 
         FalLoteCorreo lote = loteService.generarLoteDesdePendientes(cmd("LOT-T05"));
 
@@ -275,14 +290,14 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(notif.getFhUltMod()).isEqualTo(ahora);
         assertThat(notif.getIdUserUltMod()).isEqualTo(ACTOR);
 
-        FalActaEvento lotgen = eventoRepo.buscarPorActa(1L).stream()
+        FalActaEvento lotgen = eventoRepo.buscarPorActa(acta(1L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN)
                 .findFirst().orElseThrow();
         assertThat(lotgen.fhEvt()).isEqualTo(ahora);
         assertThat(lotgen.idUserEvt()).isEqualTo(ACTOR);
 
         // Snapshot exacto
-        FalActaSnapshot snap = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
     }
@@ -357,7 +372,7 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T13: notif PENDIENTE_ENVIO con resultado no nulo -> excepcion, reloj=0, sin efectos")
     void t13_notifConResultado() {
         crearActaConDomicilio(1L);
-        FalNotificacion notif = FalNotificacion.preparar(10L, 1L, 10L, TipoDocu.NOTIFICACION_ACTA,
+        FalNotificacion notif = FalNotificacion.preparar(10L, acta(1L), 10L, TipoDocu.NOTIFICACION_ACTA,
                 FaltasClockTestSupport.FIXED.now(), ACTOR);
         notif.setResultado(ResultadoNotificacion.POSITIVO);
         notifRepo.guardar(notif);
@@ -368,7 +383,7 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(clock.invocationCount()).isEqualTo(0);
         assertThat(loteRepo.buscarPorEstado(EstadoLote.GENERADO)).isEmpty();
         assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
     }
 
     @Test
@@ -386,14 +401,15 @@ class LoteCorreoIntentosCanonicoTest {
     @Test
     @DisplayName("T15: idDomicilioNotifAct nulo en acta -> excepcion, reloj=0, sin efectos")
     void t15_domicilioNulo() {
-        FalActa actaSinDom = new FalActa(1L, "UUID-1", TipoActa.TRANSITO, 1L, 1L,
+        FalActa actaSinDom = new FalActa(null, "UUID-T15-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 9), FaltasClockTestSupport.FIXED.now(),
                 "Av. Libertad 100", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null,
+                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), ACTOR);
         actaSinDom.setBloqueActual(BloqueActual.ANAL);
-        actaRepo.guardar(actaSinDom);
-        crearNotifPendiente(10L, 1L, 10L);
+        idsActa.put(1L, actaRepo.guardar(actaSinDom).getId());
+        crearNotifPendiente(10L, acta(1L), 10L);
 
         assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(cmd("LOT-T15")))
                 .isInstanceOf(PrecondicionVioladaException.class)
@@ -401,23 +417,24 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(clock.invocationCount()).isEqualTo(0);
         assertThat(loteRepo.buscarPorEstado(EstadoLote.GENERADO)).isEmpty();
         assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
-        assertThat(eventoRepo.buscarPorActa(1L)).isEmpty();
-        assertThat(snapshotRepo.buscarPorActa(1L)).isEmpty();
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
+        assertThat(eventoRepo.buscarPorActa(acta(1L))).isEmpty();
+        assertThat(snapshotRepo.buscarPorActa(acta(1L))).isEmpty();
     }
 
     @Test
     @DisplayName("T16: domicilio referenciado inexistente -> excepcion, reloj=0, sin efectos")
     void t16_domicilioReferenciadoInexistente() {
-        FalActa actaDomBad = new FalActa(1L, "UUID-1", TipoActa.TRANSITO, 1L, 1L,
+        FalActa actaDomBad = new FalActa(null, "UUID-T16-" + java.util.UUID.randomUUID(),
+                TipoActa.TRANSITO, 1L, 1L,
                 LocalDate.of(2026, 7, 9), FaltasClockTestSupport.FIXED.now(),
                 "Av. Libertad 100", null, null, null,
-                ResultadoFirmaInfractor.FIRMADA, null,
+                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), ACTOR);
         actaDomBad.setBloqueActual(BloqueActual.ANAL);
         actaDomBad.setIdDomicilioNotifAct(9999L);
-        actaRepo.guardar(actaDomBad);
-        crearNotifPendiente(10L, 1L, 10L);
+        idsActa.put(1L, actaRepo.guardar(actaDomBad).getId());
+        crearNotifPendiente(10L, acta(1L), 10L);
 
         assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(cmd("LOT-T16")))
                 .isInstanceOf(PrecondicionVioladaException.class)
@@ -425,21 +442,21 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(clock.invocationCount()).isEqualTo(0);
         assertThat(loteRepo.buscarPorEstado(EstadoLote.GENERADO)).isEmpty();
         assertThat(intentoRepo.buscarPorNotificacion(10L)).isEmpty();
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
-        assertThat(eventoRepo.buscarPorActa(1L)).isEmpty();
-        assertThat(snapshotRepo.buscarPorActa(1L)).isEmpty();
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
+        assertThat(eventoRepo.buscarPorActa(acta(1L))).isEmpty();
+        assertThat(snapshotRepo.buscarPorActa(acta(1L))).isEmpty();
     }
 
     @Test
     @DisplayName("T17: loteCodigo duplicado secuencial -> LoteCodigoDuplicadoException, sin efectos extras")
     void t17_loteCodigoDuplicadoSecuencial() {
         crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
+        crearNotifPendiente(10L, acta(1L), 10L);
         loteService.generarLoteDesdePendientes(cmd("LOT-T17"));
         int clockAfterFirst = clock.invocationCount();
 
         crearActaConDomicilio(2L);
-        crearNotifPendiente(20L, 2L, 20L);
+        crearNotifPendiente(20L, acta(2L), 20L);
 
         assertThatThrownBy(() -> loteService.generarLoteDesdePendientes(cmd("LOT-T17")))
                 .isInstanceOf(LoteCodigoDuplicadoException.class);
@@ -447,10 +464,10 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(clock.invocationCount()).isEqualTo(clockAfterFirst);
         assertThat(loteRepo.buscarPorEstado(EstadoLote.GENERADO)).hasSize(1);
         assertThat(intentoRepo.buscarPorNotificacion(20L)).isEmpty();
-        assertThat(eventoRepo.buscarPorActa(2L)).isEmpty();
-        assertThat(snapshotRepo.buscarPorActa(2L)).isEmpty();
+        assertThat(eventoRepo.buscarPorActa(acta(2L))).isEmpty();
+        assertThat(snapshotRepo.buscarPorActa(acta(2L))).isEmpty();
         // Segunda acta permanece ANAL
-        assertThat(actaRepo.buscarPorId(2L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
+        assertThat(actaRepo.buscarPorId(acta(2L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.ANAL);
         // Notificacion permanece PENDIENTE_ENVIO
         assertThat(notifRepo.buscarPorId(20L).orElseThrow().getEstado())
                 .isEqualTo(EstadoNotificacion.PENDIENTE_ENVIO);
@@ -460,9 +477,9 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T18: dos ejecuciones concurrentes mismo loteCodigo -> 1 exito, 1 LoteCodigoDuplicadoException, reloj=1")
     void t18_concurrenciaMismoCodigo() throws InterruptedException {
         crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
+        crearNotifPendiente(10L, acta(1L), 10L);
         crearActaConDomicilio(2L);
-        crearNotifPendiente(20L, 2L, 20L);
+        crearNotifPendiente(20L, acta(2L), 20L);
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
@@ -509,20 +526,20 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(notifRepo.buscarPorId(20L).orElseThrow().getIntentos()).isEqualTo(1);
 
         // Cada acta NOTI
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
-        assertThat(actaRepo.buscarPorId(2L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(2L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
 
         // Exactamente un LOTGEN por acta
-        assertThat(eventoRepo.buscarPorActa(1L).stream()
+        assertThat(eventoRepo.buscarPorActa(acta(1L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
-        assertThat(eventoRepo.buscarPorActa(2L).stream()
+        assertThat(eventoRepo.buscarPorActa(acta(2L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
 
         // Exactamente un snapshot por acta, exacto
-        FalActaSnapshot snap1 = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap1 = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap1.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap1.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
-        FalActaSnapshot snap2 = snapshotRepo.buscarPorActa(2L).orElseThrow();
+        FalActaSnapshot snap2 = snapshotRepo.buscarPorActa(acta(2L)).orElseThrow();
         assertThat(snap2.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap2.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
 
@@ -534,9 +551,9 @@ class LoteCorreoIntentosCanonicoTest {
     @DisplayName("T19: dos codigos diferentes concurrentes -> 1 exito, 1 PrecondicionVioladaException, reloj=1")
     void t19_concurrenciaCodigosDiferentes() throws InterruptedException {
         crearActaConDomicilio(1L);
-        crearNotifPendiente(10L, 1L, 10L);
+        crearNotifPendiente(10L, acta(1L), 10L);
         crearActaConDomicilio(2L);
-        crearNotifPendiente(20L, 2L, 20L);
+        crearNotifPendiente(20L, acta(2L), 20L);
 
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
@@ -607,20 +624,20 @@ class LoteCorreoIntentosCanonicoTest {
         assertThat(notifRepo.buscarPorId(20L).orElseThrow().getIntentos()).isEqualTo(1);
 
         // Cada acta NOTI
-        assertThat(actaRepo.buscarPorId(1L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
-        assertThat(actaRepo.buscarPorId(2L).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(1L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
+        assertThat(actaRepo.buscarPorId(acta(2L)).orElseThrow().getBloqueActual()).isEqualTo(BloqueActual.NOTI);
 
         // Exactamente un LOTGEN por acta
-        assertThat(eventoRepo.buscarPorActa(1L).stream()
+        assertThat(eventoRepo.buscarPorActa(acta(1L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
-        assertThat(eventoRepo.buscarPorActa(2L).stream()
+        assertThat(eventoRepo.buscarPorActa(acta(2L)).stream()
                 .filter(e -> e.tipoEvt() == TipoEventoActa.LOTGEN).count()).isEqualTo(1);
 
         // Exactamente un snapshot por acta, EN_NOTIFICACION / EVALUAR_NOTIFICACION
-        FalActaSnapshot snap1 = snapshotRepo.buscarPorActa(1L).orElseThrow();
+        FalActaSnapshot snap1 = snapshotRepo.buscarPorActa(acta(1L)).orElseThrow();
         assertThat(snap1.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap1.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
-        FalActaSnapshot snap2 = snapshotRepo.buscarPorActa(2L).orElseThrow();
+        FalActaSnapshot snap2 = snapshotRepo.buscarPorActa(acta(2L)).orElseThrow();
         assertThat(snap2.getCodBandeja()).isEqualTo(CodigoBandeja.EN_NOTIFICACION);
         assertThat(snap2.getAccionPendiente()).isEqualTo(AccionPendiente.EVALUAR_NOTIFICACION);
 

@@ -1,5 +1,5 @@
 ---
-description: Lectura y edición controlada de artefactos de continuidad
+description: Lectura y edición controlada de artefactos de continuidad, spec canónica y MASTER-RUN
 alwaysApply: true
 ---
 
@@ -16,47 +16,447 @@ Son artefactos de continuidad:
 - resultados de validación;
 - informes de avance;
 - archivos bajo `docs-trabajo/`;
+- evidencias y reportes bajo `.work/Auditorias/`;
 - reglas bajo `.cursor/rules/`.
 
 No existe una lista fija de archivos de continuidad que deba leerse siempre.
 
-## 2. Regla de lectura
+La documentación ubicada bajo:
 
-En un slice funcional o técnico, no cargar automáticamente continuidad histórica.
+`backend/api-faltas-core/docs/spec-as-source/`
 
-Leer un artefacto de continuidad solamente cuando:
+es spec canónica y no debe tratarse como simple continuidad histórica.
 
-1. el prompt lo indique expresamente por ruta; o
-2. exista una duda operativa que no pueda resolverse con la spec, el código y los tests aplicables.
+La spec canónica es fuente normativa viva del sistema.
+
+---
+
+## 2. Jerarquía de fuentes
+
+Cuando exista una contradicción, aplicar este orden:
+
+1. decisiones autoritativas expresas del prompt actual;
+2. spec canónica vigente;
+3. DDL canónica vigente;
+4. código productivo realmente consumido;
+5. tests que expresen contratos vigentes;
+6. artefactos de continuidad;
+7. código demo, legacy, experimental o sin consumidores productivos.
 
 La continuidad nunca reemplaza la spec canónica.
 
-## 3. Regla de edición
+Un handoff, informe, prompt histórico o RUN sellado no puede modificar por sí mismo una decisión de dominio.
 
-Editar continuidad o reglas `.mdc` únicamente cuando:
+---
 
-1. el slice sea explícitamente documental; y
-2. el prompt autorice por ruta cada archivo modificable.
+## 3. Regla general de lectura
 
-No normalizar, resumir, mover, eliminar ni reescribir continuidad por iniciativa propia.
+En un slice funcional o técnico, no cargar automáticamente toda la continuidad histórica.
 
-## 4. Drift
+Leer un artefacto de continuidad solamente cuando:
 
-Si se detecta drift:
+1. el prompt lo indique expresamente por ruta;
+2. el prompt indique expresamente un RUN, bundle, handoff o evidencia de entrada;
+3. exista una duda operativa que no pueda resolverse con la spec, la DDL, el código y los tests aplicables;
+4. sea necesario verificar el estado material declarado por una wave anterior.
 
-- no corregirlo fuera de alcance;
+Cuando se autorice una carpeta o patrón completo, la autorización alcanza a todos sus descendientes:
+
+`ruta/**`
+
+No es necesario que el prompt enumere individualmente cada archivo de esa carpeta.
+
+No leer indiscriminadamente todos los handoffs, prompts históricos o RUNs del repositorio.
+
+---
+
+## 4. Regla general de edición
+
+Editar continuidad únicamente cuando:
+
+1. el slice sea explícitamente documental; o
+2. el prompt autorice expresamente la creación de evidencias, checkpoints, informes o continuidad dentro de un RUN actual; y
+3. la ruta de destino esté autorizada por archivo, carpeta o patrón.
+
+Una autorización de carpeta como:
+
+`.work/Auditorias/NOMBRE-RUN/**`
+
+autoriza crear y editar todos los artefactos internos necesarios para ese RUN, incluyendo:
+
+- diagnóstico;
+- plan;
+- inventarios;
+- decisiones;
+- checkpoints;
+- logs;
+- evidencias;
+- consultas;
+- resultados de tests;
+- archivos `source-before`;
+- archivos `source-after`;
+- manifiestos;
+- hashes;
+- informes por wave;
+- continuidad;
+- informe final.
+
+No normalizar, resumir, mover, eliminar ni reescribir continuidad histórica por iniciativa propia.
+
+---
+
+## 5. Edición de la spec canónica
+
+La spec canónica puede editarse cuando el prompt actual:
+
+1. declare expresamente una wave documental o de saneamiento normativo; y
+2. autorice una ruta concreta de `docs/spec-as-source`; y
+3. defina el alcance funcional que debe incorporarse.
+
+La autorización puede darse por archivo individual o por carpeta completa.
+
+Por ejemplo:
+
+`backend/api-faltas-core/docs/spec-as-source/**`
+
+autoriza revisar y modificar todos los documentos materialmente afectados de la spec canónica.
+
+No interpretar esta autorización como permiso para reescribir documentos no afectados.
+
+Antes de modificar la spec:
+
+1. inventariar los documentos afectados;
+2. identificar contradicciones y referencias obsoletas;
+3. determinar qué decisiones quedan vigentes;
+4. determinar qué decisiones quedan superadas;
+5. preservar la trazabilidad de las decisiones anteriores.
+
+Después de modificar la spec:
+
+1. verificar que no queden contradicciones internas;
+2. actualizar índices, registros documentales y README cuando corresponda;
+3. evitar documentos huérfanos;
+4. ejecutar los guardrails documentales aplicables;
+5. persistir las nuevas decisiones en la spec, no solamente en el RUN.
+
+---
+
+## 6. Drift
+
+Si se detecta drift fuera del alcance autorizado:
+
+- no corregirlo;
 - reportar archivo, afirmación y evidencia contradictoria;
-- proponer un micro-slice documental;
-- no elegir una versión por fecha o apariencia.
+- registrar una deuda o proponer un micro-slice documental;
+- no elegir una versión sólo por fecha, nombre o apariencia.
 
-## 5. Protección de la spec
+Si el drift está dentro del alcance expresamente autorizado:
 
-Los artefactos de continuidad no pueden:
+- corregirlo;
+- dejar evidencia de la fuente anterior;
+- indicar la decisión vigente;
+- identificar documentos, código y tests afectados;
+- verificar que la corrección quede aplicada transversalmente.
+
+No considerar drift a un test, documento o implementación que haya quedado formalmente superado por una decisión autoritativa del prompt actual.
+
+En ese caso debe actualizarse o eliminarse dentro del alcance autorizado.
+
+---
+
+## 7. Protección de la spec
+
+Los artefactos de continuidad no pueden por sí solos:
 
 - crear reglas de dominio;
 - alterar contratos HTTP;
 - redefinir eventos o estados;
 - cambiar decisiones de persistencia;
-- declarar baselines canónicos por sí solos.
+- declarar baselines canónicos;
+- convertir código demo o legacy en comportamiento productivo;
+- reemplazar la DDL canónica.
 
 Toda decisión vigente debe terminar incorporada en la spec canónica.
+
+El MASTER-RUN conserva evidencia, trazabilidad, checkpoints y continuidad, pero no reemplaza la spec.
+
+---
+
+## 8. Protección de artefactos históricos
+
+No modificar:
+
+- prompts históricos de continuidad;
+- handoffs históricos;
+- RUNs históricos sellados;
+- manifiestos históricos;
+- hashes históricos;
+- evidencias históricas;
+- checklists históricos;
+- informes históricos;
+- ZIPs históricos.
+
+Si contienen afirmaciones superadas:
+
+1. preservarlos sin cambios;
+2. registrar la corrección en la spec canónica;
+3. documentar en el RUN actual que el artefacto histórico representa el estado válido de su momento;
+4. no reescribir la historia para que parezca coincidir con el modelo actual.
+
+---
+
+## 9. Protección de `.cursor/rules`
+
+No crear, modificar, mover ni eliminar archivos bajo:
+
+`.cursor/rules/**`
+
+salvo que el prompt actual autorice expresamente cada regla o una ruta concreta.
+
+Una autorización para modificar la spec o crear un MASTER-RUN no implica autorización para cambiar reglas de Cursor.
+
+Si una regla provoca una contradicción operativa:
+
+- reportarla;
+- citar la sección exacta;
+- explicar el impacto;
+- continuar cuando pueda resolverse mediante una autorización ya presente en el prompt;
+- no modificar la regla por iniciativa propia.
+
+---
+
+## 10. Autorización extraordinaria por prompt
+
+Un prompt puede ampliar de forma controlada los permisos de lectura y edición de esta regla cuando incluya una sección explícita denominada, por ejemplo:
+
+`AUTORIZACIÓN DOCUMENTAL Y DE CONTINUIDAD`
+
+La autorización debe indicar:
+
+- ruta o patrón autorizado;
+- tipo de operación permitido;
+- alcance funcional;
+- exclusiones;
+- protección de artefactos históricos.
+
+Las autorizaciones por carpeta o patrón son válidas.
+
+Ejemplo:
+
+`backend/api-faltas-core/docs/spec-as-source/**`
+
+autoriza editar los documentos materialmente afectados de la spec.
+
+Ejemplo:
+
+`.work/Auditorias/ACTA-ALTA-INTEGRAL-JDBC-MASTER-*/**`
+
+autoriza crear y actualizar todos los artefactos del MASTER-RUN actual.
+
+La autorización del prompt actual prevalece sobre la restricción general de edición únicamente dentro de esas rutas y para ese alcance.
+
+No extiende permisos a otras carpetas.
+
+---
+
+## 11. Autorización específica para la remediación integral del alta de Acta
+
+Cuando el prompt actual sea el prompt maestro de remediación integral del alta de Acta, lifecycle, DDL, JDBC y retiro de InMemory, quedan autorizadas las siguientes operaciones.
+
+### 11.1 Spec canónica
+
+Lectura y edición de:
+
+`backend/api-faltas-core/docs/spec-as-source/**`
+
+La autorización comprende solamente los documentos materialmente afectados por:
+
+- alta integral del acta;
+- satélites del alta;
+- eliminación de captura progresiva;
+- eliminación de `CAPT`;
+- eliminación de `ACTCAP`;
+- eliminación de `CompletarCaptura`;
+- nacimiento directo en `ENRI`;
+- condición operativa `ACTA NUEVA`;
+- evento inicial `ACTLAB`;
+- `id_tecnico`;
+- QR;
+- domicilios opcionales cuando no estén disponibles;
+- edición posterior en enriquecimiento;
+- valorización reutilizable;
+- vista previa de valorización;
+- baja lógica de artículos infringidos;
+- obligación de pago fuera del alta;
+- DDL y eliminación de `CHECK`;
+- persistencia JDBC canónica;
+- eliminación de persistencias InMemory migradas;
+- transacciones y rollback;
+- contratos HTTP;
+- snapshots;
+- matrices de tests;
+- roadmap de implementación.
+
+También se autoriza actualizar dentro de esa misma raíz:
+
+- `README.md`;
+- registro de documentos;
+- índices;
+- matrices;
+- decisiones de persistencia;
+- contratos de comandos;
+- contratos HTTP;
+- roadmap;
+- guardrails documentales.
+
+### 11.2 MASTER-RUN
+
+Creación y edición de:
+
+`.work/Auditorias/ACTA-ALTA-INTEGRAL-JDBC-MASTER-*/**`
+
+El MASTER-RUN puede contener:
+
+- reconstrucción material;
+- preflight;
+- inventario Git;
+- inventario de base;
+- plan maestro;
+- waves;
+- checkpoints;
+- matrices;
+- decisiones;
+- análisis de impacto;
+- migraciones;
+- DDL antes y después;
+- resultados de build;
+- resultados de tests;
+- evidencias de rollback;
+- manifiestos;
+- hashes;
+- fuentes posteriores;
+- continuidad;
+- informe final.
+
+Esta autorización permanece vigente durante toda la ejecución del prompt maestro y no requiere aprobación entre waves.
+
+### 11.3 Exclusiones
+
+La autorización específica no permite modificar:
+
+`.cursor/rules/**`
+
+`docs-trabajo/**`
+
+ni:
+
+- prompts históricos;
+- handoffs históricos;
+- RUNs históricos;
+- ZIPs históricos;
+- evidencias históricas;
+- archivos ajenos al alcance funcional.
+
+Sólo pueden leerse cuando el prompt los nombre o cuando resulten indispensables para resolver una duda material.
+
+---
+
+## 12. Ejecución por waves
+
+Cuando el prompt autorice un MASTER-RUN autónomo:
+
+1. reconstruir primero el estado material;
+2. crear el plan maestro;
+3. guardar el plan dentro del MASTER-RUN;
+4. ejecutar las waves secuencialmente;
+5. validar cada wave;
+6. escribir un checkpoint;
+7. continuar automáticamente con la siguiente wave;
+8. no solicitar autorización adicional salvo una stop condition real.
+
+Cada checkpoint debe indicar:
+
+- alcance ejecutado;
+- archivos modificados;
+- DDL ejecutada;
+- tests ejecutados;
+- resultado;
+- deudas;
+- siguiente wave;
+- estado Git;
+- estado de datos;
+- confirmación de protección de artefactos ajenos.
+
+Si la ejecución se interrumpe, la reanudación debe partir del último checkpoint material verificado, no de memoria conversacional.
+
+---
+
+## 13. Git y staging
+
+La autorización documental no autoriza operaciones destructivas o de control de versión.
+
+No ejecutar salvo autorización expresa independiente:
+
+- `git add`;
+- `git commit`;
+- `git push`;
+- `git reset`;
+- `git restore`;
+- `git checkout`;
+- `git stash`;
+- `git clean`;
+- `git rebase`;
+- `git merge`.
+
+Proteger siempre:
+
+- staging ajeno;
+- archivos modificados previamente;
+- archivos no trackeados ajenos;
+- HEAD;
+- índice Git.
+
+Capturar el estado antes y después de cada wave relevante.
+
+---
+
+## 14. Datos y base de datos
+
+La autorización documental no habilita destruir datos maestros.
+
+Proteger tablas con información cargada, incluyendo:
+
+- geografía;
+- domicilios;
+- calles;
+- localidades;
+- rubros;
+- catálogos;
+- versiones de catálogos;
+- cualquier otra tabla inventariada con datos que deban conservarse.
+
+Las tablas transaccionales vacías pueden modificarse, recrearse o migrarse cuando el prompt maestro lo autorice.
+
+Antes de una transformación física:
+
+1. inventariar filas por tabla;
+2. clasificar tablas maestras y transaccionales;
+3. registrar qué datos se protegen;
+4. generar migración controlada;
+5. verificar el resultado posterior.
+
+---
+
+## 15. Principio final
+
+La continuidad sirve para retomar y verificar.
+
+La spec sirve para definir.
+
+La DDL sirve para materializar.
+
+El código sirve para implementar.
+
+Los tests sirven para demostrar.
+
+Ninguno de esos niveles debe contradecir a los demás al cerrar una wave.

@@ -8,7 +8,12 @@ import java.time.LocalDateTime;
  * Medida preventiva efectivamente aplicada al acta.
  * Mapeada a fal_acta_medida_preventiva en MariaDB.
  *
- * Referencia articulo infringido activo de la misma acta.
+ * <p>Decision funcional final (Wave 4 Parte 3B §7, DECISION-MEDIDA-PREVENTIVA-LIBRE-01,
+ * reemplaza la version anterior que exigia articulo): el inspector puede elegir cualquier
+ * medida preventiva vigente del catalogo, sin exigir compatibilidad previa con un articulo
+ * infringido. {@code actaArticuloId} es opcional (nullable): cuando se informa, es solo una
+ * referencia historica/informativa, nunca una FK obligatoria ni una condicion de validacion.
+ *
  * La relacion con bloqueantes es unidireccional (no se guarda bloqueante_id).
  * Si genera bloqueante, el bloqueante apunta a esta medida por su id.
  * Historial se preserva: no se borra fisicamente.
@@ -25,6 +30,10 @@ public class FalActaMedidaPreventiva {
     private final LocalDateTime fhAlta;
     private final String idUserAlta;
 
+    /**
+     * @param actaArticuloId opcional (nullable) desde Wave 4 Parte 3B §7: la medida ya no
+     *                        depende de un articulo infringido de la acta.
+     */
     public FalActaMedidaPreventiva(
             Long id,
             Long actaId,
@@ -35,7 +44,6 @@ public class FalActaMedidaPreventiva {
             String idUserAlta) {
         if (id == null) throw new IllegalArgumentException("id es obligatorio");
         if (actaId == null) throw new IllegalArgumentException("actaId es obligatorio");
-        if (actaArticuloId == null) throw new IllegalArgumentException("actaArticuloId es obligatorio");
         if (medidaPreventivaId == null) throw new IllegalArgumentException("medidaPreventivaId es obligatorio");
         if (fhAlta == null) throw new IllegalArgumentException("fhAlta es obligatoria");
         if (idUserAlta == null || idUserAlta.isBlank()) throw new IllegalArgumentException("idUserAlta es obligatorio");

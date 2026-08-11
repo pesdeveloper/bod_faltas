@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 import ar.gob.malvinas.faltas.core.domain.exception.ConcurrenciaConflictoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalActaSnapshot;
 import ar.gob.malvinas.faltas.core.repository.ActaSnapshotRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -21,8 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * El recalculador (SnapshotRecalculador) debe leer el snapshot existente para preservar
  * su versionRow antes de llamar a guardar. No debe crear new FalActaSnapshot() si la
  * entidad ya existe en el store.
+ *
+ * <p><b>Restringido a {@code !jdbc} desde WAVE 1A2-B2.</b> Con el perfil {@code jdbc} el
+ * puerto lo resuelve {@code JdbcActaSnapshotRepository}. Antes de B2 el snapshot del alta se
+ * escribia en memoria aunque el acta fuera a MariaDB, de modo que un rollback dejaba una
+ * proyeccion operativa de un acta que no existia.
  */
 @Repository
+@Profile("!jdbc")
 public class InMemoryActaSnapshotRepository implements ActaSnapshotRepository {
 
     private final Map<Long, FalActaSnapshot> store = new ConcurrentHashMap<>();

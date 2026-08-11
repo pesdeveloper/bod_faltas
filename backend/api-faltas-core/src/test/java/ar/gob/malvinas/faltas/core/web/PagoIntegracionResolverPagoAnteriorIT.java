@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.web;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.application.command.NotificarMovimientoPagoCommand;
 import ar.gob.malvinas.faltas.core.application.service.PagoEconomicoService;
 import ar.gob.malvinas.faltas.core.domain.enums.ClasificacionPago;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -45,11 +48,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * e idempotencia/exito (200), bajo el modelo R1 de movimiento unico. Ver
  * backend/api-faltas-core/docs/spec-as-source/40-api/http-contracts.md.
  *
- * Spring Security activo. No desactivar. Cada test siembra sus propios datos
- * usando actaRepo.nextId()/obligacionRepo.nextId() para no colisionar con
- * datos de otros tests que comparten el mismo contexto Spring.
+ * Spring Security activo. No desactivar. Cada test siembra sus propios datos:
+ * el acta se persiste sin id y su PK la asigna la persistencia, y la obligacion
+ * usa obligacionRepo.nextId(), de modo que no colisionan con datos de otros
+ * tests que comparten el mismo contexto Spring.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @DisplayName("IT: POST /api/faltas/pagos/resolver-pago-anterior")
 class PagoIntegracionResolverPagoAnteriorIT {
@@ -57,6 +62,9 @@ class PagoIntegracionResolverPagoAnteriorIT {
     private static final String URL = "/api/faltas/pagos/resolver-pago-anterior";
     private static final String URL_NOTIFICAR_MOVIMIENTO = "/api/faltas/pagos/notificar-movimiento";
     private static final String ACTOR_SUB = "usuario-it-resolver-pago-anterior";
+
+    /** Base sintetica de los id de persona del escenario; el definitivo suma la PK del acta. */
+    private static final long PERSONA_SEMILLA = 500_000L;
 
     @Autowired
     private MockMvc mockMvc;
@@ -402,13 +410,21 @@ class PagoIntegracionResolverPagoAnteriorIT {
     }
 
     private FalActaObligacionPago sembrarActaConObligacionVigente(BigDecimal monto) {
-        Long actaId = actaRepo.nextId();
-        Long personaId = 500_000L + actaId;
+        String marca = "UUID-IT-" + java.util.UUID.randomUUID();
         LocalDateTime ahora = LocalDateTime.now();
-        FalActa acta = new FalActa(actaId, "UUID-IT-" + actaId, TipoActa.TRANSITO, 1L, 1L,
-                LocalDate.now(), ahora, "Domicilio IT " + actaId, null,
-                null, null, ResultadoFirmaInfractor.FIRMADA, personaId, ahora, "SYS");
-        actaRepo.guardar(acta);
+        // El acta nace identificada: la obligacion de pago exige un sujeto. El id de
+        // persona definitivo se deriva de la PK, que asigna la persistencia, de modo
+        // que se construye con la semilla y se reasigna sobre la copia persistida. La
+        // combinacion situacion/persona es coherente en todo momento.
+        FalActa acta = new FalActa(null, marca, TipoActa.TRANSITO, 1L, 1L,
+                LocalDate.now(), ahora, "Domicilio IT " + marca, null,
+                null, null, ResultadoFirmaInfractor.FIRMADA,
+                SituacionIdentificacionInfractor.IDENTIFICADO_COMPLETO, PERSONA_SEMILLA, ahora, "SYS");
+        FalActa persistida = actaRepo.guardar(acta);
+        Long actaId = persistida.getId();
+        Long personaId = PERSONA_SEMILLA + actaId;
+        persistida.setIdPersonaInfractor(personaId);
+        actaRepo.guardar(persistida);
 
         Long obligacionId = obligacionRepo.nextId();
         FalActaObligacionPago vigente = new FalActaObligacionPago(

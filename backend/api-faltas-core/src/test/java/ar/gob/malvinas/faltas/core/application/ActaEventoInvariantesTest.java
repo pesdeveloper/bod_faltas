@@ -38,10 +38,9 @@ class ActaEventoInvariantesTest {
     }
 
     private FalActa crearActa() {
-        Long id = actaRepo.nextId();
-        FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
+        FalActa acta = new FalActa(null, "uuid-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), "TEST");
         return actaRepo.guardar(acta);
     }
@@ -75,12 +74,11 @@ class ActaEventoInvariantesTest {
         @Test
         @DisplayName("Acta sin uuid tecnico registra violacion")
         void acta_sin_uuid() {
-            Long id = actaRepo.nextId();
-            FalActa acta = new FalActa(id, "", TipoActa.TRANSITO, 1L, 1L,
+            FalActa sinUuid = new FalActa(null, "", TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                    "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                    "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                     FaltasClockTestSupport.FIXED.now(), "TEST");
-            actaRepo.guardar(acta);
+            FalActa acta = actaRepo.guardar(sinUuid);
             registrarActlab(acta);
             var violaciones = checker.verificar(acta, eventoRepo.buscarPorActa(acta.getId()));
             assertThat(violaciones).anyMatch(viol -> viol.regla().equals("UUID_NULO"));
@@ -160,15 +158,15 @@ class ActaEventoInvariantesTest {
             eventoRepo.registrar(FalActaEvento.builder()
                     .actaId(acta.getId()).tipoEvt(TipoEventoActa.ACTLAB).fhEvt(t1).build());
             eventoRepo.registrar(FalActaEvento.builder()
-                    .actaId(acta.getId()).tipoEvt(TipoEventoActa.ACTCAP).fhEvt(t2).build());
+                    .actaId(acta.getId()).tipoEvt(TipoEventoActa.ACTENR).fhEvt(t2).build());
             eventoRepo.registrar(FalActaEvento.builder()
-                    .actaId(acta.getId()).tipoEvt(TipoEventoActa.ACTENR).fhEvt(t3).build());
+                    .actaId(acta.getId()).tipoEvt(TipoEventoActa.DOCGEN).fhEvt(t3).build());
 
             List<FalActaEvento> ordenados = eventoRepo.buscarPorActa(acta.getId());
             assertThat(ordenados).hasSize(3);
             assertThat(ordenados.get(0).tipoEvt()).isEqualTo(TipoEventoActa.ACTLAB);
-            assertThat(ordenados.get(1).tipoEvt()).isEqualTo(TipoEventoActa.ACTCAP);
-            assertThat(ordenados.get(2).tipoEvt()).isEqualTo(TipoEventoActa.ACTENR);
+            assertThat(ordenados.get(1).tipoEvt()).isEqualTo(TipoEventoActa.ACTENR);
+            assertThat(ordenados.get(2).tipoEvt()).isEqualTo(TipoEventoActa.DOCGEN);
         }
 
         @Test

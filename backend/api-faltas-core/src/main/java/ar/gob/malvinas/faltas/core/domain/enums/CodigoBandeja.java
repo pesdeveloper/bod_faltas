@@ -8,7 +8,8 @@ package ar.gob.malvinas.faltas.core.domain.enums;
  */
 public enum CodigoBandeja {
 
-    ACTAS_EN_ENRIQUECIMIENTO("ACTAS_EN_ENRIQUECIMIENTO", "Actas en captura/enriquecimiento"),
+    ACTA_NUEVA("ACTA_NUEVA", "Acta nueva, recien labrada, sin documentos generados aun"),
+    ACTAS_EN_ENRIQUECIMIENTO("ACTAS_EN_ENRIQUECIMIENTO", "Actas en enriquecimiento"),
     PENDIENTE_PREPARACION_DOCUMENTAL("PENDIENTE_PREPARACION_DOCUMENTAL", "Pendiente de preparacion documental"),
     PENDIENTE_FIRMA("PENDIENTE_FIRMA", "Pendiente de firma"),
     PENDIENTE_NOTIFICACION("PENDIENTE_NOTIFICACION", "Pendiente de notificacion"),

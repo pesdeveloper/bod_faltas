@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.service.ActaContravencionService;
@@ -1164,7 +1166,7 @@ class SatelitesCatalogosTest {
         private FalActa crearActa(Long id, TipoActa tipo) {
             return new FalActa(id, "uuid-" + id, tipo, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(), "Calle Falsa 123",
-                    null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                    null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                     FaltasClockTestSupport.FIXED.now(), "u1");
         }
 

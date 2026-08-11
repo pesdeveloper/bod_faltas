@@ -325,7 +325,7 @@ class MariaDbLogicalModelParityGuardrailTest {
     // =====================================================================
 
     @Nested
-    @DisplayName("fal_acta: tripla CHAR(4), id_persona_infractor NOT NULL, bloque completo de captura/lugar del hecho/QR")
+    @DisplayName("fal_acta: tripla CHAR(4), id_persona_infractor NULL con situacion de identificacion, bloque completo de captura/lugar del hecho/QR")
     class FalActa {
 
         @Test
@@ -363,6 +363,7 @@ class MariaDbLogicalModelParityGuardrailTest {
                             "fh_archivo",
                             "resumen_hecho",
                             "id_persona_infractor",
+                            "situacion_identificacion_infractor",
                             "est_proc_act CHAR(4)",
                             "sit_adm_act CHAR(4)",
                             "bloque_actual CHAR(4)"),
@@ -373,11 +374,30 @@ class MariaDbLogicalModelParityGuardrailTest {
                             "id_persona BIGINT NULL FK"));
         }
 
+        /**
+         * Invertido en WAVE 1A2-B1.5B1, el trabajo de DDL que aplico
+         * {@code DECISION_DDL-ACTA-INFR-01} sobre la base ejecutada. Hasta entonces el
+         * modelo describia {@code id_persona_infractor BIGINT NOT NULL}, que era el
+         * esquema real. Ahora la ausencia de sujeto identificado se expresa con NULL y
+         * la califica {@code situacion_identificacion_infractor}.
+         */
         @Test
-        @DisplayName("la FK a persona es NOT NULL (id_persona_infractor)")
-        void fk_persona_not_null() throws IOException {
+        @DisplayName("la FK a persona es NULL y la situacion de identificacion la califica")
+        void fk_persona_nullable_con_situacion() throws IOException {
             String contenido = leerModelo();
-            assertThat(contenido).containsPattern("(?i)id_persona_infractor BIGINT NOT NULL");
+            assertThat(contenido)
+                    .as("el ALTER de DECISION_DDL-ACTA-INFR-01 dejo id_persona_infractor nullable")
+                    .containsPattern("(?i)id_persona_infractor BIGINT NULL");
+            assertThat(contenido)
+                    .as("la redaccion NOT NULL quedo obsoleta y no debe reaparecer")
+                    .doesNotContainPattern("(?i)id_persona_infractor BIGINT NOT NULL");
+            assertThat(contenido)
+                    .as("el modelo declara la columna nueva como SMALLINT NOT NULL")
+                    .containsPattern("(?i)situacion_identificacion_infractor SMALLINT NOT NULL");
+            assertThat(contenido)
+                    .as("el modelo declara los dos CHECK canonicos de la matriz")
+                    .contains("chk_acta_situacion_infractor")
+                    .contains("chk_acta_infractor_coherente");
         }
     }
 
@@ -887,13 +907,14 @@ class MariaDbLogicalModelParityGuardrailTest {
                     .as("fal_dia_no_computable: origen debe ser SMALLINT NOT NULL (DECISION_DDL-ENUM-01 CERRADA)")
                     .contains("origen SMALLINT NOT NULL");
 
-            // R3.1: total de headings de tabla (#### `) = 65
+            // R3.1: total de headings de tabla (#### `) = 66 (65 + fal_valor_unidad_faltas,
+            // tabla nueva de Wave 4 PARTE-2 S7.2)
             long totalHeadings = Files.readAllLines(modeloLogico, StandardCharsets.UTF_8).stream()
                     .filter(l -> l.startsWith("#### `"))
                     .count();
             assertThat(totalHeadings)
-                    .as("El modelo logico debe tener exactamente 65 headings de tabla del tipo '#### `'")
-                    .isEqualTo(65L);
+                    .as("El modelo logico debe tener exactamente 66 headings de tabla del tipo '#### `'")
+                    .isEqualTo(66L);
         }
 
         @Test

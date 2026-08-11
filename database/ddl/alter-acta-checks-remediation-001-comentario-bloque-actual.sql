@@ -1,0 +1,1 @@
+ALTER TABLE `fal_acta` MODIFY COLUMN `bloque_actual` CHAR(4) NOT NULL COMMENT 'Bloque procesal actual del acta (BloqueActual enum: ENRI, NOTI, ANAL, GEXT, ARCH, CERR; el acta nace directamente en ENRI, DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)';

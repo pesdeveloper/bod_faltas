@@ -249,16 +249,15 @@ class FirmaFalloNotificacionCanonicaTest {
         @BeforeEach
         void setUpFallo() {
             // Acta
-            idActa = actaRepo.nextId();
             FalActa acta = new FalActa(
-                    idActa, UUID.randomUUID().toString(),
+                    null, UUID.randomUUID().toString(),
                     "TRANSITO", DEP_COD, "INS-001",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(),
                     FaltasClockTestSupport.FIXED.now(),
-                    "Belgrano 200", "Calle 123", null, null, null,
+                    "Belgrano 200", "Calle 123", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                     "Juan Perez", "12345678", ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
             acta.setBloqueActual(BloqueActual.ANAL);
-            actaRepo.guardar(acta);
+            idActa = actaRepo.guardar(acta).getId();
 
             // Plantilla notificable
             idPlantilla = plantillaRepo.nextPlantillaId();
@@ -357,16 +356,15 @@ class FirmaFalloNotificacionCanonicaTest {
         @Test
         @DisplayName("4a. Cuando existe PENDIENTE_ENVIO, enviarNotificacion la reutiliza (no crea nueva)")
         void enviar_reutiliza_pendiente() {
-            Long idActa = actaRepo.nextId();
             FalActa acta = new FalActa(
-                    idActa, UUID.randomUUID().toString(),
+                    null, UUID.randomUUID().toString(),
                     "TRANSITO", DEP_COD, "INS-002",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(),
                     FaltasClockTestSupport.FIXED.now(),
-                    "Belgrano 300", "Calle 456", null, null, null,
+                    "Belgrano 300", "Calle 456", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                     "Maria Lopez", "87654321", ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
             acta.setBloqueActual(BloqueActual.NOTI);
-            actaRepo.guardar(acta);
+            Long idActa = actaRepo.guardar(acta).getId();
 
             // Documento firmado
             Long idDoc = docRepo.nextId();
@@ -402,13 +400,12 @@ class FirmaFalloNotificacionCanonicaTest {
         @Test
         @DisplayName("4b. Cuando no existe PENDIENTE_ENVIO, enviarNotificacion crea una nueva EN_PROCESO")
         void enviar_crea_nueva_si_no_hay_pendiente() {
-            Long idActa = actaRepo.nextId();
             FalActa acta = new FalActa(
-                    idActa, UUID.randomUUID().toString(),
+                    null, UUID.randomUUID().toString(),
                     "TRANSITO", DEP_COD, "INS-003",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(),
                     FaltasClockTestSupport.FIXED.now(),
-                    "San Martin 100", "Belgrano 50", null, null, null,
+                    "San Martin 100", "Belgrano 50", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                     "Carlos Ruiz", "11223344", ResultadoFirmaInfractor.FIRMADA);
             acta.setBloqueActual(BloqueActual.NOTI);
             Long domId5a = domicilioRepo.nextId();
@@ -422,7 +419,7 @@ class FirmaFalloNotificacionCanonicaTest {
                     false, null, null, null,
                     FaltasClockTestSupport.FIXED.now(), USER));
             acta.setIdDomicilioNotifAct(domId5a);
-            actaRepo.guardar(acta);
+            Long idActa = actaRepo.guardar(acta).getId();
 
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
@@ -453,13 +450,12 @@ class FirmaFalloNotificacionCanonicaTest {
         @Test
         @DisplayName("5a. Genera lote desde notificaciones PENDIENTE_ENVIO disponibles")
         void genera_lote_desde_pendientes() {
-            Long idActa = actaRepo.nextId();
             FalActa acta = new FalActa(
-                    idActa, UUID.randomUUID().toString(),
+                    null, UUID.randomUUID().toString(),
                     "TRANSITO", DEP_COD, "INS-010",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(),
                     FaltasClockTestSupport.FIXED.now(),
-                    "Dir 10", "Dir Ref 10", null, null, null,
+                    "Dir 10", "Dir Ref 10", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                     "Pedro Gomez", "55667788", ResultadoFirmaInfractor.FIRMADA);
             acta.setBloqueActual(BloqueActual.NOTI);
             Long domId5a = domicilioRepo.nextId();
@@ -473,7 +469,7 @@ class FirmaFalloNotificacionCanonicaTest {
                     false, null, null, null,
                     FaltasClockTestSupport.FIXED.now(), USER));
             acta.setIdDomicilioNotifAct(domId5a);
-            actaRepo.guardar(acta);
+            Long idActa = actaRepo.guardar(acta).getId();
 
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(
@@ -521,13 +517,12 @@ class FirmaFalloNotificacionCanonicaTest {
         @Test
         @DisplayName("6a. Registrar notificacion positiva de fallo absolutorio: fallo = NOTIFICADO")
         void notif_positiva_fallo_absolutorio_marca_notificado() {
-            Long idActa = actaRepo.nextId();
             FalActa acta = new FalActa(
-                    idActa, UUID.randomUUID().toString(),
+                    null, UUID.randomUUID().toString(),
                     "TRANSITO", DEP_COD, "INS-020",
                     FaltasClockTestSupport.FIXED.now().toLocalDate(),
                     FaltasClockTestSupport.FIXED.now(),
-                    "Av. Libertad 200", "Ref 20", null, null, null,
+                    "Av. Libertad 200", "Ref 20", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
                     "Ana Torres", "99887766", ResultadoFirmaInfractor.FIRMADA);
             acta.setBloqueActual(BloqueActual.NOTI);
             Long domId5a = domicilioRepo.nextId();
@@ -541,7 +536,7 @@ class FirmaFalloNotificacionCanonicaTest {
                     false, null, null, null,
                     FaltasClockTestSupport.FIXED.now(), USER));
             acta.setIdDomicilioNotifAct(domId5a);
-            actaRepo.guardar(acta);
+            Long idActa = actaRepo.guardar(acta).getId();
 
             Long idDoc = docRepo.nextId();
             FalDocumento doc = new FalDocumento(

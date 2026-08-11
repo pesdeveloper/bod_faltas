@@ -1,5 +1,6 @@
 package ar.gob.malvinas.faltas.core.web;
 
+import ar.gob.malvinas.faltas.core.domain.exception.ActorNoAutenticadoException;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaArticuloInfringidoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaContravencionNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaDocumentoNoEncontradaException;
@@ -23,8 +24,10 @@ import ar.gob.malvinas.faltas.core.domain.exception.DocumentoPlantillaInvalidaEx
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoPlantillaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DocumentoRedaccionNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.DomicilioPersonaNoEncontradoException;
+import ar.gob.malvinas.faltas.core.domain.exception.EvidenciaArchivoNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.FirmanteNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.FormaPagoNoEncontradaException;
+import ar.gob.malvinas.faltas.core.domain.exception.ImagenEvidenciaInvalidaException;
 import ar.gob.malvinas.faltas.core.domain.exception.GestionExternaNoEncontradaException;
 import ar.gob.malvinas.faltas.core.domain.exception.InspectorNoEncontradoException;
 import ar.gob.malvinas.faltas.core.domain.exception.LoteCodigoDuplicadoException;
@@ -128,6 +131,7 @@ public class GlobalFaltasControllerAdvice {
         m.put(TarifarioNoEncontradoException.class,                   "RECURSO_NO_ENCONTRADO");
         m.put(VehiculoMarcaNoEncontradaException.class,               "RECURSO_NO_ENCONTRADO");
         m.put(VehiculoModeloNoEncontradoException.class,              "RECURSO_NO_ENCONTRADO");
+        m.put(EvidenciaArchivoNoEncontradoException.class,            "EVIDENCIA_ARCHIVO_NO_ENCONTRADO");
         NOT_FOUND_CODES = Map.copyOf(m);
     }
 
@@ -173,13 +177,25 @@ public class GlobalFaltasControllerAdvice {
         RubroVersionNoEncontradoException.class,
         TarifarioNoEncontradoException.class,
         VehiculoMarcaNoEncontradaException.class,
-        VehiculoModeloNoEncontradoException.class
+        VehiculoModeloNoEncontradoException.class,
+        EvidenciaArchivoNoEncontradoException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
         String codigo = NOT_FOUND_CODES.getOrDefault(ex.getClass(), "RECURSO_NO_ENCONTRADO");
         log.debug("Recurso no encontrado [{}]: {}", codigo, ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ErrorResponse.of(codigo, "Recurso no encontrado"));
+    }
+
+    // -------------------------------------------------------------------------
+    // 401 UNAUTHORIZED — actor no autenticado
+    // -------------------------------------------------------------------------
+
+    @ExceptionHandler(ActorNoAutenticadoException.class)
+    public ResponseEntity<ErrorResponse> handleActorNoAutenticado(ActorNoAutenticadoException ex) {
+        log.debug("Actor no autenticado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of("ACTOR_NO_AUTENTICADO", "Autenticacion requerida"));
     }
 
     // -------------------------------------------------------------------------
@@ -191,6 +207,13 @@ public class GlobalFaltasControllerAdvice {
         log.debug("Precondicion violada: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ErrorResponse.of("PRECONDICION_VIOLADA", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ImagenEvidenciaInvalidaException.class)
+    public ResponseEntity<ErrorResponse> handleImagenInvalida(ImagenEvidenciaInvalidaException ex) {
+        log.debug("Imagen de evidencia invalida: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ErrorResponse.of("IMAGEN_EVIDENCIA_INVALIDA", ex.getMessage()));
     }
 
     @ExceptionHandler({
@@ -313,6 +336,15 @@ public class GlobalFaltasControllerAdvice {
     public ResponseEntity<ErrorResponse> handleMetodoNoSoportado(HttpRequestMethodNotSupportedException ex) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(ErrorResponse.of("METODO_NO_SOPORTADO", "Metodo HTTP no soportado: " + ex.getMethod()));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMultipartExcedido(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        log.debug("Multipart excede el limite configurado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ErrorResponse.of("IMAGEN_EVIDENCIA_INVALIDA",
+                        "El archivo o la solicitud multipart excede el tamaño maximo permitido."));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)

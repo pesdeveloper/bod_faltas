@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.support.FaltasClockTestSupport;
 
 import ar.gob.malvinas.faltas.core.application.command.CrearDependenciaCommand;
@@ -140,15 +142,13 @@ class DocumentoNumeracionTest {
      * Esto permite que DocumentoService resuelva la dependencia via findByCodDep.
      */
     private FalActa crearActa() {
-        Long id = actaRepo.nextId();
         FalActa acta = new FalActa(
-                id, UUID.randomUUID().toString(),
+                null, UUID.randomUUID().toString(),
                 "TRANSITO", DEP_COD, "INS-001",
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                "Belgrano 200", "Calle 123", null, null, null, "Juan Perez", "12345678",
+                "Belgrano 200", "Calle 123", null, null, SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null, "Juan Perez", "12345678",
                 ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR);
-        actaRepo.guardar(acta);
-        return acta;
+        return actaRepo.guardar(acta);
     }
 
     /**
@@ -543,8 +543,16 @@ class DocumentoNumeracionTest {
         @Test
         @DisplayName("18. Falla si dependencia del acta no esta registrada (codDep no encontrado)")
         void falla_si_dependencia_no_encontrada() {
-            // Acta con codDep="DEP-001" pero no hay dependencia registrada en repo
-            FalActa acta = crearActa();
+            // Acta con idDependencia numerico deliberadamente inexistente (no el fallback 1L de
+            // DEP_COD, seedeado como dependencia por defecto no productiva desde Wave 4 PARTE-3A
+            // en InMemoryDependenciaRepository).
+            FalActa acta = actaRepo.guardar(new FalActa(
+                    null, UUID.randomUUID().toString(), TipoActa.TRANSITO, 999_999L, 1L,
+                    FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
+                    "Belgrano 200", null, null, null,
+                    ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR,
+                    SituacionIdentificacionInfractor.DATOS_INSUFICIENTES, null,
+                    FaltasClockTestSupport.FIXED.now(), "SYS"));
             NumPolitica pol = crearPoliticaDocSimple();
             NumTalonario tal = crearTalonarioDocGlobal(pol.getId());
             crearAmbitoGlobalDocumento(tal.getId(), TipoDocu.CONSTANCIA.codigo());

@@ -1,0 +1,17 @@
+# Perfil "test": unico modo no-JDBC permitido, exclusivo de src/test (no se empaqueta con la
+# aplicacion productiva). Wave 4 Parte 3E-B retira "memory" como perfil productivo por defecto;
+# los @SpringBootTest que necesitan un contexto rapido sin MariaDB real activan este perfil
+# explicitamente con @ActiveProfiles("test") en vez de depender del comportamiento por defecto
+# de application.yml.
+#
+# Este perfil NO es una opcion desplegable: los guardrails de arranque (JdbcOnlyStartupGuardrail)
+# tratan "test" como el unico bypass valido del requisito de perfil "jdbc", y no debe
+# documentarse ni usarse fuera de la suite de tests.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+app:
+  persistence:
+    mode: memory

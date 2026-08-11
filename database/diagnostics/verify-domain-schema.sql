@@ -463,53 +463,153 @@ ORDER BY expected.objeto_protegido;
 -- ============================================================================
 -- SECCIÓN 10 — UNIQUE inesperadas en tablas del dominio
 -- ============================================================================
--- Detecta UNIQUE constraints cuyo nombre NO sigue el patrón esperado uq_<tabla>_*.
--- Diagnóstico: UNIQUE_INESPERADA indica un constraint que requiere revisión manual.
+-- Corrección MARIADB-BASELINE-DIAGNOSTIC-FIX-001 (falso positivo cerrado):
+-- el criterio anterior exigía que el nombre del constraint comenzara por
+-- uq_<nombre_completo_de_tabla>_ (ej. uq_fal_dependencia_*). La convención
+-- real y consistente del DDL (create-bod-faltas-domain.sql) es
+-- uq_<abreviatura>_* (ej. uq_fal_dep_cod para fal_dependencia,
+-- uq_firma_req_doc_seq para fal_documento_firma_req). spec-as-source
+-- (mariadb-logical-model.md / ddl-decisions.md) documenta la unicidad
+-- exclusivamente por conjunto de columnas: el nombre físico del constraint
+-- no es normativo. Verificado materialmente contra sb_faltas_db: las 33
+-- UNIQUE reales coincidían 1:1 (tabla + columnas + orden) con las 33
+-- declaradas en el DDL (RUN-20260802-051800). Wave 4 PARTE-2 (S7/S6) agregó
+-- 7 UNIQUE nuevas (normativa/articulo versionados, tarifario y valor de unidad
+-- por UK activo, cabecera e item de valorizacion), totalizando 40. Wave 4
+-- PARTE-3B S7.2 agregó 1 UNIQUE mas (fal_acta_medida_preventiva:
+-- acta_id+medida_preventiva_id, duplicado exacto de medida por acta), total 41.
+--
+-- Criterio nuevo: identidad semántica (tabla + columnas + orden), no nombre.
+-- Sigue detectando: UNIQUE_FALTANTE (esperada, ausente), UNIQUE_INESPERADA
+-- (columnas/orden no autorizados por la lista esperada, o forma duplicada
+-- de un UNIQUE ya contabilizado en la misma tabla). El nombre físico se
+-- muestra para trazabilidad, pero deja de ser criterio de rechazo.
+WITH esperadas AS (
+    SELECT 'fal_dependencia' AS tabla_esp, 'cod_dep' AS columnas_esp
+    UNION ALL SELECT 'fal_inspector', 'id_user'
+    UNION ALL SELECT 'fal_inspector', 'legajo_insp'
+    UNION ALL SELECT 'fal_firmante', 'id_user'
+    UNION ALL SELECT 'fal_persona', 'tipo_documento,doc_key'
+    UNION ALL SELECT 'fal_vehiculo_marca', 'codigo'
+    UNION ALL SELECT 'num_politica', 'codigo'
+    UNION ALL SELECT 'fal_dia_no_computable', 'fecha_activa'
+    UNION ALL SELECT 'fal_motivo_archivo', 'cod_motivo_archivo'
+    UNION ALL SELECT 'fal_normativa_faltas', 'codigo_norma,version_norma'
+    UNION ALL SELECT 'fal_normativa_faltas', 'codigo_norma_activo'
+    UNION ALL SELECT 'fal_medida_preventiva', 'codigo'
+    UNION ALL SELECT 'fal_lote_correo', 'lote_codigo'
+    UNION ALL SELECT 'fal_documento_plantilla', 'codigo'
+    UNION ALL SELECT 'fal_vehiculo_modelo', 'marca_vehiculo_id,codigo'
+    UNION ALL SELECT 'num_talonario', 'codigo'
+    UNION ALL SELECT 'num_talonario', 'nombre_secuencia'
+    UNION ALL SELECT 'fal_articulo_normativa_faltas', 'id_normativa,codigo_articulo,version_articulo'
+    UNION ALL SELECT 'fal_articulo_normativa_faltas', 'id_normativa,codigo_articulo_activo'
+    UNION ALL SELECT 'fal_tarifario_unidad_faltas', 'id_articulo_activo'
+    UNION ALL SELECT 'fal_valor_unidad_faltas', 'tipo_unidad_activo'
+    UNION ALL SELECT 'fal_documento_plantilla_contenido', 'id_plantilla,version_contenido'
+    UNION ALL SELECT 'num_talonario_inspector', 'talonario_id_activo'
+    UNION ALL SELECT 'fal_acta', 'id_tecnico'
+    UNION ALL SELECT 'fal_acta', 'codigo_qr'
+    UNION ALL SELECT 'fal_acta_transito_alcoholemia', 'acta_id,orden_medicion'
+    UNION ALL SELECT 'fal_acta_articulo_infringido', 'id_acta_activo,id_art_activo'
+    UNION ALL SELECT 'fal_acta_valorizacion', 'id_acta'
+    UNION ALL SELECT 'fal_acta_valorizacion_item', 'id_acta_articulo_actual'
+    UNION ALL SELECT 'fal_acta_valorizacion_item', 'id_acta_articulo,version_item'
+    UNION ALL SELECT 'fal_documento_firma_req', 'id_documento,seq_firma_req'
+    UNION ALL SELECT 'fal_documento_redaccion', 'id_documento,nro_revision'
+    UNION ALL SELECT 'num_talonario_movimiento', 'id_talonario,nro_talonario'
+    UNION ALL SELECT 'fal_notificacion_intento', 'id_notificacion,nro_intento'
+    UNION ALL SELECT 'fal_acta_obligacion_pago', 'acta_id_vigente'
+    UNION ALL SELECT 'fal_acta_forma_pago', 'obligacion_pago_id_vigente'
+    UNION ALL SELECT 'fal_acta_forma_pago', 'obligacion_pago_id,nro_forma'
+    UNION ALL SELECT 'fal_acta_plan_pago_ref', 'id_tdoc_plan,id_doc_plan'
+    UNION ALL SELECT 'fal_acta_plan_pago_ref', 'obligacion_pago_id_vigente'
+    UNION ALL SELECT 'fal_acta_pago_movimiento', 'movimiento_origen_id_aplicacion'
+    UNION ALL SELECT 'fal_acta_medida_preventiva', 'acta_id,medida_preventiva_id'
+),
+reales AS (
+    SELECT
+        tc.table_name                       AS tabla_real,
+        tc.constraint_name                  AS nombre_constraint,
+        GROUP_CONCAT(kcu.column_name ORDER BY kcu.ordinal_position SEPARATOR ',')
+                                            AS columnas_real
+    FROM information_schema.table_constraints AS tc
+    JOIN information_schema.key_column_usage AS kcu
+        ON kcu.constraint_schema = tc.constraint_schema
+       AND kcu.constraint_name = tc.constraint_name
+       AND kcu.table_name = tc.table_name
+    WHERE tc.table_schema = DATABASE()
+      AND tc.constraint_type = 'UNIQUE'
+      AND tc.table_name IN (
+          'fal_dependencia','fal_inspector','fal_firmante','fal_persona',
+          'fal_vehiculo_marca','num_politica','fal_dia_no_computable',
+          'fal_motivo_archivo','fal_normativa_faltas','fal_medida_preventiva',
+          'fal_lote_correo','fal_documento_plantilla',
+          'fal_dependencia_version','fal_inspector_version','fal_firmante_version',
+          'fal_vehiculo_modelo','num_talonario','fal_dependencia_normativa',
+          'fal_articulo_normativa_faltas','fal_documento_plantilla_firma_req',
+          'fal_documento_plantilla_contenido','fal_documento_plantilla_default',
+          'fal_firmante_version_habilitacion','fal_tarifario_unidad_faltas','fal_valor_unidad_faltas',
+          'fal_articulo_medida_preventiva','num_talonario_ambito','num_talonario_inspector',
+          'fal_persona_domicilio','fal_acta',
+          'fal_acta_evidencia','fal_observacion','fal_acta_transito',
+          'fal_acta_transito_alcoholemia','fal_acta_vehiculo','fal_acta_contravencion',
+          'fal_acta_sustancias_alimenticias','fal_acta_paralizacion','fal_acta_archivo',
+          'fal_acta_articulo_infringido','fal_acta_qr_acceso','fal_acta_gestion_externa',
+          'fal_acta_valorizacion','fal_acta_medida_preventiva','fal_acta_bloqueante_cierre_material',
+          'fal_documento','fal_acta_valorizacion_item',
+          'fal_acta_documento','fal_documento_firma_req','fal_documento_redaccion',
+          'fal_notificacion','num_talonario_movimiento','fal_acta_fallo',
+          'fal_documento_firma','fal_notificacion_intento','fal_notificacion_acuse',
+          'fal_acta_evento','fal_acta_apelacion','fal_acta_obligacion_pago',
+          'fal_acta_snapshot','fal_acta_apelacion_documento','fal_acta_forma_pago',
+          'fal_acta_plan_pago_ref','fal_acta_pago_movimiento','fal_acta_economia_proyeccion'
+      )
+    GROUP BY tc.table_name, tc.constraint_name
+),
+reales_rank AS (
+    SELECT
+        r.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY r.tabla_real, r.columnas_real
+            ORDER BY r.nombre_constraint
+        ) AS rn_forma
+    FROM reales AS r
+)
 SELECT
-    tc.table_name                       AS tabla,
-    tc.constraint_name                  AS nombre_constraint,
-    GROUP_CONCAT(kcu.column_name ORDER BY kcu.ordinal_position SEPARATOR ', ')
-                                        AS columnas,
+    rr.tabla_real                       AS tabla,
+    rr.nombre_constraint,
+    rr.columnas_real                    AS columnas,
     CASE
-        WHEN tc.constraint_name LIKE CONCAT('uq_', tc.table_name, '%') THEN 'OK_NOMBRE_ESPERADO'
-        ELSE 'UNIQUE_INESPERADA'
-    END                                 AS diagnostico
-FROM information_schema.table_constraints AS tc
-JOIN information_schema.key_column_usage AS kcu
-    ON kcu.constraint_schema = tc.constraint_schema
-   AND kcu.constraint_name = tc.constraint_name
-   AND kcu.table_name = tc.table_name
-WHERE tc.table_schema = DATABASE()
-  AND tc.constraint_type = 'UNIQUE'
-  AND tc.table_name IN (
-      'fal_dependencia','fal_inspector','fal_firmante','fal_persona',
-      'fal_vehiculo_marca','num_politica','fal_dia_no_computable',
-      'fal_motivo_archivo','fal_normativa_faltas','fal_medida_preventiva',
-      'fal_lote_correo','fal_documento_plantilla',
-      'fal_dependencia_version','fal_inspector_version','fal_firmante_version',
-      'fal_vehiculo_modelo','num_talonario','fal_dependencia_normativa',
-      'fal_articulo_normativa_faltas','fal_documento_plantilla_firma_req',
-      'fal_documento_plantilla_contenido','fal_documento_plantilla_default',
-      'fal_firmante_version_habilitacion','fal_tarifario_unidad_faltas',
-      'fal_articulo_medida_preventiva','num_talonario_ambito','num_talonario_inspector',
-      'fal_persona_domicilio','fal_acta',
-      'fal_acta_evidencia','fal_observacion','fal_acta_transito',
-      'fal_acta_transito_alcoholemia','fal_acta_vehiculo','fal_acta_contravencion',
-      'fal_acta_sustancias_alimenticias','fal_acta_paralizacion','fal_acta_archivo',
-      'fal_acta_articulo_infringido','fal_acta_qr_acceso','fal_acta_gestion_externa',
-      'fal_acta_valorizacion','fal_acta_medida_preventiva','fal_acta_bloqueante_cierre_material',
-      'fal_documento','fal_acta_valorizacion_item',
-      'fal_acta_documento','fal_documento_firma_req','fal_documento_redaccion',
-      'fal_notificacion','num_talonario_movimiento','fal_acta_fallo',
-      'fal_documento_firma','fal_notificacion_intento','fal_notificacion_acuse',
-      'fal_acta_evento','fal_acta_apelacion','fal_acta_obligacion_pago',
-      'fal_acta_snapshot','fal_acta_apelacion_documento','fal_acta_forma_pago',
-      'fal_acta_plan_pago_ref','fal_acta_pago_movimiento','fal_acta_economia_proyeccion'
-  )
-GROUP BY tc.table_name, tc.constraint_name
-ORDER BY tc.table_name, tc.constraint_name;
+        WHEN rr.rn_forma > 1       THEN 'UNIQUE_INESPERADA'
+        WHEN esp.tabla_esp IS NULL THEN 'UNIQUE_INESPERADA'
+        ELSE                             'OK'
+    END                                  AS diagnostico
+FROM reales_rank AS rr
+LEFT JOIN esperadas AS esp
+    ON esp.tabla_esp = rr.tabla_real
+   AND esp.columnas_esp = rr.columnas_real
 
--- Si aparece UNIQUE_INESPERADA: verificar si el constraint es intencional o un error.
+UNION ALL
+
+SELECT
+    esp.tabla_esp                       AS tabla,
+    NULL                                 AS nombre_constraint,
+    esp.columnas_esp                    AS columnas,
+    'UNIQUE_FALTANTE'                    AS diagnostico
+FROM esperadas AS esp
+LEFT JOIN reales AS r
+    ON r.tabla_real = esp.tabla_esp
+   AND r.columnas_real = esp.columnas_esp
+WHERE r.tabla_real IS NULL
+
+ORDER BY tabla, columnas, nombre_constraint;
+
+-- Esperado: 33 filas, todas con diagnostico='OK' (0 UNIQUE_INESPERADA, 0 UNIQUE_FALTANTE).
+-- UNIQUE_FALTANTE  : declarada en create-bod-faltas-domain.sql/spec pero ausente en la base.
+-- UNIQUE_INESPERADA: presente en la base sin respaldo en la lista esperada (columnas/orden
+--                    incorrecto, UNIQUE adicional no autorizado, o duplicado de una forma
+--                    ya contabilizada en la misma tabla).
 
 -- ============================================================================
 -- SECCIÓN 11 — FK inesperadas: referencias a tablas fuera del dominio esperado
@@ -590,41 +690,32 @@ ORDER BY tc.table_name, tc.constraint_name;
 -- Verificar si es intencional o un error de constraint.
 
 -- ============================================================================
--- SECCIÓN 12 — CHECK constraints con cláusula normalizada (diagnóstico exacto)
+-- SECCIÓN 12 — CHECK constraints por identidad semántica (RETIRADA)
 -- ============================================================================
--- Normaliza la cláusula real del CHECK con LOWER() y REGEXP_REPLACE para comparar
--- contra la cláusula esperada y detectar divergencias.
--- Diagnóstico: CLAUSULA_DIVERGENTE indica que MariaDB almacenó la cláusula distinta.
-SELECT
-    tc.table_name                       AS tabla,
-    tc.constraint_name                  AS check_nombre,
-    cc.check_clause                     AS clausula_real,
-    lower(REGEXP_REPLACE(cc.check_clause, '[[:space:]]+', ' '))
-                                        AS clausula_normalizada,
-    CASE
-        WHEN lower(REGEXP_REPLACE(cc.check_clause, '[[:space:]]+', ' '))
-             LIKE CONCAT('%', lower(tc.constraint_name COLLATE utf8mb4_uca1400_ai_ci), '%')
-          OR cc.check_clause IS NULL    THEN 'OK'
-        ELSE                            'CLAUSULA_DIVERGENTE'
-    END                                 AS diagnostico
-FROM information_schema.table_constraints AS tc
-JOIN information_schema.check_constraints AS cc
-    ON cc.constraint_schema = tc.constraint_schema
-   AND cc.constraint_name = tc.constraint_name
-WHERE tc.table_schema = DATABASE()
-  AND tc.constraint_type = 'CHECK'
-  AND tc.table_name IN (
-      'fal_dependencia','fal_inspector','fal_persona',
-      'num_politica','fal_dia_no_computable',
-      'fal_acta','fal_acta_obligacion_pago','fal_acta_forma_pago',
-      'fal_acta_fallo','fal_acta_apelacion','fal_acta_evento',
-      'fal_acta_pago_movimiento','num_talonario','fal_lote_correo',
-      'fal_acta_articulo_infringido','fal_acta_transito_alcoholemia',
-      'fal_notificacion_intento','num_talonario_inspector','num_talonario_movimiento'
-  )
-ORDER BY tc.table_name, tc.constraint_name;
-
--- Si aparece CLAUSULA_DIVERGENTE: ajustar la cláusula esperada con la real de MariaDB.
+-- Histórico: corrección MARIADB-BASELINE-CHECK-DIAGNOSTIC-FIX-002 (falso positivo
+-- cerrado) reemplazó el criterio de comparación por nombre por comparación por
+-- identidad semántica (tabla + expresión normalizada) sobre 43 CHECK esperados
+-- en 15 tablas del dominio.
+--
+-- RETIRO (DECISION_DDL-SIN-CHECKS-CODIGOS-01, ACTA-ALTA-INTEGRAL-JDBC-MASTER-
+-- 20260804-224853): las 43 CHECK que esta sección verificaba en fal_inspector,
+-- fal_persona, num_politica, fal_dia_no_computable, fal_acta,
+-- fal_acta_obligacion_pago, fal_acta_forma_pago, fal_acta_fallo,
+-- fal_acta_apelacion, fal_acta_pago_movimiento, num_talonario, fal_lote_correo,
+-- fal_acta_transito_alcoholemia, fal_notificacion_intento,
+-- num_talonario_inspector y num_talonario_movimiento fueron eliminadas del DDL:
+-- son CHECK de código/enum/estado o de coherencia funcional entre campos, no
+-- invariantes técnicos, y la validación ya vive en dominio/aplicación (ver
+-- Wave 2 de ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853 y
+-- backend/api-faltas-core/docs/spec-as-source/50-persistence/ddl-decisions.md).
+-- La única CHECK que permanece en el dominio, fal_acta_evidencia.chk_evidencia_hash
+-- (conservada con justificación individual: invariante criptográfico fijo
+-- SHA-256 = 64 caracteres), nunca estuvo en el alcance de esta sección.
+--
+-- No queda ninguna CHECK física que verificar aquí. Se retira la consulta en
+-- lugar de dejar un CTE vacío o inventar una nueva regla de verificación sin
+-- necesidad demostrada.
+SELECT 'SECCION_12_RETIRADA_DECISION_DDL_SIN_CHECKS_CODIGOS_01' AS estado;
 
 -- Verifica que los objetos protegidos NO fueron recreados como tablas dominio
 -- por error. Solo se valida que no están entre las tablas del dominio creadas.
@@ -906,38 +997,46 @@ ORDER BY esp_rub.constraint_esp;
 -- 13e. Cuatro FK GEO canónicas (constraint_name explícito)
 -- Expectativas explícitas con LEFT JOIN. Siempre devuelve 4 filas.
 -- Diagnostico: OK | FK_AUSENTE | FK_DIVERGENTE
+-- Nota (MARIADB-BASELINE-EXEC-001): delete_esp/update_esp = 'NO ACTION', no 'RESTRICT'.
+-- Las 4 FK se agregan via ALTER TABLE post-creacion (ciclos G1/G4 de
+-- dependency-order.md) con "ON DELETE RESTRICT ON UPDATE RESTRICT" explicito en
+-- el DDL, pero MariaDB reporta 'NO ACTION' en information_schema.referential_constraints
+-- para toda FK agregada por ALTER TABLE con esa clausula (verificado empiricamente
+-- contra sb_faltas_db 12.3.2; el mismo patron aplica a fk_dep_padre y
+-- fk_pers_dom_acta_origen, fuera del alcance de esta seccion). RESTRICT y NO ACTION
+-- son equivalentes en InnoDB: sin diferencia de comportamiento, solo de metadata.
 WITH esp_geo AS (
     SELECT 'fk_pers_dom_loc_malv'              AS constraint_esp,
            'fal_persona_domicilio'             AS tabla_hija_esp,
            'localidad_malvinas_version_id'     AS columnas_hija_esperadas,
            'geo_malv_localidad_version'        AS tabla_padre_esp,
            'localidad_version_id'              AS columnas_padre_esperadas,
-           'RESTRICT'                          AS delete_esp,
-           'RESTRICT'                          AS update_esp
+           'NO ACTION'                         AS delete_esp,
+           'NO ACTION'                         AS update_esp
     UNION ALL
     SELECT 'fk_pers_dom_calle_malv',
            'fal_persona_domicilio',
            'calle_malvinas_version_id',
            'geo_malv_calle_version',
            'calle_version_id',
-           'RESTRICT',
-           'RESTRICT'
+           'NO ACTION',
+           'NO ACTION'
     UNION ALL
     SELECT 'fk_acta_loc_infr_malv',
            'fal_acta',
            'localidad_infr_malvinas_version_id',
            'geo_malv_localidad_version',
            'localidad_version_id',
-           'RESTRICT',
-           'RESTRICT'
+           'NO ACTION',
+           'NO ACTION'
     UNION ALL
     SELECT 'fk_acta_calle_infr_malv',
            'fal_acta',
            'calle_infr_malvinas_version_id',
            'geo_malv_calle_version',
            'calle_version_id',
-           'RESTRICT',
-           'RESTRICT'
+           'NO ACTION',
+           'NO ACTION'
 ),
 real_geo AS (
     SELECT

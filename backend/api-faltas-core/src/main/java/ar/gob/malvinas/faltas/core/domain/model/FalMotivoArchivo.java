@@ -10,13 +10,17 @@ import java.time.LocalDateTime;
  * Baja logica: si_activo=false. No se borra.
  * No tiene versionRow.
  * Los snapshots de motivo en cada ciclo de archivo son inmutables.
+ *
+ * Limites alineados al DDL de fal_motivo_archivo (spec-as-source
+ * 50-persistence/mariadb-logical-model.md, HUMAN_DECISION_CLOSED
+ * SPEC-MODEL-DDL-CLOSURE-001): cod_motivo_archivo VARCHAR(8), nombre VARCHAR(64).
+ * La tabla no tiene columna descripcion y el modelo no la representa.
  */
 public class FalMotivoArchivo {
 
     private Long id;
     private String codMotivoArchivo;
     private String nombre;
-    private String descripcion;
     private boolean siNulidad;
     private boolean siPermiteReingreso;
     private boolean siRequiereObservacion;
@@ -30,7 +34,6 @@ public class FalMotivoArchivo {
             Long id,
             String codMotivoArchivo,
             String nombre,
-            String descripcion,
             boolean siNulidad,
             boolean siPermiteReingreso,
             boolean siRequiereObservacion,
@@ -40,22 +43,18 @@ public class FalMotivoArchivo {
         if (codMotivoArchivo == null || codMotivoArchivo.trim().isEmpty()) {
             throw new IllegalArgumentException("codMotivoArchivo obligatorio");
         }
-        if (codMotivoArchivo.length() > 32) {
-            throw new IllegalArgumentException("codMotivoArchivo supera 32 caracteres");
+        if (codMotivoArchivo.length() > 8) {
+            throw new IllegalArgumentException("codMotivoArchivo supera 8 caracteres");
         }
         if (nombre == null || nombre.trim().isEmpty()) {
             throw new IllegalArgumentException("nombre obligatorio");
         }
-        if (nombre.length() > 80) {
-            throw new IllegalArgumentException("nombre supera 80 caracteres");
-        }
-        if (descripcion != null && descripcion.length() > 255) {
-            throw new IllegalArgumentException("descripcion supera 255 caracteres");
+        if (nombre.length() > 64) {
+            throw new IllegalArgumentException("nombre supera 64 caracteres");
         }
         this.id = id;
         this.codMotivoArchivo = codMotivoArchivo.trim().toUpperCase();
         this.nombre = nombre.trim();
-        this.descripcion = descripcion != null ? descripcion.trim() : null;
         this.siNulidad = siNulidad;
         this.siPermiteReingreso = siPermiteReingreso;
         this.siRequiereObservacion = siRequiereObservacion;
@@ -70,8 +69,6 @@ public class FalMotivoArchivo {
     public void setCodMotivoArchivo(String codMotivoArchivo) { this.codMotivoArchivo = codMotivoArchivo; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public boolean isSiNulidad() { return siNulidad; }
     public void setSiNulidad(boolean siNulidad) { this.siNulidad = siNulidad; }
     public boolean isSiPermiteReingreso() { return siPermiteReingreso; }
@@ -88,7 +85,7 @@ public class FalMotivoArchivo {
     public void setIdUserUltMod(String idUserUltMod) { this.idUserUltMod = idUserUltMod; }
 
     public FalMotivoArchivo copia() {
-        FalMotivoArchivo c = new FalMotivoArchivo(id, codMotivoArchivo, nombre, descripcion,
+        FalMotivoArchivo c = new FalMotivoArchivo(id, codMotivoArchivo, nombre,
                 siNulidad, siPermiteReingreso, siRequiereObservacion, siActivo, fhAlta, idUserAlta);
         c.fhUltMod = this.fhUltMod;
         c.idUserUltMod = this.idUserUltMod;

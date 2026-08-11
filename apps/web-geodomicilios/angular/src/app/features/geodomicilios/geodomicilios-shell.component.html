@@ -1,0 +1,54 @@
+﻿<div class="geo-shell">
+  <div class="geo-shell__header">
+    <div class="geo-shell__title">
+      <mat-icon class="geo-shell__icon">location_on</mat-icon>
+      <span>GeoDomicilios</span>
+      <span class="geo-shell__subtitle">Georreferenciación de acta</span>
+    </div>
+    <div class="geo-shell__completitud">
+      <span class="completitud-item" [class.completitud-item--ok]="state.domicilioCompleto()">
+        <mat-icon>person_pin</mat-icon>
+        <span>Infractor</span>
+      </span>
+      <span class="completitud-item" [class.completitud-item--ok]="state.municipioCompleto()">
+        <mat-icon>account_balance</mat-icon>
+        <span>Licencia</span>
+      </span>
+      <span class="completitud-item" [class.completitud-item--ok]="state.ubicacionCompleta()">
+        <mat-icon>map</mat-icon>
+        <span>Ubicación</span>
+      </span>
+    </div>
+  </div>
+
+  <mat-tab-group
+    class="geo-shell__tabs"
+    [selectedIndex]="tabIndex()"
+    (selectedIndexChange)="onTabChange($event)"
+    animationDuration="200ms"
+  >
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon [class.tab-complete]="state.domicilioCompleto()">person_pin</mat-icon>
+        <span class="tab-label">Domicilio del Infractor</span>
+      </ng-template>
+      <app-domicilio-infractor-tab />
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon [class.tab-complete]="state.municipioCompleto()">account_balance</mat-icon>
+        <span class="tab-label">Municipio de la Licencia</span>
+      </ng-template>
+      <app-municipio-licencia-tab />
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon [class.tab-complete]="state.ubicacionCompleta()">map</mat-icon>
+        <span class="tab-label">Ubicación de la Infracción</span>
+      </ng-template>
+      <app-ubicacion-infraccion-tab />
+    </mat-tab>
+  </mat-tab-group>
+</div>

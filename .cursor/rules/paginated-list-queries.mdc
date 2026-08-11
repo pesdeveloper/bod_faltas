@@ -1,0 +1,98 @@
+-----------------
+description: Contrato obligatorio para filtros, paginación y orden de entidades listables
+alwaysApply: true
+-----------------
+
+# Consultas operativas listables
+
+Antes de crear o modificar un endpoint, caso de uso, puerto, repositorio o
+adapter que liste entidades, leer y respetar `DECISION-LIST-PAGE-SORT-01`
+en la spec-as-source.
+
+La spec-as-source es la autoridad normativa. Esta regla funciona como
+guardrail persistente y no reemplaza ni duplica la decisión canónica.
+
+## Reglas obligatorias
+
+* Todo endpoint operacional de listado es siempre paginado.
+* Los parámetros de paginación son opcionales para el cliente.
+* Omitir parámetros equivale a:
+
+  * `page = 0`;
+  * `size = 50`;
+  * orden predeterminado de la entidad.
+* El tamaño máximo permitido es `100`.
+* Un tamaño mayor que `100` debe rechazarse explícitamente; no debe limitarse
+  ni corregirse silenciosamente.
+* No exponer operaciones públicas de listado ilimitado.
+* Cada entidad debe definir explícitamente su orden predeterminado.
+* Los filtros deben ser tipados y específicos por entidad.
+* El orden debe recibirse como una lista ordenada de criterios funcionales:
+  campo + dirección `ASC` o `DESC`.
+* La precedencia de los criterios debe respetar su orden de aparición.
+* No aceptar nombres de columnas, tablas, alias, funciones ni expresiones SQL
+  aportadas por el cliente.
+* Cada entidad debe mantener una allowlist explícita de campos funcionales
+  ordenables.
+* Los campos de orden desconocidos deben rechazarse.
+* Los campos de orden repetidos deben rechazarse.
+* Las direcciones de orden inválidas deben rechazarse.
+* Todo orden, predeterminado o solicitado, debe agregar una clave única y
+  estable como último criterio de desempate.
+* Filtros, orden y paginación deben ejecutarse en la base de datos.
+* No filtrar, ordenar ni paginar en memoria después de cargar la consulta.
+* Las relaciones o colecciones batch sólo deben consultarse para los IDs de
+  la página actual.
+* Los valores de filtros deben enviarse al motor mediante parámetros
+  enlazados.
+* No crear SQL concatenando valores aportados por el cliente.
+* Las expresiones de `ORDER BY` sólo pueden construirse desde constantes o
+  allowlists internas del adapter.
+* Scroll infinito y paginación tradicional deben reutilizar el mismo contrato
+  de filtros, orden y tamaño.
+* El scroll infinito puede omitir el conteo total y consultar `size + 1` para
+  determinar si existe una página siguiente.
+* Toda excepción a estas reglas debe estar respaldada por una decisión
+  normativa explícita en la spec-as-source.
+
+## Registro para optimización física posterior
+
+Al implementar o modificar una entidad listable:
+
+* registrar la entidad y la tabla principal consultada;
+* registrar los joins utilizados;
+* registrar los filtros soportados;
+* registrar el orden predeterminado;
+* registrar los campos funcionales ordenables;
+* registrar las combinaciones relevantes de filtros y orden;
+* registrar el SQL final o su estructura verificable;
+* registrar los índices existentes relacionados con esas consultas;
+* ejecutar un `EXPLAIN` básico cuando exista acceso seguro al motor;
+* conservar evidencia del plan obtenido cuando el slice lo requiera;
+* no crear un índice por cada campo filtrable u ordenable;
+* no crear índices por combinaciones teóricas o especulativas;
+* no declarar cerrada la optimización física definitiva dentro de un slice
+  que sólo implemente funcionalidad;
+* registrar la entidad y sus patrones de consulta en
+  `D-PERSISTENCE-PAGING-INDEX-01`;
+* no resolver paginación, filtrado u orden en memoria por falta de un índice;
+* no ampliar DDL salvo que el slice autorice expresamente la optimización
+  física;
+* no ocultar un plan deficiente creando un índice sin diagnóstico,
+  justificación y medición;
+* dejar la selección, modificación o eliminación definitiva de índices para
+  la wave autorizada de optimización física.
+
+## Divergencias y decisiones
+
+Si la spec y el código divergen:
+
+1. detener únicamente la implementación afectada;
+2. informar la divergencia con archivos, líneas y evidencia concreta;
+3. tomar la spec-as-source como autoridad;
+4. no resolver la diferencia mediante inferencias silenciosas;
+5. continuar con las tareas independientes que no dependan de esa decisión.
+
+Si para resolver la divergencia fuera necesario modificar una decisión
+normativa, presentar opciones concretas, impactos, riesgos y una recomendación
+antes de cambiar la spec.

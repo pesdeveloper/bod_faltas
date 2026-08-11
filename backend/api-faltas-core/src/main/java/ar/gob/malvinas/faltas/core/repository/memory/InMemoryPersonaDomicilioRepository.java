@@ -3,6 +3,7 @@ package ar.gob.malvinas.faltas.core.repository.memory;
 import ar.gob.malvinas.faltas.core.domain.enums.TipoDomicilio;
 import ar.gob.malvinas.faltas.core.domain.model.FalPersonaDomicilio;
 import ar.gob.malvinas.faltas.core.repository.PersonaDomicilioRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,7 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+/**
+ * Retirada del perfil productivo {@code jdbc} en Wave 4 (alta integral JDBC):
+ * {@link ar.gob.malvinas.faltas.core.infrastructure.jdbc.JdbcPersonaDomicilioRepository} es el
+ * único adaptador activo bajo ese perfil. Se conserva aquí exclusivamente para el perfil
+ * en memoria (demos, tests unitarios sin IT).
+ */
 @Repository
+@Profile("!jdbc")
 public class InMemoryPersonaDomicilioRepository implements PersonaDomicilioRepository, ResettableInMemoryRepository {
 
     private final Map<Long, FalPersonaDomicilio> store = new ConcurrentHashMap<>();

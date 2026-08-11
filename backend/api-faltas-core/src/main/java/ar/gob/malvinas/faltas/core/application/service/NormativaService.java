@@ -67,33 +67,20 @@ public class NormativaService {
             throw new PrecondicionVioladaException("versionArticulo debe ser >= 1.");
         if (cmd.nombreArticulo() == null || cmd.nombreArticulo().isBlank())
             throw new PrecondicionVioladaException("nombreArticulo es obligatorio.");
-        if (cmd.cantidadUnidades() == null)
-            throw new PrecondicionVioladaException("cantidadUnidades es obligatorio.");
-        if (cmd.cantidadUnidades().compareTo(BigDecimal.ZERO) <= 0)
-            throw new PrecondicionVioladaException("cantidadUnidades debe ser mayor a 0.");
-        if (cmd.tipoUnidad() == null)
-            throw new PrecondicionVioladaException("tipoUnidad es obligatorio.");
+        if (cmd.tipoInfraccion() == null)
+            throw new PrecondicionVioladaException("tipoInfraccion es obligatorio.");
         if (normativaRepository.existsArticuloByNormativaYCodigo(cmd.normativaId(), cmd.codigoArticulo(), cmd.versionArticulo()))
             throw new PrecondicionVioladaException("Ya existe articulo con codigoArticulo=" + cmd.codigoArticulo() + " versionArticulo=" + cmd.versionArticulo() + " en normativaId=" + cmd.normativaId());
-        if (cmd.siTienePagoVoluntario()) {
-            if (cmd.cantidadUnidadesPagoVoluntario() == null)
-                throw new PrecondicionVioladaException("cantidadUnidadesPagoVoluntario es requerido cuando siTienePagoVoluntario=true.");
-            if (cmd.tipoUnidadPagoVoluntario() == null)
-                throw new PrecondicionVioladaException("tipoUnidadPagoVoluntario es requerido cuando siTienePagoVoluntario=true.");
-        }
         LocalDateTime ahoraArt = faltasClock.now();
         LocalDate fhVigDesde = cmd.fhVigDesde() != null ? cmd.fhVigDesde() : ahoraArt.toLocalDate();
         String idUserAlta = cmd.idUserAlta() != null ? cmd.idUserAlta() : "sistema";
         FalArticuloNormativaFaltas a = new FalArticuloNormativaFaltas(
                 secArticulo.getAndIncrement(), cmd.normativaId(),
                 cmd.codigoArticulo(), cmd.versionArticulo(), cmd.nombreArticulo(),
-                cmd.cantidadUnidades(), cmd.tipoUnidad(), cmd.siTienePagoVoluntario(),
-                fhVigDesde, ahoraArt, idUserAlta);
+                cmd.tipoInfraccion(), fhVigDesde, ahoraArt, idUserAlta);
         a.setDescripcionArticulo(cmd.descripcionArticulo());
-        if (cmd.siTienePagoVoluntario()) {
-            a.setCantidadUnidadesPagoVoluntario(cmd.cantidadUnidadesPagoVoluntario());
-            a.setTipoUnidadPagoVoluntario(cmd.tipoUnidadPagoVoluntario());
-        }
+        a.setCategoriaInfraccion(cmd.categoriaInfraccion());
+        a.setSiAdmiteMedidaPreventiva(cmd.siAdmiteMedidaPreventiva());
         return normativaRepository.guardarArticulo(a);
     }
     public FalArticuloNormativaFaltas obtenerArticulo(Long id) {

@@ -66,9 +66,8 @@ public class NormativaController {
                 new CrearArticuloNormativaFaltasCommand(
                         normativaId, req.codigoArticulo(), req.versionArticulo(),
                         req.nombreArticulo(), req.descripcionArticulo(),
-                        req.cantidadUnidades(), req.tipoUnidad(),
-                        req.siTienePagoVoluntario(), req.cantidadUnidadesPagoVoluntario(),
-                        req.tipoUnidadPagoVoluntario(), req.fhVigDesde(), req.idUserAlta()));
+                        req.tipoInfraccion(), req.categoriaInfraccion(), req.siAdmiteMedidaPreventiva(),
+                        req.fhVigDesde(), req.idUserAlta()));
         return ResponseEntity.status(HttpStatus.CREATED).body(ArticuloNormativaFaltasResponse.de(a));
     }
 

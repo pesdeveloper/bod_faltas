@@ -42,10 +42,9 @@ class ActaConcurrenciaTest {
     }
 
     private FalActa crearActa() {
-        Long id = actaRepo.nextId();
-        FalActa acta = new FalActa(id, "uuid-" + id, TipoActa.TRANSITO, 1L, 1L,
+        FalActa acta = new FalActa(null, "uuid-" + java.util.UUID.randomUUID(), TipoActa.TRANSITO, 1L, 1L,
                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                "Calle Test", null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                 FaltasClockTestSupport.FIXED.now(), "TEST");
         return actaRepo.guardar(acta);
     }
@@ -73,7 +72,7 @@ class ActaConcurrenciaTest {
             final FalActa actaStale = new FalActa(acta.getId(), acta.getUuidTecnico(),
                     TipoActa.TRANSITO, 1L, 1L,
                     FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
-                    "Stale", null, null, null, ResultadoFirmaInfractor.FIRMADA, null,
+                    "Stale", null, null, null, ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                     FaltasClockTestSupport.FIXED.now(), "TEST");
             // versionRow de actaStale es 0, pero repo tiene version 1
             assertThatThrownBy(() -> actaRepo.guardar(actaStale))
@@ -111,7 +110,7 @@ class ActaConcurrenciaTest {
                                 TipoActa.TRANSITO, 1L, 1L,
                                 FaltasClockTestSupport.FIXED.now().toLocalDate(), FaltasClockTestSupport.FIXED.now(),
                                 "Intento concurrente", null, null, null,
-                                ResultadoFirmaInfractor.FIRMADA, null,
+                                ResultadoFirmaInfractor.FIRMADA, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
                                 FaltasClockTestSupport.FIXED.now(), "TEST");
                         actaRepo.guardar(stale);
                         exitos.incrementAndGet();

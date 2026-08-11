@@ -46,22 +46,25 @@ SET NAMES utf8mb4;
 -- 1. fal_dependencia
 --    Unidades administrativas (organismos/dependencias) del municipio.
 --    Nota: FK auto-referencial id_dep_padre se agrega vía ALTER al final.
+--    Nota (MARIADB-BASELINE-EXEC-001, ERROR 1901): MariaDB no admite CHECK
+--    sobre columnas AUTO_INCREMENT. La regla id_dep_padre <> id se mantiene
+--    sin cambios pero se aplica en FalDependencia.setIdDepPadre() (aplicacion),
+--    no como CHECK fisico. Ver mariadb-logical-model.md sec. Dependencias.
 -- ----------------------------------------------------------------------------
 CREATE TABLE fal_dependencia (
     id              BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'CONTENIDO: Identificador tecnico autoincremental. USO: PK de la tabla. REGLA: generado por DB.',
     cod_dep         VARCHAR(8)     NULL                   COMMENT 'CONTENIDO: Codigo alfanumerico de la dependencia. USO: identificacion corta operativa. REGLA: unico cuando se informa; NULL permitido.',
     nom_dep         VARCHAR(48)    NOT NULL               COMMENT 'CONTENIDO: Nombre completo de la dependencia. USO: visualizacion en bandejas y actas. REGLA: no puede ser vacio.',
-    id_dep_padre    BIGINT         NULL                   COMMENT 'CONTENIDO: FK autorreferencial a dependencia padre. USO: jerarquia organizacional. REGLA: NULL = raiz; id_dep_padre <> id. FK agregada via ALTER TABLE post-creacion.',
+    id_dep_padre    BIGINT         NULL                   COMMENT 'CONTENIDO: FK autorreferencial a dependencia padre. USO: jerarquia organizacional. REGLA: NULL = raiz; id_dep_padre <> id, validado en aplicacion (FalDependencia.setIdDepPadre; MariaDB no admite CHECK sobre AUTO_INCREMENT). FK agregada via ALTER TABLE post-creacion.',
     si_activa       BOOLEAN        NOT NULL DEFAULT TRUE  COMMENT 'CONTENIDO: Estado de actividad. USO: filtrado de dependencias vigentes. REGLA: FALSE = dada de baja logicamente.',
     fh_alta         DATETIME(6)    NOT NULL               COMMENT 'CONTENIDO: Timestamp tecnico de creacion. USO: auditoria. REGLA: suministrado por FaltasClock.',
     id_user_alta    CHAR(36)       NOT NULL               COMMENT 'CONTENIDO: UUID del usuario creador. USO: auditoria. REGLA: UUID del actor.',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_fal_dep_cod (cod_dep),
-    CONSTRAINT chk_dep_no_self CHECK (id_dep_padre IS NULL OR id_dep_padre <> id)
+    UNIQUE KEY uq_fal_dep_cod (cod_dep)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'QUE ES: Maestro de dependencias y organismos administrativos del municipio. USO: parametro de adscripcion de inspectores y actas. RAZON: centralizar la jerarquia organizacional versionable. REGLAS CLAVE: cod_dep unico donde informado; id_dep_padre autorreferencial (NULL = raiz); chk_dep_no_self impide que una dependencia sea su propio padre.';
+  COMMENT = 'QUE ES: Maestro de dependencias y organismos administrativos del municipio. USO: parametro de adscripcion de inspectores y actas. RAZON: centralizar la jerarquia organizacional versionable. REGLAS CLAVE: cod_dep unico donde informado; id_dep_padre autorreferencial (NULL = raiz); id_dep_padre <> id validado en aplicacion (FalDependencia.setIdDepPadre), no CHECK fisico -- MariaDB no admite CHECK sobre columnas AUTO_INCREMENT (ERROR 1901).';
 
 -- ----------------------------------------------------------------------------
 -- 2. fal_inspector
@@ -77,8 +80,7 @@ CREATE TABLE fal_inspector (
     id_user_alta    CHAR(36)       NOT NULL               COMMENT 'CONTENIDO: UUID del usuario creador. USO: auditoria. REGLA: UUID del actor.',
     PRIMARY KEY (id),
     UNIQUE KEY uq_fal_insp_id_user (id_user),
-    UNIQUE KEY uq_fal_insp_legajo (legajo_insp),
-    CONSTRAINT chk_fal_insp_legajo CHECK (legajo_insp > 0)
+    UNIQUE KEY uq_fal_insp_legajo (legajo_insp)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
@@ -109,11 +111,11 @@ CREATE TABLE fal_firmante (
 CREATE TABLE fal_persona (
     id                      BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'CONTENIDO: Identificador tecnico autoincremental. USO: PK. REGLA: generado por DB.',
     tipo_persona            SMALLINT       NOT NULL               COMMENT 'CONTENIDO: Tipo de persona. USO: discriminacion fisica/juridica. REGLA: 1=FISICA, 2=JURIDICA (TipoPersona enum).',
-    tipo_documento          SMALLINT       NOT NULL               COMMENT 'CONTENIDO: Tipo de documento de identidad. USO: determina estructura del documento. VALORES: 1=DNI, 2=CUIT, 3=CUIL, 4=PASAPORTE, 5=DNI_EXTRANJERO, 9=OTRO (TipoDocumentoPersona enum).',
-    prefijo_cuit_cuil       TINYINT UNSIGNED NULL                 COMMENT 'CONTENIDO: Prefijo de CUIT/CUIL (ej: 20, 23, 27, 30). USO: solo para CUIT/CUIL. REGLA: NULL para documentos simples; BETWEEN 0 AND 99 cuando informado.',
-    nro_doc                 INT UNSIGNED   NOT NULL               COMMENT 'CONTENIDO: Numero de documento sin prefijo ni digito. USO: parte principal del documento. REGLA: BETWEEN 1 AND 99999999.',
+    tipo_documento          SMALLINT       NULL                   COMMENT 'CONTENIDO: Tipo de documento de identidad. USO: determina la estructura del documento. VALORES: 1=DNI, 2=CUIT, 3=CUIL, 4=PASAPORTE, 5=DNI_EXTRANJERO, 9=OTRO (TipoDocumentoPersona enum). REGLA: NULL cuando la persona no tiene documento; se informa junto con nro_doc (DECISION_DDL-PERS-01).',
+    prefijo_cuit_cuil       TINYINT UNSIGNED NULL                 COMMENT 'CONTENIDO: Prefijo de CUIT/CUIL (ej: 20, 23, 27, 30). USO: solo para CUIT/CUIL. REGLA: NULL para el resto de los tipos; BETWEEN 10 AND 99 cuando se informa, porque son dos digitos significativos (DECISION_DDL-PERS-01).',
+    nro_doc                 VARCHAR(12)    NULL                   COMMENT 'CONTENIDO: Numero de documento en forma canonica, sin separadores y en mayusculas. USO: parte principal del documento; cuerpo central de 8 digitos en CUIT/CUIL. REGLA: 1 a 12 caracteres [0-9A-Z]; NULL cuando no hay documento; DNI sin ceros iniciales y hasta 8 digitos (DECISION_DDL-PERS-01).',
     digito_verificador      TINYINT UNSIGNED NULL                 COMMENT 'CONTENIDO: Digito verificador de CUIT/CUIL. USO: solo para CUIT/CUIL. REGLA: NULL para documentos simples; BETWEEN 0 AND 9 cuando informado.',
-    doc_key                 VARCHAR(20)    AS (CASE WHEN tipo_documento IN (2, 3) THEN CONCAT(LPAD(COALESCE(prefijo_cuit_cuil, 0), 2, 0), LPAD(nro_doc, 8, 0), COALESCE(digito_verificador, 0)) ELSE CONCAT(tipo_documento, '-', nro_doc) END) STORED COMMENT 'CONTENIDO: Clave funcional normalizada para unicidad de documento. USO: UNIQUE constraint. REGLA: generada por DB. TIPOS CUIT/CUIL (2,3): concatena prefijo+nro_doc+digito; otros tipos: tipo_documento-nro_doc.',
+    doc_key                 VARCHAR(12)    AS (CASE WHEN tipo_documento IS NULL THEN NULL WHEN tipo_documento IN (2, 3) THEN CONCAT(prefijo_cuit_cuil, nro_doc, digito_verificador) ELSE nro_doc END) STORED COMMENT 'CONTENIDO: Clave funcional del documento. USO: segunda columna del UNIQUE de unicidad documental. REGLA: generada por la DB; NULL sin documento; CUIT/CUIL (2,3) concatena prefijo+nro_doc+digito sin relleno; el resto de los tipos reproduce nro_doc. Prohibido COALESCE y LPAD (DECISION_DDL-PERS-01).',
     apellido                VARCHAR(24)    NULL                   COMMENT 'CONTENIDO: Apellido de la persona fisica. USO: solo personas fisicas. REGLA: NULL para personas juridicas.',
     nombres                 VARCHAR(36)    NULL                   COMMENT 'CONTENIDO: Nombres de la persona fisica. USO: solo personas fisicas. REGLA: NULL para personas juridicas.',
     razon_social            VARCHAR(64)    NULL                   COMMENT 'CONTENIDO: Razon social de la persona juridica. USO: solo personas juridicas. REGLA: NULL para personas fisicas.',
@@ -130,19 +132,12 @@ CREATE TABLE fal_persona (
     id_user_ult_mod         CHAR(36)       NULL                   COMMENT 'CONTENIDO: UUID del usuario de la ultima mod. USO: auditoria. REGLA: nullable.',
     PRIMARY KEY (id),
     UNIQUE KEY uq_fal_persona_tipo_doc_key (tipo_documento, doc_key),
-    CONSTRAINT chk_fal_persona_tipo CHECK (tipo_persona IN (1, 2)),
-    CONSTRAINT chk_fal_persona_nro_doc CHECK (nro_doc BETWEEN 1 AND 99999999),
-    CONSTRAINT chk_fal_persona_prefijo CHECK (prefijo_cuit_cuil IS NULL OR prefijo_cuit_cuil BETWEEN 0 AND 99),
-    CONSTRAINT chk_fal_persona_digito CHECK (digito_verificador IS NULL OR digito_verificador BETWEEN 0 AND 9),
-    CONSTRAINT chk_fal_persona_id_suj CHECK (id_suj IS NULL OR id_suj BETWEEN 1 AND 255),
-    CONSTRAINT chk_fal_persona_id_bie CHECK (id_bie IS NULL OR id_bie BETWEEN 1 AND 9999999),
-    CONSTRAINT chk_fal_persona_id_bie_suj CHECK (id_bie IS NULL OR id_suj IS NOT NULL),
     INDEX ix_fal_persona_apellido (apellido),
     INDEX ix_fal_persona_razon_social (razon_social)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'QUE ES: Maestro de personas fisicas y juridicas (infractores, presentantes). USO: identificacion en actas, notificaciones y domicilios. RAZON: modelo estructurado de documento evita duplicacion por formato. REGLAS CLAVE: doc_key garantiza unicidad; nro_doc es INT UNSIGNED; CUIT/CUIL require prefijo y digito.';
+  COMMENT = 'QUE ES: Maestro de personas fisicas y juridicas (infractores, presentantes). USO: identificacion en actas, notificaciones y domicilios. RAZON: modelo estructurado de documento evita duplicacion por formato. REGLAS CLAVE: el documento es opcional en conjunto; nro_doc es VARCHAR(12) en forma canonica; CUIT/CUIL se almacenan descompuestos y requieren prefijo y digito; doc_key garantiza unicidad junto con tipo_documento y es NULL sin documento.';
 
 -- ----------------------------------------------------------------------------
 -- 5. fal_vehiculo_marca
@@ -188,9 +183,7 @@ CREATE TABLE num_politica (
     fh_ult_mod          DATETIME(6)    NULL                   COMMENT 'CONTENIDO: Timestamp de la ultima modificacion. USO: auditoria. REGLA: nullable.',
     id_user_ult_mod     CHAR(36)       NULL                   COMMENT 'CONTENIDO: UUID del usuario de la ultima mod. USO: auditoria. REGLA: nullable.',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_num_politica_codigo (codigo),
-    CONSTRAINT chk_num_pol_clase CHECK (clase_numeracion IN (1, 2)),
-    CONSTRAINT chk_num_pol_longitud CHECK (longitud_nro > 0)
+    UNIQUE KEY uq_num_politica_codigo (codigo)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
@@ -215,12 +208,6 @@ CREATE TABLE fal_dia_no_computable (
     fecha_activa        DATE           AS (CASE WHEN si_activo = TRUE THEN fecha ELSE NULL END) STORED COMMENT 'CONTENIDO: Columna generada para UNIQUE condicional (solo fecha activa). USO: evitar duplicados de fecha activa por tipo. REGLA: NULL cuando si_activo=FALSE.',
     PRIMARY KEY (id),
     UNIQUE KEY uq_fal_dia_nc_fecha_activa (fecha_activa),
-    CONSTRAINT chk_dia_nc_tipo   CHECK (tipo   IN (1, 2, 3)),
-    CONSTRAINT chk_dia_nc_origen CHECK (origen IN (1, 2)),
-    CONSTRAINT chk_dia_nc_ref_ext CHECK (
-        (origen = 1 AND referencia_externa IS NULL) OR
-        (origen = 2 AND referencia_externa IS NOT NULL)
-    ),
     INDEX ix_fal_dia_nc_fecha (fecha)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
@@ -256,24 +243,28 @@ CREATE TABLE fal_motivo_archivo (
 -- ----------------------------------------------------------------------------
 CREATE TABLE fal_normativa_faltas (
     id                  BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'CONTENIDO: Identificador tecnico. USO: PK. REGLA: generado por DB.',
-    codigo_norma        VARCHAR(8)     NOT NULL               COMMENT 'CONTENIDO: Codigo unico de la normativa. USO: referencia en articulos. REGLA: unico; max 8 caracteres.',
+    codigo_norma        VARCHAR(8)     NOT NULL               COMMENT 'CONTENIDO: Codigo unico de la normativa (estable entre versiones). USO: referencia en articulos. REGLA: max 8 caracteres.',
+    version_norma       SMALLINT       NOT NULL DEFAULT 1     COMMENT 'CONTENIDO: Version funcional de la normativa. USO: reconstruccion historica. REGLA: >=1; una fila por version.',
     nombre_norma        VARCHAR(64)    NOT NULL               COMMENT 'CONTENIDO: Nombre oficial de la normativa. USO: visualizacion. REGLA: no puede ser vacio.',
     tipo_norma          SMALLINT       NOT NULL               COMMENT 'CONTENIDO: Tipo de norma juridica. USO: clasificacion. VALORES: segun TipoNorma enum (ej. ORDENANZA, LEY, DECRETO).',
     numero_norma        INT            NULL                   COMMENT 'CONTENIDO: Numero oficial de la norma. USO: referencia juridica. REGLA: nullable si sin numero asignado.',
     anio_norma          SMALLINT       NULL                   COMMENT 'CONTENIDO: Anio de la norma. USO: referencia juridica. REGLA: nullable si desconocido.',
     fecha_promulgacion  DATE           NULL                   COMMENT 'CONTENIDO: Fecha de promulgacion de la norma. USO: referencia juridica. REGLA: nullable.',
     fecha_publicacion   DATE           NULL                   COMMENT 'CONTENIDO: Fecha de publicacion oficial de la norma. USO: entrada en vigencia formal. REGLA: nullable.',
-    si_activa           BOOLEAN        NOT NULL DEFAULT TRUE  COMMENT 'CONTENIDO: Estado de actividad. USO: filtrado de normativas vigentes. REGLA: FALSE = dada de baja.',
-    fh_vig_desde        DATE           NULL                   COMMENT 'CONTENIDO: Fecha de inicio de vigencia. USO: control temporal de aplicabilidad. REGLA: nullable.',
-    fh_vig_hasta        DATE           NULL                   COMMENT 'CONTENIDO: Fecha de fin de vigencia. USO: normativas derogadas. REGLA: NULL = sin vencimiento.',
+    si_activa           BOOLEAN        NOT NULL DEFAULT TRUE  COMMENT 'CONTENIDO: Estado de actividad. USO: filtrado de normativas vigentes. REGLA: FALSE = dada de baja o version historica cerrada.',
+    fh_vig_desde        DATE           NOT NULL               COMMENT 'CONTENIDO: Fecha de inicio de vigencia de esta version. USO: control temporal de aplicabilidad. REGLA: NOT NULL.',
+    fh_vig_hasta        DATE           NULL                   COMMENT 'CONTENIDO: Fecha de fin de vigencia de esta version. USO: normativas derogadas o reemplazadas por nueva version. REGLA: NULL = sin vencimiento.',
+    version_row         INT            NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Version de fila para OCC. USO: control de concurrencia optimista en correcciones sin relaciones materiales. REGLA: distinta de version_norma (funcional).',
     fh_alta             DATETIME(6)    NOT NULL               COMMENT 'CONTENIDO: Timestamp tecnico de creacion. USO: auditoria. REGLA: suministrado por FaltasClock.',
     id_user_alta        CHAR(36)       NOT NULL               COMMENT 'CONTENIDO: UUID del usuario creador. USO: auditoria. REGLA: UUID del actor.',
+    codigo_norma_activo VARCHAR(8)     GENERATED ALWAYS AS (IF(si_activa = TRUE, codigo_norma, NULL)) PERSISTENT COMMENT 'Generada: codigo_norma si activa, NULL si no (UK activo).',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_fal_norm_codigo (codigo_norma)
+    UNIQUE KEY uq_fal_norm_codigo_version (codigo_norma, version_norma),
+    UNIQUE KEY uq_fal_norm_codigo_activo (codigo_norma_activo)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'QUE ES: Catalogo de normativas del sistema de faltas (ordenanzas, leyes, reglamentos). USO: catalogo de articulos infringidos. RAZON: tipar la fuente normativa de cada articulo. REGLAS CLAVE: codigo_norma unico; articulos en fal_articulo_normativa_faltas.';
+  COMMENT = 'QUE ES: Catalogo versionado de normativas del sistema de faltas (ordenanzas, leyes, reglamentos). USO: catalogo de articulos infringidos. RAZON: tipar la fuente normativa de cada articulo y permitir reconstruccion historica (Wave 4 PARTE-2 S6). REGLAS CLAVE: UNIQUE(codigo_norma, version_norma); UK activo por codigo; articulos en fal_articulo_normativa_faltas.';
 
 -- ----------------------------------------------------------------------------
 -- 10. fal_medida_preventiva
@@ -314,9 +305,7 @@ CREATE TABLE fal_lote_correo (
     fh_alta             DATETIME(6)    NOT NULL               COMMENT 'CONTENIDO: Timestamp tecnico de alta. USO: auditoria. REGLA: suministrado por FaltasClock.',
     id_user_alta        CHAR(36)       NOT NULL               COMMENT 'CONTENIDO: UUID del usuario creador. USO: auditoria. REGLA: UUID del actor.',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_fal_lote_codigo (lote_codigo),
-    CONSTRAINT chk_fal_lote_codigo CHECK (lote_codigo REGEXP '^LC-[0-9]{8}-[0-9]{8}$'),
-    CONSTRAINT chk_fal_lote_estado CHECK (estado_lote BETWEEN 1 AND 5)
+    UNIQUE KEY uq_fal_lote_codigo (lote_codigo)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
@@ -477,7 +466,8 @@ CREATE TABLE num_talonario (
     serie            VARCHAR(12)    NULL                   COMMENT 'CONTENIDO: Serie alfanumerica del talonario. REGLA: nullable.',
     nro_desde        INT            NOT NULL               COMMENT 'CONTENIDO: Numero inicial del rango. REGLA: > 0.',
     nro_hasta        INT            NULL                   COMMENT 'CONTENIDO: Numero final del rango. REGLA: NULL si sin limite operativo; si presente, >= nro_desde.',
-    nombre_secuencia VARCHAR(64)    NOT NULL               COMMENT 'CONTENIDO: Nombre de la SEQUENCE MariaDB asociada. USO: talonario electronico. REGLA: UNIQUE; uno por talonario electronico; NOCACHE recomendado.',
+    nombre_secuencia VARCHAR(64)    NOT NULL               COMMENT 'CONTENIDO: Identificador logico heredado. USO: ninguno operativo real; no referencia una SEQUENCE de MariaDB (Wave 4 PARTE-2 S8.3: no usar SEQUENCE). REGLA: UNIQUE; conservado para no romper contratos existentes.',
+    ultimo_nro_emitido INT          NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Contador transaccional del correlativo electronico realmente emitido. USO: reclamado con SELECT...FOR UPDATE en una seccion critica breve al final de la transaccion del alta (Wave 4 PARTE-2 S8.3). REGLA: rollback revierte el UPDATE; no usar SEQUENCE.',
     si_activo        BOOLEAN        NOT NULL DEFAULT TRUE  COMMENT 'CONTENIDO: TRUE si el talonario esta habilitado. USO: filtro operativo. REGLA: NOT NULL.',
     si_bloqueado     BOOLEAN        NOT NULL DEFAULT FALSE COMMENT 'CONTENIDO: TRUE si bloqueado temporalmente. USO: suspension de uso. REGLA: NOT NULL.',
     cod_desbloqueo   VARCHAR(64)    NULL                   COMMENT 'CONTENIDO: Codigo de desbloqueo. USO: autorizar reanudacion. REGLA: nullable.',
@@ -487,8 +477,7 @@ CREATE TABLE num_talonario (
     UNIQUE KEY uq_num_talonario_codigo (codigo),
     UNIQUE KEY uq_num_talonario_secuencia (nombre_secuencia),
     CONSTRAINT fk_num_talonario_politica FOREIGN KEY (politica_id)
-        REFERENCES num_politica (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_num_talonario_nro CHECK (nro_desde > 0 AND (nro_hasta IS NULL OR nro_hasta >= nro_desde))
+        REFERENCES num_politica (id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
@@ -522,24 +511,30 @@ CREATE TABLE fal_dependencia_normativa (
 CREATE TABLE fal_articulo_normativa_faltas (
     id                              BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'CONTENIDO: Identificador tecnico. USO: PK. REGLA: generado por DB.',
     id_normativa                    BIGINT          NOT NULL               COMMENT 'CONTENIDO: FK a la normativa que contiene el articulo. USO: agrupacion normativa. REGLA: referencia fal_normativa_faltas(id).',
-    codigo_articulo                 VARCHAR(16)     NOT NULL               COMMENT 'CONTENIDO: Codigo del articulo dentro de la normativa. USO: referencia en actas. REGLA: UNIQUE(id_normativa, codigo_articulo); max 16 caracteres (SPEC-MODEL-DDL-CLOSURE-001).',
+    codigo_articulo                 VARCHAR(16)     NOT NULL               COMMENT 'CONTENIDO: Codigo del articulo dentro de la normativa (estable entre versiones). USO: referencia en actas. REGLA: max 16 caracteres (SPEC-MODEL-DDL-CLOSURE-001).',
+    version_articulo                SMALLINT        NOT NULL DEFAULT 1     COMMENT 'CONTENIDO: Version funcional del articulo. USO: reconstruccion historica. REGLA: >=1; una fila por version.',
     nombre_articulo                 VARCHAR(64)     NOT NULL               COMMENT 'CONTENIDO: Nombre o titulo del articulo infractor. USO: visualizacion. REGLA: max 64 caracteres (SPEC-MODEL-DDL-CLOSURE-001).',
     descripcion_articulo            VARCHAR(128)    NULL                   COMMENT 'CONTENIDO: Descripcion corta del articulo. USO: contexto adicional. REGLA: max 128 caracteres; no usar TEXT (SPEC-MODEL-DDL-CLOSURE-001).',
     tipo_infraccion                 SMALLINT        NOT NULL               COMMENT 'CONTENIDO: Tipo de infraccion. USO: clasificacion de la conducta infractora. VALORES: segun TipoInfraccion enum.',
     categoria_infraccion            SMALLINT        NULL                   COMMENT 'CONTENIDO: Categoria de la infraccion. USO: sub-clasificacion. VALORES: segun CategoriaInfraccion enum; nullable.',
     si_admite_medida_preventiva     BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'CONTENIDO: Admite medida preventiva. USO: habilita la aplicacion de medidas preventivas. REGLA: FALSE = no aplica.',
-    si_activo                       BOOLEAN         NOT NULL DEFAULT TRUE  COMMENT 'CONTENIDO: Estado de actividad. USO: filtrado de articulos vigentes. REGLA: FALSE = dado de baja.',
+    si_activo                       BOOLEAN         NOT NULL DEFAULT TRUE  COMMENT 'CONTENIDO: Estado de actividad. USO: filtrado de articulos vigentes. REGLA: FALSE = dado de baja o version historica cerrada.',
+    fh_vig_desde                    DATE            NOT NULL               COMMENT 'CONTENIDO: Fecha de inicio de vigencia de esta version. USO: control temporal. REGLA: NOT NULL.',
+    fh_vig_hasta                    DATE            NULL                   COMMENT 'CONTENIDO: Fecha de fin de vigencia de esta version. USO: articulos derogados o reemplazados por nueva version. REGLA: NULL = sin vencimiento.',
+    version_row                     INT             NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Version de fila para OCC. USO: correcciones sin relaciones materiales. REGLA: distinta de version_articulo (funcional).',
     fh_alta                         DATETIME(6)     NOT NULL               COMMENT 'CONTENIDO: Timestamp tecnico de creacion. USO: auditoria. REGLA: suministrado por FaltasClock.',
     id_user_alta                    CHAR(36)        NOT NULL               COMMENT 'CONTENIDO: UUID del usuario creador. USO: auditoria. REGLA: UUID del actor.',
+    codigo_articulo_activo          VARCHAR(16)     GENERATED ALWAYS AS (IF(si_activo = TRUE, codigo_articulo, NULL)) PERSISTENT COMMENT 'Generada: codigo_articulo si activo, NULL si no (UK activo por normativa).',
     PRIMARY KEY (id),
-    UNIQUE KEY uq_fal_art_norm_cod (id_normativa, codigo_articulo),
+    UNIQUE KEY uq_fal_art_norm_cod_version (id_normativa, codigo_articulo, version_articulo),
+    UNIQUE KEY uq_fal_art_norm_cod_activo (id_normativa, codigo_articulo_activo),
     CONSTRAINT fk_art_norm_normativa FOREIGN KEY (id_normativa)
         REFERENCES fal_normativa_faltas (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     INDEX ix_art_norm_normativa (id_normativa)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'QUE ES: Articulos de normativas de faltas que definen la conducta infractora. USO: referencia en imputaciones. RAZON: centralizar catalogo de infracciones por normativa. REGLAS CLAVE: UNIQUE(id_normativa, codigo_articulo); codigo_articulo VARCHAR(16); SPEC-MODEL-DDL-CLOSURE-001.';
+  COMMENT = 'QUE ES: Articulos versionados de normativas de faltas que definen la conducta infractora. USO: referencia en imputaciones. RAZON: centralizar catalogo de infracciones por normativa y permitir reconstruccion historica (Wave 4 PARTE-2 S6). No contiene datos economicos: la formula vive en fal_tarifario_unidad_faltas (S7.3). REGLAS CLAVE: UNIQUE(id_normativa, codigo_articulo, version_articulo); UK activo; codigo_articulo VARCHAR(16); SPEC-MODEL-DDL-CLOSURE-001.';
 
 -- ----------------------------------------------------------------------------
 -- 21. fal_documento_plantilla_firma_req
@@ -650,22 +645,54 @@ CREATE TABLE fal_firmante_version_habilitacion (
 --     Tarifas unitarias vigentes para el cálculo de valorización de artículos.
 -- ----------------------------------------------------------------------------
 CREATE TABLE fal_tarifario_unidad_faltas (
-    id              BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico de la tarifa',
-    id_articulo     BIGINT          NOT NULL               COMMENT 'FK al artículo normativo tarifado',
-    fh_vig_desde    DATE            NOT NULL               COMMENT 'Inicio de vigencia de esta tarifa',
-    fh_vig_hasta    DATE            NULL                   COMMENT 'Fin de vigencia (NULL = tarifa activa)',
-    valor_unitario  DECIMAL(14,4)   NOT NULL               COMMENT 'Valor monetario por unidad de la infracción',
-    fh_alta         DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora técnica de alta del registro',
-    id_user_alta    CHAR(36)        NOT NULL               COMMENT 'UUID del usuario que creó la tarifa',
+    id                                  BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico de la tarifa (fórmula del artículo)',
+    id_articulo                         BIGINT          NOT NULL               COMMENT 'FK al artículo normativo tarifado',
+    tipo_unidad                         SMALLINT        NOT NULL               COMMENT 'Tipo de unidad económica (TipoUnidadFaltas: 1=SALARIO,2=UNIDAD_FIJA,3=MONTO)',
+    cantidad_unidades_ordinaria         DECIMAL(10,4)   NULL                   COMMENT 'Cantidad de unidades ordinaria (obligatoria si tipo_unidad<>MONTO)',
+    cantidad_unidades_pago_voluntario   DECIMAL(10,4)   NULL                   COMMENT 'Cantidad de unidades de pago voluntario (obligatoria si si_admite_pago_voluntario y tipo_unidad<>MONTO)',
+    monto_fijo_ordinario                DECIMAL(14,2)   NULL                   COMMENT 'Monto fijo ordinario (obligatorio si tipo_unidad=MONTO)',
+    monto_fijo_pago_voluntario          DECIMAL(14,2)   NULL                   COMMENT 'Monto fijo de pago voluntario (obligatorio si si_admite_pago_voluntario y tipo_unidad=MONTO)',
+    si_admite_pago_voluntario           BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'TRUE = el artículo admite pago voluntario con cantidad/monto propios',
+    fh_vig_desde                        DATE            NOT NULL               COMMENT 'Inicio de vigencia de esta fórmula',
+    fh_vig_hasta                        DATE            NULL                   COMMENT 'Fin de vigencia (NULL = fórmula activa)',
+    si_activa                           BOOLEAN         NOT NULL DEFAULT TRUE  COMMENT 'TRUE = fórmula vigente operativa; FALSE = histórica',
+    fh_alta                             DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora técnica de alta del registro',
+    id_user_alta                        CHAR(36)        NOT NULL               COMMENT 'UUID del usuario que creó la tarifa',
+    id_articulo_activo                  BIGINT          GENERATED ALWAYS AS (IF(si_activa = TRUE, id_articulo, NULL)) PERSISTENT COMMENT 'Generada: id_articulo si activa, NULL si no (UK: una sola fórmula activa por artículo)',
     PRIMARY KEY (id),
+    UNIQUE KEY uq_tarifario_articulo_activo (id_articulo_activo),
     CONSTRAINT fk_tarifario_articulo FOREIGN KEY (id_articulo)
         REFERENCES fal_articulo_normativa_faltas (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_tarifario_valor CHECK (valor_unitario >= 0),
+    INDEX ix_tarifario_articulo_activa (id_articulo, si_activa),
     INDEX ix_tarifario_articulo_vig (id_articulo, fh_vig_desde, fh_vig_hasta)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'Tarifario de valores unitarios por artículo normativo para el cálculo de valorización de actas';
+  COMMENT = 'Tarifario POR ARTICULO (formula: unidades u monto fijo, ordinaria y pago voluntario) para el calculo de valorizacion de actas (Wave 4 PARTE-2 S7.3). Reemplaza el modelo previo por TipoUnidadFaltas global.';
+
+-- ----------------------------------------------------------------------------
+-- 25b. fal_valor_unidad_faltas
+--      Valor monetario historico de las unidades economicas SALARIO/UNIDAD_FIJA.
+--      Nueva tabla (Wave 4 PARTE-2 S7.2). MONTO no tiene fila aqui.
+-- ----------------------------------------------------------------------------
+CREATE TABLE fal_valor_unidad_faltas (
+    id                  BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico del valor de unidad',
+    tipo_unidad         SMALLINT        NOT NULL               COMMENT 'Tipo de unidad económica (TipoUnidadFaltas: 1=SALARIO,2=UNIDAD_FIJA; MONTO no aplica)',
+    valor_unidad        DECIMAL(14,4)   NOT NULL               COMMENT 'Valor monetario de una unidad de este tipo',
+    fh_vig_desde        DATE            NOT NULL               COMMENT 'Inicio de vigencia de este valor',
+    fh_vig_hasta        DATE            NULL                   COMMENT 'Fin de vigencia (NULL = valor activo)',
+    si_activa           BOOLEAN         NOT NULL DEFAULT TRUE  COMMENT 'TRUE = valor operativo actual; FALSE = histórico',
+    fh_alta             DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora técnica de alta del registro',
+    id_user_alta        CHAR(36)        NOT NULL               COMMENT 'UUID del usuario que creó el valor',
+    tipo_unidad_activo  SMALLINT        GENERATED ALWAYS AS (IF(si_activa = TRUE, tipo_unidad, NULL)) PERSISTENT COMMENT 'Generada: tipo_unidad si activa, NULL si no (UK: una sola fila activa por tipo)',
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_valor_unidad_tipo_activo (tipo_unidad_activo),
+    INDEX ix_valor_unidad_tipo_activa (tipo_unidad, si_activa),
+    INDEX ix_valor_unidad_tipo_vig (tipo_unidad, fh_vig_desde, fh_vig_hasta)
+) ENGINE = InnoDB
+  DEFAULT CHARACTER SET = utf8mb4
+  COLLATE = utf8mb4_uca1400_ai_ci
+  COMMENT = 'Valor monetario historico y vigente de las unidades economicas SALARIO/UNIDAD_FIJA (Wave 4 PARTE-2 S7.2). MONTO usa monto_fijo_* directamente en fal_tarifario_unidad_faltas.';
 
 -- ----------------------------------------------------------------------------
 -- 26. fal_articulo_medida_preventiva
@@ -743,7 +770,6 @@ CREATE TABLE num_talonario_inspector (
         REFERENCES num_talonario (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_tal_insp_inspector FOREIGN KEY (id_insp, ver_insp)
         REFERENCES fal_inspector_version (id_insp, ver_insp) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_tal_insp_estado CHECK (estado_asignacion BETWEEN 1 AND 4),
     INDEX ix_tal_insp_inspector (id_insp),
     INDEX ix_tal_insp_talonario (id_talonario)
 ) ENGINE = InnoDB
@@ -797,8 +823,6 @@ CREATE TABLE fal_persona_domicilio (
     PRIMARY KEY (id),
     CONSTRAINT fk_pers_dom_persona FOREIGN KEY (persona_id)
         REFERENCES fal_persona (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_pers_dom_tipo CHECK (tipo_domicilio BETWEEN 1 AND 6),
-    CONSTRAINT chk_pers_dom_modo CHECK (modo_domicilio IN (1, 2)),
     INDEX ix_pers_dom_persona (persona_id),
     INDEX ix_pers_dom_acta_origen (acta_origen_id)
 ) ENGINE = InnoDB
@@ -823,8 +847,8 @@ CREATE TABLE fal_acta (
     id_dispositivo_captura          VARCHAR(80)     NULL                   COMMENT 'ID del dispositivo móvil o terminal de captura',
     id_user_captura                 CHAR(36)        NULL                   COMMENT 'UUID del usuario que capturó el acta (nullable si automático)',
     fh_captura                      DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora funcional de captura del acta',
-    lat_captura                     DECIMAL(12,8)   NULL                   COMMENT 'Latitud del punto de captura (grados decimales)',
-    lon_captura                     DECIMAL(12,8)   NULL                   COMMENT 'Longitud del punto de captura (grados decimales)',
+    lat_captura                     DECIMAL(10,7)   NULL                   COMMENT 'Latitud del punto de captura (grados decimales; SPEC-MODEL-DDL-CLOSURE-001: DECIMAL(10,7)).',
+    lon_captura                     DECIMAL(10,7)   NULL                   COMMENT 'Longitud del punto de captura (grados decimales; SPEC-MODEL-DDL-CLOSURE-001: DECIMAL(10,7)).',
     precision_captura_m             DECIMAL(8,2)    NULL                   COMMENT 'Precisión de la posición de captura en metros',
     fh_pos_captura                  DATETIME(6)     NULL                   COMMENT 'Fecha-hora de la posición de captura (puede diferir de fh_captura)',
     origen_pos_captura              SMALLINT        NULL                   COMMENT 'Origen de la posición de captura (OrigenUbicacion enum)',
@@ -837,7 +861,8 @@ CREATE TABLE fal_acta (
     id_insp                         BIGINT          NULL                   COMMENT 'FK al inspector firmante del acta (nullable si no aplica)',
     ver_insp                        SMALLINT        NULL                   COMMENT 'Versión del inspector (SMALLINT: tipo exacto de fal_inspector_version.ver_insp; obligatoria si hay id_insp)',
     -- infractor y domicilios
-    id_persona_infractor            BIGINT          NOT NULL               COMMENT 'FK a la persona infractora (toda acta tiene sujeto técnico)',
+    situacion_identificacion_infractor SMALLINT     NOT NULL               COMMENT 'Situación de identificación del infractor al labrar (SituacionIdentificacionInfractor enum: 1=IDENTIFICADO_COMPLETO, 2=IDENTIFICADO_PARCIAL, 3=PRESENTE_SE_NIEGA, 4=PRESENTE_NO_APORTA_DATOS, 5=AUSENTE, 6=DATOS_INSUFICIENTES). Sin DEFAULT: es una calificación jurídica del acto y el alta la informa siempre (DECISION_DDL-ACTA-INFR-01)',
+    id_persona_infractor            BIGINT          NULL                   COMMENT 'FK a la persona infractora. NULL cuando no hay sujeto identificado (situación 3..6); nunca una persona centinela, ficticia o con documento inventado (DECISION_DDL-ACTA-INFR-01)',
     id_domicilio_infractor_act      BIGINT          NULL                   COMMENT 'FK al domicilio actual del infractor (snapshot del domicilio en el acta)',
     id_domicilio_notif_act          BIGINT          NULL                   COMMENT 'FK al domicilio de notificación actual del infractor',
     -- resumen del hecho
@@ -853,8 +878,8 @@ CREATE TABLE fal_acta (
     altura_origen_infr              SMALLINT        NULL                   COMMENT 'Origen del dato de altura (OrigenNomenclatura enum)',
     si_altura_infr_estimada         BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'TRUE = altura del lugar del hecho es una estimación',
     -- lugar del hecho: coordenadas finales
-    lat_infr                        DECIMAL(12,8)   NULL                   COMMENT 'Latitud final del lugar del hecho (grados decimales)',
-    lon_infr                        DECIMAL(12,8)   NULL                   COMMENT 'Longitud final del lugar del hecho (grados decimales)',
+    lat_infr                        DECIMAL(10,7)   NULL                   COMMENT 'Latitud final del lugar del hecho (grados decimales; SPEC-MODEL-DDL-CLOSURE-001: DECIMAL(10,7)).',
+    lon_infr                        DECIMAL(10,7)   NULL                   COMMENT 'Longitud final del lugar del hecho (grados decimales; SPEC-MODEL-DDL-CLOSURE-001: DECIMAL(10,7)).',
     origen_ubicacion_infr           SMALLINT        NULL                   COMMENT 'Origen de las coordenadas del lugar del hecho (OrigenUbicacion)',
     si_ubicacion_infr_manual        BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'TRUE = ubicación del hecho ajustada manualmente',
     -- texto libre del lugar del hecho
@@ -866,9 +891,9 @@ CREATE TABLE fal_acta (
     codigo_qr                       VARCHAR(128)    NOT NULL               COMMENT 'CONTENIDO: Token firmado del QR del acta, formato QR0.<uuid-acta>.<version>.<firma-hmac-base64url>. USO: identificacion publica del acta via QR. REGLA: 128 caracteres cubre el token firmado completo; no contiene datos personales, domicilio ni imagen; UNIQUE.',
     qr_payload_version              SMALLINT        NOT NULL DEFAULT 0     COMMENT 'Versión del payload QR (0=inicial; incrementar si cambia la estructura)',
     -- estado actual (tripla canónica)
-    bloque_actual                   CHAR(4)         NOT NULL               COMMENT 'Bloque procesal actual del acta (BloqueActual enum: CAPT, D2, D3, FALL, etc.)',
-    est_proc_act                    CHAR(4)         NOT NULL               COMMENT 'Estado procesal actual (EstadoProcesalActa enum: ENTR, etc.)',
-    sit_adm_act                     CHAR(4)         NOT NULL               COMMENT 'Situación administrativa actual (SituacionAdministrativaActa enum: ACTV, ARCH, etc.)',
+    bloque_actual                   CHAR(4)         NOT NULL               COMMENT 'Bloque procesal actual del acta (BloqueActual enum: ENRI, NOTI, ANAL, GEXT, ARCH, CERR; el acta nace directamente en ENRI, DECISION-ACTA-LIFECYCLE-SIN-CAPT-01)',
+    est_proc_act                    CHAR(4)         NOT NULL               COMMENT 'Estado procesal actual (EstadoProcesalActa enum: TRAM, CONC, PRSC)',
+    sit_adm_act                     CHAR(4)         NOT NULL               COMMENT 'Situación administrativa actual (SituacionAdministrativaActa enum: ACTV, PARA, GEXT, ARCH, CERR, ANUL)',
     -- resultado y cierre
     resultado_final                 SMALLINT        NOT NULL DEFAULT 0     COMMENT 'Resultado final del acta (ResultadoFinalActa enum; 0=SIN_RESULTADO_FINAL)',
     resultado_firma_infractor       SMALLINT        NOT NULL               COMMENT 'Resultado de la firma del infractor (ResultadoFirmaInfractor enum)',
@@ -899,8 +924,6 @@ CREATE TABLE fal_acta (
         REFERENCES fal_motivo_archivo (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_acta_talonario FOREIGN KEY (id_talonario)
         REFERENCES num_talonario (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_acta_tipo CHECK (tipo_acta IN (1, 2, 3, 4)),
-    CONSTRAINT chk_acta_qr_ver CHECK (qr_payload_version >= 0),
     INDEX ix_fal_acta_persona (id_persona_infractor),
     INDEX ix_fal_acta_dep (id_dep),
     INDEX ix_fal_acta_fecha (fecha_acta),
@@ -946,27 +969,46 @@ ALTER TABLE fal_acta
 
 -- ----------------------------------------------------------------------------
 -- 31. fal_acta_evidencia
---     Evidencias físicas vinculadas al acta (imágenes, firma ológrafa).
---     Append-only. (DECISION_DDL-EVID-01 CERRADA)
+--     Evidencias vinculadas al acta (fotografias generales, firma ológrafa,
+--     video, audio, PDF, documentos ofimaticos, planillas de calculo).
+--     Append-only. (DECISION_DDL-EVID-01 CERRADA + DECISION_DDL-EVID-03:
+--     metadata de fotografias, Wave 4 Parte 3D. Las diez columnas nuevas son
+--     NULL-able y exclusivas de tipo_evid=FOTO; el resto de los tipos las deja
+--     siempre en NULL. La coherencia FOTO<->campos NO se impone con un CHECK
+--     fisico -- DECISION_DDL-SIN-CHECKS-CODIGOS-01 retiro del DDL los CHECK de
+--     coherencia funcional entre campos y los dejo en dominio/aplicacion -- se
+--     valida en FalActaEvidencia (Java) y en el caso de uso, no en el motor.)
 -- ----------------------------------------------------------------------------
 CREATE TABLE fal_acta_evidencia (
-    id              BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico de la evidencia',
-    id_acta         BIGINT         NOT NULL               COMMENT 'FK al acta a la que pertenece la evidencia',
-    tipo_evid       SMALLINT       NOT NULL               COMMENT 'Tipo de evidencia. Codigos (HUMAN_DECISION_CLOSED FULL-R1.2-CORRECCION-10): 4=FOTO, 8=VIDEO, 12=AUDIO, 16=PDF, 20=DOCUMENTO_OFIMATICO, 24=PLANILLA_CALCULO, 48=FIRMA_OLOGRAFA_INFRACTOR. Codigos 28-44 reservados. TipoEvidenciaActa enum.',
-    storage_key     VARCHAR(255)   NOT NULL               COMMENT 'Clave de almacenamiento externo del binario (no se guarda el binario aquí)',
-    fecha_registro  DATETIME(6)    NOT NULL               COMMENT 'Fecha-hora funcional de captura o incorporación de la evidencia',
-    hash_evid       CHAR(64)       NULL                   COMMENT 'Hash SHA-256 hexadecimal del binario (64 chars; nullable)',
-    fh_alta         DATETIME(6)    NOT NULL               COMMENT 'Fecha-hora técnica de alta del registro',
-    id_user_alta    CHAR(36)       NOT NULL               COMMENT 'UUID del actor que incorporó la evidencia',
+    id                   BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico de la evidencia',
+    id_acta              BIGINT         NOT NULL               COMMENT 'FK al acta a la que pertenece la evidencia',
+    tipo_evid            SMALLINT       NOT NULL               COMMENT 'Tipo de evidencia. Codigos (HUMAN_DECISION_CLOSED FULL-R1.2-CORRECCION-10): 4=FOTO, 8=VIDEO, 12=AUDIO, 16=PDF, 20=DOCUMENTO_OFIMATICO, 24=PLANILLA_CALCULO, 48=FIRMA_OLOGRAFA_INFRACTOR. Codigos 28-44 reservados. TipoEvidenciaActa enum.',
+    storage_key          VARCHAR(255)   NOT NULL               COMMENT 'Clave de almacenamiento externo del binario (no se guarda el binario aquí)',
+    fecha_registro       DATETIME(6)    NOT NULL               COMMENT 'Fecha-hora funcional de captura o incorporación de la evidencia',
+    hash_evid            CHAR(64)       NULL                   COMMENT 'Hash SHA-256 hexadecimal del binario (64 chars; nullable). Para tipo_evid=FOTO es el SHA-256 del archivo final procesado (DECISION_DDL-EVID-03).',
+    orden                SMALLINT       NULL                   COMMENT 'CONTENIDO: orden de la fotografia dentro del acta. USO: exclusivo de tipo_evid=FOTO; asignado por backend, nunca por el cliente. REGLA: NULL para evidencias no-FOTO; UNIQUE(id_acta, orden) cuando informado (DECISION_DDL-EVID-03).',
+    descripcion          VARCHAR(240)   NULL                   COMMENT 'CONTENIDO: epigrafe opcional de la fotografia, texto normalizado. USO: exclusivo de tipo_evid=FOTO. REGLA: NULL para evidencias no-FOTO; NULL o no vacio tras trim (DECISION_DDL-EVID-03).',
+    nombre_original      VARCHAR(180)   NULL                   COMMENT 'CONTENIDO: nombre de archivo original saneado, solo informativo. USO: exclusivo de tipo_evid=FOTO; nunca se usa como ruta. REGLA: NULL para evidencias no-FOTO (DECISION_DDL-EVID-03).',
+    mime_tipo            VARCHAR(50)    NULL                   COMMENT 'CONTENIDO: MIME final tras el pipeline de normalizacion de imagen (p.ej. image/jpeg). USO: exclusivo de tipo_evid=FOTO. REGLA: NOT NULL cuando tipo_evid=FOTO, validado en FalActaEvidencia (DECISION_DDL-EVID-03).',
+    tamanio_bytes        INT UNSIGNED   NULL                   COMMENT 'CONTENIDO: tamano en bytes del archivo final procesado. USO: exclusivo de tipo_evid=FOTO. REGLA: NOT NULL cuando tipo_evid=FOTO (DECISION_DDL-EVID-03).',
+    ancho_px             INT UNSIGNED   NULL                   COMMENT 'CONTENIDO: ancho final en pixeles tras el pipeline. USO: exclusivo de tipo_evid=FOTO. REGLA: NOT NULL cuando tipo_evid=FOTO (DECISION_DDL-EVID-03).',
+    alto_px              INT UNSIGNED   NULL                   COMMENT 'CONTENIDO: alto final en pixeles tras el pipeline. USO: exclusivo de tipo_evid=FOTO. REGLA: NOT NULL cuando tipo_evid=FOTO (DECISION_DDL-EVID-03).',
+    fecha_captura_exif   DATETIME(6)    NULL                   COMMENT 'CONTENIDO: fecha/hora de captura leida del EXIF original, informativa. USO: exclusivo de tipo_evid=FOTO. REGLA: nunca autoritativa; NULL si el EXIF no existe o es invalido; nunca la informa el cliente directamente (DECISION_DDL-EVID-03).',
+    bloque_al_incorporar CHAR(4)        NULL                   COMMENT 'CONTENIDO: BloqueActual.codigo() del acta vigente al momento de incorporar la fotografia. USO: trazabilidad operativa de etapa; exclusivo de tipo_evid=FOTO. REGLA: NULL para evidencias no-FOTO (DECISION_DDL-EVID-03).',
+    origen_incorporacion SMALLINT       NULL                   COMMENT 'CONTENIDO: origen de la operacion que incorporo la fotografia. VALORES: 4=ALTA_INICIAL, 8=CARGA_POSTERIOR (OrigenIncorporacionEvidencia enum, multiplos de 4 como TipoEvidenciaActa). USO: exclusivo de tipo_evid=FOTO. REGLA: NOT NULL cuando tipo_evid=FOTO (DECISION_DDL-EVID-03).',
+    fh_alta              DATETIME(6)    NOT NULL               COMMENT 'Fecha-hora técnica de alta del registro',
+    id_user_alta         CHAR(36)       NOT NULL               COMMENT 'UUID del actor que incorporó la evidencia',
     PRIMARY KEY (id),
     CONSTRAINT fk_evidencia_acta FOREIGN KEY (id_acta)
         REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT chk_evidencia_hash CHECK (hash_evid IS NULL OR CHAR_LENGTH(hash_evid) = 64),
-    INDEX ix_evidencia_acta (id_acta)
+    INDEX ix_evidencia_acta (id_acta),
+    CONSTRAINT uq_evidencia_acta_orden UNIQUE (id_acta, orden),
+    CONSTRAINT uq_evidencia_acta_hash UNIQUE (id_acta, hash_evid)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'Evidencias físicas del acta (firma ológrafa del infractor, etc.). Append-only. DECISION_DDL-EVID-01.';
+  COMMENT = 'Evidencias del acta (fotografias generales, firma ológrafa del infractor, video, audio, PDF, documentos ofimaticos y planillas). Append-only. DECISION_DDL-EVID-01 (catalogo tipo_evid) + DECISION_DDL-EVID-03 (metadata de fotografias: orden, hash, dimensiones, MIME, EXIF, trazabilidad de etapa/origen; exclusiva de tipo_evid=FOTO).';
 
 -- ----------------------------------------------------------------------------
 -- 32. fal_observacion
@@ -987,11 +1029,6 @@ CREATE TABLE fal_observacion (
     PRIMARY KEY (id),
     CONSTRAINT fk_obs_acta_contexto FOREIGN KEY (id_acta_contexto)
         REFERENCES fal_acta (id) ON DELETE CASCADE ON UPDATE RESTRICT,
-    CONSTRAINT chk_obs_texto CHECK (CHAR_LENGTH(TRIM(observacion)) BETWEEN 1 AND 512),
-    CONSTRAINT chk_obs_baja_coherente CHECK (
-        (si_activa = TRUE  AND fh_baja IS NULL     AND id_user_baja IS NULL) OR
-        (si_activa = FALSE AND fh_baja IS NOT NULL AND id_user_baja IS NOT NULL)
-    ),
     INDEX ix_obs_entidad (entidad_tipo, entidad_id, si_activa, fh_alta),
     INDEX ix_obs_acta_contexto (id_acta_contexto, fh_alta)
 ) ENGINE = InnoDB
@@ -1042,7 +1079,6 @@ CREATE TABLE fal_acta_transito_alcoholemia (
     UNIQUE KEY uq_acta_alcoholemia_orden (acta_id, orden_medicion),
     CONSTRAINT fk_alcoholemia_acta FOREIGN KEY (acta_id)
         REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_alcoholemia_orden CHECK (orden_medicion > 0),
     INDEX ix_alcoholemia_acta (acta_id)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
@@ -1108,11 +1144,7 @@ CREATE TABLE fal_acta_contravencion (
     CONSTRAINT fk_acta_ctv_acta FOREIGN KEY (acta_id)
         REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_acta_ctv_rubro FOREIGN KEY (rubro_id)
-        REFERENCES fal_rubro_version (rubro_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_ctv_suj_i CHECK (id_suj_i IS NULL OR (id_suj_i BETWEEN 1 AND 255)),
-    CONSTRAINT chk_ctv_bie_i CHECK (id_bie_i IS NULL OR (id_bie_i BETWEEN 1 AND 9999999)),
-    CONSTRAINT chk_ctv_suj_c CHECK (id_suj_c IS NULL OR (id_suj_c BETWEEN 1 AND 255)),
-    CONSTRAINT chk_ctv_bie_c CHECK (id_bie_c IS NULL OR (id_bie_c BETWEEN 1 AND 9999999))
+        REFERENCES fal_rubro_version (rubro_id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
@@ -1197,9 +1229,11 @@ CREATE TABLE fal_acta_articulo_infringido (
     id                  BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico del artículo infringido',
     id_acta             BIGINT          NOT NULL               COMMENT 'FK al acta',
     id_articulo         BIGINT          NOT NULL               COMMENT 'FK al artículo normativo infringido',
-    cantidad_unidades   DECIMAL(10,4)   NOT NULL DEFAULT 1     COMMENT 'Cantidad de unidades del artículo imputado',
     si_activo           BOOLEAN         NOT NULL DEFAULT TRUE  COMMENT 'TRUE = artículo vigente en el acta; FALSE = dado de baja',
     motivo_baja         SMALLINT        NULL                   COMMENT 'CONTENIDO: Motivo de la baja del articulo. USO: trazabilidad. REGLA: MotivoBajaArticuloInfringido enum; nullable.',
+    version_row         INT             NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Version de fila para OCC (Wave 4 PARTE-2 S7.4). USO: control de concurrencia optimista en alta/baja.',
+    fh_baja             DATETIME(6)     NULL                   COMMENT 'CONTENIDO: Fecha-hora real de la baja logica. USO: auditoria de baja. REGLA: NULL mientras si_activo=TRUE; nunca se aproxima con fh_alta.',
+    id_user_baja        CHAR(36)        NULL                   COMMENT 'CONTENIDO: UUID del usuario que dio de baja. USO: auditoria de baja. REGLA: NULL mientras si_activo=TRUE; nunca se aproxima con id_user_alta.',
     fh_alta             DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora técnica de alta',
     id_user_alta        CHAR(36)        NOT NULL               COMMENT 'UUID del usuario que imputó el artículo',
     -- UK activo: solo un registro activo por (acta, artículo) usando columnas generadas
@@ -1215,7 +1249,7 @@ CREATE TABLE fal_acta_articulo_infringido (
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'Artículos normativos imputados en cada acta. UK activo (id_acta, id_articulo) via columnas generadas.';
+  COMMENT = 'Articulos normativos imputados en cada acta. UK activo (id_acta, id_articulo) via columnas generadas. Sin cantidad_unidades ni valorizacion (vive en fal_acta_valorizacion_item, Wave 4 PARTE-2 S7.4).';
 
 -- ----------------------------------------------------------------------------
 -- 41. fal_acta_qr_acceso
@@ -1278,28 +1312,26 @@ CREATE TABLE fal_acta_gestion_externa (
 --     OCC.
 -- ----------------------------------------------------------------------------
 CREATE TABLE fal_acta_valorizacion (
-    id                  BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'CONTENIDO: Identificador tecnico. USO: PK. REGLA: generado por DB.',
-    version_row         INT             NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Version para OCC. USO: control de concurrencia optimista. REGLA: incrementar en cada UPDATE.',
-    id_acta             BIGINT          NOT NULL               COMMENT 'CONTENIDO: FK al acta valorizada. USO: trazabilidad. REGLA: referencia fal_acta(id).',
-    tipo_valorizacion   SMALLINT        NOT NULL               COMMENT 'CONTENIDO: Tipo de valorizacion. VALORES: TipoValorizacion enum.',
-    estado_valorizacion SMALLINT        NOT NULL               COMMENT 'CONTENIDO: Estado. VALORES: 1=PRELIMINAR, 2=CONFIRMADA, 3=REEMPLAZADA, 4=ANULADA.',
-    monto_total         DECIMAL(14,2)   NOT NULL               COMMENT 'CONTENIDO: Monto total. USO: valor economico del acta. REGLA: NOT NULL; escala 2; >= 0.',
-    fh_calculo          DATETIME(6)     NOT NULL               COMMENT 'CONTENIDO: Timestamp del calculo. USO: trazabilidad. REGLA: NOT NULL; suministrado por FaltasClock.',
-    si_vigente          BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'CONTENIDO: TRUE si es la valorizacion activa del acta. REGLA: una sola CONFIRMADA vigente por acta+tipo.',
-    si_confirmada       BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'CONTENIDO: TRUE si fue confirmada operativamente. REGLA: consistente con estado_valorizacion.',
-    fh_alta             DATETIME(6)     NOT NULL               COMMENT 'CONTENIDO: Timestamp tecnico de alta. USO: auditoria. REGLA: suministrado por FaltasClock.',
-    id_user_alta        CHAR(36)        NOT NULL               COMMENT 'CONTENIDO: UUID del usuario que creo el registro. USO: auditoria. REGLA: UUID.',
+    id                              BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'CONTENIDO: Identificador tecnico. USO: PK. REGLA: generado por DB.',
+    version_row                     INT             NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Version para OCC. USO: control de concurrencia optimista sobre la cabecera mutable. REGLA: incrementar en cada UPDATE.',
+    id_acta                         BIGINT          NOT NULL               COMMENT 'CONTENIDO: FK al acta valorizada. USO: trazabilidad. REGLA: referencia fal_acta(id); una sola cabecera por acta.',
+    monto_total_ordinario           DECIMAL(14,2)   NOT NULL DEFAULT 0     COMMENT 'CONTENIDO: Total actual global de la dimension ordinaria. USO: valor economico del acta. REGLA: escala 2; >= 0.',
+    monto_total_pago_voluntario     DECIMAL(14,2)   NULL                   COMMENT 'CONTENIDO: Total actual global de pago voluntario. USO: solo si hay articulos con si_admite_pago_voluntario. REGLA: escala 2; >= 0; NULL si ningun articulo admite pago voluntario.',
+    estado_valorizacion             SMALLINT        NOT NULL               COMMENT 'CONTENIDO: Estado de la cabecera. VALORES: EstadoValorizacionActa enum: 1=PRELIMINAR, 2=CONFIRMADA.',
+    si_confirmada                   BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'CONTENIDO: TRUE si fue confirmada operativamente. USO: distingue calculo del alta (siempre FALSE) de una confirmacion posterior (ENRI, fuera de alcance del alta). REGLA: consistente con estado_valorizacion.',
+    fh_calculo                      DATETIME(6)     NOT NULL               COMMENT 'CONTENIDO: Timestamp del ultimo calculo/recalculo. USO: trazabilidad. REGLA: NOT NULL; suministrado por FaltasClock.',
+    fh_confirmacion                 DATETIME(6)     NULL                   COMMENT 'CONTENIDO: Timestamp de confirmacion. USO: trazabilidad. REGLA: NULL mientras si_confirmada=FALSE.',
+    id_user_confirmacion            CHAR(36)        NULL                   COMMENT 'CONTENIDO: UUID del usuario que confirmo. USO: auditoria. REGLA: NULL mientras si_confirmada=FALSE.',
+    fh_alta                         DATETIME(6)     NOT NULL               COMMENT 'CONTENIDO: Timestamp tecnico de alta. USO: auditoria. REGLA: suministrado por FaltasClock.',
+    id_user_alta                    CHAR(36)        NOT NULL               COMMENT 'CONTENIDO: UUID del usuario que creo el registro. USO: auditoria. REGLA: UUID.',
     PRIMARY KEY (id),
+    UNIQUE KEY uq_acta_valorizacion_acta (id_acta),
     CONSTRAINT fk_valorizacion_acta FOREIGN KEY (id_acta)
-        REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_valorizacion_monto CHECK (monto_total >= 0),
-    CONSTRAINT chk_valorizacion_estado CHECK (estado_valorizacion BETWEEN 1 AND 4),
-    INDEX ix_valorizacion_acta (id_acta),
-    INDEX ix_valorizacion_acta_vigente (id_acta, si_vigente)
+        REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'Decisión económica del acta en un momento dado. OCC. Una sola CONFIRMADA vigente por acta+tipo.';
+  COMMENT = 'Cabecera unica por acta con el total economico actual (Wave 4 PARTE-2 S7.8). OCC via version_row. El alta calcula valorizacion pero no confirma ni crea obligacion de pago. Reemplaza el modelo previo de multiples filas por acta+tipo.';
 
 -- ----------------------------------------------------------------------------
 -- 44. fal_acta_medida_preventiva
@@ -1308,7 +1340,7 @@ CREATE TABLE fal_acta_valorizacion (
 CREATE TABLE fal_acta_medida_preventiva (
     id                      BIGINT         NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico de la medida aplicada',
     acta_id                 BIGINT         NOT NULL               COMMENT 'FK al acta donde se aplicó la medida',
-    acta_articulo_id        BIGINT         NOT NULL               COMMENT 'FK al artículo infringido que habilitó la medida',
+    acta_articulo_id        BIGINT         NULL                   COMMENT 'CONTENIDO: FK opcional al articulo infringido. USO: referencia historica/informativa. REGLA: NULL permitido desde Wave 4 Parte 3B S7 (DECISION-MEDIDA-PREVENTIVA-LIBRE-01): la medida ya no depende de un articulo infringido; el inspector puede elegir cualquier medida vigente del catalogo.',
     medida_preventiva_id    BIGINT         NOT NULL               COMMENT 'FK a la medida preventiva del catálogo aplicada',
     med_prev_txt            VARCHAR(255)   NULL                   COMMENT 'Texto descriptivo de la medida (snapshot al momento de aplicar)',
     estado_medida           SMALLINT       NOT NULL DEFAULT 1     COMMENT '1=APLICADA, 2=CUMPLIDA, 3=ANULADA (EstadoMedidaAplicada)',
@@ -1316,6 +1348,7 @@ CREATE TABLE fal_acta_medida_preventiva (
     fh_alta                 DATETIME(6)    NOT NULL               COMMENT 'Fecha-hora técnica de alta',
     id_user_alta            CHAR(36)       NOT NULL               COMMENT 'UUID del usuario que aplicó la medida',
     PRIMARY KEY (id),
+    UNIQUE KEY uq_med_prev_acta_medida (acta_id, medida_preventiva_id),
     CONSTRAINT fk_med_prev_acta FOREIGN KEY (acta_id)
         REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_med_prev_acta_art FOREIGN KEY (acta_articulo_id)
@@ -1326,7 +1359,7 @@ CREATE TABLE fal_acta_medida_preventiva (
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'Medidas preventivas aplicadas al acta. Relación con bloqueantes es unidireccional (bloqueante → medida).';
+  COMMENT = 'Medidas preventivas aplicadas al acta. Relación con bloqueantes es unidireccional (bloqueante → medida). UNIQUE(acta_id, medida_preventiva_id): duplicado exacto (Wave 4 Parte 3B S7.2). acta_articulo_id nullable (Wave 4 Parte 3B S7, DECISION-MEDIDA-PREVENTIVA-LIBRE-01).';
 
 -- ----------------------------------------------------------------------------
 -- 45. fal_acta_bloqueante_cierre_material
@@ -1400,33 +1433,37 @@ CREATE TABLE fal_documento (
 --     Ítems de detalle de una valorización (append-only tras confirmación del padre).
 -- ----------------------------------------------------------------------------
 CREATE TABLE fal_acta_valorizacion_item (
-    id                  BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico del ítem de valorización',
-    id_valorizacion     BIGINT          NOT NULL               COMMENT 'FK a la valorización que contiene este ítem',
-    id_articulo         BIGINT          NULL                   COMMENT 'FK al artículo normativo valorizado (nullable si ítem manual)',
-    tipo_item           SMALLINT        NOT NULL               COMMENT 'Tipo de ítem (TipoValorizacionItem enum)',
-    descripcion         VARCHAR(255)    NULL                   COMMENT 'Descripción del ítem (libre si manual)',
-    cantidad_unidades   DECIMAL(10,4)   NOT NULL               COMMENT 'Cantidad de unidades del artículo',
-    tipo_unidad_faltas  SMALLINT        NOT NULL               COMMENT 'Tipo de unidad de faltas (TipoUnidadFaltas enum)',
-    valor_unitario      DECIMAL(14,4)   NOT NULL               COMMENT 'Valor por unidad aplicado en esta valorización',
-    importe             DECIMAL(14,2)   NOT NULL               COMMENT 'Importe = cantidad_unidades × valor_unitario (escala 2)',
-    tarifario_unidad_id BIGINT          NULL                   COMMENT 'FK al tarifario unitario que proveyó el valor (nullable si manual)',
-    origen_valorizacion SMALLINT        NOT NULL               COMMENT 'Origen de este ítem (OrigenValorizacion enum)',
-    criterio_tarifario  SMALLINT        NULL                   COMMENT 'Criterio tarifario específico del ítem (nullable)',
-    si_manual           BOOLEAN         NOT NULL DEFAULT FALSE COMMENT 'TRUE = valor ingresado manualmente (sobrescritura)',
-    fh_alta             DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora técnica de alta',
-    id_user_alta        CHAR(36)        NOT NULL               COMMENT 'UUID del usuario que creó el ítem',
+    id                                      BIGINT          NOT NULL AUTO_INCREMENT COMMENT 'Identificador técnico del ítem de valorización',
+    id_acta_articulo                        BIGINT          NOT NULL               COMMENT 'FK al artículo infringido del que este ítem es historial económico (Wave 4 PARTE-2 S7.5)',
+    version_item                            INT             NOT NULL               COMMENT 'Version funcional del historial economico del articulo (NO es OCC); 1,2,3... por cada cambio',
+    si_actual                               BOOLEAN         NOT NULL DEFAULT TRUE  COMMENT 'TRUE = version actual del articulo; FALSE = historica',
+    id_tarifario_articulo_usado             BIGINT          NOT NULL               COMMENT 'FK a la formula (fal_tarifario_unidad_faltas) usada para reconstruir el calculo automatico',
+    id_valor_unidad_usado                   BIGINT          NULL                   COMMENT 'FK al valor de unidad (fal_valor_unidad_faltas) usado; obligatorio para SALARIO/UNIDAD_FIJA, NULL para MONTO',
+    modo_valorizacion_ordinaria             SMALLINT        NOT NULL               COMMENT 'Modo de la dimension ordinaria (ModoValorizacionItem enum: 1=AUTOMATICA,2=MANUAL_UNIDADES,3=MANUAL_MONTO)',
+    cantidad_manual_ordinaria               DECIMAL(10,4)   NULL                   COMMENT 'Cantidad manual ordinaria (solo si modo=MANUAL_UNIDADES)',
+    monto_manual_ordinario                  DECIMAL(14,2)   NULL                   COMMENT 'Monto manual ordinario (solo si modo=MANUAL_MONTO)',
+    modo_valorizacion_pago_voluntario       SMALLINT        NULL                   COMMENT 'Modo de la dimension de pago voluntario (ModoValorizacionItem enum); NULL si el articulo no admite pago voluntario',
+    cantidad_manual_pago_voluntario         DECIMAL(10,4)   NULL                   COMMENT 'Cantidad manual de pago voluntario (solo si modo=MANUAL_UNIDADES)',
+    monto_manual_pago_voluntario            DECIMAL(14,2)   NULL                   COMMENT 'Monto manual de pago voluntario (solo si modo=MANUAL_MONTO)',
+    motivo_cambio                           VARCHAR(255)    NULL                   COMMENT 'Motivo del cambio manual; obligatorio si algun modo es manual',
+    observacion_cambio                      VARCHAR(500)    NULL                   COMMENT 'Observacion adicional opcional del cambio',
+    fh_alta                                 DATETIME(6)     NOT NULL               COMMENT 'Fecha-hora técnica de alta de esta version (inmutable)',
+    id_user_alta                            CHAR(36)        NOT NULL               COMMENT 'UUID del usuario que genero esta version (obligatorio si algun modo es manual)',
+    id_acta_articulo_actual                 BIGINT          GENERATED ALWAYS AS (IF(si_actual = TRUE, id_acta_articulo, NULL)) PERSISTENT COMMENT 'Generada: id_acta_articulo si actual, NULL si no (UK: un solo item actual por articulo)',
     PRIMARY KEY (id),
-    CONSTRAINT fk_val_item_valorizacion FOREIGN KEY (id_valorizacion)
-        REFERENCES fal_acta_valorizacion (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT fk_val_item_articulo FOREIGN KEY (id_articulo)
-        REFERENCES fal_articulo_normativa_faltas (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT fk_val_item_tarifario FOREIGN KEY (tarifario_unidad_id)
+    UNIQUE KEY uq_val_item_actual (id_acta_articulo_actual),
+    UNIQUE KEY uq_val_item_version (id_acta_articulo, version_item),
+    CONSTRAINT fk_val_item_acta_articulo FOREIGN KEY (id_acta_articulo)
+        REFERENCES fal_acta_articulo_infringido (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_val_item_tarifario FOREIGN KEY (id_tarifario_articulo_usado)
         REFERENCES fal_tarifario_unidad_faltas (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    INDEX ix_val_item_valorizacion (id_valorizacion)
+    CONSTRAINT fk_val_item_valor_unidad FOREIGN KEY (id_valor_unidad_usado)
+        REFERENCES fal_valor_unidad_faltas (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    INDEX ix_val_item_acta_articulo (id_acta_articulo)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_uca1400_ai_ci
-  COMMENT = 'Ítems de detalle de una valorización. Append-only tras confirmación del padre.';
+  COMMENT = 'Historial economico versionado de cada articulo infringido (Wave 4 PARTE-2 S7.5). Inmutable: cada cambio crea una fila nueva. UK: un solo item actual por articulo. Sin FK circular hacia fal_acta_articulo_infringido.';
 
 -- =============================================================================
 -- SECCIÓN 07 — G7: Documentos y asociados (tablas 48–53)
@@ -1515,7 +1552,6 @@ CREATE TABLE fal_documento_redaccion (
         REFERENCES fal_documento_plantilla_contenido (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_redaccion_origen FOREIGN KEY (redaccion_origen_id)
         REFERENCES fal_documento_redaccion (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_redaccion_estado CHECK (estado_redaccion BETWEEN 1 AND 3),
     INDEX ix_redaccion_documento (id_documento)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
@@ -1581,7 +1617,6 @@ CREATE TABLE num_talonario_movimiento (
         REFERENCES fal_acta (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_tal_mov_documento FOREIGN KEY (documento_id)
         REFERENCES fal_documento (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_tal_mov_nro CHECK (nro_talonario > 0),
     INDEX ix_tal_mov_talonario (id_talonario),
     INDEX ix_tal_mov_nro (id_talonario, nro_talonario)
 ) ENGINE = InnoDB
@@ -1627,9 +1662,6 @@ CREATE TABLE fal_acta_fallo (
         REFERENCES fal_acta_valorizacion (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_fallo_reemplazado FOREIGN KEY (fallo_reemplazado_id)
         REFERENCES fal_acta_fallo (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_fallo_estado CHECK (estado_fallo BETWEEN 1 AND 6),
-    CONSTRAINT chk_fallo_tipo CHECK (tipo_fallo IN (1, 2)),
-    CONSTRAINT chk_fallo_firmeza CHECK (origen_firmeza IS NULL OR origen_firmeza IN (1, 2)),
     INDEX ix_fallo_acta (id_acta),
     INDEX ix_fallo_acta_vigente (id_acta, si_vigente)
 ) ENGINE = InnoDB
@@ -1702,7 +1734,6 @@ CREATE TABLE fal_notificacion_intento (
         REFERENCES fal_notificacion (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_noti_intento_lote FOREIGN KEY (lote_id)
         REFERENCES fal_lote_correo (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_noti_intento_nro CHECK (nro_intento > 0),
     INDEX ix_noti_intento_notificacion (id_notificacion)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
@@ -1809,7 +1840,6 @@ CREATE TABLE fal_acta_apelacion (
         REFERENCES fal_acta_fallo (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_apelacion_doc_resolucion FOREIGN KEY (documento_resolucion_id)
         REFERENCES fal_documento (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_apelacion_estado CHECK (estado_apelacion BETWEEN 1 AND 6),
     INDEX ix_apelacion_acta (id_acta),
     INDEX ix_apelacion_fallo (fallo_id)
 ) ENGINE = InnoDB
@@ -1859,10 +1889,6 @@ CREATE TABLE fal_acta_obligacion_pago (
         REFERENCES fal_acta_fallo (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_oblig_reemplazada FOREIGN KEY (obligacion_reemplazada_id)
         REFERENCES fal_acta_obligacion_pago (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_oblig_tipo CHECK (tipo_obligacion IN (1, 2)),
-    CONSTRAINT chk_oblig_origen CHECK (origen_obligacion BETWEEN 1 AND 3),
-    CONSTRAINT chk_oblig_estado CHECK (estado_obligacion BETWEEN 1 AND 6),
-    CONSTRAINT chk_oblig_monto CHECK (monto_original >= 0),
     INDEX ix_oblig_acta (acta_id),
     INDEX ix_oblig_persona (persona_id)
 ) ENGINE = InnoDB
@@ -1993,9 +2019,6 @@ CREATE TABLE fal_acta_forma_pago (
         REFERENCES fal_acta_obligacion_pago (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_forma_pago_reemplazada FOREIGN KEY (forma_reemplazada_id)
         REFERENCES fal_acta_forma_pago (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_forma_pago_tipo CHECK (tipo_forma_pago IN (1, 2, 3)),
-    CONSTRAINT chk_forma_pago_nro CHECK (nro_forma > 0),
-    CONSTRAINT chk_forma_pago_monto CHECK (monto_forma >= 0),
     INDEX ix_forma_pago_obligacion (obligacion_pago_id)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
@@ -2050,8 +2073,6 @@ CREATE TABLE fal_acta_plan_pago_ref (
         REFERENCES fal_acta_obligacion_pago (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_plan_pago_refinanciado FOREIGN KEY (plan_refinanciado_id)
         REFERENCES fal_acta_plan_pago_ref (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_plan_pago_estado CHECK (estado_plan BETWEEN 1 AND 4),
-    CONSTRAINT chk_plan_pago_cuotas CHECK (cantidad_cuotas > 0),
     INDEX ix_plan_pago_obligacion (obligacion_pago_id)
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
@@ -2112,9 +2133,6 @@ CREATE TABLE fal_acta_pago_movimiento (
         REFERENCES fal_acta_plan_pago_ref (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT fk_pago_mov_origen FOREIGN KEY (movimiento_origen_id)
         REFERENCES fal_acta_pago_movimiento (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
-    CONSTRAINT chk_pago_mov_tipo CHECK (tipo_movimiento BETWEEN 1 AND 5),
-    CONSTRAINT chk_pago_mov_clasificacion CHECK (clasificacion_pago BETWEEN 1 AND 4),
-    CONSTRAINT chk_pago_mov_motivo_anulacion CHECK (motivo_anulacion_pago IS NULL OR motivo_anulacion_pago BETWEEN 1 AND 6),
     INDEX ix_pago_mov_obligacion (obligacion_pago_id),
     INDEX ix_pago_mov_forma_pago (forma_pago_id),
     INDEX ix_pago_mov_fh (fh_movimiento)
@@ -2320,8 +2338,8 @@ DELIMITER ;
 -- =============================================================================
 -- FIN DEL SCRIPT DDL — BOD FALTAS
 -- =============================================================================
--- Tablas creadas: 64 (CREATE TABLE)
+-- Tablas creadas: 65 (CREATE TABLE) — incluye fal_valor_unidad_faltas (Wave 4 PARTE-2 S7.2)
 -- Tabla preexistente adoptada: 1 (fal_rubro_version — NO incluida en este script)
--- Total canonico: 65
+-- Total canonico: 66
 -- Triggers defensivos AFTER DELETE: 21 (codigos 2-22 de EntidadTipoObservada)
 -- =============================================================================

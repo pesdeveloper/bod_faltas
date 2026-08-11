@@ -132,26 +132,26 @@ class DdlObservationContractTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Nested
-    @DisplayName("OBS-G3: CHECKs de texto y coherencia de baja presentes")
+    @DisplayName("OBS-G3: CHECKs de texto y coherencia de baja retirados (DECISION_DDL-SIN-CHECKS-CODIGOS-01)")
     class G3_Checks {
 
         @Test
-        @DisplayName("chk_obs_texto CHECK BETWEEN 1 AND 512")
+        @DisplayName("chk_obs_texto eliminado: la longitud/no-blanco se valida en dominio, no en CHECK fisico")
         void chkObsTexto() {
             String bloque = bloquesPorTabla.get("fal_observacion");
             assertThat(bloque)
-                    .as("chk_obs_texto debe contener BETWEEN 1 AND 512")
-                    .contains("chk_obs_texto")
-                    .contains("BETWEEN 1 AND 512");
+                    .as("chk_obs_texto fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01: no ata la evolucion "
+                            + "del modelo a un CHECK fisico de rango de texto")
+                    .doesNotContain("chk_obs_texto");
         }
 
         @Test
-        @DisplayName("chk_obs_baja_coherente CHECK (si_activa / fh_baja / id_user_baja)")
+        @DisplayName("chk_obs_baja_coherente eliminado: la coherencia si_activa/fh_baja/id_user_baja se valida en dominio")
         void chkObsBajaCoherente() {
             String bloque = bloquesPorTabla.get("fal_observacion");
             assertThat(bloque)
-                    .as("chk_obs_baja_coherente debe existir")
-                    .contains("chk_obs_baja_coherente");
+                    .as("chk_obs_baja_coherente fue retirado por DECISION_DDL-SIN-CHECKS-CODIGOS-01")
+                    .doesNotContain("chk_obs_baja_coherente");
         }
     }
 

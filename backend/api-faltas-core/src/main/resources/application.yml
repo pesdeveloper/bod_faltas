@@ -1,23 +1,107 @@
-# Perfil por defecto: persistencia en memoria.
-# DataSourceAutoConfiguration se excluye para no requerir base de datos real.
-# Para activar JDBC real: --spring.profiles.active=jdbc
+# Wave 4 Parte 3E-B (DECISION-JDBC-ONLY-01): el perfil "jdbc" es obligatorio para ejecutar la
+# aplicacion productiva. No existe modo "memory" productivo ni exclusion de
+# DataSourceAutoConfiguration en esta configuracion base: sin el perfil "jdbc" (o el perfil de
+# test dedicado "test", exclusivo de src/test), JdbcOnlyStartupGuardrail rechaza el arranque con
+# un mensaje explicito antes de que cualquier bean dependiente de persistencia se inicialice.
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-
-app:
-  persistence:
-    mode: memory
+  # Multipart (Wave 4 Parte 3D): alta con fotografias y carga posterior. Limite por archivo
+  # igual al limite de entrada del pipeline (faltas.fotografias.max-bytes-entrada); el limite
+  # total de la request cubre hasta 10 fotografias + la parte JSON con margen.
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${FALTAS_MULTIPART_MAX_FILE_SIZE:5MB}
+      max-request-size: ${FALTAS_MULTIPART_MAX_REQUEST_SIZE:60MB}
 
 # Endpoints demo/dev. Por defecto deshabilitados (faltas.demo.enabled=false).
 # Activar explicitamente en ambiente demo/dev con faltas.demo.enabled=true.
 
 faltas:
+  # Seeder de talonario ACTA ELECTRONICO local/dev (Wave 4 Parte 3C §11; endurecido en
+  # Wave 4 Parte 3E §15). Por defecto deshabilitado. Requiere ademas --spring.profiles.active
+  # con "jdbc" (app.persistence.mode=jdbc: TalonarioElectronicoDevSeeder rechaza ejecutar en el
+  # perfil por defecto en memoria) Y con "local" o "dev" (@Profile estructural en
+  # TalonarioElectronicoDevSeeder/SeedLocalDevController: sin uno de esos dos perfiles, ningun
+  # valor de esta property alcanza para habilitarlo; los beans ni se registran en el contexto).
+  #
+  # Ejecucion local:
+  #   mvn -o spring-boot:run -Dspring-boot.run.profiles=jdbc,dev \
+  #       -Dspring-boot.run.arguments="--faltas.seed.local-dev.enabled=true"
+  #   curl -X POST http://localhost:8080/demo/dev/seed-talonario-electronico
+  #
+  # Verificacion directa en MariaDB:
+  #   SELECT id, cod_dep, nom_dep FROM fal_dependencia WHERE cod_dep = 'DEV-FALTAS-01';
+  #   SELECT id, codigo, tipo_talonario, si_activo FROM num_talonario WHERE codigo = 'DEVTALAC';
+  seed:
+    local-dev:
+      enabled: ${FALTAS_SEED_LOCAL_DEV_ENABLED:false}
   plazos:
     apelacion-dias-computables: 30
+  # QR del acta (DECISION_DDL-ACTA-QR-01, DECISION-QR-INMUTABLE-01).
+  #
+  # payload-version-activa es la version del FORMATO del payload, no una version de clave
+  # ni un contador de reemisiones. Hoy existe un unico formato: 0. Una version distinta
+  # falla al iniciar como no implementada.
+  #
+  # secret NO tiene valor por defecto a proposito: la configuracion es fail-closed. Sin una
+  # clave valida la aplicacion no arranca. Un fallback funcional aca seria una clave publica
+  # conocida y volveria falsificables los QR de un ambiente mal configurado.
+  #
+  # La clave debe ser estable entre reinicios y despliegues: los QR ya impresos en tickets
+  # tienen que seguir verificando. Cambiarla los invalida a todos y exige decision normativa.
+  # Se inyecta por secreto de ambiente en FALTAS_QR_SECRET y no vive en el repositorio.
+  qr:
+    payload-version-activa: ${FALTAS_QR_PAYLOAD_VERSION_ACTIVA:0}
+    secret: ${FALTAS_QR_SECRET:}
   security:
     jwt:
       issuer: https://tokenserver.dev.local
       audience: api-faltas-core
       dev-secret: ${FALTAS_JWT_DEV_SECRET:faltas-dev-test-secret-not-for-prod-use}
+  # Evidencias fotograficas del acta (Wave 4 Parte 3D). Raiz de almacenamiento
+  # filesystem configurable, con subdirectorios temporal/ y final/ debajo.
+  # No hardcodear rutas absolutas: el default es relativo al working directory
+  # del proceso, pensado para desarrollo/test; en cada ambiente se fija por
+  # variable de entorno.
+  storage:
+    evidencias:
+      root-dir: ${FALTAS_STORAGE_ROOT_DIR:./faltas-data/evidencias}
+  # Limites del pipeline de fotografias (Wave 4 Parte 3D S6), configurables y
+  # explicitos. Valores de referencia del prompt: 10 fotos/operacion, 5 MiB de
+  # entrada, lado mayor final 1920px sin upscale, limite de pixeles decodificados
+  # 40 megapixeles (proteccion contra decompression bombs de imagenes con
+  # dimensiones extremas pero archivo comprimido pequeño).
+  fotografias:
+    max-cantidad-por-operacion: ${FALTAS_FOTO_MAX_CANTIDAD:10}
+    max-bytes-entrada: ${FALTAS_FOTO_MAX_BYTES_ENTRADA:5242880}
+    max-pixeles-decodificables: ${FALTAS_FOTO_MAX_PIXELES:40000000}
+    lado-mayor-final-px: ${FALTAS_FOTO_LADO_MAYOR_FINAL:1920}
+    calidad-jpeg: ${FALTAS_FOTO_CALIDAD_JPEG:0.85}
+    # max-longitud-descripcion NO existe como property (Wave 4 Parte 3E §16): era decorativa,
+    # sin ningun @Value que la leyera. El limite real de 240 caracteres es una invariante fija
+    # de DDL/dominio (fal_acta_evidencia.descripcion VARCHAR(240), FalActaEvidencia linea 143),
+    # no un parametro de ambiente: exponerla como configurable permitiria fijar un valor
+    # incoherente con el ancho fisico de la columna sin ninguna necesidad funcional.
+
+geo:
+  datasource:
+    enabled: ${GEO_DATASOURCE_ENABLED:false}
+    url: ${GEO_POSTGRES_URL:jdbc:postgresql://${PGHOST:10.10.3.179}:${PGPORT:5432}/${PGDATABASE:sb_malvinas_geo}}
+    username: ${GEO_POSTGRES_USER:${PGUSER:malvinas_admin}}
+    password: ${GEO_POSTGRES_PASSWORD:}
+    hikari:
+      connection-timeout: 10000
+      maximum-pool-size: 5
+      minimum-idle: 1
+      pool-name: geo-pool
+  catalog:
+    mariadb:
+      enabled: ${GEO_CATALOG_MARIADB_ENABLED:false}
+      url: ${GEO_CATALOG_MARIADB_URL:jdbc:mariadb://${MARIADB_HOST:10.10.3.179}:${MARIADB_PORT:3306}/${MARIADB_DATABASE:sb_faltas_db}}
+      username: ${GEO_CATALOG_MARIADB_USER:${MARIADB_USER:${MARIADB_USERNAME:}}}
+      password: ${GEO_CATALOG_MARIADB_PASSWORD:${MARIADB_PASSWORD:${GEO_MARIADB_PASSWORD:}}}
+      hikari:
+        connection-timeout: 10000
+        maximum-pool-size: 3
+        minimum-idle: 1
+        pool-name: geo-catalog-pool

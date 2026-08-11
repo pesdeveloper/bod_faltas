@@ -8,14 +8,20 @@
 > La evolucion historica se conserva en Git y no forma parte de la spec-as-source
 > activa.
 
-**Fecha de actualización:** 2026-07-24
+**Fecha de actualización:** 2026-08-04
 **Estado:** spec-as-source auditada transversalmente; puerta `READY_FOR_DDL` evaluada en
 [`../00-governance/ready-for-ddl-gate.md`](../00-governance/ready-for-ddl-gate.md);
 todas las `DECISION_DDL-*` cerradas (ver
 [`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md));
-script DDL canónico completo (64 tablas) aprobado para ejecución manual controlada
+script DDL canónico completo (64 tablas) aprobado y validado en sandbox
 (trabajo DDL-MARIADB-MANUAL-001-FULL-R1; ver `database/ddl/create-bod-faltas-domain.sql`);
-esquema en MariaDB aún no creado.
+9 puertos JDBC de dominio activos bajo perfil `jdbc`, resto en InMemory transitorio.
+El alta del acta fue remediada de captura progresiva (bloque `CAPT` eliminado, evento
+`ACTCAP` eliminado) a alta integral
+directamente en `ENRI` por `ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853`
+(`DECISION-ACTA-ALTA-INTEGRAL-01` y afines en
+[`../20-application/command-contracts.md`](../20-application/command-contracts.md)); ver
+§8 de este roadmap para el detalle de waves pendientes de esa remediación.
 
 ## 1. Baseline vigente
 
@@ -41,8 +47,13 @@ Estado verificado:
 - script DDL canónico aprobado para ejecución manual controlada: `database/ddl/create-bod-faltas-domain.sql`,
   64 tablas TO_CREATE + adopción de `fal_rubro_version`; guardrails estáticos en 3 clases de test
   (`DdlInventoryContractTest`, `DdlScriptContractTest`, `DdlDiagnosticsSafetyTest`); verdes en CI;
-  esquema en MariaDB aún no creado;
-- sin repositorios JDBC de dominio ni JPA/Hibernate todavía; sin Flyway/Liquibase por DECISION_DDL-EXEC-01 (no se incorporarán); sin Testcontainers ni DDL ejecutado todavía.
+  esquema validado materialmente en sandbox autorizado (`DDL_VALIDATED_ON_MARIADB_SANDBOX`,
+  ver [`../50-persistence/jdbc-infrastructure.md`](../50-persistence/jdbc-infrastructure.md) §8);
+- 9 repositorios JDBC de dominio activos bajo perfil `jdbc` (Acta, Evento, Snapshot,
+  Evidencia, Persona, Observacion, QrAcceso, DiaNoComputable, MotivoArchivo); sin
+  JPA/Hibernate; sin Flyway/Liquibase por DECISION_DDL-EXEC-01 (no se incorporarán); sin
+  Testcontainers; resto de los puertos aún en InMemory transitorio
+  (`DECISION-PERSISTENCE-INMEMORY-RETIREMENT-01`).
 
 Las definiciones activas de paridad y estrategia de persistencia se encuentran en:
 
@@ -253,20 +264,72 @@ verificación post-ejecución; cierre formal del modelo georreferenciado.
 Estas integraciones dependen de sistemas externos y no bloquean el diseño ni la
 generación del DDL de MariaDB:
 
-- Integración real con la aplicación de Firmas (más allá del callback `firmar-real` ya implementado; posible ampliación de flujo).
+- Integración real con la aplicación de Firmas (más allá del callback `firmar-real` ya implementado). **Diseño 100 % cerrado** (`DEC-EDA-001..029`; `OPEN_DECISIONS = 0`, `DEFERRED_CONTRACTS = 0`): ownership, lifecycle completo de solicitud/requisito, único punto de aplicación del efecto de dominio de una firma, arquitectura y operación de transporte (bus central `bus_evento` append-only, único, con Outbox/checkpoint/Inbox/Inbox error locales por aplicación, sin fan-out ni rutinas), transferencia binaria, autenticación M2M, transporte SQL directo del bus con cuentas de mínimo privilegio, PKI, y los 12/12 contratos de eventos `NORMATIVE` (`10-domain/firma-notificacion-fallo.md` "Integración EDA con Firmas", `40-api/firma-event-contracts.md`, `30-integrations/municipal-eventing.md`, `firma-binary-transfer.md`, `eventing-operations.md`, `50-persistence/firma-eda-physical-model.md`). Modelo físico `DDL_READY`; DDL generado en `database/ddl/alter-firmas-eda-closure-001-forward.sql`/`-rollback.sql`/`database/ddl/grants-firmas-eda-bus.sql`, `DDL_NOT_EXECUTED`. `IMPLEMENTATION_NOT_STARTED`; slices de código pendientes, en orden recomendado:
+  1. Endurecer `AL_FIRMAR` para rechazar (422) en vez de auto-numerar en `DocumentoService.registrarFirmaDocumental`, y actualizar `test28` de `DocumentoFirmaRealTest.java` para assertar el rechazo.
+  2. Implementar el comando de aplicación que transicione `FalDocumentoFirmaReq` según el lifecycle extendido (`DEC-EDA-016`), incluida la regla de carrera firma/cancelación.
+  3. Ejecutar manualmente el DDL de este cierre sobre un ambiente autorizado, tras el baseline de 65 tablas: `database/diagnostics/verify-firmas-eda-closure-001-precheck.sql`, luego `database/ddl/alter-firmas-eda-closure-001-forward.sql` y `database/ddl/grants-firmas-eda-bus.sql`, y correr `database/diagnostics/verify-firmas-eda-closure-001-{postcheck,parity}.sql`.
+  4. Implementar los tres endpoints de `30-integrations/firma-binary-transfer.md` (staging temporal vía `fal_documento_firma_resultado`, `DEC-EDA-024`) y la autenticación M2M de `eventing-operations.md`.
+  5. Implementar el relay Outbox→Bus, el lector local con checkpoint, los consumidores Inbox y los jobs de purga/reconciliación locales por aplicación (`eventing-operations.md`).
+  6. Coordinar con el bounded context Firmas la ejecución de `database/ddl/firmas/create-firmas-eda-outbox-inbox.sql` contra la base de datos propia de Firmas (`DEC-EDA-028`, fuera de este repositorio).
 - Integración real con el sistema de Notificaciones (envío postal/electrónico real; hoy simulado con lotes y acuses mock).
 - Integración real con Ingresos/Tesorería (hoy la conciliación económica usa un input mock absoluto de Tesorería).
 - Storage y comprobantes reales (hoy `storageKey` usa esquemas `mock://`; sin `file://` ni `s3://` reales).
 - Sincronización real de calendario administrativo con un proveedor externo (hoy sin integración; ver `../10-domain/calendario-plazos-administrativos.md`, sección 14).
 - Frontend productivo, cuando corresponda (hoy existe una demo navegable in-memory; ver `../40-api/http-contracts.md`, endpoints `/demo/**`).
 
-## 4. Mejoras no bloqueantes
+## 4. Proceso automatizado: firmeza por vencimiento de plazo (CMD-FALLO-005)
+
+El endpoint `POST /api/faltas/actas/{id}/firmeza/vencer-plazo-apelacion` (CMD-FALLO-005,
+`FirmezaCondenaService.vencerPlazoApelacion`) ya existe y es funcional.
+
+**Pendiente:** implementar un job/scheduler que ejecute CMD-FALLO-005 automáticamente
+para todas las actas en bandeja `PENDIENTES_FALLO` cuyo `fhVtoApelacion` esté vencido
+(`LocalDate.now().isAfter(fhVtoApelacion)`) y no tengan apelación activa asociada al fallo.
+
+Alcance cuando se implemente:
+
+- Identificar actas con `codBandeja = PENDIENTES_FALLO` y `fhVtoApelacion < hoy`.
+- Verificar ausencia de apelación activa asociada al fallo (precondición de CMD-FALLO-005).
+- Ejecutar CMD-FALLO-005 por cada acta elegible.
+- Registrar `PLAVNC` y `CONFIR`; recalcular snapshot.
+- Identidad técnica autenticada del proceso (no JWT de usuario final).
+- El endpoint ya exige JWT Bearer; la variante de proceso técnico puede requerir
+  un mecanismo de autenticación técnica distinto (a definir en la spec de seguridad).
+
+Hasta que se implemente este job, el botón contextual "Declarar Condena Firme" en
+`web-direccion-faltas` actúa como guardrail operativo manual.
+
+No bloquea la validación contra MariaDB ni los slices JDBC vigentes.
+
+## 5. Mejoras no bloqueantes
 
 - Revisión del mapeo `INSPECTOR_NO_ENCONTRADO` para `FirmanteNoEncontradoException` (ver `../00-governance/command-contract-standard.md`, tabla de errores); requiere decisión explícita, no se corrige silenciosamente.
 - Decisión funcional pendiente sobre la seguridad de `pago-condena/confirmar`, `pago-condena/observar` y
   `GET pago-condena` (hoy `permitAll` en `SecurityConfig`; ver `../40-api/http-contracts.md`).
 
-## 5. Regla de mantenimiento de este documento
+## 5.1 Remediación integral del alta de acta, DDL y persistencia JDBC (en curso)
+
+`ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853`
+(`.work/Auditorias/ACTA-ALTA-INTEGRAL-JDBC-MASTER-20260804-224853/`). Wave 1 (spec),
+Wave 2 (DDL: 58 CHECK de código/enum/regla funcional eliminados de 24 tablas,
+`DECISION_DDL-SIN-CHECKS-CODIGOS-01`) y Wave 3 (dominio: bloque `CAPT` eliminado, evento
+`ACTCAP` eliminado, comando `CompletarCaptura` eliminado, todos prohibidos como productivos;
+`LabrarActaCommand`/`Request` con `id_tecnico` opcional) están cerradas. Pendiente:
+
+- Wave 4 — adapters JDBC de los satélites directos del alta integral (domicilio,
+  artículos infringidos, normativa, contravención, vehículo, tránsito, alcoholemia,
+  medidas preventivas, sustancias alimenticias, valorización) y retiro de InMemory de
+  ese alcance.
+- Wave 5 — valorizador reutilizable sin persistencia, preview de UX, confirmación
+  atómica en `ENRI` con bajas lógicas de artículos.
+- Wave 6 — migración JDBC del resto del dominio (fallo, apelación, notificación,
+  documento/firma, paralización, archivo, gestión externa, pagos), reutilizando el
+  inventario de 16 servicios ya registrado en
+  [`../50-persistence/ddl-decisions.md`](../50-persistence/ddl-decisions.md)
+  (`D-POST-B2-CROSS-COMMAND-TX-01`).
+- Wave 7 — certificación final (`mvn -o clean test`, `mvn -o -P integration-tests verify`).
+
+## 6. Regla de mantenimiento de este documento
 
 Este documento contiene únicamente el trabajo pendiente vigente. No agregar
 cronologías de bloques cerrados, resultados históricos extensos ni copias de

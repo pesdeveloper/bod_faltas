@@ -6,14 +6,12 @@ import ar.gob.malvinas.faltas.core.application.command.ObservarPagoCondenaComman
 import ar.gob.malvinas.faltas.core.application.result.ComandoResultado;
 import ar.gob.malvinas.faltas.core.application.service.PagoCondenaService;
 import ar.gob.malvinas.faltas.core.domain.exception.ActaNoEncontradaException;
-import ar.gob.malvinas.faltas.core.domain.exception.PrecondicionVioladaException;
+import ar.gob.malvinas.faltas.core.domain.exception.ActorNoAutenticadoException;
 import ar.gob.malvinas.faltas.core.domain.model.FalPagoCondena;
-import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContext;
 import ar.gob.malvinas.faltas.core.infrastructure.security.ActorContextHolder;
 import ar.gob.malvinas.faltas.core.web.dto.ConfirmarPagoCondenaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.InformarPagoCondenaRequest;
 import ar.gob.malvinas.faltas.core.web.dto.ObservarPagoCondenaRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,12 +37,12 @@ public class PagoCondenaController {
     public ResponseEntity<ComandoResultado> informar(
             @PathVariable Long id,
             @Valid @RequestBody InformarPagoCondenaRequest req) {
-        ActorContext ctx = ActorContextHolder.get();
-        if (ctx == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        String actor = ActorContextHolder.subOr(null);
+        if (actor == null) {
+            throw new ActorNoAutenticadoException();
         }
         InformarPagoCondenaCommand cmd = new InformarPagoCondenaCommand(
-                id, req.monto(), req.referenciaPago(), req.observaciones(), ctx.sub());
+                id, req.monto(), req.referenciaPago(), req.observaciones(), actor);
         return ResponseEntity.ok(pagoCondenaService.informar(cmd));
     }
 
@@ -52,8 +50,12 @@ public class PagoCondenaController {
     public ResponseEntity<ComandoResultado> confirmar(
             @PathVariable Long id,
             @RequestBody(required = false) ConfirmarPagoCondenaRequest req) {
+        String actor = ActorContextHolder.subOr(null);
+        if (actor == null) {
+            throw new ActorNoAutenticadoException();
+        }
         ConfirmarPagoCondenaCommand cmd = new ConfirmarPagoCondenaCommand(
-                id, req != null ? req.observaciones() : null);
+                id, req != null ? req.observaciones() : null, actor);
         return ResponseEntity.ok(pagoCondenaService.confirmar(cmd));
     }
 
@@ -61,8 +63,12 @@ public class PagoCondenaController {
     public ResponseEntity<ComandoResultado> observar(
             @PathVariable Long id,
             @RequestBody ObservarPagoCondenaRequest req) {
+        String actor = ActorContextHolder.subOr(null);
+        if (actor == null) {
+            throw new ActorNoAutenticadoException();
+        }
         ObservarPagoCondenaCommand cmd = new ObservarPagoCondenaCommand(
-                id, req.motivoObservacion(), req.observaciones());
+                id, req.motivoObservacion(), req.observaciones(), actor);
         return ResponseEntity.ok(pagoCondenaService.observar(cmd));
     }
 

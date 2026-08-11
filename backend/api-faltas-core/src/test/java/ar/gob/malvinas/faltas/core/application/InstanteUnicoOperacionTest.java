@@ -1,5 +1,7 @@
 package ar.gob.malvinas.faltas.core.application;
 
+import ar.gob.malvinas.faltas.core.domain.enums.SituacionIdentificacionInfractor;
+
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloAbsolutorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.DictarFalloCondenatorioCommand;
 import ar.gob.malvinas.faltas.core.application.command.LabrarActaCommand;
@@ -14,6 +16,7 @@ import ar.gob.malvinas.faltas.core.domain.model.FalActaFallo;
 import ar.gob.malvinas.faltas.core.domain.model.FalDocumento;
 import ar.gob.malvinas.faltas.core.repository.memory.*;
 import ar.gob.malvinas.faltas.core.snapshot.SnapshotRecalculador;
+import ar.gob.malvinas.faltas.core.support.ActaServiceTestSupport;
 import ar.gob.malvinas.faltas.core.support.CountingClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -75,13 +78,15 @@ class InstanteUnicoOperacionTest {
     @Test
     @DisplayName("ActaService.labrar usa un unico instante para fechaLabrado y fhAlta")
     void labrar_usa_instante_unico() {
-        ActaService svc = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        ActaService svc = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), clock);
 
         clock.reset();
         ComandoResultado res = svc.labrar(new LabrarActaCommand(
                 TipoActa.TRANSITO, null, null, null, null, null, null,
-                null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
+                null, null, null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
+                null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null));
 
         FalActa acta = actaRepo.buscarPorId(res.idActa()).orElseThrow();
         LocalDateTime esperado = clock.nthInstant(0);
@@ -97,13 +102,15 @@ class InstanteUnicoOperacionTest {
     @Test
     @DisplayName("ActaService.labrar snapshot.ultimaActualizacion usa mismo instante que fhAlta; sin llamada extra al reloj")
     void labrar_snapshot_usa_mismo_instante_sin_llamada_extra() {
-        ActaService svc = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        ActaService svc = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), clock);
 
         clock.reset();
         ComandoResultado res = svc.labrar(new LabrarActaCommand(
                 TipoActa.TRANSITO, null, null, null, null, null, null,
-                null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
+                null, null, null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
+                null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null));
 
         LocalDateTime esperado = clock.nthInstant(0);
 
@@ -129,14 +136,16 @@ class InstanteUnicoOperacionTest {
     @Test
     @DisplayName("FalloActaService.dictarAbsolutorio usa un unico instante para fhDictado, fhAlta y fechaGeneracion")
     void absolutorio_usa_instante_unico() {
-        ActaService actaSvc = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        ActaService actaSvc = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), clock);
         FalloActaService falloSvc = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, clock);
 
         ComandoResultado actaRes = actaSvc.labrar(new LabrarActaCommand(
                 TipoActa.TRANSITO, null, null, null, null, null, null,
-                null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
+                null, null, null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
+                null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null));
         Long actaId = actaRes.idActa();
 
         FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();
@@ -169,14 +178,16 @@ class InstanteUnicoOperacionTest {
     @Test
     @DisplayName("FalloActaService.dictarCondenatorio usa un unico instante para fhDictado, fhAlta y fechaGeneracion")
     void condenatorio_usa_instante_unico() {
-        ActaService actaSvc = new ActaService(actaRepo, eventoRepo, snapshotRepo, recalc,
+        ActaService actaSvc = ActaServiceTestSupport.actaService(actaRepo, eventoRepo, snapshotRepo, recalc,
                 new InMemoryActaEvidenciaRepository(), clock);
         FalloActaService falloSvc = new FalloActaService(
                 actaRepo, eventoRepo, snapshotRepo, docRepo, falloRepo, pagoVolRepo, recalc, clock);
 
         ComandoResultado actaRes = actaSvc.labrar(new LabrarActaCommand(
                 TipoActa.TRANSITO, null, null, null, null, null, null,
-                null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, null));
+                null, null, null, null, null, null, ResultadoFirmaInfractor.SE_NIEGA_A_FIRMAR, SituacionIdentificacionInfractor.PRESENTE_NO_APORTA_DATOS, null,
+                null, null, null, null,
+                ar.gob.malvinas.faltas.core.support.LabrarActaCommandTestFactory.transitoMinimo(), null, null, null));
         Long actaId = actaRes.idActa();
 
         FalActa acta = actaRepo.buscarPorId(actaId).orElseThrow();

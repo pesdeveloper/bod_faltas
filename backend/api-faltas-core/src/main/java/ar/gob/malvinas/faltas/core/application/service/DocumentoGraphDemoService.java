@@ -27,7 +27,7 @@ import java.util.List;
  * Ejecuta los 8 casos operativos principales de punta a punta:
  *   acta demo -> contexto -> redaccion BORRADOR -> confirmacion -> generacion mock final.
  *
- * Cada ejecucion crea una acta demo fresca (id generado por nextId()).
+ * Cada ejecucion crea una acta demo fresca, con la PK asignada por la persistencia.
  * Dos ejecuciones son independientes entre si.
  *
  * Guardrails:
@@ -104,8 +104,7 @@ public class DocumentoGraphDemoService {
     public DocumentoGraphDemoResultado ejecutar() {
         LocalDateTime fhInicio = faltasClock.now();
 
-        FalActa acta = actaRepository.guardar(
-                GraphDemoActaFactory.crearActaDemo(actaRepository.nextId()));
+        FalActa acta = actaRepository.guardar(GraphDemoActaFactory.crearActaDemo());
         falloRepository.guardar(GraphDemoActaFactory.crearFalloCondenatorioDemo(acta.getId(), falloRepository.nextId()));
         pagoRepository.guardar(GraphDemoActaFactory.crearPagoVoluntarioDemo(acta.getId()));
 

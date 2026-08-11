@@ -609,22 +609,22 @@ Casos de uso del prototipo Angular 20:
 Los siguientes endpoints definen responsabilidades conceptuales. Los paths son provisionales
 y se alinean con las convenciones HTTP existentes antes de la implementación.
 
-```text
-GET  /api/geo/provincias
-GET  /api/geo/unidades-territoriales
-GET  /api/geo/localidades
-GET  /api/geo/calles
-GET  /api/geo/local/malvinas/localidades
-GET  /api/geo/local/malvinas/calles
-GET  /api/geo/map-config
-POST /api/geo/validar-punto
-POST /api/geo/resolver-punto
-POST /api/geo/geocodificar                  -- calle + altura → punto, cuadra, lado, calidad
-POST /api/geo/reverse                       -- punto → calle, cuadra, lado, altura estimada
-GET  /api/catastro/parcelas/{id}/detalle
-GET  /api/catastro/parcelas/{id}/inmuebles
-GET  /api/catastro/parcelas/{id}/comercios
-```
+| Método | Path | Estado |
+|---|---|---|
+| GET | `/api/geo/provincias` | IMPLEMENTADO |
+| GET | `/api/geo/unidades-territoriales` | IMPLEMENTADO |
+| GET | `/api/geo/localidades` | IMPLEMENTADO |
+| GET | `/api/geo/calles` | IMPLEMENTADO |
+| GET | `/api/geo/local/malvinas/localidades` | IMPLEMENTADO |
+| GET | `/api/geo/local/malvinas/calles` | IMPLEMENTADO |
+| GET | `/api/geo/map-config` | TO_IMPLEMENT |
+| POST | `/api/geo/validar-punto` | TO_IMPLEMENT |
+| POST | `/api/geo/resolver-punto` | TO_IMPLEMENT |
+| POST | `/api/geo/geocodificar` — calle + altura → punto, cuadra, lado, calidad | IMPLEMENTADO |
+| POST | `/api/geo/reverse` — punto → calle, cuadra, lado, altura estimada | IMPLEMENTADO |
+| GET | `/api/catastro/parcelas/{id}/detalle` | TO_IMPLEMENT |
+| GET | `/api/catastro/parcelas/{id}/inmuebles` | TO_IMPLEMENT |
+| GET | `/api/catastro/parcelas/{id}/comercios` | TO_IMPLEMENT |
 
 Las capas vectoriales MVT de parcelas se sirven directamente por Martin (TileJSON/MVT), no por endpoint Spring GeoJSON. El endpoint `/api/catastro/parcelas/geojson` ya no es el flujo principal de visualización.
 
@@ -1410,3 +1410,48 @@ Fuentes futuras candidatas (no crear en este slice):
 | `gis_calle_label_web` | Segmentos optimizados para label, prioridad y longitud | Solo si `geo_gmat_calle` no alcanza |
 | `gis_calle_corredor_web` | Corredor vial (fallback si doble trazo falla) | Etapa posterior autorizada, solo si necesario |
 | `gis_manzana_label_web` | Manzanas con ST_PointOnSurface explícito | Solo si `geo_gmat_manzana` no ubica bien |
+
+
+---
+
+## 21. GAPs de DDL (GEO-INFRA-SPEC-001) — Estado al 2026-07-30
+
+Todos los objetos fueron verificados en `sb_malvinas_geo` (PostgreSQL 15.2 / PostGIS 3.3).
+El DDL real esta versionado en `db/postgis/`. Ver ese README para el manifiesto y orden de ejecucion.
+
+### GAP HB-1: funcion comercios_parcela (MVT) — RESUELTO
+
+**Objeto:** `comercios_parcela(z integer, x integer, y integer) RETURNS bytea LANGUAGE sql STABLE PARALLEL SAFE`
+**Motor:** PostgreSQL/PostGIS, base `sb_malvinas_geo`
+**Estado en Martin:** publicada como fuente MVT `comercios_parcela` (confirmado via `/catalog` el 2026-07-30).
+**Archivo:** `db/postgis/functions/comercios_parcela_mvt.sql` — DDL real versionado.
+
+### GAP HB-2: tablas fal_inmueble, fal_comercio, fal_comercio_inmueble — RESUELTO
+
+**Objetos:** tablas en PostGIS, base `sb_malvinas_geo` (no en MariaDB).
+**Filas verificadas al 2026-07-30:** fal_inmueble 85.167 / fal_comercio 13.024 / fal_comercio_inmueble 12.737.
+**Sin geometria propia.** Join espacial via clave catastral con `geo_qmat_parcela` (SRID 22195).
+**Archivos:** `db/postgis/tables/fal_inmueble.sql`, `fal_comercio.sql`, `fal_comercio_inmueble.sql` — DDL real versionado.
+
+### GAP HB-3: funcion geo_buscar_calles_tolerante — RESUELTO
+
+**Objeto:** `geo_buscar_calles_tolerante(p_query text, p_id_loc text DEFAULT NULL, p_limit integer DEFAULT 5)`
+**Motor:** PostgreSQL/PostGIS, base `sb_malvinas_geo`. No es fuente Martin; es llamada desde el backend Java.
+**Dependencias reales:** `geo_normalizar_termino`, `geo_tokens_sorted`, tabla `geo_malv_calle_indice_busqueda`.
+**Correccion:** la dependencia documentada anteriormente como `geo_calle_nombre_lookup` era incorrecta.
+**Archivo:** `db/postgis/functions/geo_buscar_calles_tolerante.sql` — DDL real versionado.
+
+### GAP HB-4: version validada de PostgreSQL/PostGIS — RESUELTO
+
+**Versions validadas:**
+- PostgreSQL 15.2 (Visual C++ build 1914, 64-bit)
+- PostGIS 3.3 (USE_GEOS=1 USE_PROJ=1 USE_STATS=1)
+
+Ver `db/postgis/README.md` §Versiones validadas y `apps/web-geodomicilios/docs/spec/60-infrastructure/postgis-local-setup.md` §1.
+
+---
+
+### Objeto adicional descubierto: comercios_manzana
+
+La fuente `comercios_manzana` esta publicada en Martin pero no tiene DDL versionado ni documentacion
+en el layer-catalog. Pendiente de documentación en `apps/web-geodomicilios/docs/spec/20-map/layer-catalog.md` y de versionar su DDL en `db/postgis/`.
