@@ -1857,12 +1857,12 @@ class SpecAsSourceGuardrailTest {
         }
 
         @Test
-        @DisplayName("el documento UX del frontend ha sido eliminado (MANIFEST-010/Wave F)")
-        void ux_demo_overview_sin_docs_trabajo() {
+        @DisplayName("el documento UX del frontend se conserva como documentacion util del baseline")
+        void ux_demo_overview_conservado_en_baseline() {
             Path archivo = repoRoot.resolve("apps/web-direccion-faltas/docs/00-ux-demo-overview.md");
-            assertThat(Files.exists(archivo))
-                    .as("apps/web-direccion-faltas/docs/00-ux-demo-overview.md debe haber sido eliminado (MANIFEST-010)")
-                    .isFalse();
+            assertThat(Files.isRegularFile(archivo))
+                    .as("apps/web-direccion-faltas/docs/00-ux-demo-overview.md debe conservarse en el baseline")
+                    .isTrue();
         }
     }
 
